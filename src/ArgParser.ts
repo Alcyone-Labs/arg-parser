@@ -1093,7 +1093,8 @@ export class ArgParser {
         .map((flag: ProcessedFlag) => {
           // Flag type is ProcessedFlag
           const optionsText = flag["options"]
-            .toSorted((a: string, b: string) => a.length - b.length) // Sort by length (shortest first)
+            .slice() // Create a copy before sorting (toSorted only supported by Node 20+)
+            .sort((a: string, b: string) => a.length - b.length) // Sort by length (shortest first)
             .map((opt: string) => green(opt))
             .join(", ");
           const isMandatory =

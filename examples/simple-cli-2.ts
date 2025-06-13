@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 import chalk from "chalk";
-import { ArgParser } from "../src";
+import { ArgParser } from "../dist/index.js";
 
 const argParser = new ArgParser(
   {
-    appName: "ArgParser Sample CLI",
-    appCommandName: "sample-cli", // <-- Add this line if you use a script name under package.json .bin property so it displays in the command line help
+    appName: "ArgParser Sample CLI 2",
+    appCommandName: "sample-cli-2", // <-- Add this line if you use a script name under package.json .bin property so it displays in the command line help
     description: "A sample, testable CLI to show how the APIs work",
     // handleErrors: true, // Default, no need to specify unless setting to false
     //

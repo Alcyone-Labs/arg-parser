@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 /**
  * Advanced CLI Example - demonstrates sub-commands and handlers
- * 
+ *
  * This example shows how to create a CLI tool with:
  * - Sub-commands with their own flags
  * - Handler functions for different commands
  * - Nested sub-commands
  * - Global flags that apply to all commands
  */
-
 import chalk from "chalk";
-import { ArgParser } from "../dist/index.js";
+import { ArgParser } from "../src";
 
 // Create the main parser with global flags
 const mainParser = new ArgParser(
@@ -18,7 +17,6 @@ const mainParser = new ArgParser(
     appName: "Advanced CLI Example",
     appCommandName: "advanced-cli",
     description: "An advanced CLI tool demonstrating sub-commands and handlers",
-    executeHandlers: true, // Enable automatic handler execution
     subCommands: [
       // Database management commands
       {
@@ -31,11 +29,19 @@ const mainParser = new ArgParser(
               description: "Run database migrations",
               handler: (ctx) => {
                 console.log(chalk.blue("🔄 Running database migrations..."));
-                console.log(`Environment: ${ctx.parentArgs?.environment || "development"}`);
+                console.log(
+                  `Environment: ${ctx.parentArgs?.environment || "development"}`,
+                );
                 if (ctx.args.force) {
-                  console.log(chalk.yellow("⚠️  Force flag enabled - skipping safety checks"));
+                  console.log(
+                    chalk.yellow(
+                      "⚠️  Force flag enabled - skipping safety checks",
+                    ),
+                  );
                 }
-                console.log(chalk.green("✅ Migrations completed successfully"));
+                console.log(
+                  chalk.green("✅ Migrations completed successfully"),
+                );
               },
               parser: new ArgParser({}, [
                 {
@@ -53,7 +59,9 @@ const mainParser = new ArgParser(
               description: "Seed the database with sample data",
               handler: (ctx) => {
                 console.log(chalk.blue("🌱 Seeding database..."));
-                console.log(`Environment: ${ctx.parentArgs?.environment || "development"}`);
+                console.log(
+                  `Environment: ${ctx.parentArgs?.environment || "development"}`,
+                );
                 console.log(`Records to create: ${ctx.args.count}`);
                 console.log(chalk.green("✅ Database seeded successfully"));
               },
@@ -70,7 +78,7 @@ const mainParser = new ArgParser(
           ],
         }),
       },
-      
+
       // Server management commands
       {
         name: "server",
@@ -82,12 +90,22 @@ const mainParser = new ArgParser(
               description: "Start the server",
               handler: (ctx) => {
                 console.log(chalk.blue("🚀 Starting server..."));
-                console.log(`Environment: ${ctx.parentArgs?.environment || "development"}`);
+                console.log(
+                  `Environment: ${ctx.parentArgs?.environment || "development"}`,
+                );
                 console.log(`Port: ${ctx.args.port}`);
                 if (ctx.args.watch) {
-                  console.log(chalk.cyan("👀 Watch mode enabled - will restart on file changes"));
+                  console.log(
+                    chalk.cyan(
+                      "👀 Watch mode enabled - will restart on file changes",
+                    ),
+                  );
                 }
-                console.log(chalk.green(`✅ Server started successfully on port ${ctx.args.port}`));
+                console.log(
+                  chalk.green(
+                    `✅ Server started successfully on port ${ctx.args.port}`,
+                  ),
+                );
               },
               parser: new ArgParser({}, [
                 {
@@ -130,7 +148,7 @@ const mainParser = new ArgParser(
       flagOnly: true,
       defaultValue: false,
     },
-  ]
+  ],
 );
 
 // Parse and execute
@@ -138,5 +156,7 @@ const args = mainParser.parse(process.argv.slice(2));
 
 // This will only run if no sub-command handlers were executed
 if (!args.$commandChain) {
-  console.log(chalk.yellow("No command specified. Use --help to see available commands."));
+  console.log(
+    chalk.yellow("No command specified. Use --help to see available commands."),
+  );
 }

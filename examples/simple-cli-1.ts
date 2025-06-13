@@ -1,7 +1,7 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Simple CLI Example - demonstrates basic ArgParser usage
- * 
+ *
  * This example shows how to create a simple CLI tool with:
  * - Basic flags with different types
  * - Mandatory and optional flags
@@ -9,14 +9,13 @@
  * - Enum validation
  * - Help generation
  */
-
-import { ArgParser } from "../dist/index.js";
+import { ArgParser } from "../src";
 
 // Create a new ArgParser instance
 const parser = new ArgParser(
   {
     appName: "Simple CLI Example",
-    appCommandName: "simple-cli",
+    appCommandName: "simple-cli-1",
     description: "A simple CLI tool demonstrating ArgParser features",
   },
   [
@@ -29,7 +28,7 @@ const parser = new ArgParser(
       mandatory: true,
       enum: ["development", "staging", "production"],
     },
-    
+
     // Number flag with default value
     {
       name: "port",
@@ -38,7 +37,7 @@ const parser = new ArgParser(
       type: "number",
       defaultValue: 3000,
     },
-    
+
     // Boolean flag (flag-only)
     {
       name: "verbose",
@@ -48,7 +47,7 @@ const parser = new ArgParser(
       flagOnly: true,
       defaultValue: false,
     },
-    
+
     // String flag that allows multiple values
     {
       name: "files",
@@ -57,7 +56,7 @@ const parser = new ArgParser(
       type: "string",
       allowMultiple: true,
     },
-    
+
     // Optional string flag
     {
       name: "output",
@@ -66,14 +65,14 @@ const parser = new ArgParser(
       type: "string",
       defaultValue: "./dist",
     },
-  ]
+  ],
 );
 
 // Parse command line arguments
 const args = parser.parse(process.argv.slice(2));
 
 // Use the parsed arguments
-console.log("🚀 Simple CLI Example");
+console.log("Simple CLI Example");
 console.log("===================");
 console.log(`Environment: ${args.environment}`);
 console.log(`Port: ${args.port}`);
@@ -87,8 +86,8 @@ if (args.files && args.files.length > 0) {
 }
 
 if (args.verbose) {
-  console.log("\n📝 Verbose mode enabled - showing detailed information");
+  console.log("\nVerbose mode enabled - showing detailed information");
   console.log("All parsed arguments:", JSON.stringify(args, null, 2));
 }
 
-console.log("\n✅ CLI execution completed successfully!");
+console.log("\nCLI execution completed successfully!");

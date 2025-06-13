@@ -4,7 +4,7 @@ This directory contains example CLI applications demonstrating various features 
 
 ## Examples
 
-### 1. Simple CLI (`simple-cli.ts`)
+### 1. Simple CLI (`simple-cli-1.ts`)
 
 A basic example showing fundamental ArgParser features:
 
@@ -15,15 +15,19 @@ A basic example showing fundamental ArgParser features:
 - Multiple values for a single flag
 
 **Run the example:**
+
 ```bash
 # Build the library first
 pnpm build
 
 # Run with TypeScript
-npx tsx examples/simple-cli.ts --env production --port 8080 --verbose --file src/index.ts --file src/ArgParser.ts
+npx tsx examples/simple-cli-1.ts --env production --port 8080 --verbose --file src/index.ts --file src/ArgParser.ts
+
+# Run with bun
+bun examples/simple-cli-1.ts --env production --port 8080 --verbose --file src/index.ts --file src/ArgParser.ts
 
 # See help
-npx tsx examples/simple-cli.ts --help
+npx tsx examples/simple-cli-1.ts --help
 ```
 
 ### 2. Advanced CLI (`advanced-cli.ts`)
@@ -37,12 +41,16 @@ A more complex example demonstrating:
 - Automatic handler execution
 
 **Run the example:**
+
 ```bash
 # Build the library first
 pnpm build
 
 # Run database migration
 npx tsx examples/advanced-cli.ts --env production db migrate --force
+
+# Run database migration (run with bun)
+bun examples/advanced-cli.ts --env production db migrate --force
 
 # Start server with watch mode
 npx tsx examples/advanced-cli.ts --verbose server start --port 8080 --watch
@@ -57,30 +65,6 @@ npx tsx examples/advanced-cli.ts --help
 npx tsx examples/advanced-cli.ts db --help
 npx tsx examples/advanced-cli.ts server start --help
 ```
-
-## Key Features Demonstrated
-
-### Basic Features (Simple CLI)
-- **Type Safety**: Automatic type inference for parsed arguments
-- **Validation**: Enum validation for restricted values
-- **Defaults**: Sensible default values for optional flags
-- **Multiple Values**: Support for flags that accept multiple values
-- **Help Generation**: Automatic help text generation
-
-### Advanced Features (Advanced CLI)
-- **Sub-commands**: Hierarchical command structure
-- **Handlers**: Automatic execution of command-specific functions
-- **Context**: Access to parent arguments and command chain
-- **Global Flags**: Flags that apply across all sub-commands
-- **Nested Commands**: Multi-level command hierarchies
-
-## Building Your Own CLI
-
-1. **Start Simple**: Begin with the simple example and add flags as needed
-2. **Add Sub-commands**: Use sub-commands to organize related functionality
-3. **Use Handlers**: Implement handlers for automatic command execution
-4. **Leverage Types**: Take advantage of TypeScript's type inference
-5. **Test Thoroughly**: Use the comprehensive test suite as a reference
 
 ## Tips
 

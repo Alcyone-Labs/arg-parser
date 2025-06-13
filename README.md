@@ -6,18 +6,24 @@ Whether you're building a simple script or a complex nested CLI application, Arg
 
 ## TODOs
 
+### Changelog
+
+- 1.0.1: Reorganize the examples, replace toSorted that's only NodeJS 20+
+
 ### Features
 
-- [] Publish as an open-source library
-- [] Upgrade to Zod/V4
-- [] Add support for locales / translations
-- [] (potentially) support for async type function to enable more flexibility (but at the cost of a potentially much larger issue surface)
-- [] (potentially) add support for fully typed parsed output, this has proven very challenging
+- [x] Publish as an open-source library
+- [ ] Improve flag options collision prevention
+- [ ] Make it possible to pass a `--load-from` parameter that loads all the parameters from a JSON file instead of command line
+- [ ] Add support for locales / translations
+- [ ] (potentially) support for async type function to enable more flexibility (but at the cost of a potentially much larger issue surface, would need to see if there's a need for it)
+- [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
+- [ ] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
 
 ### (known) Bugs / DX improvement points
 
-- [] When a flag with `flagOnly: false` is going to consume a value that appears like a valid flag from the set, raise the appropriate warning
-- [] When a flag with `allowMultiple: false` and `flagOnly: true` is passed multiple times (regardless of the options, for example "-1" and later "--one", both being valid), raise the correct error
+- [ ] When a flag with `flagOnly: false` is going to consume a value that appears like a valid flag from the set, raise the appropriate warning
+- [ ] When a flag with `allowMultiple: false` and `flagOnly: true` is passed multiple times (regardless of the options, for example "-1" and later "--one", both being valid), raise the correct error
 
 ## Features
 
@@ -241,6 +247,8 @@ ArgParser excels at building CLIs with nested commands, like `git clone` or `doc
 ### Defining Sub-Commands
 
 Define sub-commands using the `subCommands` option in the `ArgParser` constructor or the `.addSubCommand(subCommand)` method. Each sub-command requires a `name`, `description`, and a dedicated `ArgParser` instance for its own flags and nested sub-commands.
+
+Note that each flag name set is debounced to make sure there are no duplicates, but the flags are sandboxed within their respective sub-commands. So it's ok to use the same flag on different sub-commands.
 
 ```typescript
 import {

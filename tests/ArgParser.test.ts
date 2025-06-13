@@ -1,5 +1,13 @@
 // packages/arg-parser/tests/ArgParser.test.ts
-import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  test,
+  vi,
+  type MockInstance,
+} from "vitest";
 import { ArgParser, ArgParserError } from "../src/ArgParser";
 import { type IFlag } from "../src/types";
 
@@ -50,7 +58,9 @@ describe("ArgParser", () => {
   const testCommandName = "test-cli";
 
   let mockConsoleError: ReturnType<typeof vi.spyOn>;
-  let mockProcessExit: MockInstance<(code?: string | number | null | undefined) => never>;
+  let mockProcessExit: MockInstance<
+    (code?: string | number | null | undefined) => never
+  >;
 
   beforeEach(() => {
     parser = new ArgParser({
@@ -61,9 +71,13 @@ describe("ArgParser", () => {
     mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockProcessExit = vi
       .spyOn(process, "exit")
-      .mockImplementation((code?: string | number | null | undefined): never => {
-        throw new Error(`process.exit called with code ${code ?? "undefined"}`);
-      });
+      .mockImplementation(
+        (code?: string | number | null | undefined): never => {
+          throw new Error(
+            `process.exit called with code ${code ?? "undefined"}`,
+          );
+        },
+      );
   });
 
   afterEach(() => {
@@ -129,7 +143,7 @@ describe("ArgParser", () => {
       "-t",
       "metadata",
     ]);
-    expect(args["files"]?.toSorted()).toEqual(["file1", "file2"]);
+    expect(args["files"]?.slice().sort()).toEqual(["file1", "file2"]);
     expect(mockProcessExit).not.toHaveBeenCalled();
   });
 
@@ -803,7 +817,6 @@ describe("ArgParser", () => {
     test("should handle flags before subcommands correctly", () => {
       const handler = vi.fn();
       const parser = new ArgParser({
-
         appCommandName: testCommandName,
       })
         .addFlags([
@@ -846,7 +859,6 @@ describe("ArgParser", () => {
     test("should error on flags from parent scope appearing after subcommand flags", () => {
       const handler = vi.fn();
       const parser = new ArgParser({
-
         appCommandName: testCommandName,
       })
         .addFlags([
@@ -892,7 +904,6 @@ describe("ArgParser", () => {
     test("should handle flags between nested subcommands correctly", () => {
       const finalHandler = vi.fn();
       const parser = new ArgParser({
-
         appCommandName: testCommandName,
       })
         .addFlags([
@@ -1115,17 +1126,21 @@ describe("ArgParser", () => {
       let exitCode: number | undefined = undefined;
       mockProcessExit = vi
         .spyOn(process, "exit")
-        .mockImplementation((code?: string | number | null | undefined): never => {
-          if (typeof code === "string") {
-            const num = parseInt(code, 10);
-            exitCode = isNaN(num) ? 1 : num;
-          } else if (code === null) {
-            exitCode = 0;
-          } else {
-            exitCode = code;
-          }
-          throw new Error(`process.exit called with code ${code ?? "undefined"}`);
-        });
+        .mockImplementation(
+          (code?: string | number | null | undefined): never => {
+            if (typeof code === "string") {
+              const num = parseInt(code, 10);
+              exitCode = isNaN(num) ? 1 : num;
+            } else if (code === null) {
+              exitCode = 0;
+            } else {
+              exitCode = code;
+            }
+            throw new Error(
+              `process.exit called with code ${code ?? "undefined"}`,
+            );
+          },
+        );
 
       expect(() => simpleParser.parse([])).toThrow(
         /process.exit called with code 0/,
@@ -1137,8 +1152,6 @@ describe("ArgParser", () => {
 
       expect(exitCode).toBe(0);
     });
-
-
 
     test("should NOT display auto-help if arguments are provided (and trigger error if needed)", () => {
       const parser = new ArgParser({
@@ -1191,17 +1204,21 @@ describe("ArgParser", () => {
       let exitCode: number | undefined = undefined;
       mockProcessExit = vi
         .spyOn(process, "exit")
-        .mockImplementation((code?: string | number | null | undefined): never => {
-          if (typeof code === "string") {
-            const num = parseInt(code, 10);
-            exitCode = isNaN(num) ? 1 : num;
-          } else if (code === null) {
-            exitCode = 0;
-          } else {
-            exitCode = code;
-          }
-          throw new Error(`process.exit called with code ${code ?? "undefined"}`);
-        });
+        .mockImplementation(
+          (code?: string | number | null | undefined): never => {
+            if (typeof code === "string") {
+              const num = parseInt(code, 10);
+              exitCode = isNaN(num) ? 1 : num;
+            } else if (code === null) {
+              exitCode = 0;
+            } else {
+              exitCode = code;
+            }
+            throw new Error(
+              `process.exit called with code ${code ?? "undefined"}`,
+            );
+          },
+        );
 
       expect(() => parser.parse([])).toThrow(/process.exit called with code 0/);
 
@@ -1650,9 +1667,13 @@ describe("ArgParser", () => {
       mockProcessExit.mockRestore();
       mockProcessExit = vi
         .spyOn(process, "exit")
-        .mockImplementation((code?: string | number | null | undefined): never => {
-          throw new Error(`process.exit called with code ${code ?? "undefined"}`);
-        });
+        .mockImplementation(
+          (code?: string | number | null | undefined): never => {
+            throw new Error(
+              `process.exit called with code ${code ?? "undefined"}`,
+            );
+          },
+        );
     });
 
     afterEach(() => {
