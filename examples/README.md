@@ -1,75 +1,220 @@
 # ArgParser Examples
 
-This directory contains example CLI applications demonstrating various features of the ArgParser library.
+This directory contains example CLI applications demonstrating various features of the ArgParser library, from basic CLI usage to advanced MCP server integration.
 
-## Examples
+## 🚀 **Runtime Compatibility**
 
-### 1. Simple CLI (`simple-cli-1.ts`)
+All examples work seamlessly across multiple JavaScript runtimes:
 
-A basic example showing fundamental ArgParser features:
+### **BunJS (Recommended)**
+```bash
+bun examples/getting-started.ts --input data.txt --verbose
+bun examples/simple-cli.ts --env production --port 8080
+```
 
-- Basic flag types (string, number, boolean)
-- Mandatory and optional flags
-- Default values
-- Enum validation
-- Multiple values for a single flag
+### **Node.js**
+```bash
+npx tsx examples/getting-started.ts --input data.txt --verbose
+npx tsx examples/simple-cli.ts --env production --port 8080
+```
+
+### **Deno**
+```bash
+# Direct execution
+deno run --unstable-sloppy-imports --allow-read --allow-write --allow-env examples/getting-started.ts --input data.txt --verbose
+
+# Or use predefined tasks (recommended)
+deno task example:getting-started --input data.txt --verbose
+deno task example:simple-cli --env production --port 8080
+```
+
+### **Using Built Artifacts**
+
+After running `pnpm build`, you can also use the compiled JavaScript files:
+
+```bash
+# Using CommonJS build (works with any Node.js version)
+node -e "const { ArgParser } = require('./dist/index.cjs'); /* your CLI code */"
+
+# Using ES Modules build
+node -e "import('./dist/index.mjs').then(({ ArgParser }) => { /* your CLI code */ });"
+
+# For production applications, use the minified version
+node -e "import('./dist/index.min.mjs').then(({ ArgParser }) => { /* your CLI code */ });"
+```
+
+**Note:** Replace `bun` with your preferred runtime command in all examples below.
+
+## 📋 **Quick Overview**
+
+| Example | Purpose | Key Features |
+|---------|---------|--------------|
+| `getting-started.ts` | Learn the basics | Complete executable CLI, subcommands, MCP integration |
+| `simple-cli.ts` | Essential patterns | Clean flag examples, modern handler patterns |
+| `v1.1.0-showcase.ts` | Latest features | System flags, environment loading, multi-transport MCP |
+| `fzf-search-cli.ts` | Real-world usage | Production-ready tool, complex validation, error handling |
+| `with-env-example.ts` | Configuration | File loading, environment management, save/load workflow |
+| `mcp-preset-transports.ts` | MCP advanced | Preset transport configuration, multiple protocols |
+
+## 🌟 **Featured Examples**
+
+### **v1.1.0 Feature Showcase (`v1.1.0-showcase.ts`)**
+
+**NEW!** Comprehensive demonstration of all v1.1.0 features including:
+
+- **System flags** (`--s-debug`, `--s-with-env`, `--s-save-to-env`)
+- **MCP server integration** with multiple transport types
+- **Environment loading** from various file formats
+- **Multiple transport configurations** for maximum flexibility
+
+**Run the showcase:**
+
+```bash
+# Basic CLI usage with debug
+bun examples/v1.1.0-showcase.ts --s-debug --input data.txt process --format json
+
+# Load environment from YAML
+bun examples/v1.1.0-showcase.ts --s-with-env config.yaml --input data.txt analyze --algorithm neural
+
+# Save current configuration to environment file
+bun examples/v1.1.0-showcase.ts --input data.txt --s-save-to-env
+
+# Start MCP server with stdio (default)
+bun examples/v1.1.0-showcase.ts serve
+
+# Start MCP server with SSE transport
+bun examples/v1.1.0-showcase.ts serve --transport sse --port 3001
+
+# Start MCP server with multiple transports
+bun examples/v1.1.0-showcase.ts serve --transports '[{"type":"stdio"},{"type":"sse","port":3001,"path":"/sse"},{"type":"streamable-http","port":3002,"path":"/mcp"}]'
+
+# Start predefined multi-transport server
+bun examples/v1.1.0-showcase.ts serve-multi
+```
+
+## **Core Examples**
+
+### 1. **Getting Started** (`getting-started.ts`) ⭐
+
+**Perfect for beginners!** A complete, executable CLI demonstrating the most common ArgParser patterns:
+
+- **Basic flags**: String, boolean, and array types with validation
+- **Essential features**: Mandatory flags, default values, enum validation
+- **Sub-commands**: Building hierarchical CLIs with command-specific flags
+- **MCP integration**: Transform your CLI into an MCP server with one line
+
+**Run the examples:**
+
+```bash
+# Basic file processing
+bun examples/getting-started.ts --input data.txt --format json --verbose
+
+# Convert files with subcommand
+bun examples/getting-started.ts convert --input data.csv --format yaml --compress
+
+# Analyze files
+bun examples/getting-started.ts analyze --file report.txt --type detailed
+
+# Start MCP server
+bun examples/getting-started.ts serve
+
+# Show help
+bun examples/getting-started.ts --help
+```
+
+### 2. **Simple CLI** (`simple-cli.ts`)
+
+Clean, focused example demonstrating essential flag types:
+
+- **String flags** with enum validation
+- **Number flags** with default values
+- **Boolean flags** (flag-only)
+- **Array flags** (multiple values)
+- **Modern handler patterns**
+
+```bash
+# Run with all flags
+bun examples/simple-cli.ts --env production --port 8080 --verbose --file src/main.ts --file src/utils.ts
+
+# Show help
+bun examples/simple-cli.ts --help
+
+### 3. **Configuration File Loading** (`with-env-example.ts`)
+
+Demonstrates the `--s-with-env` and `--s-save-to-env` system flags for configuration management:
+
+- Support for multiple file formats (.env, YAML, JSON, TOML)
+- CLI arguments override file configuration
+- Automatic type conversion and validation
+- Save current configuration to files
 
 **Run the example:**
 
 ```bash
-# Build the library first
-pnpm build
+# Load from .env file
+bun examples/with-env-example.ts --s-with-env examples/config.env
 
-# Run with TypeScript
-npx tsx examples/simple-cli-1.ts --env production --port 8080 --verbose --file src/index.ts --file src/ArgParser.ts
+# Load from YAML file
+bun examples/with-env-example.ts --s-with-env examples/config.yaml
 
-# Run with bun
-bun examples/simple-cli-1.ts --env production --port 8080 --verbose --file src/index.ts --file src/ArgParser.ts
+# Save current configuration to auto-generated file
+bun examples/with-env-example.ts --verbose --output result.txt --count 5 --s-save-to-env
 
-# See help
-npx tsx examples/simple-cli-1.ts --help
+# Save to specific file
+bun examples/with-env-example.ts --verbose --count 10 --s-save-to-env my-config.yaml
+
+# Load and modify saved configuration
+bun examples/with-env-example.ts --s-with-env my-config.yaml --count 15
 ```
 
-### 2. Advanced CLI (`advanced-cli.ts`)
+### 3. **Real-World Example** (`fzf-search-cli.ts`)
 
-A more complex example demonstrating:
+A complete, production-ready CLI tool demonstrating:
 
-- Sub-commands with nested structure
-- Handler functions for command execution
-- Global flags that apply to all commands
-- Command-specific flags
-- Automatic handler execution
+- **Real-world functionality**: Fuzzy file search using fzf
+- **Complex flag validation**: File extensions, directory paths
+- **MCP server integration**: Transform CLI into MCP server
+- **Error handling**: Graceful handling of missing dependencies
+- **Modern patterns**: Clean code structure and TypeScript types
 
 **Run the example:**
 
 ```bash
-# Build the library first
-pnpm build
+# Basic file search
+bun examples/fzf-search-cli.ts --query "test" --directory src
 
-# Run database migration
-npx tsx examples/advanced-cli.ts --env production db migrate --force
+# Search with file extensions filter
+bun examples/fzf-search-cli.ts --query "util" --extensions "ts,js" --max-results 10
 
-# Run database migration (run with bun)
-bun examples/advanced-cli.ts --env production db migrate --force
+# Start as MCP server
+bun examples/fzf-search-cli.ts mcp-server
 
-# Start server with watch mode
-npx tsx examples/advanced-cli.ts --verbose server start --port 8080 --watch
-
-# Seed database
-npx tsx examples/advanced-cli.ts db seed --count 500
-
-# See help for main command
-npx tsx examples/advanced-cli.ts --help
-
-# See help for sub-commands
-npx tsx examples/advanced-cli.ts db --help
-npx tsx examples/advanced-cli.ts server start --help
+# Show help
+bun examples/fzf-search-cli.ts --help
 ```
 
-## Tips
+## **Development Tips**
 
-- Use descriptive flag names and descriptions
+### **CLI Design Best Practices**
+- Use descriptive flag names and comprehensive descriptions
 - Provide sensible defaults where possible
 - Use enum validation for restricted values
-- Consider using global flags for common options
+- Consider using global flags for common options like `--verbose`
 - Implement proper error handling in your handlers
+
+### **MCP Integration Tips**
+- Design your CLI with clear, focused commands that work well as MCP tools
+- Use meaningful return values from handlers - they become MCP tool responses
+- Consider which transport types your users need (stdio for CLI tools, HTTP for web apps)
+- Test your MCP tools with multiple transports to ensure compatibility
+
+### **Configuration Management**
+- Use `--s-save-to-env` to generate configuration templates for users
+- Combine `--s-with-env` with CLI arguments for flexible deployment scenarios
+- Use `--s-debug` during development to understand complex command chains
+- Document your configuration file formats for users
+
+### **Performance & Debugging**
+- Use `--s-debug-print` to inspect complex parser configurations
+- Test with various argument combinations to ensure robust parsing
+- Consider using async handlers for I/O operations when using `ArgParserWithMcp`

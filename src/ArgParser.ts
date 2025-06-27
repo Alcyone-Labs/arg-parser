@@ -1,11 +1,14 @@
-import fs from "node:fs";
-import path from "node:path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import chalk from "chalk";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
+import * as yaml from "js-yaml";
+import * as toml from "@iarna/toml";
+import * as dotenv from "dotenv";
 import { FlagManager } from "./FlagManager";
-import {
-  HandlerContext,
+import type {
   IFlag,
+  IHandlerContext,
   ISubCommand,
   ProcessedFlag,
   TParsedArgs,
@@ -23,10 +26,16 @@ export class ArgParserError extends Error {
   }
 }
 
-// zodFlagSchema, IFlag (zod-derived), ResolveType, ExtractFlagType, TParsedArgs (original)
-// have been moved to types.ts or are superseded by types from types.ts
+export interface IArgParserParams<THandlerReturn = any> {
+  /**
+   * This is the display name of the app, used in help text
+   */
+  appName?: string;
+  subCommands?: ISubCommand[];
+  handler?: (
+    ctx: IHandlerContext<any, any>,
+  ) => THandlerReturn | Promise<THandlerReturn>;
 
-interface IArgParserParams {
   /**
    * Add an extra new line between each flag group,
    * makes the text more readable but uses more space
@@ -70,8 +79,7 @@ interface IArgParserParams {
   handleErrors?: boolean;
   /**
    * The command name to display in help suggestions (e.g., 'dabl').
-   * If not provided, it falls back to appName or guessing from the script path.
-   * @since 1.5.1
+   * If not provided, it falls back to guessing from the script path.
    */
   appCommandName?: string;
   /**
@@ -98,25 +106,25 @@ interface IParseOptions {
 
 type TParsedArgsWithRouting<T = any> = T & {
   $commandChain?: string[];
-  handlerToExecute?: { handler: Function; context: HandlerContext };
+  handlerToExecute?: { handler: Function; context: IHandlerContext };
 };
 
 type RecursiveParseResult = {
   finalArgs: TParsedArgsWithRouting<any>;
-  handlerToExecute?: { handler: Function; context: HandlerContext };
+  handlerToExecute?: { handler: Function; context: IHandlerContext };
 };
 
-export class ArgParser {
+export class ArgParser<THandlerReturn = any> {
   #appName: string = "Argument Parser";
   #appCommandName?: string;
   #subCommandName: string = "";
-  #parameters: IArgParserParams = {
+  #parameters: IArgParserParams<THandlerReturn> = {
     extraNewLine: true,
     wrapAtWidth: 50,
     blankSpaceWidth: 30,
     mandatoryCharacter: "*",
   };
-  #handler?: (ctx: HandlerContext) => void;
+  #handler?: (ctx: IHandlerContext) => void;
   #throwForDuplicateFlags: boolean = false;
   #description?: string;
   #handleErrors: boolean = true;
@@ -127,11 +135,7 @@ export class ArgParser {
   #flagManager: FlagManager;
 
   constructor(
-    options: IArgParserParams & {
-      appName?: string;
-      subCommands?: ISubCommand[];
-      handler?: (ctx: HandlerContext) => void;
-    } = {},
+    options: IArgParserParams<THandlerReturn> = {},
     initialFlags?: readonly IFlag[],
   ) {
     this.#appName = options.appName || "app";
@@ -198,7 +202,31 @@ export class ArgParser {
   }
 
   get flagNames(): string[] {
-    return this.#flagManager.flagNames; // Delegates to FlagManager
+    return this.#flagManager.flagNames;
+  }
+
+  public getAppName(): string | undefined {
+    return this.#appName;
+  }
+
+  public getAppCommandName(): string | undefined {
+    return this.#appCommandName;
+  }
+
+  public getSubCommandName(): string {
+    return this.#subCommandName;
+  }
+
+  public getDescription(): string | undefined {
+    return this.#description;
+  }
+
+  public getHandler(): ((ctx: IHandlerContext) => void) | undefined {
+    return this.#handler;
+  }
+
+  public getSubCommands(): Map<string, ISubCommand> {
+    return this.#subCommands;
   }
 
   private _addToOutput(
@@ -209,7 +237,7 @@ export class ArgParser {
   ) {
     let value: unknown = arg;
 
-    if (flag.type === Boolean) {
+    if (flag["type"] === Boolean) {
       if (typeof arg === "boolean") {
         value = arg;
       } else if (typeof arg === "string") {
@@ -314,7 +342,11 @@ export class ArgParser {
    * @param handler - The function to execute.
    * @returns The ArgParser instance for chaining.
    */
-  setHandler(handler: (ctx: HandlerContext) => void): this {
+  setHandler(
+    handler: (
+      ctx: IHandlerContext<any, any>,
+    ) => THandlerReturn | Promise<THandlerReturn>,
+  ): this {
     this.#handler = handler;
     return this;
   }
@@ -409,7 +441,12 @@ export class ArgParser {
     processArgs: string[],
     options?: IParseOptions,
   ): boolean {
-    if (processArgs.length === 0 && !this.#parentParser && !this.#handler) {
+    // Auto-help should only trigger for root parsers that are intended as main CLI entry points
+    // A parser is considered a "root CLI parser" if it has appCommandName explicitly set
+    // This ensures that only parsers intended as main CLI tools trigger auto-help
+    const isRootCliParser = !this.#parentParser && !!this.#appCommandName;
+
+    if (processArgs.length === 0 && isRootCliParser && !this.#handler) {
       console.log(this.helpText());
       if (typeof process === "object" && typeof process.exit === "function") {
         process.exit(0 as never);
@@ -417,7 +454,7 @@ export class ArgParser {
       return true;
     }
 
-    if (processArgs.includes("--LIB-debug-print")) {
+    if (processArgs.includes("--s-debug-print")) {
       this.printAll("ArgParser.full.json");
       if (typeof process === "object" && typeof process.exit === "function") {
         process.exit(0);
@@ -425,12 +462,58 @@ export class ArgParser {
       return true;
     }
 
+    // Handle --s-with-env system flag early to modify processArgs before parsing
+    const withEnvIndex = processArgs.findIndex(arg => arg === "--s-with-env");
+    if (withEnvIndex !== -1) {
+      if (withEnvIndex + 1 >= processArgs.length) {
+        console.error(chalk.red("Error: --s-with-env requires a file path argument"));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(1);
+        }
+        return true;
+      }
+
+      const filePath = processArgs[withEnvIndex + 1];
+      if (!filePath || filePath.startsWith("-")) {
+        console.error(chalk.red("Error: --s-with-env requires a file path argument"));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(1);
+        }
+        return true;
+      }
+
+      try {
+        // Identify the final parser and parser chain for loading configuration
+        const { finalParser: identifiedFinalParser, parserChain: identifiedParserChain } =
+          this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+
+        const envConfigArgs = identifiedFinalParser.#_loadEnvFile(filePath, identifiedParserChain);
+        if (envConfigArgs) {
+          // Merge environment configuration with process args
+          // CLI args take precedence over file configuration
+          const mergedArgs = identifiedFinalParser.#_mergeEnvConfigWithArgs(envConfigArgs, processArgs);
+
+          // Replace the original processArgs array contents
+          processArgs.length = 0;
+          processArgs.push(...mergedArgs);
+        }
+      } catch (error) {
+        console.error(chalk.red(`Error loading environment file: ${error instanceof Error ? error.message : String(error)}`));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(1);
+        }
+        return true;
+      }
+    }
+
+
+
     const { finalParser: identifiedFinalParser } =
       this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-    if (processArgs.includes("--LIB-debug")) {
+    if (processArgs.includes("--s-debug")) {
       console.log(
-        chalk.yellow.bold("\n--- ArgParser --LIB-debug Runtime Context ---"),
+        chalk.yellow.bold("\n--- ArgParser --s-debug Runtime Context ---"),
       );
 
       const {
@@ -560,7 +643,7 @@ export class ArgParser {
       );
       identifiedFinalParser.printAll();
 
-      console.log(chalk.yellow.bold("--- End ArgParser --LIB-debug ---"));
+      console.log(chalk.yellow.bold("--- End ArgParser --s-debug ---"));
       if (typeof process === "object" && typeof process.exit === "function") {
         process.exit(0);
       }
@@ -643,7 +726,17 @@ export class ArgParser {
     }[] = [];
     const checkedFlagNames = new Set<string>();
 
-    for (const parser of parserChain) {
+    // Check if this is an MCP subcommand execution
+    const finalParser = parserChain[parserChain.length - 1];
+    const isExecutingMcpSubcommand = this.#_isExecutingMcpSubcommand(commandChain);
+
+    // For MCP subcommands, only validate the final parser's mandatory flags
+    // For regular commands, validate all parsers in the chain
+    const parsersToValidate = isExecutingMcpSubcommand
+      ? [finalParser]
+      : parserChain;
+
+    for (const parser of parsersToValidate) {
       const currentCommandChain = parser.getCommandChain();
       for (const flag of parser.#flagManager.flags) {
         // Use FlagManager
@@ -746,7 +839,28 @@ export class ArgParser {
     }
     handlerToExecute.context.args = handlerArgs;
 
-    handlerToExecute.handler(handlerToExecute.context);
+    try {
+      const handlerResult = handlerToExecute.handler(handlerToExecute.context);
+
+      // Check if result is a Promise (async handler)
+      if (handlerResult && typeof handlerResult.then === "function") {
+        // Store async handler info for ArgParserWithMcp to handle
+        (finalArgs as any)._asyncHandlerPromise = handlerResult;
+        (finalArgs as any)._asyncHandlerInfo = handlerToExecute;
+        return;
+      }
+
+      (finalArgs as any).handlerResponse = handlerResult;
+    } catch (error) {
+      // For synchronous handlers, we can handle sync errors
+      if (this.#handleErrors) {
+        this.#displayErrorAndExit(
+          new ArgParserError(`Handler error: ${error}`, []),
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 
   parse(
@@ -764,12 +878,18 @@ export class ArgParser {
         parserChain: identifiedParserChain,
       } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
+      // Check for --s-save-to-env flag at the final parser level
+      if (identifiedFinalParser.#_handleSaveToEnvFlag(processArgs, identifiedParserChain)) {
+        return {} as TParsedArgsWithRouting<any>;
+      }
+
       const { finalArgs, handlerToExecute } = this._parseRecursive(
         processArgs,
         this,
         {},
         [],
         options,
+        undefined,
       );
 
       // Set command chain in final args
@@ -816,6 +936,7 @@ export class ArgParser {
     accumulatedParentArgs: TParsedArgs<any>,
     commandChainSoFar: string[],
     options?: IParseOptions,
+    parentParser?: ArgParser,
   ): RecursiveParseResult {
     let subCommandIndex = -1;
     let subCommandName: string | null = null;
@@ -872,6 +993,7 @@ export class ArgParser {
             parentArgs: accumulatedParentArgs,
             commandChain: commandChainSoFar,
             parser: currentParser,
+            parentParser: parentParser,
           },
         };
       }
@@ -907,6 +1029,7 @@ export class ArgParser {
       combinedArgsForNextLevel,
       nextCommandChain,
       options,
+      currentParser,
     );
   }
 
@@ -1465,5 +1588,637 @@ ${descriptionLines
     }
 
     return config;
+  }
+
+  /**
+   * Generates a default environment file name based on the app name
+   */
+  #_generateDefaultEnvFileName(): string {
+    let baseName = "config";
+
+    if (this.#appCommandName) {
+      baseName = this.#appCommandName;
+    } else if (this.#appName && this.#appName !== "Argument Parser") {
+      baseName = this.#appName;
+    }
+
+    // Convert to a safe filename format (PascalCase for .env files)
+    baseName = baseName
+      .split(/[\s-_]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join("");
+
+    return `${baseName}.env`;
+  }
+
+  /**
+   * Checks if the current execution is for an MCP subcommand
+   */
+  #_isExecutingMcpSubcommand(commandChain: string[]): boolean {
+    if (commandChain.length === 0) return false;
+
+    // Walk through the command chain to find if any subcommand is marked as MCP
+    let currentParser: ArgParser = this;
+
+    for (const commandName of commandChain) {
+      const subCommand = currentParser.#subCommands.get(commandName);
+      if (subCommand) {
+        if ((subCommand as any).isMcp === true) {
+          return true;
+        }
+        currentParser = subCommand.parser;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Handles the --s-save-to-env system flag at the final parser level
+   */
+  #_handleSaveToEnvFlag(processArgs: string[], parserChain: ArgParser[]): boolean {
+    const saveToEnvIndex = processArgs.findIndex(arg => arg === "--s-save-to-env");
+    if (saveToEnvIndex !== -1) {
+      let filePath: string;
+
+      // Check if a filename is provided
+      if (saveToEnvIndex + 1 < processArgs.length) {
+        const nextArg = processArgs[saveToEnvIndex + 1];
+        if (nextArg && !nextArg.startsWith("-")) {
+          filePath = nextArg;
+        } else {
+          // No filename provided, auto-generate one
+          filePath = this.#_generateDefaultEnvFileName();
+        }
+      } else {
+        // No filename provided, auto-generate one
+        filePath = this.#_generateDefaultEnvFileName();
+      }
+
+      try {
+        this.#_saveToEnvFile(filePath, processArgs, parserChain);
+        console.log(chalk.green(`Environment configuration saved to: ${filePath}`));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(0);
+        }
+        return true;
+      } catch (error) {
+        console.error(chalk.red(`Error saving environment file: ${error instanceof Error ? error.message : String(error)}`));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(1);
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Saves the current parser's flags and their values to an environment file
+   * in the specified format based on file extension.
+   */
+  #_saveToEnvFile(filePath: string, processArgs: string[], parserChain: ArgParser[]): void {
+    // Determine file format based on extension
+    const ext = path.extname(filePath).toLowerCase();
+    let format: 'env' | 'yaml' | 'json' | 'toml';
+
+    if (ext === '.yaml' || ext === '.yml') {
+      format = 'yaml';
+    } else if (ext === '.json' || ext === '.jsonc') {
+      format = 'json';
+    } else if (ext === '.toml' || ext === '.tml') {
+      format = 'toml';
+    } else {
+      format = 'env'; // Default to .env format for no extension or unknown extensions
+    }
+
+    // Get all flags from the parser chain (current parser and inherited ones from parent chain)
+    const allFlags: ProcessedFlag[] = [];
+    const seenFlagNames = new Set<string>();
+
+    // Start from the final parser (this) and work backwards through the chain
+    // This ensures that the final parser's flags take precedence over parent flags
+    for (let i = parserChain.length - 1; i >= 0; i--) {
+      const parser = parserChain[i];
+      for (const flag of parser.#flagManager.flags) {
+        if (!seenFlagNames.has(flag["name"])) {
+          allFlags.push(flag);
+          seenFlagNames.add(flag["name"]);
+        }
+      }
+    }
+
+    const flags = allFlags;
+
+    // Parse current arguments to see which flags are set
+    const { parsedArgs } = this.#parseFlags(processArgs.filter(arg =>
+      arg !== '--s-save-to-env' && arg !== filePath
+    ));
+
+    // Generate content based on format
+    let content: string;
+    switch (format) {
+      case 'env':
+        content = this.#_generateEnvFormat(flags, parsedArgs);
+        break;
+      case 'yaml':
+        content = this.#_generateYamlFormat(flags, parsedArgs);
+        break;
+      case 'json':
+        content = this.#_generateJsonFormat(flags, parsedArgs);
+        break;
+      case 'toml':
+        content = this.#_generateTomlFormat(flags, parsedArgs);
+        break;
+    }
+
+    // Ensure directory exists
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Write file
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
+
+  /**
+   * Loads configuration from an environment file in various formats
+   */
+  #_loadEnvFile(filePath: string, parserChain: ArgParser[]): Record<string, any> {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Configuration file not found: ${filePath}`);
+    }
+
+    // Determine file format based on extension
+    const ext = path.extname(filePath).toLowerCase();
+    let format: 'env' | 'yaml' | 'json' | 'toml';
+
+    if (ext === '.yaml' || ext === '.yml') {
+      format = 'yaml';
+    } else if (ext === '.json' || ext === '.jsonc') {
+      format = 'json';
+    } else if (ext === '.toml' || ext === '.tml') {
+      format = 'toml';
+    } else {
+      format = 'env'; // Default to .env format for no extension or unknown extensions
+    }
+
+    // Load and parse the file
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    let rawConfig: Record<string, any>;
+
+    switch (format) {
+      case 'env':
+        rawConfig = this.#_parseEnvFile(fileContent);
+        break;
+      case 'yaml':
+        rawConfig = this.#_parseYamlFile(fileContent);
+        break;
+      case 'json':
+        rawConfig = this.#_parseJsonFile(fileContent);
+        break;
+      case 'toml':
+        rawConfig = this.#_parseTomlFile(fileContent);
+        break;
+    }
+
+    // Convert the raw configuration to match flag names and types
+    return this.#_convertConfigToFlagValues(rawConfig, parserChain);
+  }
+
+  /**
+   * Parses .env file content using dotenv
+   */
+  #_parseEnvFile(content: string): Record<string, any> {
+    const parsed = dotenv.parse(content);
+    const result: Record<string, any> = {};
+
+    // Convert environment variable names back to flag names
+    for (const [envKey, envValue] of Object.entries(parsed)) {
+      // Convert UPPER_CASE_WITH_UNDERSCORES back to lowercase-with-dashes
+      const flagName = envKey.toLowerCase().replace(/_/g, '-');
+
+      // Parse the value based on its content
+      if (envValue === 'true') {
+        result[flagName] = true;
+      } else if (envValue === 'false') {
+        result[flagName] = false;
+      } else if (/^-?\d+$/.test(envValue)) {
+        result[flagName] = parseInt(envValue, 10);
+      } else if (/^-?\d*\.\d+$/.test(envValue)) {
+        result[flagName] = parseFloat(envValue);
+      } else if (envValue.includes(',')) {
+        // Handle comma-separated arrays
+        result[flagName] = envValue.split(',').map(v => v.trim());
+      } else {
+        result[flagName] = envValue;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Parses YAML file content
+   */
+  #_parseYamlFile(content: string): Record<string, any> {
+    const parsed = yaml.load(content) as any;
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('YAML file must contain an object at the root level');
+    }
+
+    // Remove metadata if present
+    const { _meta, ...config } = parsed;
+    return config;
+  }
+
+  /**
+   * Parses JSON file content
+   */
+  #_parseJsonFile(content: string): Record<string, any> {
+    const parsed = JSON.parse(content);
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('JSON file must contain an object at the root level');
+    }
+
+    // Remove metadata if present
+    const { _meta, ...config } = parsed;
+    return config;
+  }
+
+  /**
+   * Parses TOML file content
+   */
+  #_parseTomlFile(content: string): Record<string, any> {
+    const parsed = toml.parse(content);
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('TOML file must contain an object at the root level');
+    }
+
+    return parsed;
+  }
+
+  /**
+   * Converts raw configuration values to match flag types and validates them
+   */
+  #_convertConfigToFlagValues(rawConfig: Record<string, any>, parserChain: ArgParser[]): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    // Get all flags from the parser chain
+    const allFlags: ProcessedFlag[] = [];
+    const seenFlagNames = new Set<string>();
+
+    // Start from the final parser and work backwards through the chain
+    for (let i = parserChain.length - 1; i >= 0; i--) {
+      const parser = parserChain[i];
+      for (const flag of parser.#flagManager.flags) {
+        if (!seenFlagNames.has(flag["name"])) {
+          allFlags.push(flag);
+          seenFlagNames.add(flag["name"]);
+        }
+      }
+    }
+
+    // Convert and validate each configuration value
+    for (const [configKey, configValue] of Object.entries(rawConfig)) {
+      const flag = allFlags.find(f => f["name"] === configKey);
+
+      if (!flag) {
+        console.warn(chalk.yellow(`Warning: Configuration key '${configKey}' does not match any known flag. Ignoring.`));
+        continue;
+      }
+
+      try {
+        const convertedValue = this.#_convertValueToFlagType(configValue, flag);
+        result[configKey] = convertedValue;
+      } catch (error) {
+        console.error(chalk.red(`Error converting configuration value for '${configKey}': ${error instanceof Error ? error.message : String(error)}`));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(1);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Converts a configuration value to match the expected flag type
+   */
+  #_convertValueToFlagType(value: any, flag: ProcessedFlag): any {
+    const flagType = flag["type"];
+
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    // Handle array flags first (before type-specific handling)
+    if (flagType === Array || flag["allowMultiple"]) {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        // Split comma-separated values
+        return value.split(',').map(v => v.trim());
+      }
+      return [value];
+    }
+
+    // Handle boolean flags
+    if (flagType === Boolean) {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') return true;
+        if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') return false;
+      }
+      throw new Error(`Cannot convert '${value}' to boolean for flag '${flag["name"]}'`);
+    }
+
+    // Handle string flags
+    if (flagType === String) {
+      return String(value);
+    }
+
+    // Handle number flags
+    if (flagType === Number) {
+      const numValue = Number(value);
+      if (isNaN(numValue)) {
+        throw new Error(`Cannot convert '${value}' to number for flag '${flag["name"]}'`);
+      }
+      return numValue;
+    }
+
+    // Handle enum validation
+    if (flag["enum"] && flag["enum"].length > 0) {
+      if (!flag["enum"].includes(value)) {
+        throw new Error(`Value '${value}' is not allowed for flag '${flag["name"]}'. Allowed values: ${flag["enum"].join(', ')}`);
+      }
+    }
+
+    return value;
+  }
+
+  /**
+   * Merges environment configuration with command line arguments
+   * CLI arguments take precedence over file configuration
+   */
+  #_mergeEnvConfigWithArgs(envConfig: Record<string, any>, processArgs: string[]): string[] {
+    const result = [...processArgs];
+
+    // Remove --s-with-env and its file path from the arguments
+    const withEnvIndex = result.findIndex(arg => arg === "--s-with-env");
+    if (withEnvIndex !== -1) {
+      result.splice(withEnvIndex, 2); // Remove both --s-with-env and the file path
+    }
+
+    // Convert environment configuration to command line arguments
+    // Only add flags that are not already present in the command line
+    const existingFlags = new Set<string>();
+
+    // Identify existing flags in command line arguments
+    for (let i = 0; i < result.length; i++) {
+      const arg = result[i];
+      if (arg.startsWith('-')) {
+        existingFlags.add(arg);
+        // Also handle ligature format (--flag=value)
+        if (arg.includes('=')) {
+          const flagPart = arg.split('=')[0];
+          existingFlags.add(flagPart);
+        }
+      }
+    }
+
+    // Add environment configuration as command line arguments
+    for (const [flagName, flagValue] of Object.entries(envConfig)) {
+      const longFlag = `--${flagName}`;
+
+      // Skip if flag is already present in command line
+      if (existingFlags.has(longFlag)) {
+        continue;
+      }
+
+      // Add the flag and its value
+      if (typeof flagValue === 'boolean') {
+        if (flagValue) {
+          result.push(longFlag);
+        }
+        // Don't add false boolean flags
+      } else if (Array.isArray(flagValue)) {
+        // Add multiple values for array flags
+        for (const item of flagValue) {
+          result.push(longFlag, String(item));
+        }
+      } else {
+        result.push(longFlag, String(flagValue));
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Generates environment file content in Bash .env format
+   */
+  #_generateEnvFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+    const lines: string[] = [];
+    lines.push('# Environment configuration generated by ArgParser');
+    lines.push('# Format: Bash .env style');
+    lines.push('');
+
+    for (const flag of flags) {
+      if (flag["name"] === 'help') continue; // Skip help flag
+
+      const flagValue = parsedArgs[flag["name"]];
+      const isSet = flagValue !== undefined && flagValue !== null;
+      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
+
+      // Add comment with flag information
+      lines.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
+      lines.push(`# Options: ${flag["options"].join(', ')}`);
+      lines.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
+      if (flag["defaultValue"] !== undefined) {
+        lines.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
+      }
+      if (flag["enum"] && flag["enum"].length > 0) {
+        lines.push(`# Allowed values: ${flag["enum"].join(', ')}`);
+      }
+
+      // Generate the environment variable line
+      const envVarName = flag["name"].toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+      let envValue = '';
+
+      if (isSet) {
+        if (Array.isArray(flagValue)) {
+          envValue = flagValue.join(',');
+        } else if (typeof flagValue === 'boolean') {
+          envValue = flagValue ? 'true' : 'false';
+        } else {
+          envValue = String(flagValue);
+        }
+        lines.push(`${envVarName}="${envValue}"`);
+      } else {
+        // Comment out unset optional flags
+        const defaultVal = flag["defaultValue"] !== undefined ? String(flag["defaultValue"]) : '';
+        const prefix = isMandatory ? '' : '# ';
+        lines.push(`${prefix}${envVarName}="${defaultVal}"`);
+      }
+
+      lines.push(''); // Empty line between flags
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Generates environment file content in YAML format
+   */
+  #_generateYamlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+    const config: any = {};
+    const comments: string[] = [];
+
+    comments.push('# Environment configuration generated by ArgParser');
+    comments.push('# Format: YAML');
+    comments.push('');
+
+    for (const flag of flags) {
+      if (flag["name"] === 'help') continue; // Skip help flag
+
+      const flagValue = parsedArgs[flag["name"]];
+      const isSet = flagValue !== undefined && flagValue !== null;
+      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
+
+      // Add flag information as comments
+      comments.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
+      comments.push(`# Options: ${flag["options"].join(', ')}`);
+      comments.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
+      if (flag["defaultValue"] !== undefined) {
+        comments.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
+      }
+      if (flag["enum"] && flag["enum"].length > 0) {
+        comments.push(`# Allowed values: ${flag["enum"].join(', ')}`);
+      }
+
+      if (isSet) {
+        config[flag["name"]] = flagValue;
+      } else if (isMandatory) {
+        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
+      }
+      // Optional unset flags are omitted from YAML but documented in comments
+
+      comments.push('');
+    }
+
+    const yamlContent = yaml.dump(config, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+      sortKeys: true
+    });
+
+    return comments.join('\n') + '\n' + yamlContent;
+  }
+
+  /**
+   * Generates environment file content in JSON format
+   */
+  #_generateJsonFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+    const config: any = {};
+    const metadata: any = {
+      _meta: {
+        generated_by: 'ArgParser',
+        format: 'JSON',
+        flags_info: {}
+      }
+    };
+
+    for (const flag of flags) {
+      if (flag["name"] === 'help') continue; // Skip help flag
+
+      const flagValue = parsedArgs[flag["name"]];
+      const isSet = flagValue !== undefined && flagValue !== null;
+      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
+
+      // Store flag metadata
+      metadata._meta.flags_info[flag["name"]] = {
+        description: Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"],
+        options: flag["options"],
+        type: this.#_getTypeString(flag["type"]),
+        mandatory: isMandatory,
+        defaultValue: flag["defaultValue"],
+        enum: flag["enum"] && flag["enum"].length > 0 ? flag["enum"] : undefined
+      };
+
+      if (isSet) {
+        config[flag["name"]] = flagValue;
+      } else if (isMandatory) {
+        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
+      }
+      // Optional unset flags are omitted but documented in metadata
+    }
+
+    const result = { ...metadata, ...config };
+    return JSON.stringify(result, null, 2);
+  }
+
+  /**
+   * Generates environment file content in TOML format
+   */
+  #_generateTomlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+    const config: any = {};
+    const lines: string[] = [];
+
+    lines.push('# Environment configuration generated by ArgParser');
+    lines.push('# Format: TOML');
+    lines.push('');
+
+    for (const flag of flags) {
+      if (flag["name"] === 'help') continue; // Skip help flag
+
+      const flagValue = parsedArgs[flag["name"]];
+      const isSet = flagValue !== undefined && flagValue !== null;
+      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
+
+      // Add flag information as comments
+      lines.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
+      lines.push(`# Options: ${flag["options"].join(', ')}`);
+      lines.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
+      if (flag["defaultValue"] !== undefined) {
+        lines.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
+      }
+      if (flag["enum"] && flag["enum"].length > 0) {
+        lines.push(`# Allowed values: ${flag["enum"].join(', ')}`);
+      }
+
+      if (isSet) {
+        config[flag["name"]] = flagValue;
+      } else if (isMandatory) {
+        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
+      }
+      // Optional unset flags are omitted from TOML but documented in comments
+
+      lines.push('');
+    }
+
+    const tomlContent = toml.stringify(config);
+    return lines.join('\n') + '\n' + tomlContent;
+  }
+
+  /**
+   * Helper method to get a string representation of a flag's type
+   */
+  #_getTypeString(type: any): string {
+    if (typeof type === 'function') {
+      return type.name || 'custom function';
+    } else if (typeof type === 'string') {
+      return type;
+    } else if (typeof type === 'object' && type) {
+      try {
+        return (type as any).constructor?.name || 'object';
+      } catch {
+        return 'object';
+      }
+    }
+    return 'unknown';
   }
 }

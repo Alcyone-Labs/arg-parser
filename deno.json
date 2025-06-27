@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "imports": {
+    "@alcyone-labs/arg-parser": "./src/index.ts"
+  },
+  "tasks": {
+    "example:getting-started": "deno run --allow-read --allow-write --allow-env examples/getting-started.ts",
+    "example:simple-cli": "deno run --allow-read --allow-write --allow-env examples/simple-cli.ts",
+    "example:v1.1.0-showcase": "deno run --allow-read --allow-write --allow-env examples/v1.1.0-showcase.ts",
+    "example:fzf-search": "deno run --allow-read --allow-write --allow-env --allow-run examples/fzf-search-cli.ts",
+    "example:with-env": "deno run --allow-read --allow-write --allow-env examples/with-env-example.ts"
+  },
+  "unstable": ["sloppy-imports"]
+}

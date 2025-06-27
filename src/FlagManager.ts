@@ -1,4 +1,5 @@
-import { IFlag, ProcessedFlag, zodFlagSchema } from "./types";
+import { zodFlagSchema } from "./types";
+import type { IFlag, ProcessedFlag } from "./types";
 
 export class FlagManager {
   #_flags: Map<string, ProcessedFlag> = new Map();

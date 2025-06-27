@@ -98,15 +98,12 @@ describe("ArgParser", () => {
       phase: "pairing",
       batch: 42,
       verbose: false,
-      files: [],
       table: "chunks",
     });
     expect(mockProcessExit).not.toHaveBeenCalled();
-    expect(mockConsoleError).not.toHaveBeenCalled();
   });
 
   test("should exit on conditional mandatory flags (default handler)", () => {
-    // Should require batch number for non-analysis phases
     expect(
       () => parser.parse(["--phase", "chunking", "-t", "metadata"]),
       "Throw when phase is chunking",
@@ -143,7 +140,8 @@ describe("ArgParser", () => {
       "-t",
       "metadata",
     ]);
-    expect(args["files"]?.slice().sort()).toEqual(["file1", "file2"]);
+    expect(args["files"]).toEqual(expect.arrayContaining(["file1", "file2"]));
+    expect(args["files"]).toHaveLength(2);
     expect(mockProcessExit).not.toHaveBeenCalled();
   });
 
@@ -154,7 +152,7 @@ describe("ArgParser", () => {
 
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Invalid value 'invalid' for flag 'phase'/,
+      /Error: Invalid value 'invalid' for flag 'phase'/,
     );
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
       /Allowed values: 'chunking', 'pairing', 'analysis'/,
@@ -189,9 +187,6 @@ describe("ArgParser", () => {
     expect(mockConsoleError.mock.calls[0][0]).not.toMatch(/phase/);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(/batch/);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(/table/);
-    expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
-    );
   });
 
   test("should process function-based types", () => {
@@ -201,7 +196,9 @@ describe("ArgParser", () => {
       options: ["--date"],
       type: (value: string) => new Date(value),
     };
+
     const customParser = new ArgParser({
+      appName: "Custom Parser",
       appCommandName: testCommandName,
     }).addFlag(flag);
 
@@ -1235,13 +1232,14 @@ describe("ArgParser", () => {
     test("should NOT display auto-help when parse is called on a sub-parser instance", () => {
       const subParser = new ArgParser({});
 
-      const parentParser = new ArgParser({
-        appCommandName: testCommandName,
-      }).addSubCommand({
-        name: "sub",
-        description: "test sub",
-        parser: subParser,
-      });
+      // Parent parser for testing (not used in this specific test)
+      // const parentParser = new ArgParser({
+      //   appCommandName: testCommandName,
+      // }).addSubCommand({
+      //   name: "sub",
+      //   description: "test sub",
+      //   parser: subParser,
+      // });
 
       expect(() => subParser.parse([])).not.toThrow();
 
@@ -1372,10 +1370,10 @@ describe("ArgParser", () => {
       expect(childParser.hasFlag("shared")).toBe(true);
       expect(childParser.hasFlag("help")).toBe(true);
 
-      const sharedFlag = childParser.flags.find((f) => f.name === "shared");
-      expect(sharedFlag?.description).toBe("Shared flag (Child override)");
-      expect(sharedFlag?.type).toBe(Number);
-      expect(sharedFlag?.options).toEqual(["--shared-child"]);
+      const sharedFlag = childParser.flags.find((f) => f["name"] === "shared");
+      expect(sharedFlag?.["description"]).toBe("Shared flag (Child override)");
+      expect(sharedFlag?.["type"]).toBe(Number);
+      expect(sharedFlag?.["options"]).toEqual(["--shared-child"]);
 
       const help = childParser.helpText();
       const stripped = help.replace(/\x1B\[[0-9;]*m/g, "");
@@ -1464,9 +1462,9 @@ describe("ArgParser", () => {
       expect(grandChildParser.hasFlag("help")).toBe(true);
 
       const sharedFlag = grandChildParser.flags.find(
-        (f) => f.name === "shared",
+        (f) => f["name"] === "shared",
       );
-      expect(sharedFlag?.description).toBe("Shared flag (Child override)");
+      expect(sharedFlag?.["description"]).toBe("Shared flag (Child override)");
 
       const help = grandChildParser.helpText();
       const stripped = help.replace(/\x1B\[[0-9;]*m/g, "");

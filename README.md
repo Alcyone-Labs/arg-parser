@@ -2,43 +2,76 @@
 
 ArgParser is a powerful and flexible library for building command-line interfaces (CLIs) in TypeScript and JavaScript. It helps you define, parse, validate, and handle command-line arguments and sub-commands in a structured, type-safe way.
 
-Whether you're building a simple script or a complex nested CLI application, ArgParser provides the tools to create robust and user-friendly interfaces.
+Whether you're building a simple script, a complex nested CLI application, or an MCP (Model Context Protocol) server, ArgParser provides the tools to create robust and user-friendly interfaces with minimal boilerplate.
 
-## TODOs
+## What's New in v1.1.0
 
-### Changelog
+### **Major Features**
 
-- 1.0.1: Reorganize the examples, replace toSorted that's only NodeJS 20+
+- **MCP (Model Context Protocol) Integration**: Transform any CLI into an MCP server with multiple transport support
+- **System Flags**: Built-in `--s-debug`, `--s-with-env`, and `--s-save-to-env` for enhanced debugging and configuration
+- **Environment Loading**: Load configuration from `.env`, `.yaml`, `.json`, and `.toml` files
+- **Multiple Transport Support**: Run MCP servers with stdio, SSE, and HTTP transports simultaneously, including streamable HTTP
+- **Enhanced Debugging**: Comprehensive runtime debugging and configuration export tools
 
-### Features
+### **Quick Start with MCP**
 
-- [x] Publish as an open-source library
-- [ ] Improve flag options collision prevention
-- [ ] Make it possible to pass a `--load-from` parameter that loads all the parameters from a JSON file instead of command line
-- [ ] Add support for locales / translations
-- [ ] (potentially) support for async type function to enable more flexibility (but at the cost of a potentially much larger issue surface, would need to see if there's a need for it)
-- [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
-- [ ] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
+```typescript
+import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
 
-### (known) Bugs / DX improvement points
+const cli = ArgParserWithMcp.withMcp({
+  appName: "My CLI Tool",
+  appCommandName: "my-tool",
+  description: "A powerful CLI that can also run as an MCP server",
+  handler: async (ctx) => ({ result: "success", args: ctx.args }),
+})
+.addFlags([
+  { name: "input", options: ["--input", "-i"], type: "string", mandatory: true },
+  { name: "verbose", options: ["--verbose", "-v"], type: "boolean", flagOnly: true },
+])
+.addMcpSubCommand("serve", {
+  name: "my-mcp-server",
+  version: "1.1.0",
+  description: "Expose this CLI as an MCP server",
+}, {
+  // Optional: Configure default transports (CLI flags take precedence)
+  defaultTransports: [
+    { type: "stdio" },
+    { type: "sse", port: 3001, host: "0.0.0.0" }
+  ]
+});
 
-- [ ] When a flag with `flagOnly: false` is going to consume a value that appears like a valid flag from the set, raise the appropriate warning
-- [ ] When a flag with `allowMultiple: false` and `flagOnly: true` is passed multiple times (regardless of the options, for example "-1" and later "--one", both being valid), raise the correct error
+// Use as CLI: my-tool --input data.txt --verbose
+// Use as MCP server with defaults: my-tool serve
+// Use as MCP server with CLI override: my-tool serve --transport sse --port 3002
+// Use with multiple transports: my-tool serve --transports '[{"type":"stdio"},{"type":"sse","port":3001}]'
+```
 
 ## Features
 
-- **Type Safety:** Define expected argument types (string, number, boolean, array, custom functions) and get type-safe parsed results.
-- **Optionally Complex Dynamic Types** Provide a method to trigger arbitrary logic when a flag is encountered and return the output to the parsed flag.
-- **Declarative API:** Configure your CLI structure, flags, and sub-commands using a clear, declarative syntax.
-- **Automatic Help Generation:** Generate comprehensive and contextual help text based on your parser configuration.
-- **Hierarchical Commands:** Easily define nested sub-commands to create complex command structures (e.g., `git commit`, `docker container ls`).
-- **Handler Execution:** Associate handler functions with commands and have them executed automatically upon successful parsing (or manually control execution).
-- **Validation:** Define custom validation rules for flag values.
-- **Conditional Requirements:** Make flags mandatory based on the presence or values of other arguments.
-- **Default Values:** Specify default values for flags if they are not provided on the command line.
-- **Flag Inheritance:** Share common flags between parent and child commands with an intuitive inheritance mechanism.
-- **Error Handling:** Built-in, user-friendly error reporting for common parsing issues, with an option to handle errors manually.
-- **Debugging Tools:** Easily inspect your parser's configuration for complex setups.
+### **Core CLI Features**
+- **Type Safety:** Define expected argument types (string, number, boolean, array, custom functions) and get type-safe parsed results
+- **Declarative API:** Configure your CLI structure, flags, and sub-commands using a clear, declarative syntax
+- **Automatic Help Generation:** Generate comprehensive and contextual help text based on your parser configuration
+- **Hierarchical Commands:** Easily define nested sub-commands to create complex command structures (e.g., `git commit`, `docker container ls`)
+- **Handler Execution:** Associate handler functions with commands and have them executed automatically upon successful parsing
+- **Validation:** Define custom validation rules for flag values with enum support and custom validators
+- **Conditional Requirements:** Make flags mandatory based on the presence or values of other arguments
+- **Default Values:** Specify default values for flags if they are not provided on the command line
+- **Flag Inheritance:** Share common flags between parent and child commands with an intuitive inheritance mechanism
+- **Error Handling:** Built-in, user-friendly error reporting for common parsing issues, with an option to handle errors manually
+
+### **MCP Integration (v1.1.0+)**
+- **Automatic MCP Server Creation:** Transform any CLI into an MCP server with a single method call
+- **Multiple Transport Support:** Run stdio, SSE, and HTTP transports simultaneously on different ports
+- **Type-Safe Tool Generation:** Automatically generate MCP tools with Zod schema validation from CLI definitions
+- **Flexible Configuration:** Support for single transport or complex multi-transport JSON configurations
+
+### **System & Configuration Features (v1.1.0+)**
+- **Environment Loading:** Load configuration from `.env`, `.yaml`, `.json`, and `.toml` files with `--s-with-env`
+- **Configuration Export:** Save current configuration to various formats with `--s-save-to-env`
+- **Advanced Debugging:** Runtime debugging with `--s-debug` and configuration inspection with `--s-debug-print`
+- **CLI Precedence:** Command line arguments always override file configuration
 
 ## Installation
 
@@ -56,7 +89,90 @@ bun add @alcyone-labs/arg-parser
 deno install npm:@alcyone-labs/arg-parser
 ```
 
+### **For MCP Integration (Optional)**
+
+If you plan to use MCP server features, install the additional dependencies:
+
+```bash
+pnpm add @modelcontextprotocol/sdk express
+# or
+npm install @modelcontextprotocol/sdk express
+```
+
+**Note:** MCP dependencies are optional and only required if you use `ArgParserWithMcp` or MCP-related features.
+
+## Runtime Compatibility
+
+ArgParser is fully compatible with multiple JavaScript runtimes:
+
+### **BunJS (Recommended)**
+```bash
+# Run TypeScript directly
+bun your-cli.ts --flag value
+
+# Or compile and run
+bun build your-cli.ts --outdir ./dist
+bun ./dist/your-cli.js --flag value
+```
+
+### **Node.js**
+```bash
+# Using tsx for TypeScript
+npx tsx your-cli.ts --flag value
+
+# Using ts-node
+npx ts-node your-cli.ts --flag value
+
+# Or compile and run
+npx tsc your-cli.ts
+node your-cli.js --flag value
+```
+
+### **Deno**
+```bash
+# Run with required permissions
+deno run --unstable-sloppy-imports --allow-read --allow-write --allow-env your-cli.ts --flag value
+
+# Or use the provided deno.json configuration for easier task management
+deno task example:simple-cli --env production --port 8080
+```
+
+### **Using Built Artifacts**
+
+After building your project with `pnpm build` (or your preferred build tool), you can use the compiled JavaScript files directly:
+
+```bash
+# CommonJS (Node.js)
+node dist/index.cjs
+
+# ES Modules (Node.js with "type": "module" in package.json)
+node dist/index.mjs
+
+# Minified ES Modules (production)
+node dist/index.min.mjs
+
+# Import in your own projects
+const { ArgParser } = require('./dist/index.cjs');  // CommonJS
+import { ArgParser } from './dist/index.mjs';       // ES Modules
+
+# Example: Using built artifacts in production
+node -e "
+const { ArgParser } = require('./dist/index.cjs');
+const cli = new ArgParser({
+  appName: 'Production CLI',
+  handler: (ctx) => console.log('Production ready!', ctx.args)
+}).addFlags([
+  { name: 'env', options: ['--env'], type: 'string', mandatory: true, description: 'Environment' }
+]);
+cli.parse(['--env', 'production']);
+"
+```
+
+All examples in this repository work seamlessly across all three runtimes, ensuring maximum compatibility for your CLI applications.
+
 ## Basic Usage
+
+### **Standard CLI Usage**
 
 Here's a simple example demonstrating how to define flags and parse arguments:
 
@@ -67,13 +183,15 @@ const parser = new ArgParser({
   appName: "Data Processor",
   appCommandName: "data-proc", // Used in help text and error messages
   description: "A tool for processing data phases",
-  // By default, if a handler is set, it will be executed after successful parsing.
-  // Set handler: () => { ... } here for a root command handler.
+  handler: async (ctx) => {
+    console.log("Processing data with phase:", ctx.args.phase);
+    return { success: true, phase: ctx.args.phase };
+  },
 }).addFlags([
   {
     name: "phase",
     options: ["--phase"],
-    type: String, // Use native types or typeof string equivalents ("string", "number", "boolean", etc.)
+    type: "string", // Use "string", "number", "boolean", or native types
     mandatory: true,
     enum: ["chunking", "pairing", "analysis"],
     description: "Processing phase to execute",
@@ -82,35 +200,132 @@ const parser = new ArgParser({
     name: "batch",
     options: ["-b", "--batch-number"],
     type: "number",
-    mandatory: (args) => args.phase !== "analysis", // Mandatory based on another flag's value
+    mandatory: (args) => args.phase !== "analysis", // Conditional requirement
     defaultValue: 0,
     description: "Batch number (required except for analysis phase)",
   },
   {
     name: "verbose",
-    options: ["-v"],
+    options: ["-v", "--verbose"],
     flagOnly: true, // This flag does not expect a value
     description: "Enable verbose logging",
   },
 ]);
 
-// Parse command line arguments (excluding 'node' and script path)
-// If parsing fails (e.g., missing mandatory flag), ArgParser handles the error
-// by printing a message and exiting (process.exit(1)) by default.
-const args = parser.parse(process.argv.slice(2));
-
-// If parsing succeeds and no command handler was executed,
-// execution continues here with the parsed args.
-console.log("Parsing successful! Arguments:", args);
-
-// Example of using parsed arguments:
-if (args.phase === "chunking") {
-  if (args.verbose) {
-    console.debug("Starting the chunking phase...");
-  }
-  // Perform chunking logic...
-}
+// Parse and execute
+const result = parser.parse(process.argv.slice(2));
+console.log("Result:", result);
 ```
+
+### **MCP Server Usage (v1.1.0+)**
+
+Transform your CLI into an MCP server with minimal changes:
+
+```typescript
+import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+
+const cli = ArgParserWithMcp.withMcp({
+  appName: "Data Processor",
+  appCommandName: "data-proc",
+  description: "A tool for processing data phases (CLI + MCP server)",
+  handler: async (ctx) => {
+    console.log("Processing data with phase:", ctx.args.phase);
+    return { success: true, phase: ctx.args.phase, batch: ctx.args.batch };
+  },
+})
+.addFlags([
+  {
+    name: "phase",
+    options: ["--phase"],
+    type: "string",
+    mandatory: true,
+    enum: ["chunking", "pairing", "analysis"],
+    description: "Processing phase to execute",
+  },
+  {
+    name: "batch",
+    options: ["-b", "--batch-number"],
+    type: "number",
+    defaultValue: 0,
+    description: "Batch number for processing",
+  },
+])
+.addMcpSubCommand("serve", {
+  name: "data-processor-mcp",
+  version: "1.1.0",
+  description: "Data Processor MCP Server",
+});
+
+// Use as CLI: data-proc --phase chunking --batch 5
+// Use as MCP server: data-proc serve
+// Use with custom transport: data-proc serve --transport sse --port 3001
+```
+
+## MCP Integration (v1.1.0+)
+
+ArgParser v1.1.0 introduces powerful Model Context Protocol (MCP) integration, allowing you to expose any CLI as an MCP server with minimal code changes.
+
+### **Quick MCP Setup**
+
+1. **Import the MCP-enabled class:**
+   ```typescript
+   import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+   ```
+
+2. **Create your CLI with MCP support:**
+   ```typescript
+   const cli = ArgParserWithMcp.withMcp({
+     appName: "My Tool",
+     appCommandName: "my-tool",
+     handler: async (ctx) => ({ result: "success", args: ctx.args }),
+   })
+   .addFlags([/* your flags */])
+   .addMcpSubCommand("serve", {
+     name: "my-mcp-server",
+     version: "1.0.0",
+   });
+   ```
+
+3. **Use as CLI or MCP server:**
+   ```bash
+   # CLI usage
+   my-tool --input data.txt --verbose
+
+   # MCP server (stdio)
+   my-tool serve
+
+   # MCP server (HTTP)
+   my-tool serve --transport sse --port 3001
+
+   # Multiple transports
+   my-tool serve --transports '[{"type":"stdio"},{"type":"sse","port":3001}]'
+   ```
+
+### **MCP Transport Options**
+
+- **`stdio`** (default): Standard input/output for CLI tools
+- **`sse`**: Server-Sent Events over HTTP for web applications
+- **`streamable-http`**: HTTP with streaming support for advanced integrations
+
+### **Multiple Transports Simultaneously**
+
+Run multiple transport types at once for maximum flexibility:
+
+```bash
+my-tool serve --transports '[
+  {"type":"stdio"},
+  {"type":"sse","port":3001,"path":"/sse"},
+  {"type":"streamable-http","port":3002,"path":"/mcp","host":"0.0.0.0"}
+]'
+```
+
+### **Automatic Tool Generation**
+
+Your CLI flags are automatically converted to MCP tools with:
+- **Type-safe schemas** using Zod validation
+- **Automatic documentation** from flag descriptions
+- **Enum validation** for restricted values
+- **Error handling** with detailed messages
 
 ## Core Concepts
 
@@ -479,9 +694,241 @@ try {
 }
 ```
 
+## Environment Configuration Export
+
+ArgParser includes a built-in system flag `--s-save-to-env` that allows you to export the current parser's configuration and parsed arguments to various file formats. This is useful for creating configuration templates, documenting CLI usage, or generating environment files for deployment.
+
+### Usage
+
+```bash
+# Export to .env format (default for no extension)
+your-cli --flag1 value1 --flag2 --s-save-to-env config.env
+
+# Export to YAML format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.yaml
+
+# Export to JSON format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.json
+
+# Export to TOML format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.toml
+```
+
+### Supported Formats
+
+The format is automatically detected based on the file extension:
+
+- **`.env`** (or no extension): Bash environment variable format
+- **`.yaml` / `.yml`**: YAML format
+- **`.json` / `.jsonc`**: JSON format with metadata
+- **`.toml` / `.tml`**: TOML format
+
+### Behavior
+
+- **Works at any parser level**: Can be used with root commands or sub-commands
+- **Includes inherited flags**: Shows flags from the current parser and all parent parsers in the chain
+- **Comments optional flags**: Flags that are optional and not set are commented out but still documented
+- **Preserves values**: Set flags show their actual values, unset flags show default values or are commented out
+- **Rich documentation**: Each flag includes its description, options, type, and constraints
+
+### Example Output
+
+For a CLI with flags `--verbose`, `--output file.txt`, and `--count 5`:
+
+**`.env` format:**
+```bash
+# Environment configuration generated by ArgParser
+# Format: Bash .env style
+
+# verbose: Enable verbose output
+# Options: -v, --verbose
+# Type: Boolean
+# Default: false
+VERBOSE="true"
+
+# output: Output file path
+# Options: -o, --output
+# Type: String
+OUTPUT="file.txt"
+
+# count: Number of items to process
+# Options: -c, --count
+# Type: Number
+# Default: 10
+COUNT="5"
+```
+
+**`.yaml` format:**
+```yaml
+# Environment configuration generated by ArgParser
+# Format: YAML
+
+# verbose: Enable verbose output
+# Options: -v, --verbose
+# Type: Boolean
+# Default: false
+
+verbose: true
+output: "file.txt"
+count: 5
+```
+
+## System Flags (v1.1.0+)
+
+ArgParser includes several built-in system flags that provide debugging, configuration management, and introspection capabilities. These flags are processed before normal argument parsing and will cause the program to exit after execution.
+
+### **Overview**
+
+System flags use the `--s-*` pattern and provide powerful development and deployment tools:
+
+- **`--s-debug`**: Runtime debugging with step-by-step parsing analysis
+- **`--s-with-env <file>`**: Load configuration from files (`.env`, `.yaml`, `.json`, `.toml`)
+- **`--s-save-to-env <file>`**: Export current configuration to various formats
+- **`--s-debug-print`**: Export complete parser configuration for inspection
+
+### `--s-save-to-env <file>`
+
+Exports the current parser's configuration and parsed arguments to various file formats.
+
+```bash
+# Export to .env format (default for no extension)
+your-cli --flag1 value1 --flag2 --s-save-to-env config.env
+
+# Export to YAML format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.yaml
+
+# Export to JSON format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.json
+
+# Export to TOML format
+your-cli --flag1 value1 --flag2 --s-save-to-env config.toml
+```
+
+**Features:**
+- Works at any parser level (root command or sub-commands)
+- Includes inherited flags from parent parsers in the chain
+- Comments out optional flags that are not set
+- Rich documentation for each flag (description, options, type, constraints)
+- Automatic format detection based on file extension
+
+### `--s-with-env <file>`
+
+Loads configuration from a file and merges it with command line arguments. CLI arguments take precedence over file configuration.
+
+```bash
+# Load from .env format (default for no extension)
+your-cli --s-with-env config.env
+
+# Load from YAML format
+your-cli --s-with-env config.yaml
+
+# Load from JSON format
+your-cli --s-with-env config.json
+
+# Load from TOML format
+your-cli --s-with-env config.toml
+
+# Combine with CLI arguments (CLI args override file config)
+your-cli --s-with-env config.yaml --verbose --output override.txt
+```
+
+**Supported Formats:**
+
+The format is automatically detected based on the file extension:
+
+- **`.env`** (or no extension): Dotenv format with `KEY=value` pairs
+- **`.yaml` / `.yml`**: YAML format
+- **`.json` / `.jsonc`**: JSON format (metadata is ignored if present)
+- **`.toml` / `.tml`**: TOML format
+
+**Behavior:**
+
+- **File validation**: Checks if the file exists and can be parsed
+- **Type conversion**: Automatically converts values to match flag types (boolean, number, string, array)
+- **Enum validation**: Validates values against allowed enum options
+- **CLI precedence**: Command line arguments override file configuration
+- **Error handling**: Exits with error code 1 if file cannot be loaded or parsed
+- **Flag matching**: Only loads values for flags that exist in the current parser chain
+
+**Example Configuration Files:**
+
+**.env format:**
+```bash
+VERBOSE=true
+OUTPUT=file.txt
+COUNT=5
+TAGS=tag1,tag2,tag3
+```
+
+**YAML format:**
+```yaml
+verbose: true
+output: file.txt
+count: 5
+tags:
+  - tag1
+  - tag2
+  - tag3
+```
+
+**JSON format:**
+```json
+{
+  "verbose": true,
+  "output": "file.txt",
+  "count": 5,
+  "tags": ["tag1", "tag2", "tag3"]
+}
+```
+
+### `--s-debug-print`
+
+Prints the complete parser configuration to a JSON file and console for debugging complex parser setups.
+
+```bash
+your-cli --s-debug-print
+```
+
+**Output:**
+- Creates `ArgParser.full.json` with the complete parser structure
+- Shows all flags, sub-commands, handlers, and configuration
+- Useful for debugging complex parser hierarchies
+- Human-readable console output with syntax highlighting
+
+### `--s-debug`
+
+Provides detailed runtime debugging information showing how arguments are parsed step-by-step.
+
+```bash
+your-cli --flag1 value1 sub-command --flag2 value2 --s-debug
+```
+
+**Output:**
+- Shows command chain identification process
+- Step-by-step argument parsing simulation
+- Final parser identification
+- Accumulated arguments at each level
+- Remaining arguments after parsing
+- Complete static configuration of the final parser
+
+**Useful for:**
+- Understanding complex command chains
+- Debugging argument parsing issues
+- Seeing how flags are inherited between parsers
+- Troubleshooting sub-command resolution
+
+### Usage Notes
+
+- System flags are processed before normal argument parsing
+- They cause the program to exit after execution (exit code 0 for success)
+- Can be used with any combination of regular flags and sub-commands
+- Particularly useful during development and debugging
+
 ## Debugging
 
-The `printAll(filePath?: string)` method is useful for debugging complex parser configurations. It recursively outputs the structure, options, flags, and handlers of a parser instance and its sub-commands.
+### Programmatic Debugging
+
+The `printAll(filePath?: string)` method is useful for debugging complex parser configurations programmatically. It recursively outputs the structure, options, flags, and handlers of a parser instance and its sub-commands.
 
 - `parser.printAll()`: Prints a colored, human-readable output to the console.
 - `parser.printAll('./config.json')`: Writes the configuration as a pretty-printed JSON file.
@@ -499,9 +946,82 @@ const parser = new ArgParser({ appName: "Debug App" })
 parser.printAll(); // Output to console
 ```
 
+### Runtime Debugging
+
+For runtime debugging, use the system flags documented above:
+
+- `--s-debug-print`: Export complete parser configuration
+- `--s-debug`: Show step-by-step argument parsing process
+- `--s-save-to-env <file>`: Export current configuration to various formats
+- `--s-with-env <file>`: Load configuration from file and merge with CLI arguments
+
+These system flags are particularly useful when you need to debug a CLI application without modifying the source code.
+
 ## API Reference
 
 This section provides a quick overview of the main components. See the sections above for detailed explanations and examples.
+
+### **MCP Integration Classes (v1.1.0+)**
+
+#### `ArgParserWithMcp`
+
+Extends `ArgParser` with MCP server capabilities.
+
+**Factory Methods:**
+- `ArgParserWithMcp.withMcp(options?, initialFlags?)`: Create new MCP-enabled parser
+- `ArgParserWithMcp.fromArgParser(parser)`: Convert existing ArgParser to MCP-enabled
+
+**MCP Methods:**
+- `toMcpTools(options?)`: Generate MCP tool structures from CLI definition
+- `createMcpServer(serverInfo, toolOptions?)`: Create MCP server instance
+- `startMcpServer(serverInfo, toolOptions?)`: Start MCP server with stdio transport
+- `startMcpServerWithTransport(serverInfo, transportType, transportOptions?, toolOptions?)`: Start with specific transport
+- `startMcpServerWithMultipleTransports(serverInfo, transports, toolOptions?)`: Start with multiple transports (manual approach)
+- `addMcpSubCommand(name, serverInfo, options?)`: Add MCP server sub-command with optional preset transports (recommended approach)
+- `parse(args, options?)`: Async version supporting async handlers
+
+**MCP Types:**
+- `McpTransportConfig`: Configuration for a single transport (`{ type, port?, host?, path?, sessionIdGenerator? }`)
+- `McpSubCommandOptions`: Options for MCP sub-command (`{ defaultTransport?, defaultTransports?, toolOptions? }`)
+
+**Transport Types:**
+- `"stdio"`: Standard input/output
+- `"sse"`: Server-Sent Events over HTTP
+- `"streamable-http"`: HTTP with streaming support
+
+**Example:**
+```typescript
+const cli = ArgParserWithMcp.withMcp({
+  appName: "My CLI",
+  handler: async (ctx) => ({ result: ctx.args }),
+})
+.addFlags([/* flags */])
+.addMcpSubCommand("serve", {
+  name: "my-mcp-server",
+  version: "1.0.0",
+});
+
+// Elegant approach: Configure default transports in addMcpSubCommand
+const cli = ArgParserWithMcp.withMcp({
+  appName: "My Tool",
+  handler: async (ctx) => ({ result: ctx.args }),
+})
+.addFlags([/* your flags */])
+.addMcpSubCommand("serve", {
+  name: "my-server",
+  version: "1.0.0",
+}, {
+  // Default multiple transports - used when no CLI flags provided
+  defaultTransports: [
+    { type: "stdio" },
+    { type: "sse", port: 3001 },
+    { type: "streamable-http", port: 3002 }
+  ]
+});
+
+// Usage: my-tool serve (uses all default transports)
+// Usage: my-tool serve --transports '[{"type":"sse","port":4000}]' (overrides defaults)
+```
 
 ### `new ArgParser(options?, initialFlags?)`
 
@@ -590,3 +1110,139 @@ Recursively prints the parser configuration.
 - `IParseOptions`: Options for the `parse()` method.
 - `IArgParserParams`: Options for the `ArgParser` constructor.
 - `ArgParserError`: Custom error class thrown on parsing failures when `handleErrors` is `false`.
+
+## Quick Reference
+
+### **Basic CLI Setup**
+```typescript
+import { ArgParser } from "@alcyone-labs/arg-parser";
+
+const cli = new ArgParser({
+  appName: "My Tool",
+  appCommandName: "my-tool",
+  handler: async (ctx) => ({ result: ctx.args }),
+})
+.addFlags([
+  { name: "input", options: ["--input", "-i"], type: "string", mandatory: true },
+  { name: "verbose", options: ["--verbose", "-v"], type: "boolean", flagOnly: true },
+])
+.addSubCommand({
+  name: "process",
+  description: "Process data",
+  handler: async (ctx) => ({ processed: true }),
+  parser: new ArgParser({}, [
+    { name: "format", options: ["--format"], type: "string", enum: ["json", "xml"] },
+  ]),
+});
+```
+
+### **MCP Integration**
+```typescript
+import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+
+const mcpCli = ArgParserWithMcp.withMcp({ /* same options */ })
+  .addFlags([/* same flags */])
+  .addMcpSubCommand("serve", {
+    name: "my-mcp-server",
+    version: "1.0.0",
+  });
+
+// CLI: my-tool --input data.txt process --format json
+// MCP: my-tool serve --transport sse --port 3001
+```
+
+### **MCP Preset Transport Configuration**
+Configure default transports that will be used when no CLI transport flags are provided:
+
+```typescript
+import { ArgParserWithMcp, McpTransportConfig } from "@alcyone-labs/arg-parser";
+
+// Single preset transport
+const cliWithPreset = ArgParserWithMcp.withMcp({
+  appName: "My Tool",
+  handler: async (ctx) => ({ result: ctx.args }),
+})
+.addMcpSubCommand("serve", {
+  name: "my-server",
+  version: "1.0.0",
+}, {
+  defaultTransport: {
+    type: "sse",
+    port: 3001,
+    host: "0.0.0.0"
+  }
+});
+
+// Multiple preset transports
+const cliWithMultiplePresets = ArgParserWithMcp.withMcp({
+  appName: "Multi-Transport Tool",
+  handler: async (ctx) => ({ result: ctx.args }),
+})
+.addMcpSubCommand("serve", {
+  name: "multi-server",
+  version: "1.0.0",
+}, {
+  defaultTransports: [
+    { type: "stdio" },
+    { type: "sse", port: 3001 },
+    { type: "streamable-http", port: 3002, path: "/api/mcp" }
+  ],
+  toolOptions: {
+    includeSubCommands: true
+  }
+});
+
+// CLI flags always take precedence over presets
+// my-tool serve                    -> Uses preset transports
+// my-tool serve --transport sse    -> Overrides preset with CLI flags
+```
+
+### **System Flags**
+```bash
+# Debug parsing
+my-tool --s-debug --input data.txt process
+
+# Load configuration
+my-tool --s-with-env config.yaml --input override.txt
+
+# Save configuration
+my-tool --input data.txt --s-save-to-env template.yaml
+```
+
+### **Multiple MCP Transports**
+```bash
+# Single transport
+my-tool serve --transport sse --port 3001
+
+# Multiple transports
+my-tool serve --transports '[
+  {"type":"stdio"},
+  {"type":"sse","port":3001},
+  {"type":"streamable-http","port":3002}
+]'
+```
+
+---
+
+**📖 For complete examples and tutorials, see the [`examples/`](./examples/) directory.**
+
+--- 
+
+## Backlog
+
+- [x] Publish as an open-source library
+- [x] Make ArgParser compatible with MCP out-of-the-box
+- [x] Rename --LIB-* flags to --s-*
+- [x] Make it possible to pass a `--s-save-to-env /path/to/file` parameter that saves all the parameters to a file (works with Bash-style .env, JSON, YAML, TOML)
+- [x] Make it possible to pass a `--s-with-env /path/to/file` parameter that loads all the parameters from a file (works with Bash-style .env, JSON, YAML, TOML)
+- [ ] Add System flags to args.systemArgs
+- [ ] Improve flag options collision prevention
+- [ ] Add support for locales / translations
+- [ ] Add support for async type function to enable more flexibility
+- [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
+- [ ] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
+
+### (known) Bugs / DX improvement points
+
+- [ ] When a flag with `flagOnly: false` is going to consume a value that appears like a valid flag from the set, raise the appropriate warning
+- [ ] When a flag with `allowMultiple: false` and `flagOnly: true` is passed multiple times (regardless of the options, for example "-1" and later "--one", both being valid), raise the correct error

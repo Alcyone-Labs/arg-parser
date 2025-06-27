@@ -3,7 +3,7 @@ import { defineConfig, type UserConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig as defineTestConfig } from "vitest/config";
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
   const root = "./";
 
   if (command === "build") {
@@ -55,7 +55,39 @@ export default defineConfig(({ command }) => {
           fileName: () => libFileName,
         },
         rollupOptions: {
-          external: ["chalk", "magic-regexp", "zod"],
+          external: [
+            // Third-party dependencies
+            "chalk",
+            "magic-regexp",
+            "zod",
+            "dotenv",
+            "js-yaml",
+            "@iarna/toml",
+            "@modelcontextprotocol/sdk",
+            "express",
+            // Node.js built-in modules
+            "node:fs",
+            "node:path",
+            "node:crypto",
+            "node:process",
+            "node:events",
+            "node:http",
+            "node:net",
+            "node:zlib",
+            "fs",
+            "path",
+            "crypto",
+            "process",
+            "events",
+            "http",
+            "net",
+            "zlib",
+            "url",
+            "querystring",
+            "stream",
+            "util",
+            "async_hooks"
+          ],
         },
         minify: buildFormat === "es" && minifyBuild ? "esbuild" : false,
         ...(esbuildMinifyOptions && { esbuild: esbuildMinifyOptions }),

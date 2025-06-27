@@ -1,7 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.json",
-  "include": ["./src/**/*.ts", "./tests/**/*.ts", "./script/**/*.ts"],
+  "include": [
+    "./src/**/*.ts",
+    "./tests/**/*.ts",
+    "./script/**/*.ts",
+    "./examples/**/*.ts"
+  ],
   "exclude": ["./dist/**/*"],
   "compilerOptions": {
     "rootDir": "./",
@@ -10,7 +15,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleResolution": "Bundler",
-    
+
     "paths": {
       "#src/*": ["./src/*"]
     }

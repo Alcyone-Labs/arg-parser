@@ -2,7 +2,8 @@ import { z } from "zod";
 
 // Forward declaration for ArgParser to avoid circular dependency in HandlerContext
 // This will be replaced or refined once ArgParser.ts is updated to use these types.
-type ArgParserInstance = any;
+// It represents an instance of the ArgParser class.
+export type ArgParserInstance = any;
 
 export const zodFlagSchema = z
   .object({
@@ -47,28 +48,29 @@ export const zodFlagSchema = z
           message: "Must be Boolean constructor",
         }),
         z.any().refine((val) => val === Array, {
+          // Native Array constructor
           message: "Must be Array constructor",
         }),
         z.any().refine((val) => val === Object, {
+          // Native Object constructor
           message: "Must be Object constructor",
         }),
-        z.function().args(z.string()).returns(z.any()), // Custom parser function
-        z
-          .string()
-          .refine(
-            (value) =>
-              ["boolean", "string", "number", "array", "object"].includes(
-                value.toLowerCase(),
-              ),
-            {
-              message:
-                "Invalid type string. Must be one of 'boolean', 'string', 'number', 'array', 'object'.",
-            },
-          ),
+        z.function().args(z.string()).returns(z.any()), // Custom parser function (value: string) => any
+        z.string().refine(
+          // String literal types
+          (value) =>
+            ["boolean", "string", "number", "array", "object"].includes(
+              value.toLowerCase(),
+            ),
+          {
+            message:
+              "Invalid type string. Must be one of 'boolean', 'string', 'number', 'array', 'object'.",
+          },
+        ),
       ])
-      .default("string")
+      .default("string") // Default type is string if not specified
       .describe(
-        "Expected data type or a custom parser function. Defaults to 'string'.",
+        "Expected data type (constructor or string literal) or a custom parser function. Defaults to 'string'.",
       ),
     mandatory: z
       .union([z.boolean(), z.function().args(z.any()).returns(z.boolean())]) // `z.any()` for parsedArgs flexibility
@@ -104,8 +106,8 @@ export const zodFlagSchema = z
   })
   .passthrough() // Allow unrecognized properties, they won't be validated or processed beyond alias handling.
   .transform((obj) => {
+    // Alias handling for 'default' and 'required'
     const newObj: { [key: string]: any } = { ...obj };
-
     if (
       "default" in newObj &&
       newObj["default"] !== undefined &&
@@ -113,7 +115,6 @@ export const zodFlagSchema = z
     ) {
       newObj["defaultValue"] = newObj["default"];
     }
-
     if (
       "required" in newObj &&
       newObj["required"] !== undefined &&
@@ -123,96 +124,189 @@ export const zodFlagSchema = z
         | boolean
         | ((parsedArgs: any) => boolean);
     }
-
     return newObj;
   });
 
+/**
+ * The raw input type for defining a flag, before Zod processing (aliases, defaults).
+ */
 export type IFlagCore = z.input<typeof zodFlagSchema>;
 
+/**
+ * The type of the `type` property in a ProcessedFlagCore object.
+ * This represents all valid forms the `type` property can take after Zod processing.
+ */
+export type TParsedArgsTypeFromFlagDef =
+  | StringConstructor
+  | NumberConstructor
+  | BooleanConstructor
+  | ArrayConstructor
+  | ObjectConstructor
+  | ((value: string) => any) // Custom parser function
+  | "string"
+  | "number"
+  | "boolean"
+  | "array"
+  | "object"; // String literal types
+
+/**
+ * The core type of a flag after Zod processing (defaults applied, aliases resolved),
+ * but before some properties are made more specific (like `type` constructor to actual type).
+ * This type is output by `zodFlagSchema.parse()`.
+ */
+export type ProcessedFlagCore = Omit<z.output<typeof zodFlagSchema>, "type"> & {
+  type: TParsedArgsTypeFromFlagDef;
+};
+
+/**
+ * The user-facing type for defining a flag. It includes aliases like `default` and `required`.
+ * The `handler` property is removed as handlers are typically associated with commands/subcommands, not individual flags.
+ */
 export type IFlag = IFlagCore & {
   /** @alias defaultValue */
   default?: any;
   /** @alias mandatory */
-  required?: boolean | ((parsedArgs: TParsedArgs<any>) => boolean); // `any` for now for TParsedArgs generic
-  // This handler seems to be for sub-commands, not specific to flag definition itself
-  // It was part of the original IFlag in ArgParser.ts.
-  // Consider moving to ISubCommand interface if it's only used there.
-  handler?: (ctx: HandlerContext) => void | Promise<void>;
+  required?: boolean | ((parsedArgs: TParsedArgs<any>) => boolean);
 };
 
-export type ProcessedFlagCore = z.output<typeof zodFlagSchema>;
-
+/**
+ * A more refined type for a flag after it has been fully processed by ArgParser,
+ * particularly its `type` property and validation/enum/mandatory functions.
+ * This is the type that ArgParser would internally work with for parsing and type extraction.
+ */
 export type ProcessedFlag = Omit<
   ProcessedFlagCore,
-  "type" | "validate" | "enum" | "mandatory"
+  "validate" | "enum" | "mandatory"
 > & {
-  type:
-    | StringConstructor
-    | NumberConstructor
-    | BooleanConstructor
-    | ArrayConstructor
-    | ObjectConstructor
-    | ((value: string) => any);
+  // `type` is already correctly typed via ProcessedFlagCore.
   validate?: (
     value: any,
-    parsedArgs?: TParsedArgs<ProcessedFlag[]>,
+    parsedArgs?: TParsedArgs<ProcessedFlag[]>, // Parsed args up to this point
   ) => boolean | string | void | Promise<boolean | string | void>;
-  enum?: any[];
+  enum?: any[]; // Enum values, type-checked by user or ArgParser
   mandatory?: boolean | ((parsedArgs: TParsedArgs<ProcessedFlag[]>) => boolean);
 };
 
-export type ResolveType<T> = T extends (...args: any[]) => infer R
-  ? R // Function
-  : T extends new (...args: any[]) => infer S
-    ? S // Constructor
-    : T extends "string"
-      ? string
-      : T extends "number"
-        ? number
-        : T extends "boolean"
-          ? boolean
-          : T extends "array"
-            ? any[]
-            : T extends "object"
-              ? Record<string, any>
-              : any; // Fallback
+/**
+ * Resolves the TypeScript type from a flag's `type` definition.
+ */
+export type ResolveType<T extends TParsedArgsTypeFromFlagDef> =
+  T extends StringConstructor
+    ? string
+    : T extends NumberConstructor
+      ? number
+      : T extends BooleanConstructor
+        ? boolean
+        : T extends ArrayConstructor
+          ? any[] // Default to array of any if not further specified
+          : T extends ObjectConstructor
+            ? Record<string, any> // Default to object with any properties
+            : T extends "string"
+              ? string
+              : T extends "number"
+                ? number
+                : T extends "boolean"
+                  ? boolean
+                  : T extends "array"
+                    ? any[] // Default for string literal 'array'
+                    : T extends "object"
+                      ? Record<string, any> // Default for string literal 'object'
+                      : T extends (value: string) => infer R // Custom parser function
+                        ? R // The return type of the custom parser
+                        : any; // Fallback type
 
-export type ExtractFlagType<Flag extends ProcessedFlag> =
-  Flag["flagOnly"] extends true
-    ? Flag["allowMultiple"] extends true
-      ? boolean[] // Array of booleans if flagOnly and allowMultiple
-      : boolean // Single boolean if flagOnly
-    : Flag["allowMultiple"] extends true
-      ? Array<ResolveType<Flag["type"]>> // Array of resolved type
-      : ResolveType<Flag["type"]>; // Single resolved type
+/**
+ * Extracts the final TypeScript type for a flag's value based on its definition,
+ * considering `flagOnly` and `allowMultiple` properties.
+ */
+export type ExtractFlagType<TFlag extends ProcessedFlag> =
+  TFlag["flagOnly"] extends true // If the flag is a "flag-only" (presence) type
+    ? TFlag["allowMultiple"] extends true
+      ? boolean[] // Multiple presence flags result in an array of booleans
+      : boolean // Single presence flag results in a boolean
+    : TFlag["allowMultiple"] extends true // If the flag can have multiple values
+      ? Array<ResolveType<TFlag["type"]>> // Results in an array of the resolved type
+      : ResolveType<TFlag["type"]>; // Single value of the resolved type
 
-export type TParsedArgs<Flags extends readonly (IFlag | ProcessedFlag)[]> = {
-  // Made generic to support both IFlag and ProcessedFlag arrays
-  [K in Flags[number]["name"]]: Flags[number] extends ProcessedFlag // Type assertion to help compiler
-    ? ExtractFlagType<Extract<Flags[number], { name: K } & ProcessedFlag>>
-    : any; // Fallback for IFlag, though ideally, TParsedArgs uses ProcessedFlag
+/**
+ * Represents the structured object of parsed arguments.
+ * Keys are flag names, and values are their parsed and typed values.
+ * `TFlags` should be the array of `ProcessedFlag` definitions for the specific command.
+ */
+export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
+  [K in TFlags[number]["name"]]: ExtractFlagType<
+    Extract<TFlags[number], { name: K }>
+  >;
 };
 
-export type HandlerContext = {
-  args: TParsedArgs<ProcessedFlag[]>;
-  parentArgs?: TParsedArgs<ProcessedFlag[]>;
+/**
+ * Generic context object passed to command handlers.
+ * @template TCurrentCommandArgs Shape of `args` for the current command, derived from its flags.
+ * @template TParentCommandArgs Shape of `parentArgs` from the parent command, if any.
+ */
+export type IHandlerContext<
+  TCurrentCommandArgs extends Record<string, any> = Record<string, any>,
+  TParentCommandArgs extends Record<string, any> = Record<string, any>,
+> = {
+  /** Parsed arguments specific to the current command. */
+  args: TCurrentCommandArgs;
+  /** Parsed arguments from the parent command, if this is a subcommand. */
+  parentArgs?: TParentCommandArgs;
+  /** The sequence of command names that led to this handler. */
   commandChain: string[];
-  parser: ArgParserInstance; // Using the forward declared 'any' type
+  /** The `ArgParser` instance that invoked this handler (could be a subcommand's parser). */
+  parser: ArgParserInstance;
+  /** The parent `ArgParser` instance, if this is a subcommand handler. */
+  parentParser?: ArgParserInstance;
+  /** Optional: The root `ArgParser` instance of the CLI. */
+  // rootParser?: ArgParserInstance;
 };
 
-// Forward-declare ArgParser for ISubCommand to use
-// We use 'any' here as ArgParser itself imports types from this file,
-// creating a potential circular dependency for type-checking at this specific point.
-// The actual ArgParser<SubCmdFlags> type will be used in ArgParser.ts.
-type ArgParserForSubcommand = any;
+/**
+ * Generic type for the collection of processed flags that an ArgParser instance manages.
+ */
+export type FlagsArray = readonly ProcessedFlag[];
 
-export interface ISubCommand {
+/**
+ * Defines a subcommand within an ArgParser setup.
+ * @template TSubCommandFlags Flags defined specifically FOR this subcommand.
+ * @template TParentCommandFlags Flags defined for the PARENT of this subcommand.
+ * @template THandlerReturn The expected return type of the subcommand's handler.
+ */
+export interface ISubCommand<
+  TSubCommandFlags extends FlagsArray = FlagsArray,
+  TParentCommandFlags extends FlagsArray = FlagsArray,
+  THandlerReturn = any,
+> {
   name: string;
   description?: string;
-  parser: ArgParserForSubcommand;
-  handler?: (ctx: HandlerContext) => void | Promise<void>;
+  /** The ArgParser instance for this subcommand, typed with its own flags. */
+  // Ideally: parser: ArgParser<TSubCommandFlags>; (if ArgParser class is made generic)
+  parser: ArgParserInstance;
+  /** Handler function for this subcommand. */
+  handler?: (
+    ctx: IHandlerContext<
+      TParsedArgs<TSubCommandFlags>,
+      TParsedArgs<TParentCommandFlags>
+    >,
+  ) => THandlerReturn | Promise<THandlerReturn>;
+  /** Internal flag to identify MCP subcommands for proper exclusion from tool generation */
+  isMcp?: boolean;
 }
 
-// Generic type for the collection of flags an ArgParser instance will manage.
-// Using ProcessedFlag as these are the flags after initial validation and transformation.
-export type FlagsArray = readonly ProcessedFlag[];
+/**
+ * Type for the main handler of an ArgParser instance (root command or a command defined by an ArgParser).
+ * @template TParserFlags Flags defined for this ArgParser instance.
+ * @template TParentParserFlags Flags of the parent parser, if this parser is used as a subcommand.
+ * @template THandlerReturn The expected return type of the handler.
+ */
+export type MainHandler<
+  TParserFlags extends FlagsArray = FlagsArray,
+  TParentParserFlags extends FlagsArray = FlagsArray,
+  THandlerReturn = any,
+> = (
+  ctx: IHandlerContext<
+    TParsedArgs<TParserFlags>,
+    TParsedArgs<TParentParserFlags>
+  >,
+) => THandlerReturn | Promise<THandlerReturn>;
