@@ -12,7 +12,7 @@
  * 6. Real file search using fzf and file processing capabilities
  */
 
-import { ArgParserWithMcp } from "../src";
+import { ArgParser } from "../src";
 import { writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, extname, basename, resolve } from "node:path";
 import { spawn } from "node:child_process";
@@ -134,7 +134,7 @@ function analyzeFiles(files: string[]): {
 }
 
 // Create the main CLI with MCP support
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "File Search & Analysis Tool",
   appCommandName: "file-tool",
   description: "A practical file search and analysis tool showcasing ArgParser v1.1.0 features",
@@ -236,7 +236,7 @@ Use --help with any command for detailed information!
       extensions
     };
   },
-  parser: new ArgParserWithMcp({}, [
+  parser: new ArgParser({}, [
     {
       name: "query",
       description: "Search query for fuzzy matching",
@@ -355,7 +355,7 @@ Use --help with any command for detailed information!
       return { success: false, error: error.message };
     }
   },
-  parser: new ArgParserWithMcp({}, [
+  parser: new ArgParser({}, [
     {
       name: "directory",
       description: "Directory to analyze (can be set via SEARCH_DIR env var)",
@@ -397,7 +397,11 @@ Use --help with any command for detailed information!
 })
 // MCP server is now configured with elegant default transports above
 
+// Export the CLI for testing
+export default cli;
+
 // Execute the CLI
+// The --s-enable-fuzzy system flag automatically prevents execution during fuzzy testing
 async function main() {
   try {
     const result = await cli.parse(process.argv.slice(2));

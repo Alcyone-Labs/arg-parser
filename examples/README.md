@@ -217,4 +217,4 @@ bun examples/fzf-search-cli.ts --help
 ### **Performance & Debugging**
 - Use `--s-debug-print` to inspect complex parser configurations
 - Test with various argument combinations to ensure robust parsing
-- Consider using async handlers for I/O operations when using `ArgParserWithMcp`
+- Consider using async handlers for I/O operations when using `ArgParser` with MCP

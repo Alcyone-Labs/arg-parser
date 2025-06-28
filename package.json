@@ -1,7 +1,7 @@
 {
   "name": "@alcyone-labs/arg-parser",
   "version": "1.1.0",
-  "description": "A robust, type-safe command line argument parser with automatic type inference, validation, help generation and complex sub-command support",
+  "description": "A robust, type-safe command line argument parser with automatic type inference, validation, help generation and complex sub-command support, now with built-in MCP and fuzzy testing support.",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -53,12 +53,15 @@
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
-    "@modelcontextprotocol/sdk": "^1.13.1",
     "chalk": "^5.4.1",
     "dotenv": "^16.5.0",
     "js-yaml": "^4.1.0",
     "magic-regexp": "^0.10.0",
     "zod": "^3.25.67"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.1",
+    "express": "^5.1.0"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.4.2",
@@ -66,7 +69,6 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.33",
     "cross-env": "^7.0.3",
-    "express": "^5.1.0",
     "madge": "^8.0.0",
     "prettier": "^3.6.1",
     "ts-node": "^10.9.2",

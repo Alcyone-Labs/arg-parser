@@ -8,18 +8,17 @@ Whether you're building a simple script, a complex nested CLI application, or an
 
 ### **Major Features**
 
-- **MCP (Model Context Protocol) Integration**: Transform any CLI into an MCP server with multiple transport support
-- **System Flags**: Built-in `--s-debug`, `--s-with-env`, and `--s-save-to-env` for enhanced debugging and configuration
+- **MCP (Model Context Protocol) Integration**: Transform any CLI into an MCP server with multiple transport support. Run MCP servers with stdio, SSE, and HTTP transports simultaneously, including streamable HTTP.
+- **System Flags**: Built-in `--s-debug-print`, `--s-with-env`, `--s-save-to-env`, and `--s-enable-fuzzy` for enhanced debugging, configuration, and testing
 - **Environment Loading**: Load configuration from `.env`, `.yaml`, `.json`, and `.toml` files
-- **Multiple Transport Support**: Run MCP servers with stdio, SSE, and HTTP transports simultaneously, including streamable HTTP
 - **Enhanced Debugging**: Comprehensive runtime debugging and configuration export tools
 
 ### **Quick Start with MCP**
 
 ```typescript
-import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "My CLI Tool",
   appCommandName: "my-tool",
   description: "A powerful CLI that can also run as an MCP server",
@@ -99,13 +98,13 @@ pnpm add @modelcontextprotocol/sdk express
 npm install @modelcontextprotocol/sdk express
 ```
 
-**Note:** MCP dependencies are optional and only required if you use `ArgParserWithMcp` or MCP-related features.
+**Note:** MCP dependencies are optional and only required if you use `ArgParser` with MCP features or MCP-related functionality.
 
 ## Runtime Compatibility
 
 ArgParser is fully compatible with multiple JavaScript runtimes:
 
-### **BunJS (Recommended)**
+### **BunJS**
 ```bash
 # Run TypeScript directly
 bun your-cli.ts --flag value
@@ -222,9 +221,9 @@ console.log("Result:", result);
 Transform your CLI into an MCP server with minimal changes:
 
 ```typescript
-import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "Data Processor",
   appCommandName: "data-proc",
   description: "A tool for processing data phases (CLI + MCP server)",
@@ -269,12 +268,12 @@ ArgParser v1.1.0 introduces powerful Model Context Protocol (MCP) integration, a
 
 1. **Import the MCP-enabled class:**
    ```typescript
-   import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+   import { ArgParser } from "@alcyone-labs/arg-parser";
    ```
 
 2. **Create your CLI with MCP support:**
    ```typescript
-   const cli = ArgParserWithMcp.withMcp({
+   const cli = ArgParser.withMcp({
      appName: "My Tool",
      appCommandName: "my-tool",
      handler: async (ctx) => ({ result: "success", args: ctx.args }),
@@ -785,6 +784,7 @@ System flags use the `--s-*` pattern and provide powerful development and deploy
 - **`--s-with-env <file>`**: Load configuration from files (`.env`, `.yaml`, `.json`, `.toml`)
 - **`--s-save-to-env <file>`**: Export current configuration to various formats
 - **`--s-debug-print`**: Export complete parser configuration for inspection
+- **`--s-enable-fuzzy`**: Enable fuzzy testing mode (dry-run with no side effects)
 
 ### `--s-save-to-env <file>`
 
@@ -955,21 +955,150 @@ For runtime debugging, use the system flags documented above:
 - `--s-save-to-env <file>`: Export current configuration to various formats
 - `--s-with-env <file>`: Load configuration from file and merge with CLI arguments
 
+### `--s-enable-fuzzy`
+
+Enables fuzzy testing mode, which acts as a dry-run mode for safe testing without side effects. **No boilerplate code required** - the system automatically prevents CLI execution during fuzzy testing.
+
+```bash
+# Enable fuzzy mode for testing
+your-cli --s-enable-fuzzy --input test.txt --format json
+```
+
+**Features:**
+- **Automatic execution prevention**: No need for complex conditional logic in your CLI code
+- **Zero boilerplate**: Simply export your CLI with `export default cli` and call `cli.parse()`
+- Disables error handling to allow error collection
+- Skips mandatory flag validation for comprehensive testing
+- **Prevents handler function execution** (no side effects)
+- **Logs what each handler would receive** for testing visibility
+- Recursively applies to all subcommand parsers
+- Safe for testing production CLIs with database operations, file modifications, or API calls
+
+**Example Output:**
+```
+[--s-enable-fuzzy] handler() skipped for command chain: (root)
+  Input args: [--s-enable-fuzzy --input test.txt --format json]
+  Parsed args: {"input":"test.txt","format":"json"}
+```
+
+**Use Cases:**
+- Fuzzy testing CLI argument parsing
+- Validating CLI configuration without executing business logic
+- Testing complex command hierarchies safely
+- Automated testing of CLI interfaces
+
 These system flags are particularly useful when you need to debug a CLI application without modifying the source code.
+
+## Fuzzy Testing
+
+ArgParser includes comprehensive fuzzy testing capabilities to automatically test CLI configurations and catch edge cases that manual testing might miss. The fuzzy testing utility systematically explores command paths and generates various flag combinations to ensure robustness.
+
+### **Quick Start**
+
+Test any ArgParser configuration using the built-in fuzzy testing CLI:
+
+```bash
+# Test an ArgParser file
+bun src/fuzzy-test-cli.ts --file examples/getting-started.ts
+
+# Test with custom options and save results
+bun src/fuzzy-test-cli.ts \
+  --file examples/getting-started.ts \
+  --output test-results.json \
+  --format json \
+  --max-depth 3 \
+  --random-tests 20 \
+  --verbose
+```
+
+**Important Note**: Make sure that the `examples/getting-started.ts` file exports the parser instance using `export default` for the fuzzy testing CLI to work correctly.
+
+### **System Flag Integration**
+
+The `--s-enable-fuzzy` system flag makes any CLI fuzzy-test compatible **without any code modifications or boilerplate**:
+
+```bash
+# Enable fuzzy mode for safe testing (dry-run with no side effects)
+your-cli --s-enable-fuzzy --input test.txt --format json
+
+# The fuzzy testing CLI automatically uses this flag
+bun src/fuzzy-test-cli.ts --file your-cli.ts
+```
+
+**Fuzzy mode features:**
+- **Zero boilerplate**: No conditional logic needed - just `export default cli` and `cli.parse()`
+- **Automatic prevention**: System automatically prevents CLI execution during fuzzy testing
+- **Dry-run execution**: Prevents handler function execution (no side effects)
+- **Error collection**: Disables error handling to collect all parsing errors
+- **Argument logging**: Shows what each handler would receive for testing visibility
+- **Safe testing**: Test production CLIs with database operations, file modifications, or API calls
+
+### **Testing Capabilities**
+
+The fuzzy tester automatically tests:
+
+- **Valid combinations**: Proper flag usage with correct types and values
+- **Invalid combinations**: Wrong inputs to verify error handling
+- **Random combinations**: Pseudo-random flag combinations for edge cases
+- **Command paths**: All subcommand combinations up to configurable depth
+- **Performance**: Execution timing for different input complexities
+
+### **Programmatic Usage**
+
+```typescript
+import { ArgParserFuzzyTester } from "@alcyone-labs/arg-parser/fuzzy-tester";
+import { myArgParser } from "./my-cli";
+
+const tester = new ArgParserFuzzyTester(myArgParser, {
+  maxDepth: 5,
+  randomTestCases: 10,
+  includePerformance: true,
+  testErrorCases: true,
+  verbose: false,
+});
+
+const report = await tester.runFuzzyTest();
+console.log(`Success rate: ${(report.successfulTests / report.totalTests * 100).toFixed(1)}%`);
+```
+
+### **Output Formats**
+
+Generate reports in multiple formats:
+
+```bash
+# Human-readable console output
+bun src/fuzzy-test-cli.ts --file my-cli.ts --format text
+
+# Machine-readable JSON
+bun src/fuzzy-test-cli.ts --file my-cli.ts --format json --output results.json
+
+# Documentation-friendly Markdown
+bun src/fuzzy-test-cli.ts --file my-cli.ts --format markdown --output report.md
+```
+
+For complete documentation, examples, and advanced usage patterns, see the [Fuzzy Testing Documentation](docs/fuzzy-testing.md).
 
 ## API Reference
 
 This section provides a quick overview of the main components. See the sections above for detailed explanations and examples.
 
-### **MCP Integration Classes (v1.1.0+)**
+### **Core Classes**
 
-#### `ArgParserWithMcp`
+#### `ArgParserBase`
 
-Extends `ArgParser` with MCP server capabilities.
+Base class providing core CLI parsing functionality without MCP features. Use this for lightweight CLIs that don't need MCP server capabilities.
 
-**Factory Methods:**
-- `ArgParserWithMcp.withMcp(options?, initialFlags?)`: Create new MCP-enabled parser
-- `ArgParserWithMcp.fromArgParser(parser)`: Convert existing ArgParser to MCP-enabled
+**Constructor:**
+- `new ArgParserBase(options?, initialFlags?)`: Create basic parser instance
+
+#### `ArgParser` (v1.1.0+)
+
+Main class with built-in MCP server capabilities. Extends `ArgParserBase` with MCP integration.
+
+**Constructors:**
+- `new ArgParser(options?, initialFlags?)`: Create parser with MCP capabilities
+- `ArgParser.withMcp(options?, initialFlags?)`: Factory method for MCP-enabled parser (same as constructor)
+- `ArgParser.fromArgParser(parser)`: Convert existing ArgParserBase to MCP-enabled
 
 **MCP Methods:**
 - `toMcpTools(options?)`: Generate MCP tool structures from CLI definition
@@ -991,7 +1120,7 @@ Extends `ArgParser` with MCP server capabilities.
 
 **Example:**
 ```typescript
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "My CLI",
   handler: async (ctx) => ({ result: ctx.args }),
 })
@@ -1002,7 +1131,7 @@ const cli = ArgParserWithMcp.withMcp({
 });
 
 // Elegant approach: Configure default transports in addMcpSubCommand
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "My Tool",
   handler: async (ctx) => ({ result: ctx.args }),
 })
@@ -1023,9 +1152,15 @@ const cli = ArgParserWithMcp.withMcp({
 // Usage: my-tool serve --transports '[{"type":"sse","port":4000}]' (overrides defaults)
 ```
 
-### `new ArgParser(options?, initialFlags?)`
+### Constructors
 
-Constructor for creating a parser instance.
+#### `new ArgParserBase(options?, initialFlags?)`
+
+Constructor for creating a basic parser instance without MCP capabilities.
+
+#### `new ArgParser(options?, initialFlags?)`
+
+Constructor for creating a parser instance with MCP capabilities.
 
 - `options`: An object (`IArgParserParams`) configuring the parser.
   - `appName?: string`: Display name.
@@ -1138,9 +1273,9 @@ const cli = new ArgParser({
 
 ### **MCP Integration**
 ```typescript
-import { ArgParserWithMcp } from "@alcyone-labs/arg-parser";
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
-const mcpCli = ArgParserWithMcp.withMcp({ /* same options */ })
+const mcpCli = ArgParser.withMcp({ /* same options */ })
   .addFlags([/* same flags */])
   .addMcpSubCommand("serve", {
     name: "my-mcp-server",
@@ -1155,10 +1290,10 @@ const mcpCli = ArgParserWithMcp.withMcp({ /* same options */ })
 Configure default transports that will be used when no CLI transport flags are provided:
 
 ```typescript
-import { ArgParserWithMcp, McpTransportConfig } from "@alcyone-labs/arg-parser";
+import { ArgParser, McpTransportConfig } from "@alcyone-labs/arg-parser";
 
 // Single preset transport
-const cliWithPreset = ArgParserWithMcp.withMcp({
+const cliWithPreset = ArgParser.withMcp({
   appName: "My Tool",
   handler: async (ctx) => ({ result: ctx.args }),
 })
@@ -1174,7 +1309,7 @@ const cliWithPreset = ArgParserWithMcp.withMcp({
 });
 
 // Multiple preset transports
-const cliWithMultiplePresets = ArgParserWithMcp.withMcp({
+const cliWithMultiplePresets = ArgParser.withMcp({
   appName: "Multi-Transport Tool",
   handler: async (ctx) => ({ result: ctx.args }),
 })

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { ArgParserWithMcp } from "../../src";
+import { ArgParser } from "../../src";
 import type { McpTransportConfig, McpSubCommandOptions } from "../../src";
 
 describe("MCP Preset Transports Configuration", () => {
-  let parser: ArgParserWithMcp;
+  let parser: ArgParser;
 
   beforeEach(() => {
-    parser = new ArgParserWithMcp({
+    parser = new ArgParser({
       appName: "Preset Transport Test CLI",
       appCommandName: "preset-test",
       description: "A test CLI for preset MCP transport functionality",
@@ -174,7 +174,7 @@ describe("MCP Preset Transports Configuration", () => {
 
   describe("Integration with existing functionality", () => {
     test("should work with complex CLI setup and preset transports", () => {
-      const complexParser = ArgParserWithMcp.withMcp({
+      const complexParser = ArgParser.withMcp({
         appName: "Complex CLI with Presets",
         appCommandName: "complex-preset",
         description: "A complex CLI with sub-commands and preset MCP transports",
@@ -195,7 +195,7 @@ describe("MCP Preset Transports Configuration", () => {
             global: ctx.parentArgs?.["global"],
             file: ctx.args["file"],
           }),
-          parser: new ArgParserWithMcp({}, [
+          parser: new ArgParser({}, [
             {
               name: "file",
               description: "File to process",
@@ -218,7 +218,7 @@ describe("MCP Preset Transports Configuration", () => {
           }
         });
 
-      expect(complexParser).toBeInstanceOf(ArgParserWithMcp);
+      expect(complexParser).toBeInstanceOf(ArgParser);
       expect(complexParser.getSubCommands().has("process")).toBe(true);
       expect(complexParser.getSubCommands().has("serve")).toBe(true);
     });

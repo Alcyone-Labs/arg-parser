@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { ArgParser, ArgParserWithMcp } from "../../src";
+import { ArgParser, ArgParserBase } from "../../src";
 import type { IFlag } from "../../src";
 
-describe("ArgParserWithMcp", () => {
+describe("ArgParser", () => {
   describe("Basic Functionality", () => {
-    test("should extend ArgParser correctly", () => {
-      const parser = new ArgParserWithMcp({
+    test("should extend ArgParserBase correctly", () => {
+      const parser = new ArgParser({
         appName: "Test MCP CLI",
         appCommandName: "test-mcp",
       });
 
+      expect(parser).toBeInstanceOf(ArgParserBase);
       expect(parser).toBeInstanceOf(ArgParser);
-      expect(parser).toBeInstanceOf(ArgParserWithMcp);
       expect(parser.getAppName()).toBe("Test MCP CLI");
       expect(parser.getAppCommandName()).toBe("test-mcp");
     });
@@ -20,7 +20,7 @@ describe("ArgParserWithMcp", () => {
     test("should support all ArgParser functionality", async () => {
       const mockHandler = vi.fn().mockResolvedValue({ success: true });
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Test CLI",
         appCommandName: "test",
         handler: mockHandler,
@@ -50,10 +50,10 @@ describe("ArgParserWithMcp", () => {
   });
 
   describe("MCP Methods", () => {
-    let parser: ArgParserWithMcp;
+    let parser: ArgParser;
 
     beforeEach(() => {
-      parser = new ArgParserWithMcp({
+      parser = new ArgParser({
         appName: "MCP Test CLI",
         appCommandName: "mcp-test",
         description: "A test CLI for MCP functionality",
@@ -146,7 +146,7 @@ describe("ArgParserWithMcp", () => {
 
   describe("MCP Sub-command", () => {
     test("should add MCP sub-command correctly", () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Test CLI",
         appCommandName: "test",
         handler: async () => ({ success: true }),
@@ -164,12 +164,12 @@ describe("ArgParserWithMcp", () => {
         name: "serve",
         description: "Start test-mcp-server as an MCP server",
         handler: expect.any(Function),
-        parser: expect.any(ArgParser),
+        parser: expect.any(ArgParserBase),
       });
     });
 
     test("should support method chaining", () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Chainable CLI",
         appCommandName: "chain",
       })
@@ -186,7 +186,7 @@ describe("ArgParserWithMcp", () => {
           version: "1.0.0",
         });
 
-      expect(parser).toBeInstanceOf(ArgParserWithMcp);
+      expect(parser).toBeInstanceOf(ArgParser);
       expect(parser.flags.length).toBeGreaterThan(0);
       expect(parser.getSubCommands().has("mcp")).toBe(true);
     });
@@ -197,7 +197,7 @@ describe("ArgParserWithMcp", () => {
       //   data: z.any().describe("Response data"),
       // });
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Custom CLI",
         appCommandName: "custom",
       }).addMcpSubCommand(
@@ -230,13 +230,13 @@ describe("ArgParserWithMcp", () => {
 
   describe("Factory Methods", () => {
     test("should create instance with withMcp factory method", () => {
-      const parser = ArgParserWithMcp.withMcp({
+      const parser = ArgParser.withMcp({
         appName: "Factory CLI",
         appCommandName: "factory",
         description: "Created with factory method",
       });
 
-      expect(parser).toBeInstanceOf(ArgParserWithMcp);
+      expect(parser).toBeInstanceOf(ArgParser);
       expect(parser.getAppName()).toBe("Factory CLI");
       expect(parser.getAppCommandName()).toBe("factory");
       expect(parser.getDescription()).toBe("Created with factory method");
@@ -253,7 +253,7 @@ describe("ArgParserWithMcp", () => {
         },
       ];
 
-      const parser = ArgParserWithMcp.withMcp(
+      const parser = ArgParser.withMcp(
         {
           appName: "Factory CLI with Flags",
           appCommandName: "factory-flags",
@@ -280,9 +280,9 @@ describe("ArgParserWithMcp", () => {
         },
       ]);
 
-      const mcpParser = ArgParserWithMcp.fromArgParser(originalParser);
+      const mcpParser = ArgParser.fromArgParser(originalParser);
 
-      expect(mcpParser).toBeInstanceOf(ArgParserWithMcp);
+      expect(mcpParser).toBeInstanceOf(ArgParser);
       expect(mcpParser.getAppName()).toBe("Original CLI");
       expect(mcpParser.getAppCommandName()).toBe("original");
       expect(mcpParser.getDescription()).toBe("Original parser");
@@ -312,7 +312,7 @@ describe("ArgParserWithMcp", () => {
         },
       ]);
 
-      const mcpParser = ArgParserWithMcp.fromArgParser(originalParser);
+      const mcpParser = ArgParser.fromArgParser(originalParser);
       const result = await mcpParser.parse(["--test", "value"]);
 
       expect(mockHandler).toHaveBeenCalledWith(
@@ -329,7 +329,7 @@ describe("ArgParserWithMcp", () => {
 
   describe("Integration", () => {
     test("should work with complex CLI setup", async () => {
-      const parser = ArgParserWithMcp.withMcp({
+      const parser = ArgParser.withMcp({
         appName: "Complex CLI",
         appCommandName: "complex",
         description: "A complex CLI with sub-commands and MCP support",
@@ -350,7 +350,7 @@ describe("ArgParserWithMcp", () => {
             global: ctx.parentArgs?.["global"],
             file: ctx.args["file"],
           }),
-          parser: new ArgParser({}, [
+          parser: new ArgParserBase({}, [
             {
               name: "file",
               description: "File to process",
@@ -389,7 +389,7 @@ describe("ArgParserWithMcp", () => {
     });
 
     test("should handle errors gracefully in MCP context", async () => {
-      const errorParser = new ArgParserWithMcp({
+      const errorParser = new ArgParser({
         appName: "Error CLI",
         appCommandName: "error",
         handler: async () => {

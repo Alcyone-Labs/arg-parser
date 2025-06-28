@@ -1,5 +1,9 @@
-export * from "./ArgParser";
-export * from "./ArgParserWithMcp";
+export { ArgParserBase, ArgParserError } from "./ArgParserBase";
+export {
+  ArgParser,
+  type McpTransportConfig,
+  type McpSubCommandOptions
+} from "./ArgParser";
 
 export {
   zodFlagSchema,
@@ -24,3 +28,6 @@ export {
   type GenerateMcpToolsOptions,
   type IParseExecutionResult,
 } from "./mcp-integration";
+
+export { ArgParserFuzzyTester } from "./fuzzy-tester";
+export type { FuzzyTestOptions, TestResult, FuzzyTestReport } from "./fuzzy-tester";

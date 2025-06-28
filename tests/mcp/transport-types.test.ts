@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { ArgParserWithMcp } from "../../src";
+import { ArgParser } from "../../src";
 
 describe("MCP Transport Types", () => {
-  let parser: ArgParserWithMcp;
+  let parser: ArgParser;
 
   beforeEach(() => {
-    parser = new ArgParserWithMcp({
+    parser = new ArgParser({
       appName: "Transport Test CLI",
       appCommandName: "transport-test",
       description: "A test CLI for MCP transport functionality",
@@ -207,7 +207,7 @@ describe("MCP Transport Types", () => {
 
   describe("Integration with existing functionality", () => {
     test("should work with complex CLI setup and multiple transport options", () => {
-      const complexParser = ArgParserWithMcp.withMcp({
+      const complexParser = ArgParser.withMcp({
         appName: "Complex CLI",
         appCommandName: "complex",
         description: "A complex CLI with sub-commands and MCP support",
@@ -228,7 +228,7 @@ describe("MCP Transport Types", () => {
             global: ctx.parentArgs?.["global"],
             file: ctx.args["file"],
           }),
-          parser: new ArgParserWithMcp({}, [
+          parser: new ArgParser({}, [
             {
               name: "file",
               description: "File to process",
