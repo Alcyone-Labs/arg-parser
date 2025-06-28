@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 
-import { ArgParser } from "../src";
+import { ArgParserBase } from "../src";
 
 // Example demonstrating the --s-with-env system flag:
 // 1. Call with --s-save-to-env to generate config file ("ScriptName.env" if you don't pass a file name)
 // 2. Then fill in the file, and then use --s-with-env ScriptName.env (or the file name you passed) to load them
-const parser = new ArgParser({
+const parser = new ArgParserBase({
   appName: "Config Example",
   appCommandName: "script-name",
   description: "Demonstrates loading configuration from files",

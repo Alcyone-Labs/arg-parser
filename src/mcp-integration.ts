@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ZodRawShape, ZodTypeAny } from "zod";
-import { ArgParser } from "./";
+import { ArgParserBase } from "./ArgParserBase";
 import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "./";
 
 // Assuming these types are correctly exported from src/index.ts
@@ -163,14 +163,14 @@ export type IParseExecutionResult = TParsedArgs<ProcessedFlag[]> &
   ISpecialParseResultProps;
 
 export function generateMcpToolsFromArgParser(
-  rootParser: ArgParser,
+  rootParser: ArgParserBase,
   options?: GenerateMcpToolsOptions,
 ): IMcpToolStructure[] {
   const tools: IMcpToolStructure[] = [];
-  const visitedParsers = new Set<ArgParser>();
+  const visitedParsers = new Set<ArgParserBase>();
 
   function buildToolsRecursively(
-    currentParser: ArgParser,
+    currentParser: ArgParserBase,
     commandPathParts: string[],
   ) {
     if (visitedParsers.has(currentParser)) return;
@@ -401,7 +401,7 @@ export function generateMcpToolsFromArgParser(
 
             let handlerResponse = parseResult["handlerResponse"];
             if (handlerResponse === undefined && parseResult["$commandChain"]) {
-              let finalParser: ArgParser | undefined = rootParser;
+              let finalParser: ArgParserBase | undefined = rootParser;
               let currentArgs: Record<string, any> = { ...parseResult };
               let resolvedParentArgs: Record<string, any> | undefined =
                 undefined;
@@ -417,7 +417,7 @@ export function generateMcpToolsFromArgParser(
                 if (subCmdInfo && subCmdInfo.parser) {
                   resolvedParentArgs = { ...currentArgs };
                   currentArgs = currentArgs[cmdName] || {};
-                  finalParser = subCmdInfo.parser as ArgParser;
+                  finalParser = subCmdInfo.parser as ArgParserBase;
                 } else if (
                   i === 0 &&
                   finalParser &&
@@ -473,17 +473,34 @@ export function generateMcpToolsFromArgParser(
             }
             return { success: true, data: handlerResponse };
           } catch (e: any) {
-            const errorMsg = `MCP tool exec failed: ${e.message || String(e)}`;
+            // Check if this is a handler error that was thrown due to handleErrors: false
+            // In this case, we want to format it consistently with the $error handling above
+            let errorMsg: string;
+            let errorDetails: any = e;
+
+            if (e instanceof Error && e.message) {
+              // This is likely a handler error thrown when handleErrors: false
+              errorMsg = `Cmd error: handler_error - ${e.message}`;
+              errorDetails = { details: e };
+            } else {
+              // Other types of errors (parsing errors, etc.)
+              errorMsg = `MCP tool exec failed: ${e.message || String(e)}`;
+            }
+
             if (options?.outputSchemaMap?.[toolName]) {
               // Return an object matching the expected output schema with error populated
               return {
                 error: errorMsg,
                 files: [],
                 commandExecuted: null,
-                stderrOutput: null,
+                stderrOutput: errorDetails?.stderr || null,
               };
             }
-            return { success: false, message: errorMsg };
+            return {
+              success: false,
+              message: errorMsg,
+              data: errorDetails
+            };
           }
         },
       };
@@ -500,7 +517,7 @@ export function generateMcpToolsFromArgParser(
 
         const nextPathParts = [...commandPathParts, (subCmdObj as any).name];
         buildToolsRecursively(
-          (subCmdObj as any).parser as ArgParser,
+          (subCmdObj as any).parser as ArgParserBase,
           nextPathParts.filter((p) => p),
         );
       }

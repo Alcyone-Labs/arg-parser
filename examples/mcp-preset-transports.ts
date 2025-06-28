@@ -11,7 +11,7 @@
  *   bun examples/mcp-preset-transports.ts serve --transport sse --port 4000  # Overrides presets
  */
 
-import { ArgParserWithMcp } from "../src";
+import { ArgParser } from "../src";
 import type { McpTransportConfig } from "../src";
 
 // Define preset transport configurations
@@ -22,7 +22,7 @@ const defaultTransports: McpTransportConfig[] = [
 ];
 
 // Create CLI with preset MCP transports
-const cli = ArgParserWithMcp.withMcp({
+const cli = ArgParser.withMcp({
   appName: "MCP Preset Transport Example",
   appCommandName: "mcp-preset-example",
   description: "Demonstrates MCP preset transport configuration",
@@ -76,7 +76,7 @@ const cli = ArgParserWithMcp.withMcp({
     
     return analysis;
   },
-  parser: new ArgParserWithMcp({}, [
+  parser: new ArgParser({}, [
     {
       name: "detailed",
       description: "Show detailed analysis",
@@ -100,7 +100,7 @@ const cli = ArgParserWithMcp.withMcp({
 });
 
 // Alternative example with single preset transport
-const cliWithSinglePreset = ArgParserWithMcp.withMcp({
+const cliWithSinglePreset = ArgParser.withMcp({
   appName: "Single Preset Example",
   appCommandName: "single-preset",
   handler: async (ctx) => ({ result: "Single preset example", args: ctx.args })

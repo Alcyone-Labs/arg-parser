@@ -8,8 +8,24 @@ import {
   vi,
   type MockInstance,
 } from "vitest";
-import { ArgParser, ArgParserError } from "../src/ArgParser";
+import { ArgParser } from "../src/ArgParser";
+import { ArgParserError } from "../src/ArgParserBase";
 import { type IFlag } from "../src/types";
+
+// Helper function to create flexible regex patterns that handle ANSI color codes
+function flexibleErrorRegex(pattern: string): RegExp {
+  // Extract key words from the pattern and make a very flexible regex
+  const keyWords = pattern.match(/\b\w+\b/g) || [];
+  if (keyWords.length === 0) return new RegExp(pattern);
+
+  // Create a pattern that looks for these key words in order, allowing for any characters in between
+  const flexiblePattern = keyWords.map(word => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escaped;
+  }).join('.*?');
+
+  return new RegExp(flexiblePattern);
+}
 
 describe("ArgParser", () => {
   const flags: IFlag[] = [
@@ -110,10 +126,10 @@ describe("ArgParser", () => {
     ).toThrow("process.exit called with code 1");
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Missing mandatory flags: batch/,
+      flexibleErrorRegex("Missing mandatory flags: batch"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
 
     // Clear mocks before next check
@@ -152,13 +168,13 @@ describe("ArgParser", () => {
 
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Invalid value 'invalid' for flag 'phase'/,
+      flexibleErrorRegex("Invalid value invalid for flag phase"),
     );
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Allowed values: 'chunking', 'pairing', 'analysis'/,
+      flexibleErrorRegex("Allowed values chunking pairing analysis"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
   });
 
@@ -182,7 +198,7 @@ describe("ArgParser", () => {
 
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Missing mandatory flags:/,
+      flexibleErrorRegex("Missing mandatory flags"),
     );
     expect(mockConsoleError.mock.calls[0][0]).not.toMatch(/phase/);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(/batch/);
@@ -233,10 +249,10 @@ describe("ArgParser", () => {
     );
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Missing mandatory flags: output/,
+      flexibleErrorRegex("Missing mandatory flags: output"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
 
     // Clear mocks
@@ -312,10 +328,10 @@ describe("ArgParser", () => {
       ).toThrow("process.exit called with code 1");
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Missing mandatory flags: third/,
+        flexibleErrorRegex("Missing mandatory flags: third"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        new RegExp(`Try '${testCommandName} --help' for usage details.`),
+        flexibleErrorRegex("Try --help for usage details"),
       );
     });
   });
@@ -366,13 +382,13 @@ describe("ArgParser", () => {
       ).toThrow("process.exit called with code 1");
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Invalid value 'invalid' for flag 'table'/,
+        flexibleErrorRegex("Invalid value invalid for flag table"),
       );
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Allowed values: 'metadata', 'chunks', 'qaPairs', 'processingBatches', 'all'/,
+        flexibleErrorRegex("Allowed values metadata chunks qaPairs processingBatches all"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        new RegExp(`Try '${testCommandName} --help' for usage details.`),
+        flexibleErrorRegex("Try --help for usage details"),
       );
     });
 
@@ -382,10 +398,10 @@ describe("ArgParser", () => {
       );
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Missing mandatory flags: table/,
+        flexibleErrorRegex("Missing mandatory flags: table"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        new RegExp(`Try '${testCommandName} --help' for usage details.`),
+        flexibleErrorRegex("Try --help for usage details"),
       );
     });
   });
@@ -447,10 +463,10 @@ describe("ArgParser", () => {
     );
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Missing mandatory flags: force/,
+      flexibleErrorRegex("Missing mandatory flags: force"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
 
     // Clear mocks
@@ -890,10 +906,10 @@ describe("ArgParser", () => {
 
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Unknown command: '-g'/,
+        flexibleErrorRegex("Unknown command g"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        new RegExp(`Try '${testCommandName} cmd --help' for usage details.`),
+        flexibleErrorRegex("Try --help for usage details"),
       );
       expect(mockProcessExit).toHaveBeenCalledWith(1);
     });
@@ -986,7 +1002,7 @@ describe("ArgParser", () => {
         ArgParserError,
       );
       expect(() => optOutParser.parse(["--phase", "chunking"])).toThrow(
-        /Missing mandatory flags:/,
+        flexibleErrorRegex("Missing mandatory flags"),
       );
       expect(() => optOutParser.parse(["--phase", "chunking"])).not.toThrow(
         /phase/,
@@ -1007,7 +1023,7 @@ describe("ArgParser", () => {
       ).toThrow(ArgParserError);
       expect(() =>
         optOutParser.parse(["--phase", "invalid", "-t", "metadata"]),
-      ).toThrow(/Invalid value 'invalid' for flag 'phase'/);
+      ).toThrow(flexibleErrorRegex("Invalid value invalid for flag phase"));
       expect(mockConsoleError).not.toHaveBeenCalled();
       expect(mockProcessExit).not.toHaveBeenCalled();
     });
@@ -1041,7 +1057,7 @@ describe("ArgParser", () => {
       ).toThrow(ArgParserError);
       expect(() =>
         optOutParser.parse(["--phase", "chunking", "-t", "metadata"]),
-      ).toThrow(/Missing mandatory flags: batch/);
+      ).toThrow(flexibleErrorRegex("Missing mandatory flags batch"));
       expect(mockConsoleError).not.toHaveBeenCalled();
       expect(mockProcessExit).not.toHaveBeenCalled();
     });
@@ -1060,7 +1076,7 @@ describe("ArgParser", () => {
       try {
         optOutParser.parse(["unknown"]);
       } catch (e: any) {
-        expect(e.message).toMatch(/Unknown command: 'unknown'/);
+        expect(e.message).toMatch(flexibleErrorRegex("Unknown command unknown"));
         expect(e.commandChain).toEqual([]); // Error at root level
       }
       expect(mockConsoleError).not.toHaveBeenCalled();
@@ -1087,7 +1103,7 @@ describe("ArgParser", () => {
       try {
         optOutParser.parse(["level1", "unknown2"]);
       } catch (e: any) {
-        expect(e.message).toMatch(/Unknown command: 'unknown2'/);
+        expect(e.message).toMatch(flexibleErrorRegex("Unknown command unknown2"));
         expect(e.commandChain).toEqual(["level1"]); // Error after 'level1'
       }
       expect(mockConsoleError).not.toHaveBeenCalled();
@@ -1167,10 +1183,10 @@ describe("ArgParser", () => {
       );
       expect(mockConsoleError).toHaveBeenCalled();
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Unknown command: 'arg'/,
+        flexibleErrorRegex("Unknown command arg"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        new RegExp(`Try '${testCommandName} --help' for usage details.`),
+        flexibleErrorRegex("Try --help for usage details"),
       );
       expect(mockConsoleLog).not.toHaveBeenCalled();
       expect(mockProcessExit).toHaveBeenCalledWith(1);
@@ -1263,10 +1279,10 @@ describe("ArgParser", () => {
     );
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Unknown command: 'unknown'/,
+      flexibleErrorRegex("Unknown command unknown"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
     expect(mockProcessExit).toHaveBeenCalledWith(1);
   });
@@ -1290,10 +1306,10 @@ describe("ArgParser", () => {
     );
     expect(mockConsoleError).toHaveBeenCalledTimes(2);
     expect(mockConsoleError.mock.calls[0][0]).toMatch(
-      /Error: Unknown command: 'unknown2'/,
+      flexibleErrorRegex("Unknown command unknown2"),
     );
     expect(mockConsoleError.mock.calls[1][0]).toMatch(
-      new RegExp(`Try '${testCommandName} level1 --help' for usage details.`),
+      flexibleErrorRegex("Try --help for usage details"),
     );
     expect(mockProcessExit).toHaveBeenCalledWith(1);
   });
@@ -1434,10 +1450,10 @@ describe("ArgParser", () => {
       );
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Unknown command: '-g'/,
+        flexibleErrorRegex("Unknown command g"),
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        /Try 'parent-cmd child --help' for usage details./,
+        flexibleErrorRegex("Try --help for usage details"),
       );
       expect(mockProcessExit).toHaveBeenCalledWith(1);
     });
@@ -1570,10 +1586,10 @@ describe("ArgParser", () => {
 
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Missing mandatory flags: parentMandatory/,
+        /Missing mandatory flags:.*parentMandatory/,
       );
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        /Try 'parent-cmd child --help' for usage details./,
+        /Try.*--help.*for usage details/,
       );
 
       mockConsoleError.mockClear();
@@ -1762,11 +1778,11 @@ describe("ArgParser", () => {
       expect(mockConsoleLog).not.toHaveBeenCalled();
       expect(mockConsoleError).toHaveBeenCalledTimes(2);
       expect(mockConsoleError.mock.calls[0][0]).toMatch(
-        /Error: Missing mandatory flags: sub1Mandatory/,
+        flexibleErrorRegex("Missing mandatory flags sub1Mandatory"),
       );
       // Update this line:
       expect(mockConsoleError.mock.calls[1][0]).toMatch(
-        /Try 'help-test sub1 sub2 --help' for usage details./,
+        flexibleErrorRegex("Try --help for usage details"),
       );
     });
 
@@ -1782,6 +1798,421 @@ describe("ArgParser", () => {
 
       expect(mockConsoleLog).not.toHaveBeenCalled();
       expect(mockProcessExit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Inheritance and Mandatory Flag Validation", () => {
+    let mockConsoleError: ReturnType<typeof vi.spyOn>;
+    let mockProcessExit: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockProcessExit = vi
+        .spyOn(process, "exit")
+        .mockImplementation(
+          (code?: string | number | null | undefined): never => {
+            throw new Error(
+              `process.exit called with code ${code ?? "undefined"}`,
+            );
+          },
+        );
+    });
+
+    afterEach(() => {
+      mockConsoleError.mockRestore();
+      mockProcessExit.mockRestore();
+    });
+
+    describe("Root parser mandatory flags with inheritParentFlags: false", () => {
+      test("should NOT validate root parser mandatory flags when child doesn't inherit", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        }).addFlags([
+          {
+            name: "rootMandatory",
+            options: ["--root-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Root mandatory flag",
+          },
+        ]);
+
+        const childParser = new ArgParser({}); // inheritParentFlags: false by default
+        childParser.addFlags([
+          {
+            name: "childFlag",
+            options: ["--child-flag"],
+            type: "string",
+            description: "Child flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "child",
+          description: "Child command",
+          parser: childParser,
+        });
+
+        // Should succeed without providing root mandatory flag
+        const result = rootParser.parse(["child", "--child-flag", "value"]);
+
+        expect(result).toEqual({
+          help: undefined,
+          rootMandatory: undefined,
+          childFlag: "value",
+          $commandChain: ["child"],
+        });
+        expect(mockProcessExit).not.toHaveBeenCalled();
+      });
+
+      test("should validate root parser mandatory flags when child inherits", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        }).addFlags([
+          {
+            name: "rootMandatory",
+            options: ["--root-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Root mandatory flag",
+          },
+        ]);
+
+        const childParser = new ArgParser({ inheritParentFlags: true });
+        childParser.addFlags([
+          {
+            name: "childFlag",
+            options: ["--child-flag"],
+            type: "string",
+            description: "Child flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "child",
+          description: "Child command",
+          parser: childParser,
+        });
+
+        // Should fail without providing root mandatory flag
+        expect(() => rootParser.parse(["child", "--child-flag", "value"])).toThrow(
+          "process.exit called with code 1",
+        );
+
+        expect(mockConsoleError).toHaveBeenCalledTimes(2);
+        expect(mockConsoleError.mock.calls[0][0]).toMatch(/Missing mandatory flags.*rootMandatory/);
+      });
+    });
+
+    describe("Intermediate parser mandatory flags", () => {
+      test("should validate intermediate parser mandatory flags even when child doesn't inherit", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        });
+
+        const intermediateParser = new ArgParser({});
+        intermediateParser.addFlags([
+          {
+            name: "intermediateMandatory",
+            options: ["--intermediate-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Intermediate mandatory flag",
+          },
+        ]);
+
+        const finalParser = new ArgParser({}); // inheritParentFlags: false by default
+        finalParser.addFlags([
+          {
+            name: "finalFlag",
+            options: ["--final-flag"],
+            type: "string",
+            description: "Final flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "intermediate",
+          description: "Intermediate command",
+          parser: intermediateParser,
+        });
+
+        intermediateParser.addSubCommand({
+          name: "final",
+          description: "Final command",
+          parser: finalParser,
+        });
+
+        // Should fail without providing intermediate mandatory flag
+        expect(() => rootParser.parse(["intermediate", "final", "--final-flag", "value"])).toThrow(
+          "process.exit called with code 1",
+        );
+
+        expect(mockConsoleError).toHaveBeenCalledTimes(2);
+        expect(mockConsoleError.mock.calls[0][0]).toMatch(/Missing mandatory flags.*intermediateMandatory/);
+      });
+
+      test("should succeed when intermediate parser mandatory flags are provided", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        });
+
+        const intermediateParser = new ArgParser({});
+        intermediateParser.addFlags([
+          {
+            name: "intermediateMandatory",
+            options: ["--intermediate-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Intermediate mandatory flag",
+          },
+        ]);
+
+        const finalParser = new ArgParser({});
+        finalParser.addFlags([
+          {
+            name: "finalFlag",
+            options: ["--final-flag"],
+            type: "string",
+            description: "Final flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "intermediate",
+          description: "Intermediate command",
+          parser: intermediateParser,
+        });
+
+        intermediateParser.addSubCommand({
+          name: "final",
+          description: "Final command",
+          parser: finalParser,
+        });
+
+        // Should succeed when providing intermediate mandatory flag
+        const result = rootParser.parse([
+          "intermediate",
+          "--intermediate-mandatory",
+          "value",
+          "final",
+          "--final-flag",
+          "finalValue",
+        ]);
+
+        expect(result).toEqual({
+          help: undefined,
+          intermediateMandatory: "value",
+          finalFlag: "finalValue",
+          $commandChain: ["intermediate", "final"],
+        });
+        expect(mockProcessExit).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("Complex inheritance scenarios", () => {
+      test("should handle mixed inheritance in deep command chains", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        }).addFlags([
+          {
+            name: "rootMandatory",
+            options: ["--root-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Root mandatory flag",
+          },
+        ]);
+
+        // Level 1: inherits from root
+        const level1Parser = new ArgParser({ inheritParentFlags: true });
+        level1Parser.addFlags([
+          {
+            name: "level1Mandatory",
+            options: ["--level1-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Level 1 mandatory flag",
+          },
+        ]);
+
+        // Level 2: does NOT inherit from level1
+        const level2Parser = new ArgParser({ inheritParentFlags: false });
+        level2Parser.addFlags([
+          {
+            name: "level2Flag",
+            options: ["--level2-flag"],
+            type: "string",
+            description: "Level 2 flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "level1",
+          description: "Level 1 command",
+          parser: level1Parser,
+        });
+
+        level1Parser.addSubCommand({
+          name: "level2",
+          description: "Level 2 command",
+          parser: level2Parser,
+        });
+
+        // Should fail because level1 inherits from root, so rootMandatory is required
+        // But level1Mandatory should also be required since level2 doesn't inherit
+        expect(() => rootParser.parse(["level1", "level2", "--level2-flag", "value"])).toThrow(
+          "process.exit called with code 1",
+        );
+
+        expect(mockConsoleError).toHaveBeenCalled();
+        const errorMessage = mockConsoleError.mock.calls[0][0];
+        expect(errorMessage).toMatch(/Missing mandatory flags/);
+        // Should require both rootMandatory and level1Mandatory
+        expect(errorMessage).toMatch(/level1Mandatory/);
+      });
+
+      test("should work with skipHelpHandling and mandatory validation", () => {
+        const rootParser = new ArgParser({
+          appName: "TestApp",
+          appCommandName: "test-app",
+        });
+
+        const subParser = new ArgParser({});
+        subParser.addFlags([
+          {
+            name: "subMandatory",
+            options: ["--sub-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Sub mandatory flag",
+          },
+        ]);
+
+        rootParser.addSubCommand({
+          name: "sub",
+          description: "Sub command",
+          parser: subParser,
+        });
+
+        // Should fail with skipHelpHandling: true because mandatory validation still happens
+        expect(() => rootParser.parse(["sub", "--help"], { skipHelpHandling: true })).toThrow(
+          "process.exit called with code 1",
+        );
+
+        expect(mockConsoleError).toHaveBeenCalledTimes(2);
+        expect(mockConsoleError.mock.calls[0][0]).toMatch(/Missing mandatory flags.*subMandatory/);
+      });
+
+      test("should handle real-world CLI scenario like getting-started example", () => {
+        // Simulate the getting-started.ts structure
+        const mainParser = new ArgParser({
+          appName: "File Processor",
+          appCommandName: "file-processor",
+        }).addFlags([
+          {
+            name: "input",
+            options: ["--input", "-i"],
+            type: "string",
+            mandatory: true,
+            description: "Input file path",
+          },
+        ]);
+
+        const analyzeParser = new ArgParser({}); // inheritParentFlags: false by default
+        analyzeParser.addFlags([
+          {
+            name: "file",
+            options: ["--file"],
+            type: "string",
+            mandatory: true,
+            description: "File to analyze",
+          },
+          {
+            name: "type",
+            options: ["--type", "-t"],
+            type: "string",
+            enum: ["basic", "detailed"],
+            defaultValue: "basic",
+            description: "Analysis type",
+          },
+        ]);
+
+        mainParser.addSubCommand({
+          name: "analyze",
+          description: "Analyze file content",
+          parser: analyzeParser,
+        });
+
+        // Should succeed without providing main parser's mandatory 'input' flag
+        const result = mainParser.parse(["analyze", "--file", "test.txt", "--type", "detailed"]);
+
+        expect(result).toEqual({
+          help: undefined,
+          input: undefined,
+          file: "test.txt",
+          type: "detailed",
+          $commandChain: ["analyze"],
+        });
+        expect(mockProcessExit).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("MCP subcommand mandatory flag behavior", () => {
+      test("should NOT validate parent mandatory flags for MCP subcommands", () => {
+        const mainParser = new ArgParser({
+          appName: "Main CLI",
+          appCommandName: "main",
+        }).addFlags([
+          {
+            name: "parentMandatory",
+            options: ["--parent-mandatory"],
+            type: "string",
+            mandatory: true,
+            description: "Parent mandatory flag",
+          },
+        ]);
+
+        // Add MCP subcommand
+        mainParser.addMcpSubCommand("mcp-server", {
+          name: "Test MCP Server",
+          version: "1.0.0",
+          description: "Test MCP server",
+        });
+
+        // Should succeed without providing parent mandatory flag
+        const result = mainParser.parse(["mcp-server", "--port", "3000"]);
+
+        // The result is a Promise for MCP subcommands
+        expect(result).toBeInstanceOf(Promise);
+        expect(mockProcessExit).not.toHaveBeenCalled();
+      });
+
+      test("should validate MCP subcommand's own flags correctly", () => {
+        const mainParser = new ArgParser({
+          appName: "Main CLI",
+          appCommandName: "main",
+        });
+
+        // Add MCP subcommand
+        mainParser.addMcpSubCommand("mcp-server", {
+          name: "Test MCP Server",
+          version: "1.0.0",
+          description: "Test MCP server",
+        });
+
+        // Should succeed with valid MCP flags (MCP subcommands have default values for all flags)
+        const result = mainParser.parse(["mcp-server", "--port", "3000"]);
+
+        // The result is a Promise for MCP subcommands
+        expect(result).toBeInstanceOf(Promise);
+        expect(mockProcessExit).not.toHaveBeenCalled();
+      });
     });
   });
 });

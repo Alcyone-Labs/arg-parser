@@ -2,7 +2,7 @@
 import { ChildProcess, spawn } from "node:child_process";
 import path from "node:path";
 // import { z } from "zod"; // Used in commented schema examples
-import { ArgParserWithMcp } from "../src";
+import { ArgParser } from "../src";
 import type { IFlag, IHandlerContext } from "../src";
 import type {
   IParseExecutionResult,
@@ -324,7 +324,7 @@ const fzfSearchFlags: IFlag[] = [
 
 
 
-const mainParser = new ArgParserWithMcp<IFzfSearchResult>(
+const mainParser = new ArgParser<IFzfSearchResult>(
   {
     appName: "FZF File Search Utility",
     appCommandName: "fzf-search",

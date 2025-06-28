@@ -95,5 +95,9 @@ const parser = new ArgParser({
   },
 ]);
 
+// Export the CLI for testing
+export default parser;
+
 // Execute the CLI with command line arguments
+// The --s-enable-fuzzy system flag automatically prevents execution during fuzzy testing
 parser.parse(process.argv.slice(2));

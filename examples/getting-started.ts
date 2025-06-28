@@ -17,10 +17,10 @@
  *   bun examples/getting-started.ts --help
  */
 
-import { ArgParserWithMcp } from "../src";
+import { ArgParser } from "../src";
 
 // Create a complete CLI with main functionality and sub-commands
-const cli = new ArgParserWithMcp({
+const cli = new ArgParser({
   appName: "File Processor",
   appCommandName: "file-proc",
   description: "A simple file processing tool demonstrating ArgParser features",
@@ -109,7 +109,7 @@ const cli = new ArgParserWithMcp({
       compressed: ctx.args['compress']
     };
   },
-  parser: new ArgParserWithMcp({}, [
+  parser: new ArgParser({}, [
     {
       name: "input",
       description: "Input file to convert",
@@ -161,7 +161,7 @@ const cli = new ArgParserWithMcp({
       stats
     };
   },
-  parser: new ArgParserWithMcp({}, [
+  parser: new ArgParser({}, [
     {
       name: "file",
       description: "File to analyze",
@@ -186,5 +186,9 @@ const cli = new ArgParserWithMcp({
   description: "File Processing MCP Server",
 });
 
-// Execute the CLI with command line arguments
+// Export the CLI for testing
+export default cli;
+
+// Run the CLI when executed directly
+// The --s-enable-fuzzy system flag automatically prevents execution during fuzzy testing
 cli.parse(process.argv.slice(2));

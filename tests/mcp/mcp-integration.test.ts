@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { ArgParser, ArgParserWithMcp } from "../../src";
+import { ArgParser, ArgParserBase } from "../../src";
 import type { IFlag } from "../../src";
 import { generateMcpToolsFromArgParser } from "../../src/mcp-integration";
 
@@ -32,7 +32,7 @@ describe("MCP Integration", () => {
         },
       ];
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "User CLI",
         appCommandName: "user",
         description: "A CLI for user management",
@@ -82,7 +82,7 @@ describe("MCP Integration", () => {
         },
       ];
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Search CLI",
         appCommandName: "search",
         handler: async () => ({}),
@@ -132,7 +132,7 @@ describe("MCP Integration", () => {
         },
       ];
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "File Processor",
         appCommandName: "process",
         handler: async (ctx) => ({
@@ -173,7 +173,7 @@ describe("MCP Integration", () => {
         description: "Main CLI application",
       });
 
-      const userSubParser = new ArgParserWithMcp({
+      const userSubParser = new ArgParser({
         appName: "User Management",
         description: "User management commands",
         handler: async (ctx) => ({ action: "user", args: ctx.args }),
@@ -187,7 +187,7 @@ describe("MCP Integration", () => {
         },
       ]);
 
-      const fileSubParser = new ArgParserWithMcp({
+      const fileSubParser = new ArgParser({
         appName: "File Management",
         description: "File management commands",
         handler: async (ctx) => ({ action: "file", args: ctx.args }),
@@ -259,7 +259,7 @@ describe("MCP Integration", () => {
         },
       ];
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Type Test CLI",
         appCommandName: "typetest",
         handler: async () => ({}),
@@ -320,7 +320,7 @@ describe("MCP Integration", () => {
         },
       ];
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Execute Test CLI",
         appCommandName: "execute",
         handler: mockHandler,
@@ -360,7 +360,7 @@ describe("MCP Integration", () => {
         .fn()
         .mockRejectedValue(new Error("Handler failed"));
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Error Test CLI",
         appCommandName: "errortest",
         handler: mockHandler,
@@ -392,7 +392,7 @@ describe("MCP Integration", () => {
         .fn()
         .mockRejectedValue(new Error("Processing failed"));
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Custom Schema Error Test",
         appCommandName: "custom-error",
         handler: mockHandler,
@@ -431,7 +431,7 @@ describe("MCP Integration", () => {
     });
 
     test("should handle missing mandatory flags", async () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Mandatory Test CLI",
         appCommandName: "mandatory",
         handler: async () => ({ success: true }),
@@ -460,13 +460,14 @@ describe("MCP Integration", () => {
       expect(result).toEqual({
         success: false,
         message: expect.stringContaining("Missing mandatory flags"),
+        data: expect.any(Object),
       });
     });
 
     test("should handle flag type conversion", async () => {
       const mockHandler = vi.fn().mockResolvedValue({ converted: true });
 
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Conversion Test CLI",
         appCommandName: "convert",
         handler: mockHandler,
@@ -518,7 +519,7 @@ describe("MCP Integration", () => {
 
   describe("MCP Tool Name Generation", () => {
     test("should generate tool names correctly", () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "My CLI App",
         appCommandName: "my-cli",
         handler: async () => ({}),
@@ -529,7 +530,7 @@ describe("MCP Integration", () => {
     });
 
     test("should use custom tool name generator", () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Custom CLI",
         appCommandName: "custom",
         handler: async () => ({}),
@@ -547,7 +548,7 @@ describe("MCP Integration", () => {
 
   describe("Integration with Real MCP Server", () => {
     test("should produce valid tool structure for MCP server registration", () => {
-      const parser = new ArgParserWithMcp({
+      const parser = new ArgParser({
         appName: "Real MCP Test",
         appCommandName: "mcp-test",
         description: "A real MCP test tool",
