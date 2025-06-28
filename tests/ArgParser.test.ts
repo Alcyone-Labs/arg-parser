@@ -1803,7 +1803,7 @@ describe("ArgParser", () => {
 
   describe("Inheritance and Mandatory Flag Validation", () => {
     let mockConsoleError: ReturnType<typeof vi.spyOn>;
-    let mockProcessExit: ReturnType<typeof vi.spyOn>;
+    let mockProcessExit: any;
 
     beforeEach(() => {
       mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});

@@ -152,13 +152,13 @@ async function loadArgParserFromFile(filePath: string): Promise<ArgParser> {
 
   try {
     // Set environment variable to prevent CLI execution during import
-    process.env.ARGPARSER_FUZZY_MODE = 'true';
+    process.env['ARGPARSER_FUZZY_MODE'] = 'true';
 
     // Dynamic import to load the module
     const module = await import(absolutePath);
 
     // Clean up environment variable
-    delete process.env.ARGPARSER_FUZZY_MODE;
+    delete process.env['ARGPARSER_FUZZY_MODE'];
     
     // Look for exported ArgParser instances
     const possibleExports = [

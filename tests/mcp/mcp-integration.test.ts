@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
-import { ArgParser, ArgParserBase } from "../../src";
+import { ArgParser } from "../../src";
 import type { IFlag } from "../../src";
 import { generateMcpToolsFromArgParser } from "../../src/mcp-integration";
 

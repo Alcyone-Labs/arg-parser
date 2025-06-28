@@ -60,7 +60,7 @@ console.log('   Command: demo --input test.txt process --algorithm accurate\n');
 try {
   demoParser.parse(['--input', 'test.txt', 'process', '--algorithm', 'accurate']);
 } catch (error) {
-  console.log(`   Error: ${error.message}`);
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log('\n' + '='.repeat(60));
@@ -70,7 +70,7 @@ console.log('   Command: demo --s-enable-fuzzy --input test.txt process --algori
 try {
   demoParser.parse(['--s-enable-fuzzy', '--input', 'test.txt', 'process', '--algorithm', 'accurate']);
 } catch (error) {
-  console.log(`   Error: ${error.message}`);
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log('\n' + '='.repeat(60));
@@ -80,7 +80,7 @@ console.log('   Command: demo --s-enable-fuzzy process\n');
 try {
   demoParser.parse(['--s-enable-fuzzy', 'process']);
 } catch (error) {
-  console.log(`   Error: ${error.message}`);
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log('\n🎉 Demo completed!');

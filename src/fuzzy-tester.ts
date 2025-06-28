@@ -188,12 +188,12 @@ export class ArgParserFuzzyTester {
 
     // Separate mandatory and optional flags
     const mandatoryFlags = flags.filter(f =>
-      f.name !== 'help' &&
-      (typeof f.mandatory === 'boolean' ? f.mandatory : false)
+      f['name'] !== 'help' &&
+      (typeof f['mandatory'] === 'boolean' ? f['mandatory'] : false)
     );
     const optionalFlags = flags.filter(f =>
-      f.name !== 'help' &&
-      (typeof f.mandatory === 'boolean' ? !f.mandatory : true)
+      f['name'] !== 'help' &&
+      (typeof f['mandatory'] === 'boolean' ? !f['mandatory'] : true)
     );
 
     // Generate base combination with all mandatory flags
@@ -241,7 +241,7 @@ export class ArgParserFuzzyTester {
    */
   private generateRandomFlagCombination(flags: ProcessedFlag[]): string[] {
     const args: string[] = [];
-    const availableFlags = flags.filter(f => f.name !== 'help');
+    const availableFlags = flags.filter(f => f['name'] !== 'help');
     
     // Randomly select flags to include
     for (const flag of availableFlags) {
@@ -266,7 +266,7 @@ export class ArgParserFuzzyTester {
     
     // Test flags with wrong types
     for (const flag of flags) {
-      if (flag.name === 'help') continue;
+      if (flag['name'] === 'help') continue;
       
       const invalidArgs = this.generateFlagArgs(flag, 'invalid');
       if (invalidArgs.length > 0) {
@@ -281,10 +281,10 @@ export class ArgParserFuzzyTester {
    * Generate arguments for a specific flag
    */
   private generateFlagArgs(flag: ProcessedFlag, mode: 'valid' | 'invalid' | 'random'): string[] {
-    const option = flag.options[0]; // Use first option
+    const option = flag['options'][0]; // Use first option
     if (!option) return [];
-    
-    if (flag.flagOnly) {
+
+    if (flag['flagOnly']) {
       return [option];
     }
     
@@ -292,7 +292,7 @@ export class ArgParserFuzzyTester {
     const args: string[] = [];
     
     for (const value of values) {
-      if (flag.allowLigature && Math.random() < 0.5) {
+      if (flag['allowLigature'] && Math.random() < 0.5) {
         args.push(`${option}=${value}`);
       } else {
         args.push(option, value);
@@ -306,7 +306,7 @@ export class ArgParserFuzzyTester {
    * Generate values for a flag based on its type and constraints
    */
   private generateFlagValues(flag: ProcessedFlag, mode: 'valid' | 'invalid' | 'random'): string[] {
-    const count = flag.allowMultiple && mode !== 'invalid' ? 
+    const count = flag['allowMultiple'] && mode !== 'invalid' ?
       Math.floor(Math.random() * 3) + 1 : 1;
     
     const values: string[] = [];
@@ -324,24 +324,24 @@ export class ArgParserFuzzyTester {
   private generateSingleFlagValue(flag: ProcessedFlag, mode: 'valid' | 'invalid' | 'random'): string {
     if (mode === 'invalid') {
       // Generate intentionally invalid values
-      if (flag.type === Number) return 'not-a-number';
-      if (flag.enum && flag.enum.length > 0) return 'invalid-enum-value';
-      if (flag.type === Boolean) return 'not-boolean';
+      if (flag['type'] === Number) return 'not-a-number';
+      if (flag['enum'] && flag['enum'].length > 0) return 'invalid-enum-value';
+      if (flag['type'] === Boolean) return 'not-boolean';
       return 'invalid-value';
     }
     
     // Handle enum values
-    if (flag.enum && flag.enum.length > 0) {
-      const randomIndex = Math.floor(Math.random() * flag.enum.length);
-      return String(flag.enum[randomIndex]);
+    if (flag['enum'] && flag['enum'].length > 0) {
+      const randomIndex = Math.floor(Math.random() * flag['enum'].length);
+      return String(flag['enum'][randomIndex]);
     }
-    
+
     // Generate values based on type
-    if (flag.type === Number) {
+    if (flag['type'] === Number) {
       return String(Math.floor(Math.random() * 1000));
     }
-    
-    if (flag.type === Boolean) {
+
+    if (flag['type'] === Boolean) {
       return Math.random() < 0.5 ? 'true' : 'false';
     }
     

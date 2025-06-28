@@ -1444,7 +1444,7 @@ ${descriptionLines
 
     console.error(`\n${chalk.red.bold("Error:")} ${error.message}`);
     console.error(
-      `\n${chalk.dim(`Try '--help' flag for usage details.`)}`,
+      `\n${chalk.dim(`Try '${commandNameToSuggest} --help' for usage details.`)}`,
     );
 
     if (typeof process === "object" && typeof process.exit === "function") {
@@ -1715,27 +1715,7 @@ ${descriptionLines
     return `${baseName}.env`;
   }
 
-  /**
-   * Checks if the current execution is for an MCP subcommand
-   */
-  #_isExecutingMcpSubcommand(commandChain: string[]): boolean {
-    if (commandChain.length === 0) return false;
 
-    // Walk through the command chain to find if any subcommand is marked as MCP
-    let currentParser: ArgParserBase = this;
-
-    for (const commandName of commandChain) {
-      const subCommand = currentParser.#subCommands.get(commandName);
-      if (subCommand) {
-        if ((subCommand as any).isMcp === true) {
-          return true;
-        }
-        currentParser = subCommand.parser;
-      }
-    }
-
-    return false;
-  }
 
   /**
    * Handles the --s-save-to-env system flag at the final parser level

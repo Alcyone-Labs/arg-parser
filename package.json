@@ -49,7 +49,8 @@
     "format": "prettier . --write",
     "check:cir-dep": "madge ./ -c --ts-config tsconfig.dev.json",
     "check:types": "tsc --project ./tsconfig.dev.json --noEmit",
-    "build:checks": "pnpm check:cir-dep && pnpm check:types"
+    "build:checks": "pnpm check:cir-dep && pnpm check:types",
+    "test:built": "node test-built-library.mjs"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
