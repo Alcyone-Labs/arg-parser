@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "include": ["./src/**/*.ts", "./examples/**/*.ts"],
-  "exclude": ["./tests/**/*.ts", "./script/**/*.ts", "./dist/**/*"],
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./tests/**/*.ts", "./script/**/*.ts", "./examples/**/*.ts", "./dist/**/*"],
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "./dist",
+    "rootDir": "./src",
+    "outDir": "./dist/src",
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Node",

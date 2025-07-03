@@ -5,6 +5,7 @@ import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
 import * as yaml from "js-yaml";
 import * as toml from "@iarna/toml";
 import * as dotenv from "dotenv";
+import AdmZip from "adm-zip";
 import { FlagManager } from "./FlagManager";
 import type {
   IFlag,
@@ -515,10 +516,15 @@ export class ArgParserBase<THandlerReturn = any> {
       }
     }
 
-
-
     const { finalParser: identifiedFinalParser } =
       this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+
+    const saveDxtIndex = processArgs.findIndex(arg => (arg ?? "").toLowerCase() === "--s-save-dxt");
+    if (saveDxtIndex !== -1) {
+      if (this.#_handleSaveDxtFlag(processArgs, saveDxtIndex)) {
+        return true;
+      }
+    }
 
     if (processArgs.includes("--s-debug")) {
       console.log(
@@ -961,7 +967,6 @@ export class ArgParserBase<THandlerReturn = any> {
         parserChain: identifiedParserChain,
       } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-      // Check for --s-save-to-env flag at the final parser level
       if (identifiedFinalParser.#_handleSaveToEnvFlag(processArgs, identifiedParserChain)) {
         return {} as TParsedArgsWithRouting<any>;
       }
@@ -975,7 +980,6 @@ export class ArgParserBase<THandlerReturn = any> {
         undefined,
       );
 
-      // Set command chain in final args
       if (identifiedCommandChain.length > 0) {
         (finalArgs as any).$commandChain = identifiedCommandChain;
       }
@@ -2304,5 +2308,219 @@ ${descriptionLines
       }
     }
     return 'unknown';
+  }
+
+  /**
+   * Handles the --s-save-DXT system flag to generate DXT packages for MCP servers
+   */
+  #_handleSaveDxtFlag(processArgs: string[], saveDxtIndex: number): boolean {
+    try {
+      // Find all MCP subcommands
+      const mcpSubCommands = Array.from(this.#subCommands.values()).filter(
+        (subCmd: any) => subCmd.isMcp === true
+      );
+
+      if (mcpSubCommands.length === 0) {
+        console.log(chalk.yellow("No MCP servers found in this ArgParser instance."));
+        console.log(chalk.gray("Use addMcpSubCommand() to add MCP server functionality."));
+        if (typeof process === "object" && typeof process.exit === "function") {
+          process.exit(0);
+        }
+        return true;
+      }
+
+      // Get optional directory parameter
+      let outputDir = ".";
+      if (saveDxtIndex + 1 < processArgs.length) {
+        const nextArg = processArgs[saveDxtIndex + 1];
+        if (nextArg && !nextArg.startsWith("-")) {
+          outputDir = nextArg;
+        }
+      }
+
+      // Ensure output directory exists
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      console.log(chalk.cyan(`\n🔧 Generating DXT packages for ${mcpSubCommands.length} MCP server(s)...`));
+
+      // Generate DXT package for each MCP server
+      for (const subCmd of mcpSubCommands) {
+        this.#_generateDxtPackage(subCmd as any, outputDir);
+      }
+
+      console.log(chalk.green(`\n✅ DXT package generation completed!`));
+      console.log(chalk.gray(`Output directory: ${path.resolve(outputDir)}`));
+
+      if (typeof process === "object" && typeof process.exit === "function") {
+        process.exit(0);
+      }
+      return true;
+    } catch (error) {
+      console.error(chalk.red(`Error generating DXT packages: ${error instanceof Error ? error.message : String(error)}`));
+      if (typeof process === "object" && typeof process.exit === "function") {
+        process.exit(1);
+      }
+      return true;
+    }
+  }
+
+  /**
+   * Generates a DXT package for a single MCP server
+   */
+  #_generateDxtPackage(mcpSubCommand: any, outputDir: string): void {
+    // Extract server information from the MCP subcommand
+    const serverInfo = this.#_extractMcpServerInfo(mcpSubCommand);
+
+    // Generate tools for this MCP server
+    const tools = this.#_generateMcpToolsForDxt(mcpSubCommand);
+
+    // Create manifest.json
+    const manifest = this.#_createDxtManifest(serverInfo, tools);
+
+    // Create DXT zip file
+    const zip = new AdmZip();
+
+    // Add manifest.json to zip
+    zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
+
+    // Create a simple server entry point
+    const serverScript = this.#_createServerScript(serverInfo);
+    zip.addFile("server/index.js", Buffer.from(serverScript));
+
+    // Write the DXT file
+    const dxtFileName = `${serverInfo.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.dxt`;
+    const dxtFilePath = path.join(outputDir, dxtFileName);
+
+    zip.writeZip(dxtFilePath);
+
+    console.log(chalk.green(`  ✓ Generated: ${dxtFileName}`));
+    console.log(chalk.gray(`    Server: ${serverInfo.name} v${serverInfo.version}`));
+    console.log(chalk.gray(`    Tools: ${tools.length} tool(s)`));
+  }
+
+  /**
+   * Extracts server information from MCP subcommand
+   */
+  #_extractMcpServerInfo(mcpSubCommand: any): { name: string; version: string; description?: string } {
+    // Use the stored server info if available
+    if (mcpSubCommand.mcpServerInfo) {
+      return mcpSubCommand.mcpServerInfo;
+    }
+
+    // Fallback to default info
+    const defaultInfo = {
+      name: mcpSubCommand.name || "mcp-server",
+      version: "1.0.0",
+      description: mcpSubCommand.description || "MCP server generated from ArgParser"
+    };
+
+    return defaultInfo;
+  }
+
+  /**
+   * Generates MCP tools for DXT manifest
+   */
+  #_generateMcpToolsForDxt(mcpSubCommand?: any): Array<{ name: string; description?: string }> {
+    try {
+      // Check if this is an ArgParser instance with MCP capabilities
+      if (typeof (this as any).toMcpTools === 'function') {
+        // Use the actual MCP tool generation
+        const toolOptions = mcpSubCommand?.mcpToolOptions;
+        const mcpTools = (this as any).toMcpTools(toolOptions);
+
+        return mcpTools.map((tool: any) => ({
+          name: tool.name,
+          description: tool.description
+        }));
+      }
+
+      // Fallback: create simplified tool list based on parser structure
+      const tools: Array<{ name: string; description?: string }> = [];
+
+      // Add main command tool if there's a handler
+      if (this.#handler) {
+        const appName = this.#appName || "main";
+        const commandName = this.#appCommandName || appName.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        tools.push({
+          name: commandName,
+          description: this.#description || `Execute ${appName} command`
+        });
+      }
+
+      // Add subcommand tools (excluding MCP subcommands to avoid recursion)
+      for (const [name, subCmd] of this.#subCommands) {
+        if (!(subCmd as any).isMcp) {
+          const commandName = this.#appCommandName || this.#appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") || "main";
+          tools.push({
+            name: `${commandName}_${name}`,
+            description: (subCmd as any).description || `Execute ${name} subcommand`
+          });
+        }
+      }
+
+      return tools.length > 0 ? tools : [{
+        name: "main",
+        description: "Main command tool"
+      }];
+    } catch (error) {
+      console.warn(chalk.yellow(`Warning: Could not generate detailed tool list: ${error instanceof Error ? error.message : String(error)}`));
+      return [{
+        name: "main",
+        description: "Main command tool"
+      }];
+    }
+  }
+
+  /**
+   * Creates DXT manifest.json structure
+   */
+  #_createDxtManifest(serverInfo: { name: string; version: string; description?: string }, tools: Array<{ name: string; description?: string }>): any {
+    return {
+      name: serverInfo.name,
+      version: serverInfo.version,
+      description: serverInfo.description || "MCP server generated from ArgParser",
+      server: {
+        entry_point: "server/index.js",
+        runtime: "node",
+        transport: "stdio"
+      },
+      tools: tools,
+      metadata: {
+        generator: "@alcyone-labs/arg-parser",
+        generator_version: "1.2.0",
+        generated_at: new Date().toISOString()
+      }
+    };
+  }
+
+  /**
+   * Creates a simple server script for the DXT package
+   */
+  #_createServerScript(serverInfo: { name: string; version: string; description?: string }): string {
+    return `#!/usr/bin/env node
+
+// Generated MCP server for ${serverInfo.name}
+// This is a placeholder server script for the DXT package
+// In a real implementation, this would contain the actual MCP server code
+
+console.error("MCP Server: ${serverInfo.name} v${serverInfo.version}");
+console.error("This is a generated DXT package from @alcyone-labs/arg-parser");
+console.error("To use this server, you would need to implement the actual MCP server logic");
+
+// Basic MCP server structure
+const server = {
+  name: "${serverInfo.name}",
+  version: "${serverInfo.version}",
+  description: "${serverInfo.description || "Generated MCP server"}"
+};
+
+// Export for potential use
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = server;
+}
+`;
   }
 }

@@ -17,7 +17,8 @@
     "moduleResolution": "Bundler",
 
     "paths": {
-      "#src/*": ["./src/*"]
+      "#src/*": ["./src/*"],
+      "@alcyone-labs/arg-parser": ["./src/index.ts"]
     }
   }
 }

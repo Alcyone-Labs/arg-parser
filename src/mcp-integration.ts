@@ -312,12 +312,21 @@ export function generateMcpToolsFromArgParser(
             const helpText = (helpParser as any).helpText ? (helpParser as any).helpText() : "Help not available";
 
             if (options?.outputSchemaMap?.[toolName]) {
-              return {
+              const helpData = {
                 success: true,
                 help: helpText,
                 files: [],
                 commandExecuted: null,
                 stderrOutput: null,
+              };
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(helpData, null, 2)
+                  }
+                ],
+                structuredContent: helpData
               };
             }
             return { success: true, message: helpText };
@@ -384,12 +393,21 @@ export function generateMcpToolsFromArgParser(
                 details: errorDetails.details,
               };
               if (options?.outputSchemaMap?.[toolName]) {
-                // Return structured data directly when custom output schema is defined
-                return {
+                // Return structured data with both content and structuredContent when custom output schema is defined
+                const errorData = {
                   error: errPayload.message,
                   files: [],
                   commandExecuted: null,
                   stderrOutput: errPayload.details?.stderr || null,
+                };
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(errorData, null, 2)
+                    }
+                  ],
+                  structuredContent: errorData
                 };
               }
               return {
@@ -400,12 +418,43 @@ export function generateMcpToolsFromArgParser(
             }
 
             let handlerResponse = parseResult["handlerResponse"];
-            if (handlerResponse === undefined && parseResult["$commandChain"]) {
+
+            // Check if we need to execute or re-execute the handler with proper MCP context
+            // This happens when:
+            // 1. No handler was executed (handlerResponse === undefined)
+            // 2. Handler was executed but not with MCP context (need to re-execute with isMcp: true)
+
+            // For root commands, the $commandChain might be undefined, so we need to construct it
+            let commandChain = parseResult["$commandChain"];
+            if (!commandChain) {
+              // For root commands, use the app command name
+              const appCommandName = (rootParser as any).getAppCommandName
+                ? (rootParser as any).getAppCommandName()
+                : (rootParser as any)["#appCommandName"];
+              if (appCommandName) {
+                commandChain = [appCommandName];
+              }
+            }
+
+            const needsHandlerExecution = handlerResponse === undefined ||
+              (handlerResponse !== undefined && commandChain);
+
+            if (needsHandlerExecution && commandChain) {
               let finalParser: ArgParserBase | undefined = rootParser;
               let currentArgs: Record<string, any> = { ...parseResult };
               let resolvedParentArgs: Record<string, any> | undefined =
                 undefined;
-              const chain = parseResult["$commandChain"]!;
+              const chain = commandChain;
+
+              // Clean up special properties from currentArgs
+              delete currentArgs["handlerResponse"];
+              delete currentArgs["$commandChain"];
+              delete currentArgs["$error"];
+              delete currentArgs["_originalInputArgs"];
+              delete currentArgs["_asyncHandlerPromise"];
+              delete currentArgs["_asyncHandlerInfo"];
+              delete currentArgs["_fuzzyModePreventedExecution"];
+              delete currentArgs["help"]; // Remove help flag as well
 
               for (let i = 0; i < chain.length; i++) {
                 const cmdName = chain[i];
@@ -415,8 +464,21 @@ export function generateMcpToolsFromArgParser(
                   : undefined;
 
                 if (subCmdInfo && subCmdInfo.parser) {
+                  // For sub-commands, we need to pass the arguments that belong to the sub-command
+                  // Since the parseResult contains all the arguments, we'll use them directly
+                  // and filter out the special properties
                   resolvedParentArgs = { ...currentArgs };
-                  currentArgs = currentArgs[cmdName] || {};
+                  currentArgs = { ...currentArgs };
+                  // Remove special properties to get clean sub-command args
+                  delete currentArgs["handlerResponse"];
+                  delete currentArgs["$commandChain"];
+                  delete currentArgs["$error"];
+                  delete currentArgs["_originalInputArgs"];
+                  delete currentArgs["_asyncHandlerPromise"];
+                  delete currentArgs["_asyncHandlerInfo"];
+                  delete currentArgs["_fuzzyModePreventedExecution"];
+                  delete currentArgs["help"];
+
                   finalParser = subCmdInfo.parser as ArgParserBase;
                 } else if (
                   i === 0 &&
@@ -430,6 +492,15 @@ export function generateMcpToolsFromArgParser(
                           : (finalParser as any)["#appName"]))
                 ) {
                   currentArgs = { ...parseResult };
+                  // Clean up special properties again after resetting from parseResult
+                  delete currentArgs["handlerResponse"];
+                  delete currentArgs["$commandChain"];
+                  delete currentArgs["$error"];
+                  delete currentArgs["_originalInputArgs"];
+                  delete currentArgs["_asyncHandlerPromise"];
+                  delete currentArgs["_asyncHandlerInfo"];
+                  delete currentArgs["_fuzzyModePreventedExecution"];
+                  delete currentArgs["help"];
                   break;
                 } else {
                   finalParser = undefined;
@@ -441,6 +512,7 @@ export function generateMcpToolsFromArgParser(
               const finalHandler = finalParserTyped.getHandler
                 ? finalParserTyped.getHandler()
                 : finalParserTyped["#handler"];
+
               if (finalParser && finalHandler) {
                 const handlerToCall = finalHandler as Function;
                 const handlerContext: IHandlerContext<any, any> = {
@@ -448,18 +520,28 @@ export function generateMcpToolsFromArgParser(
                   commandChain: chain,
                   parser: finalParser,
                   parentArgs: resolvedParentArgs,
+                  isMcp: true,
                 };
                 try {
                   handlerResponse = await handlerToCall(handlerContext);
                 } catch (handlerError: any) {
                   const errorMsg = `Handler error: ${handlerError.message || String(handlerError)}`;
                   if (options?.outputSchemaMap?.[toolName]) {
-                    // Return an object matching the expected output schema with error populated
-                    return {
+                    // Return structured data with both content and structuredContent when custom output schema is defined
+                    const errorData = {
                       error: errorMsg,
                       files: [],
                       commandExecuted: null,
                       stderrOutput: null,
+                    };
+                    return {
+                      content: [
+                        {
+                          type: "text",
+                          text: JSON.stringify(errorData, null, 2)
+                        }
+                      ],
+                      structuredContent: errorData
                     };
                   }
                   return { success: false, message: errorMsg };
@@ -468,8 +550,40 @@ export function generateMcpToolsFromArgParser(
             }
 
             if (options?.outputSchemaMap?.[toolName]) {
-              // Return structured data directly when custom output schema is defined
-              return handlerResponse;
+              // When there's a custom output schema, ensure both content and structuredContent are provided
+              if (handlerResponse && typeof handlerResponse === 'object') {
+                // If handler already returned MCP format with content field
+                if (handlerResponse.content && Array.isArray(handlerResponse.content)) {
+                  // Handler already returned MCP format - use it as structured content
+                  // The output schema should match the entire response structure
+                  return {
+                    content: handlerResponse.content,
+                    structuredContent: handlerResponse
+                  };
+                } else {
+                  // Handler returned plain structured data, wrap it in MCP format
+                  return {
+                    content: [
+                      {
+                        type: "text",
+                        text: typeof handlerResponse === 'string' ? handlerResponse : JSON.stringify(handlerResponse, null, 2)
+                      }
+                    ],
+                    structuredContent: handlerResponse
+                  };
+                }
+              }
+
+              // Fallback for non-object responses
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: String(handlerResponse)
+                  }
+                ],
+                structuredContent: handlerResponse
+              };
             }
             return { success: true, data: handlerResponse };
           } catch (e: any) {
@@ -488,12 +602,21 @@ export function generateMcpToolsFromArgParser(
             }
 
             if (options?.outputSchemaMap?.[toolName]) {
-              // Return an object matching the expected output schema with error populated
-              return {
+              // Return structured data with both content and structuredContent when custom output schema is defined
+              const errorData = {
                 error: errorMsg,
                 files: [],
                 commandExecuted: null,
                 stderrOutput: errorDetails?.stderr || null,
+              };
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(errorData, null, 2)
+                  }
+                ],
+                structuredContent: errorData
               };
             }
             return {

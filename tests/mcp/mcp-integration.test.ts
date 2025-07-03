@@ -423,10 +423,18 @@ describe("MCP Integration", () => {
       const result = await tool.execute({ input: "test" });
 
       expect(result).toEqual({
-        error: expect.stringContaining("Processing failed"),
-        files: [],
-        commandExecuted: null,
-        stderrOutput: null,
+        content: [
+          {
+            type: "text",
+            text: expect.stringContaining("Processing failed")
+          }
+        ],
+        structuredContent: {
+          error: expect.stringContaining("Processing failed"),
+          files: [],
+          commandExecuted: null,
+          stderrOutput: null,
+        }
       });
     });
 
@@ -592,6 +600,101 @@ describe("MCP Integration", () => {
       // Verify the input schema is defined and functional
       expect(tool.inputSchema).toBeDefined();
       expect(typeof tool.inputSchema).toBe("object");
+    });
+
+    test("should provide proper handler context for MCP tool execution", async () => {
+      let capturedContext: any = null;
+
+      const parser = new ArgParser({
+        appName: "MCP Context Test CLI",
+        appCommandName: "mcp-context",
+        handleErrors: false,
+        handler: async (ctx) => {
+          capturedContext = ctx;
+          return { success: true, contextReceived: true };
+        },
+      }).addFlags([
+        {
+          name: "input",
+          description: "Input value",
+          options: ["--input"],
+          type: "string",
+          mandatory: true,
+        },
+      ]);
+
+      const tools = generateMcpToolsFromArgParser(parser);
+      const tool = tools[0];
+
+      const result = await tool.execute({ input: "test" });
+
+      // Verify that the handler was called and context is available
+      expect(capturedContext).toBeDefined();
+      expect(capturedContext.args).toEqual({ input: "test" });
+      expect(capturedContext.commandChain).toEqual(["mcp-context"]);
+      expect(capturedContext.parser).toBeDefined();
+
+      // Verify the result structure
+      expect(result).toEqual({
+        success: true,
+        data: { success: true, contextReceived: true }
+      });
+    });
+
+    test("should return proper MCP response format with output schema", async () => {
+      const parser = new ArgParser({
+        appName: "MCP Response Format Test",
+        appCommandName: "mcp-response",
+        handler: async (ctx) => {
+          // Return structured data that will be wrapped by MCP integration
+          return {
+            success: true,
+            message: "Test response",
+            timestamp: "2024-01-01T00:00:00Z"
+          };
+        },
+      }).addFlags([
+        {
+          name: "query",
+          description: "Query parameter",
+          options: ["--query"],
+          type: "string",
+          mandatory: true,
+        },
+      ]);
+
+      const outputSchema = z.object({
+        success: z.boolean(),
+        message: z.string(),
+        timestamp: z.string(),
+      });
+
+      const tools = generateMcpToolsFromArgParser(parser, {
+        outputSchemaMap: {
+          "mcp-response": outputSchema,
+        },
+      });
+
+      const tool = tools[0];
+      const result = await tool.execute({ query: "test" });
+
+      // Verify the response has both content and structuredContent
+      expect(result).toHaveProperty('content');
+      expect(result).toHaveProperty('structuredContent');
+      expect(Array.isArray(result.content)).toBe(true);
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(result.content[0]).toHaveProperty('type', 'text');
+      expect(result.content[0]).toHaveProperty('text');
+
+      // Verify structured content matches the expected format
+      expect(result.structuredContent).toEqual({
+        success: true,
+        message: "Test response",
+        timestamp: "2024-01-01T00:00:00Z"
+      });
+
+      // Verify the tool has an output schema
+      expect(tool.outputSchema).toBeDefined();
     });
   });
 });

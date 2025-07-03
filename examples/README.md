@@ -2,7 +2,7 @@
 
 This directory contains example CLI applications demonstrating various features of the ArgParser library, from basic CLI usage to advanced MCP server integration.
 
-## 🚀 **Runtime Compatibility**
+## Runtime Compatibility
 
 All examples work seamlessly across multiple JavaScript runtimes:
 
@@ -28,19 +28,18 @@ deno task example:getting-started --input data.txt --verbose
 deno task example:simple-cli --env production --port 8080
 ```
 
-### **Using Built Artifacts**
+### **About These Examples**
 
-After running `pnpm build`, you can also use the compiled JavaScript files:
+Examples are provided as TypeScript source files for educational purposes and are not compiled into the distributed package. This keeps the package lean while providing practical, runnable examples.
+
+To use the library in your own projects, install it via npm/pnpm and import it normally:
 
 ```bash
-# Using CommonJS build (works with any Node.js version)
-node -e "const { ArgParser } = require('./dist/index.cjs'); /* your CLI code */"
+# Install the library
+pnpm add @alcyone-labs/arg-parser
 
-# Using ES Modules build
-node -e "import('./dist/index.mjs').then(({ ArgParser }) => { /* your CLI code */ });"
-
-# For production applications, use the minified version
-node -e "import('./dist/index.min.mjs').then(({ ArgParser }) => { /* your CLI code */ });"
+# Use in your project
+import { ArgParser } from '@alcyone-labs/arg-parser';
 ```
 
 **Note:** Replace `bun` with your preferred runtime command in all examples below.
@@ -56,7 +55,7 @@ node -e "import('./dist/index.min.mjs').then(({ ArgParser }) => { /* your CLI co
 | `with-env-example.ts` | Configuration | File loading, environment management, save/load workflow |
 | `mcp-preset-transports.ts` | MCP advanced | Preset transport configuration, multiple protocols |
 
-## 🌟 **Featured Examples**
+## Featured Examples
 
 ### **v1.1.0 Feature Showcase (`v1.1.0-showcase.ts`)**
 

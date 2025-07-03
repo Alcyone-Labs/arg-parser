@@ -260,6 +260,8 @@ export type IHandlerContext<
   parentParser?: ArgParserInstance;
   /** Optional: The root `ArgParser` instance of the CLI. */
   // rootParser?: ArgParserInstance;
+  /** Indicates if the handler is being called from MCP mode (true) or CLI mode (false). */
+  isMcp?: boolean;
 };
 
 /**
@@ -292,6 +294,14 @@ export interface ISubCommand<
   ) => THandlerReturn | Promise<THandlerReturn>;
   /** Internal flag to identify MCP subcommands for proper exclusion from tool generation */
   isMcp?: boolean;
+  /** MCP server information for DXT generation */
+  mcpServerInfo?: {
+    name: string;
+    version: string;
+    description?: string;
+  };
+  /** MCP tool generation options for DXT generation */
+  mcpToolOptions?: any;
 }
 
 /**

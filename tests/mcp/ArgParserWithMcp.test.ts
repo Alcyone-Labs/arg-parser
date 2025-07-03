@@ -111,8 +111,8 @@ describe("ArgParser", () => {
       expect(tools[0].outputSchema).toBeDefined();
     });
 
-    test("should create MCP server", () => {
-      const server = parser.createMcpServer({
+    test("should create MCP server", async () => {
+      const server = await parser.createMcpServer({
         name: "test-mcp-server",
         version: "1.0.0",
         description: "Test MCP server",

@@ -88,6 +88,11 @@ export default defineConfig(({ command, mode }) => {
             "util",
             "async_hooks"
           ],
+          output: {
+            // Prevent code splitting for library builds
+            manualChunks: undefined,
+            inlineDynamicImports: true,
+          },
         },
         minify: buildFormat === "es" && minifyBuild ? "esbuild" : false,
         ...(esbuildMinifyOptions && { esbuild: esbuildMinifyOptions }),

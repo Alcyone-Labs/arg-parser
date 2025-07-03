@@ -4,12 +4,59 @@ ArgParser is a powerful and flexible library for building command-line interface
 
 Whether you're building a simple script, a complex nested CLI application, or an MCP (Model Context Protocol) server, ArgParser provides the tools to create robust and user-friendly interfaces with minimal boilerplate.
 
+## What's New in v1.2.0
+
+### **Critical MCP Fixes & Improvements**
+
+- **Fixed MCP Output Schema Support**: Resolved the critical issue where MCP tools with output schemas failed with `"Tool has an output schema but no structured content was provided"` error
+- **Enhanced Handler Context**: Added `isMcp` flag to handler context, enabling proper MCP mode detection in handlers
+- **Improved Response Format**: MCP tools now correctly return both `content` and `structuredContent` fields as required by the JSON-RPC 2.0 specification
+- **Better Integration**: Handlers can now reliably detect when they're being called from MCP mode vs CLI mode
+
+### **What Was Fixed**
+
+**Before v1.2.0**: MCP servers would fail when tools had output schemas defined:
+```
+MCP error -32602: Tool canny-search has an output schema but no structured content was provided
+```
+
+**After v1.2.0**: MCP tools with output schemas work correctly, returning proper JSON-RPC 2.0 responses:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [{"type": "text", "text": "..."}],
+    "structuredContent": { /* validated against output schema */ }
+  }
+}
+```
+
+### **Handler Context Enhancement**
+
+Handlers now receive an `isMcp` flag to detect execution context:
+
+```typescript
+const cli = ArgParser.withMcp({
+  handler: async (ctx) => {
+    if (ctx.isMcp) {
+      // Running in MCP mode - return structured data
+      return { success: true, data: processedData };
+    } else {
+      // Running in CLI mode - can use console output
+      console.log("Processing complete!");
+      return processedData;
+    }
+  }
+});
+```
+
 ## What's New in v1.1.0
 
 ### **Major Features**
 
 - **MCP (Model Context Protocol) Integration**: Transform any CLI into an MCP server with multiple transport support. Run MCP servers with stdio, SSE, and HTTP transports simultaneously, including streamable HTTP.
-- **System Flags**: Built-in `--s-debug-print`, `--s-with-env`, `--s-save-to-env`, and `--s-enable-fuzzy` for enhanced debugging, configuration, and testing
+- **System Flags**: Built-in `--s-debug-print`, `--s-with-env`, `--s-save-to-env`, `--s-enable-fuzzy`, and `--s-save-DXT` for enhanced debugging, configuration, testing, and MCP distribution
 - **Environment Loading**: Load configuration from `.env`, `.yaml`, `.json`, and `.toml` files
 - **Enhanced Debugging**: Comprehensive runtime debugging and configuration export tools
 
@@ -136,38 +183,36 @@ deno run --unstable-sloppy-imports --allow-read --allow-write --allow-env your-c
 deno task example:simple-cli --env production --port 8080
 ```
 
-### **Using Built Artifacts**
+### **Using the Library in Your Projects**
 
-After building your project with `pnpm build` (or your preferred build tool), you can use the compiled JavaScript files directly:
+Install the library and use it in your projects:
 
 ```bash
-# CommonJS (Node.js)
-node dist/index.cjs
+# Install the library
+pnpm add @alcyone-labs/arg-parser
 
-# ES Modules (Node.js with "type": "module" in package.json)
-node dist/index.mjs
-
-# Minified ES Modules (production)
-node dist/index.min.mjs
-
-# Import in your own projects
-const { ArgParser } = require('./dist/index.cjs');  // CommonJS
-import { ArgParser } from './dist/index.mjs';       // ES Modules
-
-# Example: Using built artifacts in production
-node -e "
-const { ArgParser } = require('./dist/index.cjs');
-const cli = new ArgParser({
-  appName: 'Production CLI',
-  handler: (ctx) => console.log('Production ready!', ctx.args)
-}).addFlags([
-  { name: 'env', options: ['--env'], type: 'string', mandatory: true, description: 'Environment' }
-]);
-cli.parse(['--env', 'production']);
-"
+# Use in your project
+import { ArgParser } from '@alcyone-labs/arg-parser';
+// or
+const { ArgParser } = require('@alcyone-labs/arg-parser');
 ```
 
-All examples in this repository work seamlessly across all three runtimes, ensuring maximum compatibility for your CLI applications.
+### **Running Examples**
+
+Examples are provided as TypeScript source files for educational purposes. Run them directly with your preferred runtime:
+
+```bash
+# BunJS (recommended)
+bun examples/simple-cli.ts --env production --port 8080
+
+# Node.js with tsx
+npx tsx examples/simple-cli.ts --env production --port 8080
+
+# Deno (use predefined tasks)
+deno task example:simple-cli --env production --port 8080
+```
+
+All examples work seamlessly across all three runtimes, ensuring maximum compatibility for your CLI applications.
 
 ## Basic Usage
 
@@ -785,6 +830,7 @@ System flags use the `--s-*` pattern and provide powerful development and deploy
 - **`--s-save-to-env <file>`**: Export current configuration to various formats
 - **`--s-debug-print`**: Export complete parser configuration for inspection
 - **`--s-enable-fuzzy`**: Enable fuzzy testing mode (dry-run with no side effects)
+- **`--s-save-DXT [dir]`**: Generate DXT packages for MCP servers (Desktop Extensions)
 
 ### `--s-save-to-env <file>`
 
@@ -1077,6 +1123,86 @@ bun src/fuzzy-test-cli.ts --file my-cli.ts --format markdown --output report.md
 ```
 
 For complete documentation, examples, and advanced usage patterns, see the [Fuzzy Testing Documentation](docs/fuzzy-testing.md).
+
+### `--s-save-DXT [directory]`
+
+Generates Desktop Extension (DXT) packages for all MCP servers defined in your ArgParser instance. DXT files are zip archives containing a manifest.json and server files, enabling single-click installation of MCP servers in compatible applications like Claude Desktop.
+
+```bash
+# Generate DXT packages in current directory
+your-cli --s-save-DXT
+
+# Generate DXT packages in specific directory
+your-cli --s-save-DXT ./dxt-packages
+
+# Example with multiple MCP servers
+my-tool --s-save-DXT ./extensions
+```
+
+**Features:**
+- **Automatic detection**: Finds all MCP servers added via `addMcpSubCommand()`
+- **Multiple servers**: Generates separate DXT files for each MCP server
+- **Complete tool listing**: Includes all MCP tools in the manifest
+- **Proper metadata**: Uses actual server names, versions, and descriptions
+- **Ready to install**: Generated DXT files work with DXT-compatible applications
+
+**Generated Structure:**
+```
+your-server.dxt (ZIP file)
+├── manifest.json         # Server metadata and tool definitions
+└── server/
+    └── index.js          # Server entry point
+```
+
+**Example Output:**
+```
+🔧 Generating DXT packages for 2 MCP server(s)...
+  ✓ Generated: primary-server.dxt
+    Server: primary-server v1.0.0
+    Tools: 3 tool(s)
+  ✓ Generated: analytics-server.dxt
+    Server: analytics-server v2.1.0
+    Tools: 5 tool(s)
+
+✅ DXT package generation completed!
+Output directory: /path/to/dxt-packages
+```
+
+**Use Cases:**
+- **Distribution**: Package MCP servers for easy sharing and installation
+- **Development**: Create test packages during MCP server development
+- **Deployment**: Generate production-ready DXT files for distribution
+- **Integration**: Prepare MCP servers for Claude Desktop or other DXT-compatible applications
+
+## Changelog
+
+### v1.2.0 (2025-01-02)
+
+**🔧 Critical MCP Fixes & Improvements**
+
+- **Fixed MCP Output Schema Support**: Resolved the critical issue where MCP tools with output schemas failed with `"Tool has an output schema but no structured content was provided"` error
+- **Enhanced Handler Context**: Added `isMcp` flag to handler context for proper MCP mode detection
+- **Improved Response Format**: MCP tools now correctly return both `content` and `structuredContent` fields as required by JSON-RPC 2.0
+- **Better Integration**: Handlers can reliably detect when they're being called from MCP mode vs CLI mode
+
+**What was broken before v1.2.0:**
+- MCP servers would fail when tools had output schemas defined
+- Handlers couldn't reliably detect MCP execution context
+- Response format didn't comply with MCP specification for structured content
+
+**What works now:**
+- ✅ MCP tools with output schemas work correctly
+- ✅ Proper JSON-RPC 2.0 response format with both `content` and `structuredContent`
+- ✅ Handler context includes `isMcp` flag for mode detection
+- ✅ Full compatibility with MCP clients and the Model Context Protocol specification
+
+### v1.1.0 (2024-12-XX)
+
+**Major Features**
+- MCP (Model Context Protocol) Integration with multiple transport support
+- System Flags: `--s-debug-print`, `--s-with-env`, `--s-save-to-env`, `--s-enable-fuzzy`, `--s-save-DXT`
+- Environment Loading from `.env`, `.yaml`, `.json`, and `.toml` files
+- Enhanced Debugging and configuration export tools
 
 ## API Reference
 

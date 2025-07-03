@@ -146,18 +146,18 @@ const cli = ArgParser.withMcp({
 
 This is a REAL, functional CLI tool that demonstrates ArgParser v1.1.0 features:
 
-📋 System Flags (available on any command):
+System Flags (available on any command):
   --s-debug          Enable debug mode for detailed logging
   --s-debug-print    Export complete parser configuration to JSON file
   --s-with-env FILE  Load configuration from file (supports .env, .yaml, .json, .toml)
   --s-save-to-env FILE  Export current configuration to file (supports .env, .yaml, .json, .toml)
 
-🔍 Commands:
+Commands:
   search    - Search for files using fuzzy matching (requires fzf)
   analyze   - Analyze files and show statistics
   serve     - Start as MCP server for AI assistants
 
-📝 Example Usage:
+Example Usage:
 
 1. Search for TypeScript files:
    bun examples/v1.1.0-showcase.ts search --query "parser" --extensions "ts,js"
@@ -194,7 +194,7 @@ Use --help with any command for detailed information!
   name: "search",
   description: "Search for files using fuzzy matching (requires fzf)",
   handler: async (ctx) => {
-    console.log("🔍 Searching for files...");
+    console.log("Searching for files...");
 
     const query = String(ctx.args["query"]);
     const directory = String(ctx.args["directory"] || process.env["SEARCH_DIR"] || ".");
@@ -209,22 +209,22 @@ Use --help with any command for detailed information!
     const result = await searchFiles(query, directory, extensions, maxResults);
 
     if (result.error) {
-      console.error(`❌ Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
       return { success: false, error: result.error };
     }
 
     if (result.files.length === 0) {
-      console.log("📭 No files found matching your query.");
+      console.log("No files found matching your query.");
       return { success: true, files: [], count: 0 };
     }
 
-    console.log(`\n📁 Found ${result.files.length} files:`);
+    console.log(`\nFound ${result.files.length} files:`);
     result.files.forEach((file, i) => {
       console.log(`${i + 1}. ${file}`);
     });
 
     if (ctx.args["verbose"]) {
-      console.log(`\n🔧 Command executed: ${result.commandExecuted}`);
+      console.log(`\nCommand executed: ${result.commandExecuted}`);
     }
 
     return {
@@ -277,7 +277,7 @@ Use --help with any command for detailed information!
   name: "analyze",
   description: "Analyze files and show statistics",
   handler: async (ctx) => {
-    console.log("📊 Analyzing files...");
+    console.log("Analyzing files...");
 
     const directory = String(ctx.args["directory"] || process.env["SEARCH_DIR"] || ".");
     const extensions = ctx.args["extensions"] ? String(ctx.args["extensions"]) : process.env["DEFAULT_EXTENSIONS"];
@@ -321,17 +321,17 @@ Use --help with any command for detailed information!
       scanDirectory(resolve(directory));
 
       if (allFiles.length === 0) {
-        console.log("📭 No files found to analyze.");
+        console.log("No files found to analyze.");
         return { success: true, files: [], analysis: null };
       }
 
       const analysis = analyzeFiles(allFiles);
 
-      console.log(`\n📈 Analysis Results:`);
+      console.log(`\nAnalysis Results:`);
       console.log(`Total files: ${analysis.totalFiles}`);
       console.log(`Total size: ${(analysis.totalSize / 1024).toFixed(2)} KB`);
 
-      console.log(`\n📋 Files by extension:`);
+      console.log(`\nFiles by extension:`);
       Object.entries(analysis.byExtension)
         .sort(([,a], [,b]) => b - a)
         .forEach(([ext, count]) => {
@@ -339,7 +339,7 @@ Use --help with any command for detailed information!
         });
 
       if (analysis.largestFile) {
-        console.log(`\n📏 Largest file: ${basename(analysis.largestFile.path)} (${(analysis.largestFile.size / 1024).toFixed(2)} KB)`);
+        console.log(`\nLargest file: ${basename(analysis.largestFile.path)} (${(analysis.largestFile.size / 1024).toFixed(2)} KB)`);
       }
 
       return {
@@ -351,7 +351,7 @@ Use --help with any command for detailed information!
       };
 
     } catch (error: any) {
-      console.error(`❌ Error analyzing directory: ${error.message}`);
+      console.error(`Error analyzing directory: ${error.message}`);
       return { success: false, error: error.message };
     }
   },

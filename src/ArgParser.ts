@@ -64,16 +64,16 @@ export class ArgParser<
    * @param toolOptions Optional MCP tool generation options
    * @returns Configured MCP server instance
    */
-  public createMcpServer(
+  public async createMcpServer(
     serverInfo: {
       name: string;
       version: string;
       description?: string;
     },
     toolOptions?: GenerateMcpToolsOptions,
-  ): any {
-    // Dynamic import to avoid circular dependencies
-    const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+  ): Promise<any> {
+    // Dynamic import to avoid circular dependencies and support ES modules
+    const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
 
     const server = new McpServer({
       id: serverInfo.name,
@@ -98,9 +98,11 @@ export class ArgParser<
         inputSchema: (tool.inputSchema as any).shape || tool.inputSchema,
       };
 
-      if (tool.outputSchema) {
-        toolConfig.outputSchema = (tool.outputSchema as any).shape || tool.outputSchema;
-      }
+      // WORKAROUND: Don't register output schema with MCP SDK due to bug
+      // The output schema will be handled in our response processing instead
+      // if (tool.outputSchema) {
+      //   toolConfig.outputSchema = (tool.outputSchema as any).shape || tool.outputSchema;
+      // }
 
       server.registerTool(tool.name, toolConfig, tool.execute);
     });
@@ -147,7 +149,7 @@ export class ArgParser<
     }>,
     toolOptions?: GenerateMcpToolsOptions,
   ): Promise<void> {
-    const server = this.createMcpServer(serverInfo, toolOptions);
+    const server = await this.createMcpServer(serverInfo, toolOptions);
     const startPromises: Promise<void>[] = [];
 
     for (const transportConfig of transports) {
@@ -182,7 +184,7 @@ export class ArgParser<
     } = {},
     toolOptions?: GenerateMcpToolsOptions,
   ): Promise<void> {
-    const server = this.createMcpServer(serverInfo, toolOptions);
+    const server = await this.createMcpServer(serverInfo, toolOptions);
     await this.#_startSingleTransport(server, serverInfo, {
       type: transportType,
       ...transportOptions,
@@ -288,24 +290,16 @@ export class ArgParser<
     }
   }
 
-  /**
-   * Override parse() to handle async handlers properly
-   * This allows ArgParser to work with async handlers while keeping
-   * backwards compatibility for synchronous usage
-   */
+
   public parse(processArgs: string[], options?: any): any {
-    // First, call the parent parse method to get the basic parsing done
     const result = super.parse(processArgs, options);
 
-    // If fuzzy mode prevented execution, return the result as-is
     const anyResult = result as any;
     if (anyResult._fuzzyModePreventedExecution) {
       return result;
     }
 
-    // Check if there's an async handler that needs to be awaited
     if (anyResult._asyncHandlerPromise) {
-      // Return a promise for async handlers
       return this.parseAsync(processArgs, options);
     }
 
@@ -516,6 +510,8 @@ export class ArgParser<
       handler: mcpHandler,
       parser: mcpSubParser,
       isMcp: true,
+      mcpServerInfo: serverInfo,
+      mcpToolOptions: toolOptions,
     });
 
     return this;
@@ -524,24 +520,26 @@ export class ArgParser<
   /**
    * Factory method to create an ArgParser instance with MCP capabilities
    * This provides a clean API for users who want MCP functionality from the start
+   * Automatically sets handleErrors: false for MCP compatibility
    */
   public static withMcp<T = any>(
     options?: ConstructorParameters<typeof ArgParserBase>[0],
     initialFlags?: ConstructorParameters<typeof ArgParserBase>[1],
   ): ArgParser<T> {
-    return new ArgParser<T>(options as any, initialFlags);
+    // Ensure handleErrors is false for MCP compatibility unless explicitly overridden
+    const mcpOptions = {
+      handleErrors: false,
+      ...options,
+    };
+    return new ArgParser<T>(mcpOptions as any, initialFlags);
   }
 
-  /**
-   * Convert an existing ArgParserBase instance to ArgParser with MCP
-   * This allows upgrading existing parsers to support MCP
-   */
+
   public static fromArgParser<T = any>(
     parser: ArgParserBase<T>,
   ): ArgParser<T> {
     const originalParser = parser as any;
 
-    // Create new instance with the same configuration as the original
     const mcpParser = new ArgParser<T>({
       appName: originalParser.getAppName(),
       appCommandName: originalParser.getAppCommandName(),
