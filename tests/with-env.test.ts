@@ -54,13 +54,13 @@ describe("--s-with-env system flag", () => {
   ];
 
   describe(".env format", () => {
-    it("should load configuration from .env file", () => {
+    it("should load configuration from .env file", async () => {
       const envFile = path.join(testDir, "config.env");
       const envContent = `
-VERBOSE=true
-OUTPUT=test-output.txt
-COUNT=5
-TAGS=tag1,tag2,tag3
+verbose=true
+output=test-output.txt
+count=5
+tags=tag1,tag2,tag3
 `;
       fs.writeFileSync(envFile, envContent);
 
@@ -69,20 +69,20 @@ TAGS=tag1,tag2,tag3
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = parser.parse(["--s-with-env", envFile]);
-      
+      const result = await parser.parseAsync(["--s-with-env", envFile]);
+
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("test-output.txt");
       expect(result.count).toBe(5);
       expect(result.tags).toEqual(["tag1", "tag2", "tag3"]);
     });
 
-    it("should allow CLI args to override env file values", () => {
+    it("should allow CLI args to override env file values", async () => {
       const envFile = path.join(testDir, "config.env");
       const envContent = `
-VERBOSE=false
-OUTPUT=env-output.txt
-COUNT=10
+verbose=false
+output=env-output.txt
+count=10
 `;
       fs.writeFileSync(envFile, envContent);
 
@@ -91,12 +91,12 @@ COUNT=10
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = parser.parse([
+      const result = await parser.parseAsync([
         "--s-with-env", envFile,
         "--verbose",
         "--output", "cli-output.txt"
       ]);
-      
+
       expect(result.verbose).toBe(true); // CLI override
       expect(result.output).toBe("cli-output.txt"); // CLI override
       expect(result.count).toBe(10); // From env file
@@ -104,7 +104,7 @@ COUNT=10
   });
 
   describe("YAML format", () => {
-    it("should load configuration from YAML file", () => {
+    it("should load configuration from YAML file", async () => {
       const yamlFile = path.join(testDir, "config.yaml");
       const yamlContent = `
 verbose: true
@@ -121,8 +121,8 @@ tags:
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = parser.parse(["--s-with-env", yamlFile]);
-      
+      const result = await parser.parseAsync(["--s-with-env", yamlFile]);
+
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("yaml-output.txt");
       expect(result.count).toBe(7);
@@ -131,7 +131,7 @@ tags:
   });
 
   describe("JSON format", () => {
-    it("should load configuration from JSON file", () => {
+    it("should load configuration from JSON file", async () => {
       const jsonFile = path.join(testDir, "config.json");
       const jsonContent = {
         verbose: false,
@@ -146,8 +146,8 @@ tags:
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = parser.parse(["--s-with-env", jsonFile]);
-      
+      const result = await parser.parseAsync(["--s-with-env", jsonFile]);
+
       expect(result.verbose).toBe(false);
       expect(result.output).toBe("json-output.txt");
       expect(result.count).toBe(3);
@@ -156,7 +156,7 @@ tags:
   });
 
   describe("TOML format", () => {
-    it("should load configuration from TOML file", () => {
+    it("should load configuration from TOML file", async () => {
       const tomlFile = path.join(testDir, "config.toml");
       const tomlContent = `
 verbose = true
@@ -171,8 +171,8 @@ tags = ["toml-tag1", "toml-tag2"]
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = parser.parse(["--s-with-env", tomlFile]);
-      
+      const result = await parser.parseAsync(["--s-with-env", tomlFile]);
+
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("toml-output.txt");
       expect(result.count).toBe(9);
@@ -181,52 +181,34 @@ tags = ["toml-tag1", "toml-tag2"]
   });
 
   describe("error handling", () => {
-    it("should exit with error if file does not exist", () => {
+    it("should exit with error if file does not exist", async () => {
       const parser = new ArgParser({
         appName: "Test App",
         handler: (ctx) => ctx.args,
+        autoExit: false,
       }).addFlags(flags);
 
-      // Mock process.exit to prevent actual exit during test
-      const originalExit = process.exit;
-      let exitCode: number | undefined;
-      process.exit = ((code?: number) => {
-        exitCode = code;
-        throw new Error(`Process exit called with code ${code}`);
-      }) as any;
+      const result = await parser.parse(["--s-with-env", "nonexistent.env"]);
 
-      try {
-        expect(() => {
-          parser.parse(["--s-with-env", "nonexistent.env"]);
-        }).toThrow();
-        expect(exitCode).toBe(1);
-      } finally {
-        process.exit = originalExit;
-      }
+      expect(result).toHaveProperty('success', false);
+      expect(result).toHaveProperty('exitCode', 1);
+      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty('type', 'error');
     });
 
-    it("should require a file path argument", () => {
+    it("should require a file path argument", async () => {
       const parser = new ArgParser({
         appName: "Test App",
         handler: (ctx) => ctx.args,
+        autoExit: false,
       }).addFlags(flags);
 
-      // Mock process.exit to prevent actual exit during test
-      const originalExit = process.exit;
-      let exitCode: number | undefined;
-      process.exit = ((code?: number) => {
-        exitCode = code;
-        throw new Error(`Process exit called with code ${code}`);
-      }) as any;
+      const result = await parser.parse(["--s-with-env"]);
 
-      try {
-        expect(() => {
-          parser.parse(["--s-with-env"]);
-        }).toThrow();
-        expect(exitCode).toBe(1);
-      } finally {
-        process.exit = originalExit;
-      }
+      expect(result).toHaveProperty('success', false);
+      expect(result).toHaveProperty('exitCode', 1);
+      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty('type', 'error');
     });
   });
 });

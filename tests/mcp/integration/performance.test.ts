@@ -32,7 +32,7 @@ describe("MCP Performance and Reliability Tests", () => {
       const tool = tools[0];
 
       const startTime = Date.now();
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         operation: "default"
       });
       const endTime = Date.now();
@@ -78,7 +78,7 @@ describe("MCP Performance and Reliability Tests", () => {
       // Execute multiple tools concurrently
       const startTime = Date.now();
       const promises = Array.from({ length: 5 }, (_, i) =>
-        tool.execute({ id: `request-${i}` })
+        tool.executeForTesting!({ id: `request-${i}` })
       );
 
       const results = await Promise.all(promises);
@@ -127,12 +127,12 @@ describe("MCP Performance and Reliability Tests", () => {
       const tool = tools[0];
 
       // First call should fail
-      const firstResult = await tool.execute({ attempt: "1" });
+      const firstResult = await tool.executeForTesting!({ attempt: "1" });
       expect(firstResult.success).toBe(false);
-      expect(firstResult.message).toContain("First call failed");
+      expect(firstResult.error).toContain("First call failed");
 
       // Second call should succeed
-      const secondResult = await tool.execute({ attempt: "2" });
+      const secondResult = await tool.executeForTesting!({ attempt: "2" });
       expect(secondResult.success).toBe(true);
       expect(secondResult.data.success).toBe(true);
 

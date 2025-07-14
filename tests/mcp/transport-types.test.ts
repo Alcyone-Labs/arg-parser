@@ -189,7 +189,7 @@ describe("MCP Transport Types", () => {
       const tools = parser.toMcpTools();
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         input: "test-input",
       });
 

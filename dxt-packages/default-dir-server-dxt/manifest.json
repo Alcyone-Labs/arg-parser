@@ -1,0 +1,28 @@
+{
+  "dxt_version": "0.1",
+  "name": "default-dir-server",
+  "version": "1.0.0",
+  "description": "Server for default directory test",
+  "author": {
+    "name": "Test Author"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.mjs",
+        "--s-mcp-serve"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "default-dir",
+      "description": "CLI for testing default directory"
+    }
+  ],
+  "icon": "logo.jpg"
+}

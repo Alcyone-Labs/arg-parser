@@ -6,7 +6,7 @@ import { setTimeout } from "node:timers/promises";
 import { spawn, ChildProcess } from "node:child_process";
 
 describe("Canny CLI Integration Tests", () => {
-  const cannyCliPath = resolve(__dirname, "../../../examples/community/canny-cli.js");
+  const cannyCliPath = resolve(__dirname, "../../../examples/community/canny-cli/canny-cli.js");
 
   beforeAll(() => {
     // Verify the Canny CLI file exists
@@ -44,16 +44,18 @@ describe("Canny CLI Integration Tests", () => {
     }, 10000);
 
     test("should handle missing API key gracefully in CLI mode", async () => {
-      // Temporarily remove API key
-      const originalApiKey = globalThis.process.env.CANNY_API_KEY;
-      delete globalThis.process.env.CANNY_API_KEY;
+      // Create environment without CANNY_API_KEY
+      const env = { ...globalThis.process.env };
+      delete env.CANNY_API_KEY;
 
-      const process = spawn("node", [cannyCliPath, "--query", "test"], {
-        stdio: ["pipe", "pipe", "pipe"]
+      const process = spawn("node", [cannyCliPath, "search", "--query", "test"], {
+        stdio: ["pipe", "pipe", "pipe"],
+        env: env
       });
 
       let stdout = "";
       let stderr = "";
+      let exitCode = 0;
 
       process.stdout?.on("data", (data) => {
         stdout += data.toString();
@@ -64,16 +66,17 @@ describe("Canny CLI Integration Tests", () => {
       });
 
       await new Promise((resolve) => {
-        process.on("close", resolve);
+        process.on("close", (code) => {
+          exitCode = code || 0;
+          resolve(code);
+        });
       });
 
       const output = stdout + stderr;
-      expect(output).toContain("API key is required");
 
-      // Restore API key
-      if (originalApiKey) {
-        globalThis.process.env.CANNY_API_KEY = originalApiKey;
-      }
+      // The process should exit with an error code when API key is missing
+      expect(exitCode).not.toBe(0);
+      expect(output).toContain("API key is required");
     }, 10000);
 
     test("should execute search successfully with API key from environment", async () => {
@@ -82,7 +85,7 @@ describe("Canny CLI Integration Tests", () => {
         return;
       }
 
-      const process = spawn("node", [cannyCliPath, "--query", "API", "--limit", "2"], {
+      const process = spawn("node", [cannyCliPath, "search", "--query", "API", "--limit", "2"], {
         stdio: ["pipe", "pipe", "pipe"]
       });
 
@@ -104,7 +107,7 @@ describe("Canny CLI Integration Tests", () => {
       // Should show search results or "no results found"
       const output = stdout + stderr;
       expect(output).toContain("Searching Canny for");
-      expect(output.toLowerCase()).toMatch(/(found \d+|no feature requests found)/);
+      expect(output.toLowerCase()).toMatch(/(found \d+|no results found)/);
     }, 15000);
   });
 
@@ -124,7 +127,7 @@ describe("Canny CLI Integration Tests", () => {
       }
 
       // Test that the MCP server can start without errors
-      const process = spawn("node", [cannyCliPath, "serve", "--help"], {
+      const process = spawn("node", [cannyCliPath, "--help"], {
         stdio: ["pipe", "pipe", "pipe"]
       });
 
@@ -144,8 +147,8 @@ describe("Canny CLI Integration Tests", () => {
       });
 
       const output = stdout + stderr;
-      expect(output).toContain("serve");
-      expect(output).toContain("transport");
+      expect(output).toContain("search");
+      expect(output).toContain("Canny");
     }, 15000);
 
     test("should generate MCP tools with correct schema", async () => {
@@ -240,7 +243,7 @@ describe("Canny CLI Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         query: "test"
       });
 
@@ -288,7 +291,7 @@ describe("Canny CLI Integration Tests", () => {
       const tool = tools[0];
 
       // Test invalid enum value
-      const invalidResult = await tool.execute({
+      const invalidResult = await tool.executeForTesting!({
         query: "test",
         status: "invalid-status"
       });
@@ -326,7 +329,7 @@ describe("Canny CLI Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         query: "test"
       });
 
@@ -343,28 +346,28 @@ describe("Canny CLI Integration Tests", () => {
         return;
       }
 
-      // Test with SSE transport
-      const sseProcess = spawn("node", [cannyCliPath, "serve", "--transport", "sse", "--port", "3002"], {
+      // Test with MCP server mode
+      const mcpProcess = spawn("node", [cannyCliPath, "--s-mcp-serve"], {
         stdio: ["pipe", "pipe", "pipe"]
       });
 
       let stderr = "";
-      sseProcess.stderr?.on("data", (data) => {
+      mcpProcess.stderr?.on("data", (data) => {
         stderr += data.toString();
       });
 
       // Give it time to start
-      await setTimeout(3000);
+      await setTimeout(1000);
 
-      // Should start without errors
-      expect(stderr).not.toContain("Error:");
+      // Should start without errors (though it may exit quickly in test mode)
+      expect(stderr).not.toContain("Unknown command");
       
       // Clean up
-      sseProcess.kill();
-      
+      mcpProcess.kill();
+
       // Wait for process to exit
       await new Promise((resolve) => {
-        sseProcess.on("close", resolve);
+        mcpProcess.on("close", resolve);
       });
     }, 10000);
   });

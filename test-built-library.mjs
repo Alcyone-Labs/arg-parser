@@ -19,7 +19,7 @@ console.log('🧪 Testing Built Library Integration\n');
 console.log('1. Testing ESM import from dist/index.mjs...');
 try {
   const { ArgParser } = await import('./dist/index.mjs');
-  
+
   // Create a simple parser without handler to test parsing
   const parser = new ArgParser({
     appName: "Test CLI",
@@ -43,8 +43,8 @@ try {
     }
   ]);
 
-  // Test parsing
-  const result = parser.parse(['--input', 'test.txt', '--verbose']);
+  // Test parsing (parse is async, so we need to await it)
+  const result = await parser.parse(['--input', 'test.txt', '--verbose']);
 
   if (result.input === 'test.txt' && result.verbose === true) {
     console.log('   ✅ ESM import and basic parsing works');
@@ -63,23 +63,29 @@ try {
   const cjsTestContent = `
 const { ArgParser } = require('./dist/index.cjs');
 
-const parser = new ArgParser({
-  appName: "CJS Test CLI",
-  appCommandName: "cjs-test",
-  description: "Testing CJS build",
-  handleErrors: false
-}).addFlags([
-  {
-    name: "output",
-    description: "Output file",
-    options: ["--output", "-o"],
-    type: "string",
-    defaultValue: "output.txt"
-  }
-]);
+async function test() {
+  const parser = new ArgParser({
+    appName: "CJS Test CLI",
+    appCommandName: "cjs-test",
+    description: "Testing CJS build",
+    handleErrors: false
+  }).addFlags([
+    {
+      name: "output",
+      description: "Output file",
+      options: ["--output", "-o"],
+      type: "string",
+      defaultValue: "output.txt"
+    }
+  ]);
 
-const result = parser.parse(['--output', 'result.txt']);
-console.log(JSON.stringify({ success: result.output === 'result.txt' }));
+  const result = await parser.parse(['--output', 'result.txt']);
+  console.log(JSON.stringify({ success: result.output === 'result.txt' }));
+}
+
+test().catch(e => {
+  console.log(JSON.stringify({ success: false, error: e.message }));
+});
 `;
 
   fs.writeFileSync('temp-cjs-test.cjs', cjsTestContent);

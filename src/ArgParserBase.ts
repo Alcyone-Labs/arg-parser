@@ -1,19 +1,23 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import chalk from "chalk";
+import chalk from "@alcyone-labs/simple-chalk";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
-import * as yaml from "js-yaml";
-import * as toml from "@iarna/toml";
-import * as dotenv from "dotenv";
-import AdmZip from "adm-zip";
+
+
 import { FlagManager } from "./FlagManager";
+import { DxtGenerator } from "./DxtGenerator";
+import { ConfigurationManager } from "./ConfigurationManager";
 import type {
   IFlag,
   IHandlerContext,
   ISubCommand,
   ProcessedFlag,
   TParsedArgs,
+  ParseResult,
 } from "./types";
+import { McpResourcesManager, McpResourceConfig } from "./mcp-resources.js";
+import { McpPromptsManager, McpPromptConfig } from "./mcp-prompts.js";
+import { McpNotificationsManager, McpChangeType } from "./mcp-notifications.js";
 
 export class ArgParserError extends Error {
   public commandChain: string[];
@@ -79,6 +83,13 @@ export interface IArgParserParams<THandlerReturn = any> {
    */
   handleErrors?: boolean;
   /**
+   * Whether to automatically call process.exit() based on ParseResult.
+   * When true (default), maintains backward compatibility with CLI behavior.
+   * When false, returns ParseResult objects for programmatic use.
+   * @default true
+   */
+  autoExit?: boolean;
+  /**
    * The command name to display in help suggestions (e.g., 'dabl').
    * If not provided, it falls back to guessing from the script path.
    */
@@ -129,12 +140,20 @@ export class ArgParserBase<THandlerReturn = any> {
   #throwForDuplicateFlags: boolean = false;
   #description?: string;
   #handleErrors: boolean = true;
+  #autoExit: boolean = true;
   #parentParser?: ArgParserBase;
   #lastParseResult: TParsedArgs<ProcessedFlag[]> = {};
   #inheritParentFlags: boolean = false;
   #subCommands: Map<string, ISubCommand> = new Map();
   #flagManager: FlagManager;
+  #dxtGenerator: DxtGenerator;
+  #configurationManager: ConfigurationManager;
   #fuzzyMode: boolean = false;
+
+  // MCP-related managers
+  #mcpResourcesManager: McpResourcesManager = new McpResourcesManager();
+  #mcpPromptsManager: McpPromptsManager = new McpPromptsManager();
+  #mcpNotificationsManager: McpNotificationsManager = new McpNotificationsManager();
 
   constructor(
     options: IArgParserParams<THandlerReturn> = {},
@@ -172,6 +191,7 @@ export class ArgParserBase<THandlerReturn = any> {
     );
 
     this.#handleErrors = options.handleErrors ?? true;
+    this.#autoExit = options.autoExit ?? true;
     this.#inheritParentFlags = options.inheritParentFlags ?? false;
     this.#description = options.description;
     this.#handler = options.handler;
@@ -191,6 +211,12 @@ export class ArgParserBase<THandlerReturn = any> {
       validate: (_value?: any, _parsedArgs?: any) => true, // Ensure signature matches Zod schema for .args()
     };
     this.#flagManager.addFlag(helpFlag); // Add the help flag via FlagManager
+
+    // Initialize DXT generator
+    this.#dxtGenerator = new DxtGenerator(this);
+
+    // Initialize Configuration manager
+    this.#configurationManager = new ConfigurationManager(this);
 
     if (options.subCommands) {
       for (const sub of options.subCommands) {
@@ -221,6 +247,31 @@ export class ArgParserBase<THandlerReturn = any> {
 
   public getDescription(): string | undefined {
     return this.#description;
+  }
+
+  public getAutoExit(): boolean {
+    return this.#autoExit;
+  }
+
+  /**
+   * Helper method to handle exit logic based on autoExit setting
+   * Returns a ParseResult instead of calling process.exit() when autoExit is false
+   */
+  private _handleExit(exitCode: number, message?: string, type?: ParseResult['type'], data?: any): ParseResult | never {
+    const result: ParseResult = {
+      success: exitCode === 0,
+      exitCode,
+      message,
+      type: type || (exitCode === 0 ? 'success' : 'error'),
+      shouldExit: true,
+      data
+    };
+
+    if (this.#autoExit && typeof process === "object" && typeof process.exit === "function") {
+      process.exit(exitCode as never);
+    }
+
+    return result;
   }
 
   public getHandler(): ((ctx: IHandlerContext) => void) | undefined {
@@ -439,10 +490,10 @@ export class ArgParserBase<THandlerReturn = any> {
     );
   }
 
-  #_handleGlobalChecks(
+  async #_handleGlobalChecks(
     processArgs: string[],
     options?: IParseOptions,
-  ): boolean {
+  ): Promise<boolean | ParseResult> {
     // Auto-help should only trigger for root parsers that are intended as main CLI entry points
     // A parser is considered a "root CLI parser" if it has appCommandName explicitly set
     // This ensures that only parsers intended as main CLI tools trigger auto-help
@@ -450,18 +501,12 @@ export class ArgParserBase<THandlerReturn = any> {
 
     if (processArgs.length === 0 && isRootCliParser && !this.#handler) {
       console.log(this.helpText());
-      if (typeof process === "object" && typeof process.exit === "function") {
-        process.exit(0 as never);
-      }
-      return true;
+      return this._handleExit(0, "Help displayed", "help");
     }
 
     if (processArgs.includes("--s-debug-print")) {
       this.printAll("ArgParser.full.json");
-      if (typeof process === "object" && typeof process.exit === "function") {
-        process.exit(0);
-      }
-      return true;
+      return this._handleExit(0, "Debug information printed", "debug");
     }
 
     // Handle --s-enable-fuzzy system flag to enable fuzzy testing mode
@@ -477,19 +522,13 @@ export class ArgParserBase<THandlerReturn = any> {
     if (withEnvIndex !== -1) {
       if (withEnvIndex + 1 >= processArgs.length) {
         console.error(chalk.red("Error: --s-with-env requires a file path argument"));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(1);
-        }
-        return true;
+        return this._handleExit(1, "--s-with-env requires a file path argument", "error");
       }
 
       const filePath = processArgs[withEnvIndex + 1];
       if (!filePath || filePath.startsWith("-")) {
         console.error(chalk.red("Error: --s-with-env requires a file path argument"));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(1);
-        }
-        return true;
+        return this._handleExit(1, "--s-with-env requires a file path argument", "error");
       }
 
       try {
@@ -497,32 +536,46 @@ export class ArgParserBase<THandlerReturn = any> {
         const { finalParser: identifiedFinalParser, parserChain: identifiedParserChain } =
           this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-        const envConfigArgs = identifiedFinalParser.#_loadEnvFile(filePath, identifiedParserChain);
+        const envConfigArgs = identifiedFinalParser.#configurationManager.loadEnvFile(filePath, identifiedParserChain);
         if (envConfigArgs) {
           // Merge environment configuration with process args
           // CLI args take precedence over file configuration
-          const mergedArgs = identifiedFinalParser.#_mergeEnvConfigWithArgs(envConfigArgs, processArgs);
+          const mergedArgs = identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(envConfigArgs, processArgs);
 
           // Replace the original processArgs array contents
           processArgs.length = 0;
           processArgs.push(...mergedArgs);
         }
+
+        // Remove the --s-with-env flag and its file path argument from processArgs
+        // This must be done after merging to avoid interfering with the merge process
+        const finalWithEnvIndex = processArgs.findIndex(arg => arg === "--s-with-env");
+        if (finalWithEnvIndex !== -1) {
+          processArgs.splice(finalWithEnvIndex, 2); // Remove both --s-with-env and the file path
+        }
       } catch (error) {
         console.error(chalk.red(`Error loading environment file: ${error instanceof Error ? error.message : String(error)}`));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(1);
-        }
-        return true;
+        return this._handleExit(1, `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`, "error");
       }
     }
 
     const { finalParser: identifiedFinalParser } =
       this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-    const saveDxtIndex = processArgs.findIndex(arg => (arg ?? "").toLowerCase() === "--s-save-dxt");
-    if (saveDxtIndex !== -1) {
-      if (this.#_handleSaveDxtFlag(processArgs, saveDxtIndex)) {
-        return true;
+    const buildDxtIndex = processArgs.findIndex(arg => (arg ?? "").toLowerCase() === "--s-build-dxt");
+    if (buildDxtIndex !== -1) {
+      const dxtResult = await this.#_handleBuildDxtFlag(processArgs, buildDxtIndex);
+      if (dxtResult !== false) {
+        return dxtResult === true ? true : dxtResult;
+      }
+    }
+
+    // Handle --s-mcp-serve system flag to start all MCP servers
+    const mcpServeIndex = processArgs.findIndex(arg => arg === "--s-mcp-serve");
+    if (mcpServeIndex !== -1) {
+      const mcpServeResult = await this.#_handleMcpServeFlag(processArgs, mcpServeIndex);
+      if (mcpServeResult !== false) {
+        return mcpServeResult === true ? true : mcpServeResult;
       }
     }
 
@@ -659,10 +712,7 @@ export class ArgParserBase<THandlerReturn = any> {
       identifiedFinalParser.printAll();
 
       console.log(chalk.yellow.bold("--- End ArgParser --s-debug ---"));
-      if (typeof process === "object" && typeof process.exit === "function") {
-        process.exit(0);
-      }
-      return true;
+      return this._handleExit(0, "Debug information displayed", "debug");
     }
 
     // ---- BEGIN ADDED DIAGNOSTIC LOG FOR identifiedFinalParser ----
@@ -719,10 +769,7 @@ export class ArgParserBase<THandlerReturn = any> {
 
       if (helpRequested) {
         console.log(identifiedFinalParser.helpText());
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(0 as never);
-        }
-        return true;
+        return this._handleExit(0, "Help displayed", "help");
       }
     }
 
@@ -916,6 +963,11 @@ export class ArgParserBase<THandlerReturn = any> {
       }
 
       (finalArgs as any).handlerResponse = handlerResult;
+
+      // Merge handler result into final args if it's an object
+      if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+        Object.assign(finalArgs, handlerResult);
+      }
     } catch (error) {
       // For synchronous handlers, we can handle sync errors
       if (this.#handleErrors) {
@@ -928,10 +980,10 @@ export class ArgParserBase<THandlerReturn = any> {
     }
   }
 
-  parse(
+  async parse(
     processArgs: string[],
     options?: IParseOptions,
-  ): TParsedArgsWithRouting<any> {
+  ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
     // Store original args for fuzzy mode logging
     const originalProcessArgs = [...processArgs];
 
@@ -956,8 +1008,10 @@ export class ArgParserBase<THandlerReturn = any> {
       } as TParsedArgsWithRouting<any>;
     }
 
-    if (this.#_handleGlobalChecks(processArgs, options)) {
-      return {} as TParsedArgsWithRouting<any>;
+    const globalCheckResult = await this.#_handleGlobalChecks(processArgs, options);
+    if (globalCheckResult !== false) {
+      // If it's a ParseResult, return it; otherwise return empty object for backward compatibility
+      return globalCheckResult === true ? {} as TParsedArgsWithRouting<any> : globalCheckResult;
     }
 
     try {
@@ -967,8 +1021,9 @@ export class ArgParserBase<THandlerReturn = any> {
         parserChain: identifiedParserChain,
       } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-      if (identifiedFinalParser.#_handleSaveToEnvFlag(processArgs, identifiedParserChain)) {
-        return {} as TParsedArgsWithRouting<any>;
+      const saveToEnvResult = identifiedFinalParser.#_handleSaveToEnvFlag(processArgs, identifiedParserChain);
+      if (saveToEnvResult !== false) {
+        return saveToEnvResult === true ? {} as TParsedArgsWithRouting<any> : saveToEnvResult;
       }
 
       const { finalArgs, handlerToExecute } = this._parseRecursive(
@@ -1010,8 +1065,9 @@ export class ArgParserBase<THandlerReturn = any> {
     } catch (error) {
       if (error instanceof ArgParserError) {
         if (this.#handleErrors) {
-          this.#displayErrorAndExit(error);
-          return {} as TParsedArgsWithRouting<any>;
+          const errorResult = this.#displayErrorAndExit(error);
+          // If autoExit is false, return the ParseResult; otherwise return empty object
+          return this.#autoExit ? {} as TParsedArgsWithRouting<any> : errorResult;
         } else {
           throw error;
         }
@@ -1319,7 +1375,7 @@ export class ArgParserBase<THandlerReturn = any> {
             typeof flag.mandatory === "function" ? "dynamic" : flag.mandatory;
           const mandatoryIndicator =
             isMandatory === true
-              ? ` ${red(this.#parameters.mandatoryCharacter)}`
+              ? ` ${red(this.#parameters.mandatoryCharacter || "*")}`
               : isMandatory === "dynamic"
                 ? ` ${dim("(conditionally mandatory)")}`
                 : "";
@@ -1429,7 +1485,7 @@ ${descriptionLines
     }
   }
 
-  #displayErrorAndExit(error: ArgParserError): void {
+  #displayErrorAndExit(error: ArgParserError): ParseResult | never {
     let commandNameToSuggest = "your-script";
 
     if (this.#appCommandName) {
@@ -1451,10 +1507,20 @@ ${descriptionLines
       `\n${chalk.dim(`Try '${commandNameToSuggest} --help' for usage details.`)}`,
     );
 
-    if (typeof process === "object" && typeof process.exit === "function") {
-      process.exit(1 as never);
+    if (this.#autoExit) {
+      if (typeof process === "object" && typeof process.exit === "function") {
+        process.exit(1 as never);
+      } else {
+        throw error;
+      }
     } else {
-      throw error;
+      return {
+        success: false,
+        exitCode: 1,
+        message: error.message,
+        type: 'error',
+        shouldExit: true
+      };
     }
   }
 
@@ -1698,829 +1764,380 @@ ${descriptionLines
     return config;
   }
 
+
+
+
+
+  // ===== MCP API Methods =====
+
   /**
-   * Generates a default environment file name based on the app name
+   * Add an MCP resource to this parser
    */
-  #_generateDefaultEnvFileName(): string {
-    let baseName = "config";
-
-    if (this.#appCommandName) {
-      baseName = this.#appCommandName;
-    } else if (this.#appName && this.#appName !== "Argument Parser") {
-      baseName = this.#appName;
-    }
-
-    // Convert to a safe filename format (PascalCase for .env files)
-    baseName = baseName
-      .split(/[\s-_]+/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join("");
-
-    return `${baseName}.env`;
+  addMcpResource(config: McpResourceConfig): this {
+    this.#mcpResourcesManager.addResource(config);
+    this.#mcpNotificationsManager.notifyChange('resources', 'added', config.name);
+    return this;
   }
 
+  /**
+   * Remove an MCP resource by name
+   */
+  removeMcpResource(name: string): this {
+    const removed = this.#mcpResourcesManager.removeResource(name);
+    if (removed) {
+      this.#mcpNotificationsManager.notifyChange('resources', 'removed', name);
+    }
+    return this;
+  }
 
+  /**
+   * Get all registered MCP resources
+   */
+  getMcpResources(): McpResourceConfig[] {
+    return this.#mcpResourcesManager.getResources();
+  }
+
+  /**
+   * Add an MCP prompt to this parser
+   */
+  addMcpPrompt(config: McpPromptConfig): this {
+    this.#mcpPromptsManager.addPrompt(config);
+    this.#mcpNotificationsManager.notifyChange('prompts', 'added', config.name);
+    return this;
+  }
+
+  /**
+   * Remove an MCP prompt by name
+   */
+  removeMcpPrompt(name: string): this {
+    const removed = this.#mcpPromptsManager.removePrompt(name);
+    if (removed) {
+      this.#mcpNotificationsManager.notifyChange('prompts', 'removed', name);
+    }
+    return this;
+  }
+
+  /**
+   * Get all registered MCP prompts
+   */
+  getMcpPrompts(): McpPromptConfig[] {
+    return this.#mcpPromptsManager.getPrompts();
+  }
+
+  /**
+   * Add a change listener for MCP entities
+   */
+  onMcpChange(listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void): this {
+    this.#mcpNotificationsManager.addGlobalListener(listener);
+    return this;
+  }
+
+  /**
+   * Remove a change listener for MCP entities
+   */
+  offMcpChange(listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void): this {
+    this.#mcpNotificationsManager.removeGlobalListener(listener);
+    return this;
+  }
+
+  /**
+   * Get the MCP notifications manager (for advanced usage)
+   */
+  getMcpNotificationsManager(): McpNotificationsManager {
+    return this.#mcpNotificationsManager;
+  }
+
+  /**
+   * Get the MCP resources manager (for advanced usage)
+   */
+  getMcpResourcesManager(): McpResourcesManager {
+    return this.#mcpResourcesManager;
+  }
+
+  /**
+   * Get the MCP prompts manager (for advanced usage)
+   */
+  getMcpPromptsManager(): McpPromptsManager {
+    return this.#mcpPromptsManager;
+  }
 
   /**
    * Handles the --s-save-to-env system flag at the final parser level
    */
-  #_handleSaveToEnvFlag(processArgs: string[], parserChain: ArgParserBase[]): boolean {
-    const saveToEnvIndex = processArgs.findIndex(arg => arg === "--s-save-to-env");
-    if (saveToEnvIndex !== -1) {
-      let filePath: string;
+  #_handleSaveToEnvFlag(processArgs: string[], parserChain: ArgParserBase[]): boolean | ParseResult {
+    try {
+      const result = this.#configurationManager.handleSaveToEnvFlag(processArgs, parserChain);
+      if (result) {
+        // Configuration was saved successfully
+        return this._handleExit(0, "Configuration saved successfully", "success");
+      }
+      return result;
+    } catch (error) {
+      // Configuration save failed
+      return this._handleExit(1, error instanceof Error ? error.message : String(error), "error");
+    }
+  }
 
-      // Check if a filename is provided
-      if (saveToEnvIndex + 1 < processArgs.length) {
-        const nextArg = processArgs[saveToEnvIndex + 1];
-        if (nextArg && !nextArg.startsWith("-")) {
-          filePath = nextArg;
-        } else {
-          // No filename provided, auto-generate one
-          filePath = this.#_generateDefaultEnvFileName();
-        }
-      } else {
-        // No filename provided, auto-generate one
-        filePath = this.#_generateDefaultEnvFileName();
+  /**
+   * Handles the --s-build-dxt system flag to generate DXT packages for MCP servers
+   */
+  async #_handleBuildDxtFlag(processArgs: string[], buildDxtIndex: number): Promise<boolean | ParseResult> {
+    return await this.#dxtGenerator.handleBuildDxtFlag(processArgs, buildDxtIndex);
+  }
+
+  /**
+   * Handles the --s-mcp-serve system flag to start all MCP servers
+   */
+  async #_handleMcpServeFlag(processArgs: string[], _mcpServeIndex: number): Promise<boolean | ParseResult> {
+    // Setup MCP logger with console hijacking
+    let mcpLogger: any;
+    try {
+      // Try to import simple-mcp-logger if available
+      const mcpLoggerModule = await (Function('return import("@alcyone-labs/simple-mcp-logger")')());
+      mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve");
+      // Hijack console globally to prevent STDOUT contamination in MCP mode
+      (globalThis as any).console = mcpLogger;
+    } catch {
+      // Fallback if simple-mcp-logger is not available
+      mcpLogger = {
+        mcpError: (message: string) => console.error(`[MCP Serve] ${message}`)
+      };
+    }
+
+    try {
+      mcpLogger.mcpError("Starting --s-mcp-serve system flag handler - console hijacked for MCP safety");
+
+      // Get MCP server configuration - prefer withMcp() config, fallback to addMcpSubCommand() config
+      const mcpServerConfig = this.#_getMcpServerConfiguration();
+
+      if (!mcpServerConfig) {
+        mcpLogger.mcpError("No MCP server configuration found. Use withMcp() or addMcpSubCommand() to configure MCP server.");
+        return this._handleExit(1, "No MCP server configuration found", "error");
       }
 
+      mcpLogger.mcpError(`Found MCP server configuration: ${mcpServerConfig.serverInfo?.name || 'unnamed'}`);
+
+      // Parse transport options from command line arguments
+      const transportOptions = this.#_parseMcpTransportOptions(processArgs);
+      mcpLogger.mcpError(`Transport options: ${JSON.stringify(transportOptions)}`);
+
+      // Start the unified MCP server
       try {
-        this.#_saveToEnvFile(filePath, processArgs, parserChain);
-        console.log(chalk.green(`Environment configuration saved to: ${filePath}`));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(0);
-        }
-        return true;
+        mcpLogger.mcpError("Starting unified MCP server with all tools");
+        await this.#_startUnifiedMcpServer(mcpServerConfig, transportOptions);
+        mcpLogger.mcpError("Successfully started unified MCP server");
       } catch (error) {
-        console.error(chalk.red(`Error saving environment file: ${error instanceof Error ? error.message : String(error)}`));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(1);
-        }
-        return true;
+        mcpLogger.mcpError(`Failed to start unified MCP server: ${error instanceof Error ? error.message : String(error)}`);
+        return this._handleExit(1, `Failed to start MCP server: ${error instanceof Error ? error.message : String(error)}`, "error");
       }
+
+      mcpLogger.mcpError("MCP server started successfully, keeping process alive");
+
+      // Keep the process alive indefinitely
+      return new Promise(() => {});
+
+    } catch (error) {
+      mcpLogger.mcpError(`Error in --s-mcp-serve handler: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        mcpLogger.mcpError(`Stack trace: ${error.stack}`);
+      }
+      return this._handleExit(1, `MCP serve failed: ${error instanceof Error ? error.message : String(error)}`, "error");
     }
-    return false;
   }
 
   /**
-   * Saves the current parser's flags and their values to an environment file
-   * in the specified format based on file extension.
+   * Get MCP server configuration from withMcp() or fallback to addMcpSubCommand()
    */
-  #_saveToEnvFile(filePath: string, processArgs: string[], parserChain: ArgParserBase[]): void {
-    // Determine file format based on extension
-    const ext = path.extname(filePath).toLowerCase();
-    let format: 'env' | 'yaml' | 'json' | 'toml';
-
-    if (ext === '.yaml' || ext === '.yml') {
-      format = 'yaml';
-    } else if (ext === '.json' || ext === '.jsonc') {
-      format = 'json';
-    } else if (ext === '.toml' || ext === '.tml') {
-      format = 'toml';
-    } else {
-      format = 'env'; // Default to .env format for no extension or unknown extensions
-    }
-
-    // Get all flags from the parser chain (current parser and inherited ones from parent chain)
-    const allFlags: ProcessedFlag[] = [];
-    const seenFlagNames = new Set<string>();
-
-    // Start from the final parser (this) and work backwards through the chain
-    // This ensures that the final parser's flags take precedence over parent flags
-    for (let i = parserChain.length - 1; i >= 0; i--) {
-      const parser = parserChain[i];
-      for (const flag of parser.#flagManager.flags) {
-        if (!seenFlagNames.has(flag["name"])) {
-          allFlags.push(flag);
-          seenFlagNames.add(flag["name"]);
-        }
+  #_getMcpServerConfiguration(): any {
+    // First, check if this is an ArgParser instance with withMcp() configuration
+    if ((this as any).getMcpServerConfig) {
+      const mcpConfig = (this as any).getMcpServerConfig();
+      if (mcpConfig) {
+        return mcpConfig;
       }
     }
 
-    const flags = allFlags;
-
-    // Parse current arguments to see which flags are set
-    const { parsedArgs } = this.#parseFlags(processArgs.filter(arg =>
-      arg !== '--s-save-to-env' && arg !== filePath
-    ));
-
-    // Generate content based on format
-    let content: string;
-    switch (format) {
-      case 'env':
-        content = this.#_generateEnvFormat(flags, parsedArgs);
-        break;
-      case 'yaml':
-        content = this.#_generateYamlFormat(flags, parsedArgs);
-        break;
-      case 'json':
-        content = this.#_generateJsonFormat(flags, parsedArgs);
-        break;
-      case 'toml':
-        content = this.#_generateTomlFormat(flags, parsedArgs);
-        break;
+    // Fallback: look for MCP subcommands for backward compatibility
+    const mcpSubCommands = this.#_findAllMcpSubCommands();
+    if (mcpSubCommands.length > 0) {
+      // Use the first MCP subcommand configuration
+      const firstMcpCmd = mcpSubCommands[0];
+      return {
+        serverInfo: firstMcpCmd.serverInfo,
+        toolOptions: firstMcpCmd.toolOptions,
+        // Extract transport options from subcommand if available
+        defaultTransports: firstMcpCmd.subCommand.mcpOptions?.defaultTransports,
+        defaultTransport: firstMcpCmd.subCommand.mcpOptions?.defaultTransport,
+      };
     }
 
-    // Ensure directory exists
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Write file
-    fs.writeFileSync(filePath, content, 'utf8');
+    return null;
   }
 
   /**
-   * Loads configuration from an environment file in various formats
+   * Start a unified MCP server with all tools from the parser
    */
-  #_loadEnvFile(filePath: string, parserChain: ArgParserBase[]): Record<string, any> {
-    if (!fs.existsSync(filePath)) {
-      throw new Error(`Configuration file not found: ${filePath}`);
+  async #_startUnifiedMcpServer(
+    mcpServerConfig: any,
+    transportOptions: {
+      transportType?: string;
+      port?: number;
+      host?: string;
+      path?: string;
+      transports?: string;
+    }
+  ): Promise<void> {
+    // We need to cast this to ArgParser to access MCP methods
+    const mcpParser = this as any;
+
+    if (!mcpParser.createMcpServer || !mcpParser.startMcpServerWithTransport || !mcpParser.startMcpServerWithMultipleTransports) {
+      throw new Error("MCP server methods not available. This parser may not support MCP functionality.");
     }
 
-    // Determine file format based on extension
-    const ext = path.extname(filePath).toLowerCase();
-    let format: 'env' | 'yaml' | 'json' | 'toml';
+    const { serverInfo, toolOptions, defaultTransports, defaultTransport } = mcpServerConfig;
 
-    if (ext === '.yaml' || ext === '.yml') {
-      format = 'yaml';
-    } else if (ext === '.json' || ext === '.jsonc') {
-      format = 'json';
-    } else if (ext === '.toml' || ext === '.tml') {
-      format = 'toml';
-    } else {
-      format = 'env'; // Default to .env format for no extension or unknown extensions
-    }
-
-    // Load and parse the file
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    let rawConfig: Record<string, any>;
-
-    switch (format) {
-      case 'env':
-        rawConfig = this.#_parseEnvFile(fileContent);
-        break;
-      case 'yaml':
-        rawConfig = this.#_parseYamlFile(fileContent);
-        break;
-      case 'json':
-        rawConfig = this.#_parseJsonFile(fileContent);
-        break;
-      case 'toml':
-        rawConfig = this.#_parseTomlFile(fileContent);
-        break;
-    }
-
-    // Convert the raw configuration to match flag names and types
-    return this.#_convertConfigToFlagValues(rawConfig, parserChain);
-  }
-
-  /**
-   * Parses .env file content using dotenv
-   */
-  #_parseEnvFile(content: string): Record<string, any> {
-    const parsed = dotenv.parse(content);
-    const result: Record<string, any> = {};
-
-    // Convert environment variable names back to flag names
-    for (const [envKey, envValue] of Object.entries(parsed)) {
-      // Convert UPPER_CASE_WITH_UNDERSCORES back to lowercase-with-dashes
-      const flagName = envKey.toLowerCase().replace(/_/g, '-');
-
-      // Parse the value based on its content
-      if (envValue === 'true') {
-        result[flagName] = true;
-      } else if (envValue === 'false') {
-        result[flagName] = false;
-      } else if (/^-?\d+$/.test(envValue)) {
-        result[flagName] = parseInt(envValue, 10);
-      } else if (/^-?\d*\.\d+$/.test(envValue)) {
-        result[flagName] = parseFloat(envValue);
-      } else if (envValue.includes(',')) {
-        // Handle comma-separated arrays
-        result[flagName] = envValue.split(',').map(v => v.trim());
-      } else {
-        result[flagName] = envValue;
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Parses YAML file content
-   */
-  #_parseYamlFile(content: string): Record<string, any> {
-    const parsed = yaml.load(content) as any;
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error('YAML file must contain an object at the root level');
-    }
-
-    // Remove metadata if present
-    const { _meta, ...config } = parsed;
-    return config;
-  }
-
-  /**
-   * Parses JSON file content
-   */
-  #_parseJsonFile(content: string): Record<string, any> {
-    const parsed = JSON.parse(content);
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error('JSON file must contain an object at the root level');
-    }
-
-    // Remove metadata if present
-    const { _meta, ...config } = parsed;
-    return config;
-  }
-
-  /**
-   * Parses TOML file content
-   */
-  #_parseTomlFile(content: string): Record<string, any> {
-    const parsed = toml.parse(content);
-    if (typeof parsed !== 'object' || parsed === null) {
-      throw new Error('TOML file must contain an object at the root level');
-    }
-
-    return parsed;
-  }
-
-  /**
-   * Converts raw configuration values to match flag types and validates them
-   */
-  #_convertConfigToFlagValues(rawConfig: Record<string, any>, parserChain: ArgParserBase[]): Record<string, any> {
-    const result: Record<string, any> = {};
-
-    // Get all flags from the parser chain
-    const allFlags: ProcessedFlag[] = [];
-    const seenFlagNames = new Set<string>();
-
-    // Start from the final parser and work backwards through the chain
-    for (let i = parserChain.length - 1; i >= 0; i--) {
-      const parser = parserChain[i];
-      for (const flag of parser.#flagManager.flags) {
-        if (!seenFlagNames.has(flag["name"])) {
-          allFlags.push(flag);
-          seenFlagNames.add(flag["name"]);
-        }
-      }
-    }
-
-    // Convert and validate each configuration value
-    for (const [configKey, configValue] of Object.entries(rawConfig)) {
-      const flag = allFlags.find(f => f["name"] === configKey);
-
-      if (!flag) {
-        console.warn(chalk.yellow(`Warning: Configuration key '${configKey}' does not match any known flag. Ignoring.`));
-        continue;
-      }
-
+    // Determine which transport configuration to use
+    if (transportOptions.transports) {
+      // Multiple transports specified via CLI
       try {
-        const convertedValue = this.#_convertValueToFlagType(configValue, flag);
-        result[configKey] = convertedValue;
-      } catch (error) {
-        console.error(chalk.red(`Error converting configuration value for '${configKey}': ${error instanceof Error ? error.message : String(error)}`));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(1);
-        }
+        const transportConfigs = JSON.parse(transportOptions.transports);
+        await mcpParser.startMcpServerWithMultipleTransports(serverInfo, transportConfigs, toolOptions);
+      } catch (error: any) {
+        throw new Error(`Error parsing transports configuration: ${error.message}. Expected JSON format: '[{"type":"stdio"},{"type":"sse","port":3001}]'`);
       }
-    }
-
-    return result;
-  }
-
-  /**
-   * Converts a configuration value to match the expected flag type
-   */
-  #_convertValueToFlagType(value: any, flag: ProcessedFlag): any {
-    const flagType = flag["type"];
-
-    // Handle null/undefined
-    if (value === null || value === undefined) {
-      return value;
-    }
-
-    // Handle array flags first (before type-specific handling)
-    if (flagType === Array || flag["allowMultiple"]) {
-      if (Array.isArray(value)) return value;
-      if (typeof value === 'string') {
-        // Split comma-separated values
-        return value.split(',').map(v => v.trim());
-      }
-      return [value];
-    }
-
-    // Handle boolean flags
-    if (flagType === Boolean) {
-      if (typeof value === 'boolean') return value;
-      if (typeof value === 'string') {
-        const lowerValue = value.toLowerCase();
-        if (lowerValue === 'true' || lowerValue === '1' || lowerValue === 'yes') return true;
-        if (lowerValue === 'false' || lowerValue === '0' || lowerValue === 'no') return false;
-      }
-      throw new Error(`Cannot convert '${value}' to boolean for flag '${flag["name"]}'`);
-    }
-
-    // Handle string flags
-    if (flagType === String) {
-      return String(value);
-    }
-
-    // Handle number flags
-    if (flagType === Number) {
-      const numValue = Number(value);
-      if (isNaN(numValue)) {
-        throw new Error(`Cannot convert '${value}' to number for flag '${flag["name"]}'`);
-      }
-      return numValue;
-    }
-
-    // Handle enum validation
-    if (flag["enum"] && flag["enum"].length > 0) {
-      if (!flag["enum"].includes(value)) {
-        throw new Error(`Value '${value}' is not allowed for flag '${flag["name"]}'. Allowed values: ${flag["enum"].join(', ')}`);
-      }
-    }
-
-    return value;
-  }
-
-  /**
-   * Merges environment configuration with command line arguments
-   * CLI arguments take precedence over file configuration
-   */
-  #_mergeEnvConfigWithArgs(envConfig: Record<string, any>, processArgs: string[]): string[] {
-    const result = [...processArgs];
-
-    // Remove --s-with-env and its file path from the arguments
-    const withEnvIndex = result.findIndex(arg => arg === "--s-with-env");
-    if (withEnvIndex !== -1) {
-      result.splice(withEnvIndex, 2); // Remove both --s-with-env and the file path
-    }
-
-    // Convert environment configuration to command line arguments
-    // Only add flags that are not already present in the command line
-    const existingFlags = new Set<string>();
-
-    // Identify existing flags in command line arguments
-    for (let i = 0; i < result.length; i++) {
-      const arg = result[i];
-      if (arg.startsWith('-')) {
-        existingFlags.add(arg);
-        // Also handle ligature format (--flag=value)
-        if (arg.includes('=')) {
-          const flagPart = arg.split('=')[0];
-          existingFlags.add(flagPart);
-        }
-      }
-    }
-
-    // Add environment configuration as command line arguments
-    for (const [flagName, flagValue] of Object.entries(envConfig)) {
-      const longFlag = `--${flagName}`;
-
-      // Skip if flag is already present in command line
-      if (existingFlags.has(longFlag)) {
-        continue;
-      }
-
-      // Add the flag and its value
-      if (typeof flagValue === 'boolean') {
-        if (flagValue) {
-          result.push(longFlag);
-        }
-        // Don't add false boolean flags
-      } else if (Array.isArray(flagValue)) {
-        // Add multiple values for array flags
-        for (const item of flagValue) {
-          result.push(longFlag, String(item));
-        }
-      } else {
-        result.push(longFlag, String(flagValue));
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Generates environment file content in Bash .env format
-   */
-  #_generateEnvFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const lines: string[] = [];
-    lines.push('# Environment configuration generated by ArgParser');
-    lines.push('# Format: Bash .env style');
-    lines.push('');
-
-    for (const flag of flags) {
-      if (flag["name"] === 'help') continue; // Skip help flag
-
-      const flagValue = parsedArgs[flag["name"]];
-      const isSet = flagValue !== undefined && flagValue !== null;
-      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
-
-      // Add comment with flag information
-      lines.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
-      lines.push(`# Options: ${flag["options"].join(', ')}`);
-      lines.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
-      if (flag["defaultValue"] !== undefined) {
-        lines.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
-      }
-      if (flag["enum"] && flag["enum"].length > 0) {
-        lines.push(`# Allowed values: ${flag["enum"].join(', ')}`);
-      }
-
-      // Generate the environment variable line
-      const envVarName = flag["name"].toUpperCase().replace(/[^A-Z0-9_]/g, '_');
-      let envValue = '';
-
-      if (isSet) {
-        if (Array.isArray(flagValue)) {
-          envValue = flagValue.join(',');
-        } else if (typeof flagValue === 'boolean') {
-          envValue = flagValue ? 'true' : 'false';
-        } else {
-          envValue = String(flagValue);
-        }
-        lines.push(`${envVarName}="${envValue}"`);
-      } else {
-        // Comment out unset optional flags
-        const defaultVal = flag["defaultValue"] !== undefined ? String(flag["defaultValue"]) : '';
-        const prefix = isMandatory ? '' : '# ';
-        lines.push(`${prefix}${envVarName}="${defaultVal}"`);
-      }
-
-      lines.push(''); // Empty line between flags
-    }
-
-    return lines.join('\n');
-  }
-
-  /**
-   * Generates environment file content in YAML format
-   */
-  #_generateYamlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const config: any = {};
-    const comments: string[] = [];
-
-    comments.push('# Environment configuration generated by ArgParser');
-    comments.push('# Format: YAML');
-    comments.push('');
-
-    for (const flag of flags) {
-      if (flag["name"] === 'help') continue; // Skip help flag
-
-      const flagValue = parsedArgs[flag["name"]];
-      const isSet = flagValue !== undefined && flagValue !== null;
-      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
-
-      // Add flag information as comments
-      comments.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
-      comments.push(`# Options: ${flag["options"].join(', ')}`);
-      comments.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
-      if (flag["defaultValue"] !== undefined) {
-        comments.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
-      }
-      if (flag["enum"] && flag["enum"].length > 0) {
-        comments.push(`# Allowed values: ${flag["enum"].join(', ')}`);
-      }
-
-      if (isSet) {
-        config[flag["name"]] = flagValue;
-      } else if (isMandatory) {
-        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
-      }
-      // Optional unset flags are omitted from YAML but documented in comments
-
-      comments.push('');
-    }
-
-    const yamlContent = yaml.dump(config, {
-      indent: 2,
-      lineWidth: -1,
-      noRefs: true,
-      sortKeys: true
-    });
-
-    return comments.join('\n') + '\n' + yamlContent;
-  }
-
-  /**
-   * Generates environment file content in JSON format
-   */
-  #_generateJsonFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const config: any = {};
-    const metadata: any = {
-      _meta: {
-        generated_by: 'ArgParser',
-        format: 'JSON',
-        flags_info: {}
-      }
-    };
-
-    for (const flag of flags) {
-      if (flag["name"] === 'help') continue; // Skip help flag
-
-      const flagValue = parsedArgs[flag["name"]];
-      const isSet = flagValue !== undefined && flagValue !== null;
-      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
-
-      // Store flag metadata
-      metadata._meta.flags_info[flag["name"]] = {
-        description: Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"],
-        options: flag["options"],
-        type: this.#_getTypeString(flag["type"]),
-        mandatory: isMandatory,
-        defaultValue: flag["defaultValue"],
-        enum: flag["enum"] && flag["enum"].length > 0 ? flag["enum"] : undefined
+    } else if (defaultTransports && defaultTransports.length > 0) {
+      // Use preset multiple transports configuration
+      await mcpParser.startMcpServerWithMultipleTransports(serverInfo, defaultTransports, toolOptions);
+    } else if (defaultTransport) {
+      // Use preset single transport configuration
+      await mcpParser.startMcpServerWithTransport(
+        serverInfo,
+        defaultTransport.type,
+        {
+          port: defaultTransport.port,
+          host: defaultTransport.host,
+          path: defaultTransport.path,
+          sessionIdGenerator: defaultTransport.sessionIdGenerator,
+        },
+        toolOptions
+      );
+    } else {
+      // Single transport mode from CLI flags or defaults
+      const transportType = (transportOptions.transportType as "stdio" | "sse" | "streamable-http") || "stdio";
+      const finalTransportOptions = {
+        port: transportOptions.port,
+        host: transportOptions.host || "localhost",
+        path: transportOptions.path || "/mcp",
       };
 
-      if (isSet) {
-        config[flag["name"]] = flagValue;
-      } else if (isMandatory) {
-        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
-      }
-      // Optional unset flags are omitted but documented in metadata
-    }
-
-    const result = { ...metadata, ...config };
-    return JSON.stringify(result, null, 2);
-  }
-
-  /**
-   * Generates environment file content in TOML format
-   */
-  #_generateTomlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const config: any = {};
-    const lines: string[] = [];
-
-    lines.push('# Environment configuration generated by ArgParser');
-    lines.push('# Format: TOML');
-    lines.push('');
-
-    for (const flag of flags) {
-      if (flag["name"] === 'help') continue; // Skip help flag
-
-      const flagValue = parsedArgs[flag["name"]];
-      const isSet = flagValue !== undefined && flagValue !== null;
-      const isMandatory = typeof flag["mandatory"] === 'function' ? false : (flag["mandatory"] ?? false);
-
-      // Add flag information as comments
-      lines.push(`# ${flag["name"]}: ${Array.isArray(flag["description"]) ? flag["description"].join(' | ') : flag["description"]}`);
-      lines.push(`# Options: ${flag["options"].join(', ')}`);
-      lines.push(`# Type: ${this.#_getTypeString(flag["type"])}`);
-      if (flag["defaultValue"] !== undefined) {
-        lines.push(`# Default: ${JSON.stringify(flag["defaultValue"])}`);
-      }
-      if (flag["enum"] && flag["enum"].length > 0) {
-        lines.push(`# Allowed values: ${flag["enum"].join(', ')}`);
-      }
-
-      if (isSet) {
-        config[flag["name"]] = flagValue;
-      } else if (isMandatory) {
-        config[flag["name"]] = flag["defaultValue"] !== undefined ? flag["defaultValue"] : null;
-      }
-      // Optional unset flags are omitted from TOML but documented in comments
-
-      lines.push('');
-    }
-
-    const tomlContent = toml.stringify(config);
-    return lines.join('\n') + '\n' + tomlContent;
-  }
-
-  /**
-   * Helper method to get a string representation of a flag's type
-   */
-  #_getTypeString(type: any): string {
-    if (typeof type === 'function') {
-      return type.name || 'custom function';
-    } else if (typeof type === 'string') {
-      return type;
-    } else if (typeof type === 'object' && type) {
-      try {
-        return (type as any).constructor?.name || 'object';
-      } catch {
-        return 'object';
-      }
-    }
-    return 'unknown';
-  }
-
-  /**
-   * Handles the --s-save-DXT system flag to generate DXT packages for MCP servers
-   */
-  #_handleSaveDxtFlag(processArgs: string[], saveDxtIndex: number): boolean {
-    try {
-      // Find all MCP subcommands
-      const mcpSubCommands = Array.from(this.#subCommands.values()).filter(
-        (subCmd: any) => subCmd.isMcp === true
-      );
-
-      if (mcpSubCommands.length === 0) {
-        console.log(chalk.yellow("No MCP servers found in this ArgParser instance."));
-        console.log(chalk.gray("Use addMcpSubCommand() to add MCP server functionality."));
-        if (typeof process === "object" && typeof process.exit === "function") {
-          process.exit(0);
-        }
-        return true;
-      }
-
-      // Get optional directory parameter
-      let outputDir = ".";
-      if (saveDxtIndex + 1 < processArgs.length) {
-        const nextArg = processArgs[saveDxtIndex + 1];
-        if (nextArg && !nextArg.startsWith("-")) {
-          outputDir = nextArg;
-        }
-      }
-
-      // Ensure output directory exists
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      console.log(chalk.cyan(`\n🔧 Generating DXT packages for ${mcpSubCommands.length} MCP server(s)...`));
-
-      // Generate DXT package for each MCP server
-      for (const subCmd of mcpSubCommands) {
-        this.#_generateDxtPackage(subCmd as any, outputDir);
-      }
-
-      console.log(chalk.green(`\n✅ DXT package generation completed!`));
-      console.log(chalk.gray(`Output directory: ${path.resolve(outputDir)}`));
-
-      if (typeof process === "object" && typeof process.exit === "function") {
-        process.exit(0);
-      }
-      return true;
-    } catch (error) {
-      console.error(chalk.red(`Error generating DXT packages: ${error instanceof Error ? error.message : String(error)}`));
-      if (typeof process === "object" && typeof process.exit === "function") {
-        process.exit(1);
-      }
-      return true;
+      await mcpParser.startMcpServerWithTransport(serverInfo, transportType, finalTransportOptions, toolOptions);
     }
   }
 
   /**
-   * Generates a DXT package for a single MCP server
+   * Find all MCP subcommands in the parser tree
    */
-  #_generateDxtPackage(mcpSubCommand: any, outputDir: string): void {
-    // Extract server information from the MCP subcommand
-    const serverInfo = this.#_extractMcpServerInfo(mcpSubCommand);
+  #_findAllMcpSubCommands(): Array<{
+    subCommand: any;
+    serverInfo: any;
+    toolOptions: any;
+  }> {
+    const mcpSubCommands: Array<{
+      subCommand: any;
+      serverInfo: any;
+      toolOptions: any;
+    }> = [];
 
-    // Generate tools for this MCP server
-    const tools = this.#_generateMcpToolsForDxt(mcpSubCommand);
-
-    // Create manifest.json
-    const manifest = this.#_createDxtManifest(serverInfo, tools);
-
-    // Create DXT zip file
-    const zip = new AdmZip();
-
-    // Add manifest.json to zip
-    zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
-
-    // Create a simple server entry point
-    const serverScript = this.#_createServerScript(serverInfo);
-    zip.addFile("server/index.js", Buffer.from(serverScript));
-
-    // Write the DXT file
-    const dxtFileName = `${serverInfo.name.replace(/[^a-zA-Z0-9_-]/g, "_")}.dxt`;
-    const dxtFilePath = path.join(outputDir, dxtFileName);
-
-    zip.writeZip(dxtFilePath);
-
-    console.log(chalk.green(`  ✓ Generated: ${dxtFileName}`));
-    console.log(chalk.gray(`    Server: ${serverInfo.name} v${serverInfo.version}`));
-    console.log(chalk.gray(`    Tools: ${tools.length} tool(s)`));
-  }
-
-  /**
-   * Extracts server information from MCP subcommand
-   */
-  #_extractMcpServerInfo(mcpSubCommand: any): { name: string; version: string; description?: string } {
-    // Use the stored server info if available
-    if (mcpSubCommand.mcpServerInfo) {
-      return mcpSubCommand.mcpServerInfo;
-    }
-
-    // Fallback to default info
-    const defaultInfo = {
-      name: mcpSubCommand.name || "mcp-server",
-      version: "1.0.0",
-      description: mcpSubCommand.description || "MCP server generated from ArgParser"
-    };
-
-    return defaultInfo;
-  }
-
-  /**
-   * Generates MCP tools for DXT manifest
-   */
-  #_generateMcpToolsForDxt(mcpSubCommand?: any): Array<{ name: string; description?: string }> {
-    try {
-      // Check if this is an ArgParser instance with MCP capabilities
-      if (typeof (this as any).toMcpTools === 'function') {
-        // Use the actual MCP tool generation
-        const toolOptions = mcpSubCommand?.mcpToolOptions;
-        const mcpTools = (this as any).toMcpTools(toolOptions);
-
-        return mcpTools.map((tool: any) => ({
-          name: tool.name,
-          description: tool.description
-        }));
-      }
-
-      // Fallback: create simplified tool list based on parser structure
-      const tools: Array<{ name: string; description?: string }> = [];
-
-      // Add main command tool if there's a handler
-      if (this.#handler) {
-        const appName = this.#appName || "main";
-        const commandName = this.#appCommandName || appName.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_");
-
-        tools.push({
-          name: commandName,
-          description: this.#description || `Execute ${appName} command`
+    // Check current parser's subcommands
+    for (const [_name, subCommand] of this.#subCommands.entries()) {
+      if (subCommand.isMcp && subCommand.mcpServerInfo) {
+        mcpSubCommands.push({
+          subCommand: subCommand,
+          serverInfo: subCommand.mcpServerInfo,
+          toolOptions: subCommand.mcpToolOptions || {}
         });
       }
-
-      // Add subcommand tools (excluding MCP subcommands to avoid recursion)
-      for (const [name, subCmd] of this.#subCommands) {
-        if (!(subCmd as any).isMcp) {
-          const commandName = this.#appCommandName || this.#appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") || "main";
-          tools.push({
-            name: `${commandName}_${name}`,
-            description: (subCmd as any).description || `Execute ${name} subcommand`
-          });
-        }
-      }
-
-      return tools.length > 0 ? tools : [{
-        name: "main",
-        description: "Main command tool"
-      }];
-    } catch (error) {
-      console.warn(chalk.yellow(`Warning: Could not generate detailed tool list: ${error instanceof Error ? error.message : String(error)}`));
-      return [{
-        name: "main",
-        description: "Main command tool"
-      }];
     }
-  }
 
-  /**
-   * Creates DXT manifest.json structure
-   */
-  #_createDxtManifest(serverInfo: { name: string; version: string; description?: string }, tools: Array<{ name: string; description?: string }>): any {
-    return {
-      name: serverInfo.name,
-      version: serverInfo.version,
-      description: serverInfo.description || "MCP server generated from ArgParser",
-      server: {
-        entry_point: "server/index.js",
-        runtime: "node",
-        transport: "stdio"
-      },
-      tools: tools,
-      metadata: {
-        generator: "@alcyone-labs/arg-parser",
-        generator_version: "1.2.0",
-        generated_at: new Date().toISOString()
+    // Recursively check child parsers
+    for (const [_name, subCommand] of this.#subCommands.entries()) {
+      if (subCommand.parser) {
+        const childMcpCommands = (subCommand.parser as ArgParserBase).#_findAllMcpSubCommands();
+        mcpSubCommands.push(...childMcpCommands);
       }
-    };
+    }
+
+    return mcpSubCommands;
   }
 
   /**
-   * Creates a simple server script for the DXT package
+   * Parse MCP transport options from command line arguments
    */
-  #_createServerScript(serverInfo: { name: string; version: string; description?: string }): string {
-    return `#!/usr/bin/env node
+  #_parseMcpTransportOptions(processArgs: string[]): {
+    transportType?: string;
+    port?: number;
+    host?: string;
+    path?: string;
+    transports?: string;
+  } {
+    const options: {
+      transportType?: string;
+      port?: number;
+      host?: string;
+      path?: string;
+      transports?: string;
+    } = {};
 
-// Generated MCP server for ${serverInfo.name}
-// This is a placeholder server script for the DXT package
-// In a real implementation, this would contain the actual MCP server code
+    // Look for transport-related flags
+    for (let i = 0; i < processArgs.length; i++) {
+      const arg = processArgs[i];
+      const nextArg = processArgs[i + 1];
 
-console.error("MCP Server: ${serverInfo.name} v${serverInfo.version}");
-console.error("This is a generated DXT package from @alcyone-labs/arg-parser");
-console.error("To use this server, you would need to implement the actual MCP server logic");
+      switch (arg) {
+        case "--transport":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.transportType = nextArg;
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+        case "--port":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.port = parseInt(nextArg, 10);
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+        case "--host":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.host = nextArg;
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+        case "--path":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.path = nextArg;
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+        case "--transports":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.transports = nextArg;
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+      }
+    }
 
-// Basic MCP server structure
-const server = {
-  name: "${serverInfo.name}",
-  version: "${serverInfo.version}",
-  description: "${serverInfo.description || "Generated MCP server"}"
-};
-
-// Export for potential use
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = server;
-}
-`;
+    return options;
   }
+
+
+
+
+
+
+
+
+
+
+
 }

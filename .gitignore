@@ -2,3 +2,13 @@
 node_modules
 .env*
 dist
+
+# A local pull of https://github.com/modelcontextprotocol
+docs/MCP/
+# Some DXT examples from Claude
+examples/claude/
+#
+docs/@alcyone-labs/
+
+# Keep icons
+!docs/MCP/icons

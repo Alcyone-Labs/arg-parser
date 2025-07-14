@@ -1,9 +1,13 @@
-import { ArgParserBase } from "./ArgParserBase";
+import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
 import {
   generateMcpToolsFromArgParser,
+  convertFlagsToZodSchema,
+  createMcpSuccessResponse,
+  createMcpErrorResponse,
 } from "./mcp-integration";
 import type { GenerateMcpToolsOptions, IMcpToolStructure } from "./mcp-integration";
-import type { IHandlerContext } from "./types";
+import type { IHandlerContext, ParseResult, IFlag } from "./types";
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 
 /**
  * Configuration for a single MCP transport
@@ -24,6 +28,92 @@ export type McpSubCommandOptions = {
   defaultTransports?: McpTransportConfig[];
   /** Single preset transport configuration (alternative to defaultTransports) */
   defaultTransport?: McpTransportConfig;
+};
+
+/**
+ * Extended server information for DXT package generation
+ */
+export type DxtServerInfo = {
+  name: string;
+  version: string;
+  description?: string;
+  /** Author information for DXT manifest */
+  author?: {
+    name: string;
+    email?: string;
+    url?: string;
+  };
+  /** Repository information for DXT manifest */
+  repository?: {
+    type: string;
+    url: string;
+  };
+  /** License identifier for DXT manifest */
+  license?: string;
+  /** Homepage URL for DXT manifest */
+  homepage?: string;
+  /** Documentation URL for DXT manifest */
+  documentation?: string;
+  /** Support/issues URL for DXT manifest */
+  support?: string;
+  /** Keywords for DXT manifest */
+  keywords?: string[];
+  /** Logo/icon for DXT manifest - can be a local file path or URL */
+  logo?: string;
+};
+
+/**
+ * MCP server configuration options for withMcp() method
+ * This centralizes MCP server metadata that was previously scattered across addMcpSubCommand calls
+ */
+export type McpServerOptions = {
+  /** MCP server metadata */
+  serverInfo?: DxtServerInfo;
+  /** Default transport configurations for the MCP server */
+  defaultTransports?: McpTransportConfig[];
+  /** Single default transport configuration (alternative to defaultTransports) */
+  defaultTransport?: McpTransportConfig;
+  /** Tool generation options for the MCP server */
+  toolOptions?: GenerateMcpToolsOptions;
+};
+
+/**
+ * Combined options for withMcp() method
+ */
+export type WithMcpOptions<THandlerReturn = any> = IArgParserParams<THandlerReturn> & {
+  /** MCP-specific server configuration */
+  mcp?: McpServerOptions;
+};
+
+/**
+ * Configuration for an individual MCP tool (deprecated - use ToolConfig instead)
+ * @deprecated Use ToolConfig and addTool() instead. Will be removed in v2.0.
+ */
+export type McpToolConfig = {
+  /** Tool name (must be unique within the server) */
+  name: string;
+  /** Tool description */
+  description?: string;
+  /** Input schema for the tool (Zod schema) */
+  inputSchema?: any; // ZodTypeAny from zod
+  /** Output schema for the tool (Zod schema) */
+  outputSchema?: any; // ZodTypeAny from zod
+  /** Handler function for the tool */
+  handler: (args: any) => Promise<any> | any;
+};
+
+/**
+ * Configuration for a unified tool that works in both CLI and MCP modes
+ */
+export type ToolConfig = {
+  /** Tool name (CLI subcommand name & MCP tool name) */
+  name: string;
+  /** Tool description */
+  description?: string;
+  /** Flags for this tool (auto-converted to MCP schema) */
+  flags: readonly IFlag[];
+  /** Handler function for the tool */
+  handler: (ctx: IHandlerContext) => Promise<any> | any;
 };
 
 /**
@@ -49,13 +139,391 @@ export type McpSubCommandOptions = {
 export class ArgParser<
   THandlerReturn = any,
 > extends ArgParserBase<THandlerReturn> {
+
+  /** Stored MCP server configuration from withMcp() */
+  private _mcpServerConfig?: McpServerOptions;
+
+  /** Registered MCP tools (deprecated) */
+  private _mcpTools: Map<string, McpToolConfig> = new Map();
+
+  /** Registered unified tools */
+  private _tools: Map<string, ToolConfig> = new Map();
+
+  /**
+   * Get the stored MCP server configuration
+   * @returns MCP server configuration if set via withMcp(), undefined otherwise
+   */
+  public getMcpServerConfig(): McpServerOptions | undefined {
+    return this._mcpServerConfig;
+  }
+
+  /**
+   * Add a unified tool that works in both CLI and MCP modes
+   * In CLI mode, the tool becomes a subcommand with its own flags
+   * In MCP mode, the tool becomes an MCP tool with auto-generated schema
+   *
+   * @param toolConfig Configuration for the tool
+   * @returns This ArgParser instance for chaining
+   */
+  public addTool(toolConfig: ToolConfig): this {
+    if (this._tools.has(toolConfig.name)) {
+      throw new Error(`Tool with name '${toolConfig.name}' already exists`);
+    }
+
+    // Validate tool configuration
+    if (!toolConfig.name || typeof toolConfig.name !== 'string') {
+      throw new Error('Tool name is required and must be a string');
+    }
+
+    if (!toolConfig.handler || typeof toolConfig.handler !== 'function') {
+      throw new Error('Tool handler is required and must be a function');
+    }
+
+    if (!Array.isArray(toolConfig.flags)) {
+      throw new Error('Tool flags must be an array');
+    }
+
+    // Store the tool configuration
+    this._tools.set(toolConfig.name, toolConfig);
+
+    // Register the tool as a CLI subcommand
+    this.#registerToolAsSubCommand(toolConfig);
+
+    return this;
+  }
+
+  /**
+   * Register a tool as a CLI subcommand
+   * @private
+   */
+  #registerToolAsSubCommand(toolConfig: ToolConfig): void {
+    // Create a new ArgParser instance for this tool's subcommand
+    const toolParser = new ArgParserBase({
+      appName: `${this.getAppName()} ${toolConfig.name}`,
+      description: toolConfig.description || `Execute ${toolConfig.name} tool`,
+      handler: toolConfig.handler,
+    }, toolConfig.flags);
+
+    // Add the subcommand to this parser
+    this.addSubCommand({
+      name: toolConfig.name,
+      description: toolConfig.description || `Execute ${toolConfig.name} tool`,
+      parser: toolParser,
+      handler: toolConfig.handler,
+    });
+  }
+
+  /**
+   * Add an MCP tool to this parser (deprecated)
+   * @deprecated Use addTool() instead. This method will be removed in v2.0.
+   * @param toolConfig Configuration for the MCP tool
+   * @returns This ArgParser instance for chaining
+   */
+  public addMcpTool(toolConfig: McpToolConfig): this {
+    console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+Please use addTool() instead for a unified CLI/MCP experience.
+Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
+
+    if (this._mcpTools.has(toolConfig.name)) {
+      throw new Error(`MCP tool with name '${toolConfig.name}' already exists`);
+    }
+
+    this._mcpTools.set(toolConfig.name, toolConfig);
+    return this;
+  }
+
+  /**
+   * Get all registered unified tools
+   * @returns Map of tool names to tool configurations
+   */
+  public getTools(): Map<string, ToolConfig> {
+    return new Map(this._tools);
+  }
+
+  /**
+   * Get all registered MCP tools (deprecated)
+   * @deprecated Use getTools() instead
+   * @returns Map of tool names to tool configurations
+   */
+  public getMcpTools(): Map<string, McpToolConfig> {
+    return new Map(this._mcpTools);
+  }
+
+  /**
+   * Get information about all available tools (unified, legacy MCP, and CLI-generated)
+   * @param options Optional configuration for MCP tool generation
+   * @returns Object with tool counts and names for debugging
+   */
+  public getToolInfo(options?: GenerateMcpToolsOptions): {
+    unifiedTools: string[];
+    legacyMcpTools: string[];
+    cliTools: string[];
+    totalTools: number;
+    duplicates: string[];
+  } {
+    const cliTools = generateMcpToolsFromArgParser(this, options);
+    const unifiedToolNames = Array.from(this._tools.keys());
+    const legacyMcpToolNames = Array.from(this._mcpTools.keys());
+    const cliToolNames = cliTools.map(t => t.name);
+
+    // Find duplicates (tools that exist in multiple categories)
+    const allToolNames = [...unifiedToolNames, ...legacyMcpToolNames, ...cliToolNames];
+    const duplicates = allToolNames.filter((name, index) => allToolNames.indexOf(name) !== index);
+
+    // Calculate total unique tools (unified tools take precedence)
+    const uniqueToolNames = new Set(allToolNames);
+
+    return {
+      unifiedTools: unifiedToolNames,
+      legacyMcpTools: legacyMcpToolNames,
+      cliTools: cliToolNames,
+      totalTools: uniqueToolNames.size,
+      duplicates: Array.from(new Set(duplicates))
+    };
+  }
+
+  /**
+   * Get information about all available MCP tools (legacy method)
+   * @deprecated Use getToolInfo() instead
+   * @param options Optional configuration for MCP tool generation
+   * @returns Object with tool counts and names for debugging
+   */
+  public getMcpToolInfo(options?: GenerateMcpToolsOptions): {
+    manualTools: string[];
+    cliTools: string[];
+    totalTools: number;
+    duplicates: string[];
+  } {
+    const toolInfo = this.getToolInfo(options);
+    return {
+      manualTools: [...toolInfo.unifiedTools, ...toolInfo.legacyMcpTools],
+      cliTools: toolInfo.cliTools,
+      totalTools: toolInfo.totalTools,
+      duplicates: toolInfo.duplicates
+    };
+  }
+
+  /**
+   * Validate that all tools are properly registered and routable
+   * @returns Validation results
+   */
+  public validateToolRouting(): {
+    isValid: boolean;
+    issues: string[];
+    cliSubcommands: string[];
+    mcpTools: string[];
+  } {
+    const issues: string[] = [];
+    const cliSubcommands: string[] = [];
+    const mcpTools: string[] = [];
+
+    // Check CLI subcommand registration
+    const subCommands = this.getSubCommands();
+    if (subCommands) {
+      for (const [name] of subCommands) {
+        cliSubcommands.push(name);
+      }
+    }
+
+    // Check MCP tool registration
+    const mcpToolStructures = this.toMcpTools();
+    for (const tool of mcpToolStructures) {
+      mcpTools.push(tool.name);
+    }
+
+    // Validate that unified tools are registered in both CLI and MCP
+    for (const [toolName] of this._tools) {
+      if (!cliSubcommands.includes(toolName)) {
+        issues.push(`Unified tool '${toolName}' is not registered as CLI subcommand`);
+      }
+      if (!mcpTools.includes(toolName)) {
+        issues.push(`Unified tool '${toolName}' is not registered as MCP tool`);
+      }
+    }
+
+    return {
+      isValid: issues.length === 0,
+      issues,
+      cliSubcommands,
+      mcpTools
+    };
+  }
+
+  /**
+   * Test tool routing by simulating a tool call
+   * This is useful for debugging and ensuring tools are properly registered
+   * @param toolName Name of the tool to test
+   * @param args Arguments to pass to the tool
+   * @returns Promise with the tool execution result or error
+   */
+  public async testMcpToolRouting(toolName: string, args: any = {}): Promise<{
+    success: boolean;
+    result?: any;
+    error?: string;
+    executionTime?: number;
+  }> {
+    try {
+      const tools = this.toMcpTools();
+      const tool = tools.find(t => t.name === toolName);
+
+      if (!tool) {
+        return {
+          success: false,
+          error: `Tool '${toolName}' not found. Available tools: ${tools.map(t => t.name).join(', ')}`
+        };
+      }
+
+      const startTime = Date.now();
+      const result = await tool.execute(args);
+      const executionTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        result,
+        executionTime
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
   /**
    * Generate MCP tools from this ArgParser instance
    * @param options Optional configuration for MCP tool generation
    * @returns Array of MCP tool structures ready for server registration
    */
   public toMcpTools(options?: GenerateMcpToolsOptions): IMcpToolStructure[] {
-    return generateMcpToolsFromArgParser(this, options);
+    // Generate tools from CLI structure (legacy approach)
+    const cliTools = generateMcpToolsFromArgParser(this, options);
+
+    // Convert unified tools to MCP tool structures
+    const unifiedTools: IMcpToolStructure[] = Array.from(this._tools.values()).map(toolConfig => ({
+      name: toolConfig.name,
+      description: toolConfig.description || `Executes the ${toolConfig.name} tool.`,
+      inputSchema: convertFlagsToZodSchema(toolConfig.flags),
+      execute: async (args: any) => {
+        // Hijack console for MCP mode to prevent STDOUT contamination
+        const originalConsole = globalThis.console;
+        let mcpLogger: any = null;
+
+        try {
+          // Try to import and setup MCP logger for this tool execution
+          try {
+            const mcpLoggerModule = await (Function('return import("@alcyone-labs/simple-mcp-logger")')());
+            mcpLogger = mcpLoggerModule.createMcpLogger(`MCP-Tool-${toolConfig.name}`);
+            // Hijack console globally to prevent STDOUT contamination
+            (globalThis as any).console = mcpLogger;
+          } catch {
+            // Fallback: create a minimal logger that redirects to stderr
+            // Use originalConsole to avoid circular reference
+            mcpLogger = {
+              log: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
+              info: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
+              warn: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
+              error: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
+              debug: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
+            };
+            (globalThis as any).console = mcpLogger;
+          }
+
+          // Create handler context similar to CLI mode
+          const context: IHandlerContext = {
+            args,
+            parentArgs: {},
+            commandChain: [toolConfig.name],
+            parser: this,
+            isMcp: true
+          };
+
+          const startTime = Date.now();
+          const result = await toolConfig.handler(context);
+          const executionTime = Date.now() - startTime;
+
+          // Log successful execution for debugging
+          if (process.env['MCP_DEBUG']) {
+            console.error(`[MCP Tool] '${toolConfig.name}' executed successfully in ${executionTime}ms`);
+          }
+
+          // Ensure the result is properly formatted for MCP
+          if (result && typeof result === 'object' && 'content' in result) {
+            // Already in MCP format
+            return result;
+          } else {
+            // Wrap in standard MCP response format
+            return createMcpSuccessResponse(result);
+          }
+        } catch (error) {
+          // Enhanced error handling with proper MCP error response format
+          const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
+
+          if (process.env['MCP_DEBUG']) {
+            console.error(`[MCP Tool Error] ${errorMessage}`);
+            if (error instanceof Error && error.stack) {
+              console.error(`[MCP Tool Stack] ${error.stack}`);
+            }
+          }
+
+          // Return MCP-compliant error response
+          return createMcpErrorResponse(errorMessage);
+        } finally {
+          // Restore original console
+          globalThis.console = originalConsole;
+        }
+      }
+    }));
+
+    // Convert legacy MCP tools to MCP tool structures (deprecated)
+    const legacyMcpTools: IMcpToolStructure[] = Array.from(this._mcpTools.values()).map(toolConfig => ({
+      name: toolConfig.name,
+      description: toolConfig.description || `Executes the ${toolConfig.name} tool.`,
+      inputSchema: toolConfig.inputSchema || { type: "object", properties: {} },
+      outputSchema: toolConfig.outputSchema,
+      execute: async (args: any) => {
+        try {
+          const startTime = Date.now();
+          const result = await toolConfig.handler(args);
+          const executionTime = Date.now() - startTime;
+
+          if (process.env['MCP_DEBUG']) {
+            console.error(`[MCP Tool] '${toolConfig.name}' (legacy) executed successfully in ${executionTime}ms`);
+          }
+
+          if (result && typeof result === 'object' && 'content' in result) {
+            return result;
+          } else {
+            return createMcpSuccessResponse(result);
+          }
+        } catch (error) {
+          const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
+
+          if (process.env['MCP_DEBUG']) {
+            console.error(`[MCP Tool Error] ${errorMessage}`);
+          }
+
+          return createMcpErrorResponse(errorMessage);
+        }
+      }
+    }));
+
+    // Combine all tools (unified tools take precedence over legacy tools, which take precedence over CLI-generated tools)
+    const allTools = [...unifiedTools, ...legacyMcpTools, ...cliTools];
+    const uniqueTools = allTools.reduce((acc, tool) => {
+      const existingTool = acc.find((t) => t.name === tool.name);
+      if (!existingTool) {
+        acc.push(tool);
+      } else {
+        // Log when a tool is being overridden
+        const toolSource = unifiedTools.find(t => t.name === tool.name) ? 'unified' :
+                          legacyMcpTools.find(t => t.name === tool.name) ? 'legacy MCP' : 'CLI-generated';
+        console.warn(`[MCP Tool Registration] ${toolSource} tool '${tool.name}' overrides other tool definitions`);
+      }
+      return acc;
+    }, [] as IMcpToolStructure[]);
+
+    return uniqueTools;
   }
 
   /**
@@ -65,49 +533,118 @@ export class ArgParser<
    * @returns Configured MCP server instance
    */
   public async createMcpServer(
-    serverInfo: {
-      name: string;
-      version: string;
-      description?: string;
-    },
+    serverInfo: DxtServerInfo,
     toolOptions?: GenerateMcpToolsOptions,
   ): Promise<any> {
-    // Dynamic import to avoid circular dependencies and support ES modules
-    const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+    const logger = createMcpLogger("MCP Server Creation");
 
-    const server = new McpServer({
-      id: serverInfo.name,
-      version: serverInfo.version,
-      name: serverInfo.name,
-      description: serverInfo.description,
-    });
+    try {
+      logger.mcpError(`Creating MCP server: ${serverInfo.name} v${serverInfo.version}`);
 
-    const tools = this.toMcpTools(toolOptions);
+      // Dynamic import to avoid circular dependencies and support ES modules
+      const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+      logger.mcpError("Successfully imported McpServer from SDK");
 
-    // Deduplicate tools by name to avoid registration conflicts
-    const uniqueTools = tools.reduce((acc, tool) => {
-      if (!acc.find((t) => t.name === tool.name)) {
-        acc.push(tool);
+      const server = new McpServer({
+        id: serverInfo.name,
+        version: serverInfo.version,
+        name: serverInfo.name,
+        description: serverInfo.description,
+      });
+
+      logger.mcpError("Successfully created McpServer instance");
+
+      // Note: We now register actual resources and prompts below, so no need for internal handlers
+      logger.mcpError("MCP server will register actual resources and prompts for full capability support");
+
+      // Generate tools from this ArgParser instance
+      logger.mcpError("Generating MCP tools from ArgParser");
+      const tools = this.toMcpTools(toolOptions);
+      logger.mcpError(`Generated ${tools.length} MCP tools`);
+
+      // Deduplicate tools by name to avoid registration conflicts
+      const uniqueTools = tools.reduce((acc, tool) => {
+        if (!acc.find((t) => t.name === tool.name)) {
+          acc.push(tool);
+        }
+        return acc;
+      }, [] as IMcpToolStructure[]);
+
+      logger.mcpError(`After deduplication: ${uniqueTools.length} unique tools`);
+
+      // Register tools
+      uniqueTools.forEach((tool) => {
+        logger.mcpError(`Registering tool: ${tool.name}`);
+        const toolConfig: any = {
+          description: tool.description || "No description provided.",
+          inputSchema: (tool.inputSchema as any).shape || tool.inputSchema,
+        };
+
+        // WORKAROUND: Don't register output schema with MCP SDK due to bug
+        // The output schema will be handled in our response processing instead
+        // if (tool.outputSchema) {
+        //   toolConfig.outputSchema = (tool.outputSchema as any).shape || tool.outputSchema;
+        // }
+
+        server.registerTool(tool.name, toolConfig, tool.execute);
+      });
+
+      logger.mcpError("Successfully registered all tools with MCP server");
+
+      // TODO: Register resources (temporarily disabled due to MCP SDK type compatibility issues)
+      const resources = this.getMcpResources();
+      logger.mcpError(`Found ${resources.length} MCP resources (registration temporarily disabled)`);
+
+      // Note: Resource registration will be implemented in a future update once MCP SDK types are resolved
+      if (resources.length > 0) {
+        logger.mcpError("Resource registration is temporarily disabled due to MCP SDK type compatibility");
+        logger.mcpError("Resources are stored and will be available once SDK integration is completed");
       }
-      return acc;
-    }, [] as IMcpToolStructure[]);
 
-    uniqueTools.forEach((tool) => {
-      const toolConfig: any = {
-        description: tool.description || "No description provided.",
-        inputSchema: (tool.inputSchema as any).shape || tool.inputSchema,
-      };
+      logger.mcpError("Resource registration step completed (temporarily disabled)");
 
-      // WORKAROUND: Don't register output schema with MCP SDK due to bug
-      // The output schema will be handled in our response processing instead
-      // if (tool.outputSchema) {
-      //   toolConfig.outputSchema = (tool.outputSchema as any).shape || tool.outputSchema;
-      // }
+      // TODO: Register prompts (temporarily disabled due to MCP SDK type compatibility issues)
+      const prompts = this.getMcpPrompts();
+      logger.mcpError(`Found ${prompts.length} MCP prompts (registration temporarily disabled)`);
 
-      server.registerTool(tool.name, toolConfig, tool.execute);
+      // Note: Prompt registration will be implemented in a future update once MCP SDK types are resolved
+      if (prompts.length > 0) {
+        logger.mcpError("Prompt registration is temporarily disabled due to MCP SDK type compatibility");
+        logger.mcpError("Prompts are stored and will be available once SDK integration is completed");
+      }
+
+      logger.mcpError("Prompt registration step completed (temporarily disabled)");
+
+      // Set up change notifications
+      this.setupMcpChangeNotifications(server);
+      logger.mcpError("Successfully set up MCP change notifications");
+
+      return server;
+
+    } catch (error) {
+      logger.mcpError(`Error creating MCP server: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        logger.mcpError(`Stack trace: ${error.stack}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Set up change notifications for the MCP server
+   * @param _server The MCP server instance (unused for now, but reserved for future client connection tracking)
+   */
+  private setupMcpChangeNotifications(_server: any): void {
+    // Set up connection tracking (this would be enhanced with actual client connections)
+    // For now, we'll set up the infrastructure for future client management
+
+    // Add listeners for resource/prompt changes to notify the server
+    this.onMcpChange((event) => {
+      // When resources/prompts change, we could notify connected clients
+      // The actual notification sending would happen when clients are connected
+      const logger = createMcpLogger("MCP Change Notifications");
+      logger.mcpError(`MCP ${event.type} ${event.action}: ${event.entityName || 'unknown'}`);
     });
-
-    return server;
   }
 
   /**
@@ -158,7 +695,6 @@ export class ArgParser<
     }
 
     await Promise.all(startPromises);
-    console.error(`[${serverInfo.name}] All MCP transports started successfully`);
   }
 
   /**
@@ -205,14 +741,22 @@ export class ArgParser<
       sessionIdGenerator?: () => string;
     },
   ): Promise<void> {
-    switch (transportConfig.type) {
-      case "stdio": {
-        const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
-        const transport = new StdioServerTransport();
-        await server.connect(transport);
-        console.error(`[${serverInfo.name}] MCP Server started with stdio transport`);
-        break;
-      }
+    const logger = createMcpLogger("MCP Transport");
+
+    try {
+      logger.mcpError(`Starting ${transportConfig.type} transport for server: ${serverInfo.name}`);
+
+      switch (transportConfig.type) {
+        case "stdio": {
+          logger.mcpError("Importing StdioServerTransport from SDK");
+          const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+          logger.mcpError("Creating StdioServerTransport instance");
+          const transport = new StdioServerTransport();
+          logger.mcpError("Connecting server to stdio transport");
+          await server.connect(transport);
+          logger.mcpError("Successfully connected to stdio transport");
+          break;
+        }
 
       case "sse": {
         const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
@@ -278,15 +822,25 @@ export class ArgParser<
 
         await new Promise<void>((resolve) => {
           app.listen(port, transportConfig.host || "localhost", () => {
-            console.error(`[${serverInfo.name}] MCP Server listening on http://${transportConfig.host || "localhost"}:${port}${path} (HTTP)`);
             resolve();
           });
         });
         break;
       }
 
-      default:
-        throw new Error(`Unsupported transport type: ${transportConfig.type}`);
+        default:
+          logger.mcpError(`Unsupported transport type: ${transportConfig.type}`);
+          throw new Error(`Unsupported transport type: ${transportConfig.type}`);
+      }
+
+      logger.mcpError(`Successfully started ${transportConfig.type} transport`);
+
+    } catch (error) {
+      logger.mcpError(`Error starting ${transportConfig.type} transport: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof Error && error.stack) {
+        logger.mcpError(`Stack trace: ${error.stack}`);
+      }
+      throw error;
     }
   }
 
@@ -299,8 +853,25 @@ export class ArgParser<
       return result;
     }
 
-    if (anyResult._asyncHandlerPromise) {
-      return this.parseAsync(processArgs, options);
+    // For synchronous parse, we don't process async handlers
+    // Users should call parseAsync() for async handler support
+    return result;
+  }
+
+  /**
+   * CLI-friendly parse method that automatically handles ParseResult objects
+   * When autoExit is false, this method will call process.exit() based on ParseResult
+   * This ensures backward compatibility for CLI applications
+   */
+  public parseForCli(processArgs: string[], options?: any): any {
+    const result = this.parse(processArgs, options);
+
+    // Handle ParseResult objects when autoExit is false
+    if (result && typeof result === 'object' && 'success' in result && 'exitCode' in result) {
+      const parseResult = result as ParseResult;
+      if (parseResult.shouldExit && typeof process === "object" && typeof process.exit === "function") {
+        process.exit(parseResult.exitCode as never);
+      }
     }
 
     return result;
@@ -310,8 +881,13 @@ export class ArgParser<
    * Async version of parse for when async handlers are detected
    */
   public async parseAsync(processArgs: string[], options?: any): Promise<any> {
-    // First, call the parent parse method to get the basic parsing done
-    const result = super.parse(processArgs, options);
+    // Call the base class parse method directly to avoid any override issues
+    let result = ArgParserBase.prototype.parse.call(this, processArgs, options);
+
+    // If the result is a Promise (which happens with async handlers), await it
+    if (result instanceof Promise) {
+      result = await result;
+    }
 
     // If fuzzy mode prevented execution, return the result as-is
     const anyResult = result as any;
@@ -319,11 +895,25 @@ export class ArgParser<
       return result;
     }
 
+    // Process the result through our async handler processor
+    result = await this.#processAsyncHandlerPromise(result);
+
+    return result;
+  }
+
+  async #processAsyncHandlerPromise(result: any): Promise<any> {
+    const anyResult = result as any;
+
     // Check if there's an async handler that needs to be awaited
     if (anyResult._asyncHandlerPromise) {
       try {
         const handlerResult = await anyResult._asyncHandlerPromise;
         anyResult.handlerResponse = handlerResult;
+
+        // Merge handler result into final args if it's an object
+        if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+          Object.assign(anyResult, handlerResult);
+        }
       } catch (error) {
         // Handle async handler errors - respect the handleErrors setting
         if ((this as any)["#handleErrors"]) {
@@ -350,47 +940,41 @@ export class ArgParser<
   /**
    * Add an MCP sub-command that starts an MCP server exposing this parser's functionality
    * @param subCommandName Name of the sub-command (default: "mcp-server")
-   * @param serverInfo Server configuration
+   * @param serverInfo Server configuration (supports extended DXT fields)
    * @param options Optional configuration including preset transports and tool options
    * @returns This ArgParserWithMcp instance for chaining
+   * @deprecated Use withMcp() to configure server metadata and --s-mcp-serve system flag instead. This method will be removed in v2.0.
    */
   public addMcpSubCommand(
     subCommandName: string | undefined,
-    serverInfo: {
-      name: string;
-      version: string;
-      description?: string;
-    },
+    serverInfo: DxtServerInfo,
     options?: McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions },
   ): this;
 
   /**
    * Add an MCP sub-command that starts an MCP server exposing this parser's functionality
    * @param subCommandName Name of the sub-command (default: "mcp-server")
-   * @param serverInfo Server configuration
+   * @param serverInfo Server configuration (supports extended DXT fields)
    * @param toolOptions Optional MCP tool generation options (backward compatibility)
    * @returns This ArgParserWithMcp instance for chaining
-   * @deprecated Use the options parameter instead for better configurability
+   * @deprecated Use withMcp() to configure server metadata and --s-mcp-serve system flag instead. This method will be removed in v2.0.
    */
   public addMcpSubCommand(
     subCommandName: string | undefined,
-    serverInfo: {
-      name: string;
-      version: string;
-      description?: string;
-    },
+    serverInfo: DxtServerInfo,
     toolOptions?: GenerateMcpToolsOptions,
   ): this;
 
   public addMcpSubCommand(
     subCommandName: string | undefined = "mcp-server",
-    serverInfo: {
-      name: string;
-      version: string;
-      description?: string;
-    },
+    serverInfo: DxtServerInfo,
     optionsOrToolOptions?: (McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions }) | GenerateMcpToolsOptions,
   ): this {
+    // Emit deprecation warning
+    console.warn(`[DEPRECATED] addMcpSubCommand() is deprecated and will be removed in v2.0.
+Please use withMcp() to configure server metadata and the --s-mcp-serve system flag instead.
+Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
+
     // Handle backward compatibility: if the third parameter is a GenerateMcpToolsOptions object
     // (detected by checking if it has properties that only exist in GenerateMcpToolsOptions)
     let options: McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions };
@@ -407,62 +991,93 @@ export class ArgParser<
 
     const { defaultTransports, defaultTransport, toolOptions } = options;
 
+    // Store server configuration for backward compatibility with --s-mcp-serve
+    if (!this._mcpServerConfig) {
+      this._mcpServerConfig = {
+        serverInfo,
+        defaultTransports,
+        defaultTransport,
+        toolOptions,
+      };
+    }
+
     const mcpHandler = async (ctx: IHandlerContext): Promise<void> => {
-      if (!ctx.parentParser) {
-        console.error(
-          "[MCP Server] Critical: MCP server handler called without a parent parser context.",
-        );
-        process.exit(1);
-      }
+      // Hijack console globally to prevent STDOUT contamination in MCP mode
+      const logger = createMcpLogger("MCP Handler");
+      // Ensure the logger is properly cast as Console interface
+      (globalThis as any).console = logger;
 
-      console.error(`[${serverInfo.name}] Starting MCP Server...`);
+      try {
+        logger.mcpError("MCP handler started - console hijacked for MCP safety");
+        logger.mcpError(`Handler context args: ${JSON.stringify(ctx.args)}`);
 
-      // Cast parent parser to ArgParser to access MCP methods
-      const mcpParser = ctx.parentParser as ArgParser;
-
-      // Check if multiple transports are specified via CLI
-      const transports = ctx.args["transports"] as string;
-
-      if (transports) {
-        // Parse multiple transports configuration from CLI
-        try {
-          const transportConfigs = JSON.parse(transports);
-          await mcpParser.startMcpServerWithMultipleTransports(serverInfo, transportConfigs, toolOptions);
-        } catch (error: any) {
-          console.error("❌ Error parsing transports configuration:", error.message);
-          console.error("Expected JSON format: '[{\"type\":\"stdio\"},{\"type\":\"sse\",\"port\":3001}]'");
+        if (!ctx.parentParser) {
+          logger.mcpError("Critical: MCP server handler called without a parent parser context.");
           process.exit(1);
         }
-      } else if (defaultTransports && defaultTransports.length > 0) {
-        // Use preset multiple transports configuration
-        await mcpParser.startMcpServerWithMultipleTransports(serverInfo, defaultTransports, toolOptions);
-      } else if (defaultTransport) {
-        // Use preset single transport configuration
-        await mcpParser.startMcpServerWithTransport(
-          serverInfo,
-          defaultTransport.type,
-          {
-            port: defaultTransport.port,
-            host: defaultTransport.host,
-            path: defaultTransport.path,
-            sessionIdGenerator: defaultTransport.sessionIdGenerator,
-          },
-          toolOptions
-        );
-      } else {
-        // Single transport mode from CLI flags (backwards compatibility)
-        const transportType = (ctx.args["transport"] as "stdio" | "sse" | "streamable-http") || "stdio";
-        const transportOptions = {
-          port: ctx.args["port"] as number,
-          host: ctx.args["host"] as string,
-          path: ctx.args["path"] as string,
-        };
 
-        await mcpParser.startMcpServerWithTransport(serverInfo, transportType, transportOptions, toolOptions);
+        logger.mcpError("Parent parser found, casting to ArgParser");
+        // Cast parent parser to ArgParser to access MCP methods
+        const mcpParser = ctx.parentParser as ArgParser;
+
+        // Check if multiple transports are specified via CLI
+        logger.mcpError("Checking transport configuration");
+        const transports = ctx.args["transports"] as string;
+
+        if (transports) {
+          logger.mcpError(`Multiple transports specified via CLI: ${transports}`);
+          // Parse multiple transports configuration from CLI
+          try {
+            const transportConfigs = JSON.parse(transports);
+            logger.mcpError(`Parsed transport configs: ${JSON.stringify(transportConfigs)}`);
+            await mcpParser.startMcpServerWithMultipleTransports(serverInfo, transportConfigs, toolOptions);
+          } catch (error: any) {
+            logger.mcpError(`Error parsing transports configuration: ${error.message}`);
+            logger.mcpError("Expected JSON format: '[{\"type\":\"stdio\"},{\"type\":\"sse\",\"port\":3001}]'");
+            process.exit(1);
+          }
+        } else if (defaultTransports && defaultTransports.length > 0) {
+          logger.mcpError(`Using preset multiple transports: ${JSON.stringify(defaultTransports)}`);
+          // Use preset multiple transports configuration
+          await mcpParser.startMcpServerWithMultipleTransports(serverInfo, defaultTransports, toolOptions);
+        } else if (defaultTransport) {
+          logger.mcpError(`Using preset single transport: ${JSON.stringify(defaultTransport)}`);
+          // Use preset single transport configuration
+          await mcpParser.startMcpServerWithTransport(
+            serverInfo,
+            defaultTransport.type,
+            {
+              port: defaultTransport.port,
+              host: defaultTransport.host,
+              path: defaultTransport.path,
+              sessionIdGenerator: defaultTransport.sessionIdGenerator,
+            },
+            toolOptions
+          );
+        } else {
+          // Single transport mode from CLI flags (backwards compatibility)
+          const transportType = (ctx.args["transport"] as "stdio" | "sse" | "streamable-http") || "stdio";
+          const transportOptions = {
+            port: ctx.args["port"] as number,
+            host: ctx.args["host"] as string,
+            path: ctx.args["path"] as string,
+          };
+
+          logger.mcpError(`Using single transport mode: ${transportType} with options: ${JSON.stringify(transportOptions)}`);
+          await mcpParser.startMcpServerWithTransport(serverInfo, transportType, transportOptions, toolOptions);
+        }
+
+        logger.mcpError("MCP server setup completed, keeping process alive");
+        // Keep the process alive
+        return new Promise(() => {});
+
+      } catch (error) {
+        logger.mcpError(`Error in MCP handler: ${error instanceof Error ? error.message : String(error)}`);
+        if (error instanceof Error && error.stack) {
+          logger.mcpError(`Stack trace: ${error.stack}`);
+        }
+        process.exit(1);
       }
-
-      // Keep the process alive
-      return new Promise(() => {});
     };
 
     // Create sub-command parser with transport options
@@ -521,19 +1136,66 @@ export class ArgParser<
    * Factory method to create an ArgParser instance with MCP capabilities
    * This provides a clean API for users who want MCP functionality from the start
    * Automatically sets handleErrors: false for MCP compatibility
+   *
+   * @param options Combined ArgParser and MCP server configuration options
+   * @param initialFlags Optional array of initial flags to add
+   * @returns ArgParser instance with MCP capabilities and stored server metadata
    */
   public static withMcp<T = any>(
-    options?: ConstructorParameters<typeof ArgParserBase>[0],
-    initialFlags?: ConstructorParameters<typeof ArgParserBase>[1],
+    options?: WithMcpOptions<T>,
+    initialFlags?: readonly IFlag[],
   ): ArgParser<T> {
+    // Extract MCP-specific options
+    const { mcp: mcpConfig, ...argParserOptions } = options || {};
+
     // Ensure handleErrors is false for MCP compatibility unless explicitly overridden
     const mcpOptions = {
       handleErrors: false,
-      ...options,
+      ...argParserOptions,
     };
-    return new ArgParser<T>(mcpOptions as any, initialFlags);
+
+    const parser = new ArgParser<T>(mcpOptions as any, initialFlags);
+
+    // Store MCP server configuration for later use
+    if (mcpConfig) {
+      (parser as any)._mcpServerConfig = mcpConfig;
+    }
+
+    return parser;
   }
 
+
+  /**
+   * Create an ArgParser instance optimized for CLI usage
+   * This sets autoExit: true by default for traditional CLI behavior
+   */
+  public static forCli<T = any>(
+    options?: ConstructorParameters<typeof ArgParserBase>[0],
+    initialFlags?: ConstructorParameters<typeof ArgParserBase>[1],
+  ): ArgParser<T> {
+    const cliOptions = {
+      autoExit: true,
+      handleErrors: true,
+      ...options,
+    };
+    return new ArgParser<T>(cliOptions as any, initialFlags);
+  }
+
+  /**
+   * Create an ArgParser instance optimized for library usage
+   * This sets autoExit: false by default for programmatic control
+   */
+  public static forLibrary<T = any>(
+    options?: ConstructorParameters<typeof ArgParserBase>[0],
+    initialFlags?: ConstructorParameters<typeof ArgParserBase>[1],
+  ): ArgParser<T> {
+    const libraryOptions = {
+      autoExit: false,
+      handleErrors: false,
+      ...options,
+    };
+    return new ArgParser<T>(libraryOptions as any, initialFlags);
+  }
 
   public static fromArgParser<T = any>(
     parser: ArgParserBase<T>,

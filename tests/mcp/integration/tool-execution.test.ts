@@ -46,7 +46,7 @@ describe("MCP Tool Execution Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         input: "test input",
         count: 5,
         verbose: true
@@ -100,7 +100,7 @@ describe("MCP Tool Execution Integration Tests", () => {
       const tool = tools[0];
 
       const startTime = Date.now();
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         delay: 100
       });
       const endTime = Date.now();
@@ -156,7 +156,7 @@ describe("MCP Tool Execution Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         data: '{"items": ["a", "b", "c"]}',
         format: "json"
       });
@@ -200,12 +200,12 @@ describe("MCP Tool Execution Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         input: "test input"
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Execution failed");
+      expect(result.error).toContain("Execution failed");
       expect(errorHandler).toHaveBeenCalled();
     });
 

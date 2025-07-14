@@ -2,8 +2,227 @@ import { z } from "zod";
 import type { ZodRawShape, ZodTypeAny } from "zod";
 import { ArgParserBase } from "./ArgParserBase";
 import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "./";
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 
 // Assuming these types are correctly exported from src/index.ts
+
+/**
+ * Standard MCP response format
+ */
+export interface McpResponse {
+  content: Array<{
+    type: "text";
+    text: string;
+  }>;
+  isError?: boolean;
+}
+
+/**
+ * Create a standardized MCP success response
+ */
+export function createMcpSuccessResponse(data: any): McpResponse {
+  return {
+    content: [
+      {
+        type: "text",
+        text: typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+      }
+    ]
+  };
+}
+
+/**
+ * Create a standardized MCP error response
+ */
+export function createMcpErrorResponse(error: string | Error): McpResponse {
+  const errorMessage = error instanceof Error ? error.message : error;
+  return {
+    isError: true,
+    content: [
+      {
+        type: "text",
+        text: `Error: ${errorMessage}`
+      }
+    ]
+  };
+}
+
+/**
+ * Convert ArgParser flag type to JSON Schema type
+ */
+function mapFlagTypeToJsonSchemaType(flagType: string): string {
+  switch (flagType) {
+    case 'string':
+      return 'string';
+    case 'number':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'array':
+      return 'array';
+    default:
+      return 'string'; // Default fallback
+  }
+}
+
+/**
+ * Convert a single ArgParser flag to JSON Schema property
+ */
+export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
+  property: any;
+  isRequired: boolean;
+} {
+  const property: any = {
+    type: mapFlagTypeToJsonSchemaType(flag.type),
+    description: flag.description || `${flag.name} parameter`
+  };
+
+  // Handle enums
+  if (flag.enum && Array.isArray(flag.enum)) {
+    property.enum = flag.enum;
+  }
+
+  // Handle default values
+  const defaultValue = (flag as any).defaultValue || (flag as any).default;
+  if (defaultValue !== undefined) {
+    property.default = defaultValue;
+  }
+
+  // Handle array items
+  if (flag.type === 'array' && (flag as any).itemType) {
+    property.items = {
+      type: mapFlagTypeToJsonSchemaType((flag as any).itemType)
+    };
+  }
+
+  // Determine if required
+  const isRequired = !!(flag.mandatory || (flag as any).required);
+
+  return { property, isRequired };
+}
+
+/**
+ * Convert ArgParser flags to MCP JSON Schema
+ */
+export function convertFlagsToJsonSchema(flags: readonly (IFlag | ProcessedFlag)[]): {
+  type: "object";
+  properties: Record<string, any>;
+  required: string[];
+} {
+  const properties: Record<string, any> = {};
+  const required: string[] = [];
+
+  for (const flag of flags) {
+    // Skip help flag and system flags
+    if (flag.name === 'help' || flag.name.startsWith('s-')) {
+      continue;
+    }
+
+    const { property, isRequired } = convertFlagToJsonSchemaProperty(flag);
+    properties[flag.name] = property;
+
+    if (isRequired) {
+      required.push(flag.name);
+    }
+  }
+
+  return {
+    type: "object",
+    properties,
+    required
+  };
+}
+
+/**
+ * Convert ArgParser flags to Zod schema for MCP tools
+ */
+export function convertFlagsToZodSchema(flags: readonly (IFlag | ProcessedFlag)[]): ZodTypeAny {
+  const zodProperties: ZodRawShape = {};
+
+  for (const flag of flags) {
+    // Skip help flag and system flags
+    if (flag.name === 'help' || flag.name.startsWith('s-')) {
+      continue;
+    }
+
+    const zodSchema = mapArgParserFlagToZodSchema(flag);
+    zodProperties[flag.name] = zodSchema;
+  }
+
+  return z.object(zodProperties);
+}
+
+/**
+ * Simplified response format for testing and validation
+ */
+export interface SimplifiedToolResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  message?: string;
+  exitCode?: number;
+}
+
+/**
+ * Extract simplified response from MCP protocol response
+ */
+export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolResponse {
+  // Handle responses that are already in simplified format
+  if (typeof mcpResponse === 'object' && mcpResponse !== null && 'success' in mcpResponse) {
+    return {
+      success: mcpResponse.success,
+      data: mcpResponse.data,
+      error: mcpResponse.error || mcpResponse.message, // Ensure error is populated
+      message: mcpResponse.message || mcpResponse.error, // Ensure message is populated
+      exitCode: mcpResponse.exitCode
+    };
+  }
+
+  // Handle error responses
+  if (mcpResponse.isError) {
+    return {
+      success: false,
+      error: mcpResponse.content?.[0]?.text || "Unknown error",
+      exitCode: 1
+    };
+  }
+
+  // Handle structured content (when output schema is used)
+  if (mcpResponse.structuredContent) {
+    return {
+      success: true,
+      data: mcpResponse.structuredContent
+    };
+  }
+
+  // Handle standard MCP content format
+  if (mcpResponse.content && Array.isArray(mcpResponse.content)) {
+    try {
+      // Try to parse JSON from the text content
+      const textContent = mcpResponse.content[0]?.text;
+      if (textContent) {
+        const parsedData = JSON.parse(textContent);
+        return {
+          success: true,
+          data: parsedData
+        };
+      }
+    } catch {
+      // If parsing fails, return the raw text
+      return {
+        success: true,
+        data: mcpResponse.content[0]?.text || "No content"
+      };
+    }
+  }
+
+  // Fallback for unexpected formats
+  return {
+    success: false,
+    error: "Unexpected response format",
+    exitCode: 1
+  };
+}
 
 // Structural type for what MCP server.tool() expects
 export interface IMcpToolStructure {
@@ -12,6 +231,7 @@ export interface IMcpToolStructure {
   inputSchema: ZodTypeAny;
   outputSchema?: ZodTypeAny;
   execute: (args: any) => Promise<any>;
+  executeForTesting?: (args: any) => Promise<SimplifiedToolResponse>;
 }
 
 function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
@@ -121,9 +341,8 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
         zodSchema = z.record(z.string(), z.any());
         break;
       default:
-        console.warn(
-          `[MCP Integration] Flag '${flag["name"]}' has an unknown type '${typeName}'. Defaulting to z.string().`,
-        );
+        const logger = createMcpLogger("MCP Integration");
+        logger.mcpError(`Flag '${flag["name"]}' has an unknown type '${typeName}'. Defaulting to z.string().`);
         zodSchema = z.string();
         break;
     }
@@ -260,11 +479,14 @@ export function generateMcpToolsFromArgParser(
       const hasHelpFlag = flags.some(flag => flag["name"] === "help");
 
       for (const flag of flags) {
+        // Skip help flag - it doesn't make sense in MCP tool context
+        if (flag["name"] === "help") continue;
+
         let flagSchema = mapArgParserFlagToZodSchema(flag);
 
         // If there's a help flag, make mandatory fields optional to allow help to work
         // This is necessary because MCP SDK validates the schema before our execute function runs
-        if (hasHelpFlag && flag["name"] !== "help" && flag["mandatory"]) {
+        if (hasHelpFlag && flag["mandatory"]) {
           flagSchema = flagSchema.optional();
         }
 
@@ -419,6 +641,16 @@ export function generateMcpToolsFromArgParser(
 
             let handlerResponse = parseResult["handlerResponse"];
 
+            // Check if there's an async handler that needs to be awaited
+            if (!handlerResponse && parseResult["_asyncHandlerPromise"]) {
+              try {
+                handlerResponse = await parseResult["_asyncHandlerPromise"];
+              } catch (error: any) {
+                // Use standardized MCP error response for async handler errors
+                return createMcpErrorResponse(error instanceof Error ? error : new Error(String(error)));
+              }
+            }
+
             // Check if we need to execute or re-execute the handler with proper MCP context
             // This happens when:
             // 1. No handler was executed (handlerResponse === undefined)
@@ -525,67 +757,50 @@ export function generateMcpToolsFromArgParser(
                 try {
                   handlerResponse = await handlerToCall(handlerContext);
                 } catch (handlerError: any) {
-                  const errorMsg = `Handler error: ${handlerError.message || String(handlerError)}`;
-                  if (options?.outputSchemaMap?.[toolName]) {
-                    // Return structured data with both content and structuredContent when custom output schema is defined
-                    const errorData = {
-                      error: errorMsg,
-                      files: [],
-                      commandExecuted: null,
-                      stderrOutput: null,
-                    };
-                    return {
-                      content: [
-                        {
-                          type: "text",
-                          text: JSON.stringify(errorData, null, 2)
-                        }
-                      ],
-                      structuredContent: errorData
-                    };
-                  }
-                  return { success: false, message: errorMsg };
+                  // Use standardized MCP error response
+                  return createMcpErrorResponse(handlerError);
                 }
               }
             }
 
-            if (options?.outputSchemaMap?.[toolName]) {
-              // When there's a custom output schema, ensure both content and structuredContent are provided
-              if (handlerResponse && typeof handlerResponse === 'object') {
-                // If handler already returned MCP format with content field
-                if (handlerResponse.content && Array.isArray(handlerResponse.content)) {
-                  // Handler already returned MCP format - use it as structured content
-                  // The output schema should match the entire response structure
-                  return {
-                    content: handlerResponse.content,
-                    structuredContent: handlerResponse
-                  };
-                } else {
-                  // Handler returned plain structured data, wrap it in MCP format
+            // Automatically format response for MCP
+            if (handlerResponse && typeof handlerResponse === 'object') {
+              // If handler already returned MCP format with content field, use it
+              if (handlerResponse.content && Array.isArray(handlerResponse.content)) {
+                return handlerResponse;
+              } else {
+                // Handler returned plain data, wrap it in MCP format
+                if (options?.outputSchemaMap?.[toolName]) {
+                  // Return structured data with both content and structuredContent when custom output schema is defined
                   return {
                     content: [
                       {
                         type: "text",
-                        text: typeof handlerResponse === 'string' ? handlerResponse : JSON.stringify(handlerResponse, null, 2)
+                        text: JSON.stringify(handlerResponse, null, 2)
                       }
                     ],
                     structuredContent: handlerResponse
                   };
+                } else {
+                  return createMcpSuccessResponse(handlerResponse);
                 }
               }
+            }
 
-              // Fallback for non-object responses
+            // For non-object responses, wrap in MCP format
+            const defaultResponse = handlerResponse || { success: true };
+            if (options?.outputSchemaMap?.[toolName] && typeof defaultResponse === 'object') {
               return {
                 content: [
                   {
                     type: "text",
-                    text: String(handlerResponse)
+                    text: JSON.stringify(defaultResponse, null, 2)
                   }
                 ],
-                structuredContent: handlerResponse
+                structuredContent: defaultResponse
               };
             }
-            return { success: true, data: handlerResponse };
+            return createMcpSuccessResponse(defaultResponse);
           } catch (e: any) {
             // Check if this is a handler error that was thrown due to handleErrors: false
             // In this case, we want to format it consistently with the $error handling above
@@ -626,6 +841,18 @@ export function generateMcpToolsFromArgParser(
             };
           }
         },
+        async executeForTesting(mcpInputArgs: Record<string, any>): Promise<SimplifiedToolResponse> {
+          try {
+            const mcpResponse = await this.execute(mcpInputArgs);
+            return extractSimplifiedResponse(mcpResponse);
+          } catch (error: any) {
+            return {
+              success: false,
+              error: error.message || String(error),
+              exitCode: 1
+            };
+          }
+        }
       };
       tools.push(tool);
     }

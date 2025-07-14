@@ -108,7 +108,7 @@ describe("MCP Multi-Transport Integration Tests", () => {
       expect(processTool).toBeDefined();
 
       // Test reverse algorithm
-      const reverseResult = await processTool!.execute({
+      const reverseResult = await processTool!.executeForTesting!({
         algorithm: "reverse",
         data: "hello world"
       });
@@ -118,7 +118,7 @@ describe("MCP Multi-Transport Integration Tests", () => {
       expect(reverseResult.data.output).toBe("dlrow olleh");
 
       // Test encode algorithm
-      const encodeResult = await processTool!.execute({
+      const encodeResult = await processTool!.executeForTesting!({
         algorithm: "encode",
         data: "hello"
       });

@@ -1,0 +1,7 @@
+{
+  "name": "no-mcp",
+  "version": "1.0.0",
+  "description": "CLI without MCP servers",
+  "main": "index.mjs",
+  "type": "module"
+}

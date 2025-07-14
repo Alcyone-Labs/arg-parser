@@ -347,11 +347,12 @@ describe("MCP Integration", () => {
       );
 
       expect(result).toEqual({
-        success: true,
-        data: {
-          result: "success",
-          data: { processed: true },
-        },
+        content: [
+          {
+            type: "text",
+            text: expect.stringContaining('"result": "success"')
+          }
+        ]
       });
     });
 
@@ -381,9 +382,13 @@ describe("MCP Integration", () => {
       const result = await tool.execute({ input: "test" });
 
       expect(result).toEqual({
-        success: false,
-        message: "Cmd error: handler_error - Handler failed",
-        data: expect.any(Object),
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: expect.stringContaining("Handler failed")
+          }
+        ]
       });
     });
 
@@ -423,18 +428,13 @@ describe("MCP Integration", () => {
       const result = await tool.execute({ input: "test" });
 
       expect(result).toEqual({
+        isError: true,
         content: [
           {
             type: "text",
             text: expect.stringContaining("Processing failed")
           }
-        ],
-        structuredContent: {
-          error: expect.stringContaining("Processing failed"),
-          files: [],
-          commandExecuted: null,
-          stderrOutput: null,
-        }
+        ]
       });
     });
 
@@ -634,10 +634,14 @@ describe("MCP Integration", () => {
       expect(capturedContext.commandChain).toEqual(["mcp-context"]);
       expect(capturedContext.parser).toBeDefined();
 
-      // Verify the result structure
+      // Verify the result structure (new MCP format)
       expect(result).toEqual({
-        success: true,
-        data: { success: true, contextReceived: true }
+        content: [
+          {
+            type: "text",
+            text: expect.stringContaining('"success": true')
+          }
+        ]
       });
     });
 

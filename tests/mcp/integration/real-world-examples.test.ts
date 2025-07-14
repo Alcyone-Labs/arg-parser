@@ -83,7 +83,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         file: "/test/file.txt",
         operation: "read"
       });
@@ -187,7 +187,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         values: "1,2,3,4,5,6,7,8,9,10",
         measures: "mean,median,standardDeviation"
       });
@@ -430,7 +430,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
       const tool = tools[0];
 
       // Test successful execution with API key provided
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         query: "dark mode",
         limit: 5,
         status: "under review",
@@ -500,7 +500,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         query: "test query"
       });
 

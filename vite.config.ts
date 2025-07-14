@@ -63,8 +63,11 @@ export default defineConfig(({ command, mode }) => {
             "dotenv",
             "js-yaml",
             "@iarna/toml",
+            "adm-zip",
             "@modelcontextprotocol/sdk",
             "express",
+            "tsdown",
+            "@alcyone-labs/simple-mcp-logger",
             // Node.js built-in modules
             "node:fs",
             "node:path",

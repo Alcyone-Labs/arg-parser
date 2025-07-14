@@ -176,12 +176,12 @@ describe("MCP Protocol Compliance Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         // Missing required parameter
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toBeDefined();
+      expect(result.error).toBeDefined();
       expect(typeof result.message).toBe("string");
       expect(result.data).toBeDefined();
     });
@@ -208,12 +208,12 @@ describe("MCP Protocol Compliance Tests", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({
+      const result = await tool.executeForTesting!({
         input: "test input"
       });
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain("Handler execution failed");
+      expect(result.error).toContain("Handler execution failed");
       expect(errorHandler).toHaveBeenCalled();
     });
 
@@ -298,7 +298,7 @@ describe("MCP Protocol Compliance Tests", () => {
       const subTool = tools.find(t => t.name.includes("execute"));
       expect(subTool).toBeDefined();
 
-      const result = await subTool!.execute({
+      const result = await subTool!.executeForTesting!({
         input: "test data"
       });
 

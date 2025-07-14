@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Simple CLI Example - demonstrates basic ArgParser usage
+ * Simple CLI Example - demonstrates basic ArgParser usage (v2.0.0)
  *
  * This example shows how to create a simple CLI tool with:
  * - Basic flags with different types
@@ -8,19 +8,29 @@
  * - Default values
  * - Enum validation
  * - Help generation
+ * - Optional MCP server capability
  *
  * Usage:
  *   bun examples/simple-cli.ts --env production --port 8080 --verbose
+ *   bun examples/simple-cli.ts --s-mcp-serve  # Optional: run as MCP server
  *   bun examples/simple-cli.ts --help
  */
 import { ArgParser } from "../src";
 
-// Create a new ArgParser instance with modern patterns
-const parser = new ArgParser({
+// Create a new ArgParser instance with optional MCP support
+const parser = ArgParser.withMcp({
   appName: "Simple CLI Example",
   appCommandName: "simple-cli",
   description: "A simple CLI tool demonstrating ArgParser features",
+  mcp: {
+    serverInfo: {
+      name: "simple-cli-mcp",
+      version: "2.0.0",
+      description: "Simple CLI as MCP Server"
+    }
+  },
   handler: async (ctx) => {
+    // Console output automatically safe in MCP mode!
     console.log("🚀 Simple CLI Example");
     console.log("===================");
     console.log(`Environment: ${ctx.args.environment}`);

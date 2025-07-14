@@ -167,6 +167,8 @@ export type IFlag = IFlagCore & {
   default?: any;
   /** @alias mandatory */
   required?: boolean | ((parsedArgs: TParsedArgs<any>) => boolean);
+  /** Environment variables that should be set from this flag's value in DXT packages */
+  env?: string | string[];
 };
 
 /**
@@ -302,6 +304,35 @@ export interface ISubCommand<
   };
   /** MCP tool generation options for DXT generation */
   mcpToolOptions?: any;
+}
+
+/**
+ * Result of parsing operations that replaces process.exit() calls.
+ * Provides structured information about the parsing outcome.
+ */
+export interface ParseResult<T = any> {
+  /** Whether the parsing was successful */
+  success: boolean;
+  /** Exit code that would have been used with process.exit() */
+  exitCode: number;
+  /** The parsed data/result when successful */
+  data?: T;
+  /** Human-readable message about the result */
+  message?: string;
+  /** Whether the process should exit (for help, version, etc.) */
+  shouldExit?: boolean;
+  /** Type of result for better handling */
+  type?: 'success' | 'error' | 'help' | 'version' | 'debug';
+}
+
+/**
+ * Configuration options for ArgParser behavior
+ */
+export interface ArgParserOptions {
+  /** Whether to automatically call process.exit() based on ParseResult (default: true for backward compatibility) */
+  autoExit?: boolean;
+  /** Whether to handle errors by exiting or throwing (default: true for backward compatibility) */
+  handleErrors?: boolean;
 }
 
 /**
