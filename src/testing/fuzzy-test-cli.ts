@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ArgParser } from "./ArgParser";
+import { ArgParser } from "../core/ArgParser";
 import { ArgParserFuzzyTester, type FuzzyTestOptions, type FuzzyTestReport } from "./fuzzy-tester";
 import * as fs from "node:fs";
 import * as path from "node:path";

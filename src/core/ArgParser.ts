@@ -4,8 +4,8 @@ import {
   convertFlagsToZodSchema,
   createMcpSuccessResponse,
   createMcpErrorResponse,
-} from "./mcp-integration";
-import type { GenerateMcpToolsOptions, IMcpToolStructure } from "./mcp-integration";
+} from "../mcp/mcp-integration";
+import type { GenerateMcpToolsOptions, IMcpToolStructure } from "../mcp/mcp-integration";
 import type { IHandlerContext, ParseResult, IFlag } from "./types";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 
@@ -1080,44 +1080,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       }
     };
 
-    // Create sub-command parser with transport options
-    const mcpSubParser = new ArgParserBase({}, [
-      {
-        name: "transport",
-        description: "Transport type for MCP server (single transport mode)",
-        options: ["--transport", "-t"],
-        type: "string",
-        enum: ["stdio", "sse", "streamable-http"],
-        defaultValue: "stdio",
-      },
-      {
-        name: "transports",
-        description: "Multiple transports configuration as JSON array (overrides single transport)",
-        options: ["--transports"],
-        type: "string",
-      },
-      {
-        name: "port",
-        description: "Port number for HTTP-based transports (single transport mode)",
-        options: ["--port", "-p"],
-        type: "number",
-        defaultValue: 3000,
-      },
-      {
-        name: "host",
-        description: "Host address for HTTP-based transports (single transport mode)",
-        options: ["--host"],
-        type: "string",
-        defaultValue: "localhost",
-      },
-      {
-        name: "path",
-        description: "Path for HTTP-based transports (single transport mode)",
-        options: ["--path"],
-        type: "string",
-        defaultValue: "/mcp",
-      },
-    ]);
+    // Create sub-command parser without transport options (now handled as system flags)
+    const mcpSubParser = new ArgParserBase({}, []);
 
     this.addSubCommand({
       name: subCommandName,
@@ -1163,7 +1127,6 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
     return parser;
   }
-
 
   /**
    * Create an ArgParser instance optimized for CLI usage

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { DxtGenerator } from '../../src/DxtGenerator';
-import { ArgParser } from '../../src/ArgParser';
+import { DxtGenerator } from '../../src/dxt/DxtGenerator';
+import { ArgParser } from '../../src/core/ArgParser';
 
 describe('DXT Console Replacement', () => {
   let tempDir: string;

@@ -1,5 +1,5 @@
-import type { ArgParserBase } from "./ArgParserBase";
-import type { ProcessedFlag, ISubCommand } from "./types";
+import type { ArgParserBase } from "../core/ArgParserBase";
+import type { ProcessedFlag, ISubCommand } from "../core/types";
 
 export interface FuzzyTestOptions {
   /** Maximum depth for command path exploration */

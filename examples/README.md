@@ -79,13 +79,13 @@ bun examples/v1.1.0-showcase.ts --s-with-env config.yaml --input data.txt analyz
 bun examples/v1.1.0-showcase.ts --input data.txt --s-save-to-env
 
 # Start MCP server with stdio (default)
-bun examples/v1.1.0-showcase.ts serve
+bun examples/v1.1.0-showcase.ts --s-mcp-serve
 
 # Start MCP server with SSE transport
-bun examples/v1.1.0-showcase.ts serve --transport sse --port 3001
+bun examples/v1.1.0-showcase.ts --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3001
 
 # Start MCP server with multiple transports
-bun examples/v1.1.0-showcase.ts serve --transports '[{"type":"stdio"},{"type":"sse","port":3001,"path":"/sse"},{"type":"streamable-http","port":3002,"path":"/mcp"}]'
+bun examples/v1.1.0-showcase.ts --s-mcp-serve --s-mcp-transports '[{"type":"stdio"},{"type":"sse","port":3001,"path":"/sse"},{"type":"streamable-http","port":3002,"path":"/mcp"}]'
 
 # Start predefined multi-transport server
 bun examples/v1.1.0-showcase.ts serve-multi

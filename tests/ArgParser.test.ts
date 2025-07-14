@@ -8,9 +8,9 @@ import {
   vi,
   type MockInstance,
 } from "vitest";
-import { ArgParser } from "../src/ArgParser";
-import { ArgParserError } from "../src/ArgParserBase";
-import { type IFlag } from "../src/types";
+import { ArgParser } from "../src/core/ArgParser";
+import { ArgParserError } from "../src/core/ArgParserBase";
+import { type IFlag } from "../src/core/types";
 
 // Helper function to create flexible regex patterns that handle ANSI color codes
 function flexibleErrorRegex(pattern: string): RegExp {

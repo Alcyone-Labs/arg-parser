@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import chalk from "@alcyone-labs/simple-chalk";
-import type { ProcessedFlag, TParsedArgs } from "./types";
+import type { ProcessedFlag, TParsedArgs } from "../core/types";
 import { globalConfigPluginRegistry } from "./plugins/ConfigPluginRegistry";
 
 /**

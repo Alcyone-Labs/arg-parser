@@ -1,4 +1,4 @@
-export { ArgParserBase, ArgParserError } from "./ArgParserBase";
+export { ArgParserBase, ArgParserError } from "./core/ArgParserBase";
 export {
   ArgParser,
   type McpTransportConfig,
@@ -8,8 +8,8 @@ export {
   type WithMcpOptions,
   type McpToolConfig,
   type ToolConfig
-} from "./ArgParser";
-export { ArgParserMcp, createMcpArgParser } from "./ArgParserMcp";
+} from "./core/ArgParser";
+export { ArgParserMcp, createMcpArgParser } from "./mcp/ArgParserMcp";
 
 export {
   zodFlagSchema,
@@ -26,7 +26,7 @@ export {
   type MainHandler,
   type ISubCommand,
   type ArgParserInstance,
-} from "./types";
+} from "./core/types";
 
 export {
   generateMcpToolsFromArgParser,
@@ -41,7 +41,7 @@ export {
   createMcpSuccessResponse,
   createMcpErrorResponse,
   type McpResponse,
-} from "./mcp-integration";
+} from "./mcp/mcp-integration";
 
 // Plugin system exports
 export {
@@ -57,10 +57,10 @@ export {
   createTomlPlugin,
   YamlConfigPlugin,
   createYamlPlugin,
-} from "./plugins";
+} from "./config/plugins";
 
-export { ArgParserFuzzyTester } from "./fuzzy-tester";
-export type { FuzzyTestOptions, TestResult, FuzzyTestReport } from "./fuzzy-tester";
+export { ArgParserFuzzyTester } from "./testing/fuzzy-tester";
+export type { FuzzyTestOptions, TestResult, FuzzyTestReport } from "./testing/fuzzy-tester";
 
 // SimpleChalk export for chalk replacement in autonomous builds
 export { default as SimpleChalk } from "@alcyone-labs/simple-chalk";

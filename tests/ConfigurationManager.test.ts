@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ConfigurationManager } from "../src/ConfigurationManager";
-import { ArgParser } from "../src/ArgParser";
+import { ConfigurationManager } from "../src/config/ConfigurationManager";
+import { ArgParser } from "../src/core/ArgParser";
 
 describe("ConfigurationManager", () => {
   const testConfigDir = "./test-config-output";

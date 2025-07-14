@@ -5,8 +5,8 @@ import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
 
 
 import { FlagManager } from "./FlagManager";
-import { DxtGenerator } from "./DxtGenerator";
-import { ConfigurationManager } from "./ConfigurationManager";
+import { DxtGenerator } from "../dxt/DxtGenerator";
+import { ConfigurationManager } from "../config/ConfigurationManager";
 import type {
   IFlag,
   IHandlerContext,
@@ -15,9 +15,9 @@ import type {
   TParsedArgs,
   ParseResult,
 } from "./types";
-import { McpResourcesManager, McpResourceConfig } from "./mcp-resources.js";
-import { McpPromptsManager, McpPromptConfig } from "./mcp-prompts.js";
-import { McpNotificationsManager, McpChangeType } from "./mcp-notifications.js";
+import { McpResourcesManager, McpResourceConfig } from "../mcp/mcp-resources.js";
+import { McpPromptsManager, McpPromptConfig } from "../mcp/mcp-prompts.js";
+import { McpNotificationsManager, McpChangeType } from "../mcp/mcp-notifications.js";
 
 export class ArgParserError extends Error {
   public commandChain: string[];
@@ -2072,6 +2072,7 @@ ${descriptionLines
 
   /**
    * Parse MCP transport options from command line arguments
+   * Uses system flags (--s-mcp-*) to avoid collisions with user flags
    */
   #_parseMcpTransportOptions(processArgs: string[]): {
     transportType?: string;
@@ -2088,40 +2089,65 @@ ${descriptionLines
       transports?: string;
     } = {};
 
-    // Look for transport-related flags
+    // Look for transport-related system flags
     for (let i = 0; i < processArgs.length; i++) {
       const arg = processArgs[i];
       const nextArg = processArgs[i + 1];
 
       switch (arg) {
-        case "--transport":
+        case "--s-mcp-transport":
           if (nextArg && !nextArg.startsWith("-")) {
             options.transportType = nextArg;
             i++; // Skip next arg since we consumed it
           }
           break;
-        case "--port":
+        case "--s-mcp-port":
           if (nextArg && !nextArg.startsWith("-")) {
             options.port = parseInt(nextArg, 10);
             i++; // Skip next arg since we consumed it
           }
           break;
-        case "--host":
+        case "--s-mcp-host":
           if (nextArg && !nextArg.startsWith("-")) {
             options.host = nextArg;
             i++; // Skip next arg since we consumed it
           }
           break;
-        case "--path":
+        case "--s-mcp-path":
           if (nextArg && !nextArg.startsWith("-")) {
             options.path = nextArg;
             i++; // Skip next arg since we consumed it
           }
           break;
-        case "--transports":
+        case "--s-mcp-transports":
           if (nextArg && !nextArg.startsWith("-")) {
             options.transports = nextArg;
             i++; // Skip next arg since we consumed it
+          }
+          break;
+        // Backward compatibility: support old flags but with deprecation warning
+        case "--transport":
+        case "--port":
+        case "--host":
+        case "--path":
+        case "--transports":
+          console.warn(`Warning: ${arg} is deprecated. Use --s-mcp-${arg.slice(2)} instead.`);
+          // Fall through to handle the old flag for now
+          if (arg === "--transport" && nextArg && !nextArg.startsWith("-")) {
+            options.transportType = nextArg;
+            i++;
+          } else if (arg === "--port" && nextArg && !nextArg.startsWith("-")) {
+            options.port = parseInt(nextArg, 10);
+            i++;
+          } else if (arg === "--host" && nextArg && !nextArg.startsWith("-")) {
+            options.host = nextArg;
+            i++;
+          } else if (arg === "--path" && nextArg && !nextArg.startsWith("-")) {
+            options.path = nextArg;
+            i++;
+          } else if (arg === "--transports" && nextArg && !nextArg.startsWith("-")) {
+            options.transports = nextArg;
+            i++;
           }
           break;
       }

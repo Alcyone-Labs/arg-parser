@@ -4,8 +4,8 @@
 
 import { describe, test, expect, beforeEach } from "vitest";
 import { z } from "zod";
-import { ArgParser } from "../../../src/ArgParser.js";
-import type { McpResourceConfig, McpPromptConfig } from "../../../src/mcp-resources.js";
+import { ArgParser } from "../../../src/core/ArgParser.js";
+import type { McpResourceConfig, McpPromptConfig } from "../../../src/mcp/mcp-resources.js";
 
 describe("ArgParser MCP Integration", () => {
   let parser: ArgParser;

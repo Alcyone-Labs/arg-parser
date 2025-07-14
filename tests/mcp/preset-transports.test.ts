@@ -161,14 +161,18 @@ describe("MCP Preset Transports Configuration", () => {
         version: "1.0.0",
       }, { defaultTransport });
 
-      // The CLI flags should take precedence over preset configuration
-      // This is tested by ensuring the sub-command parser still has the CLI flags
+      // Transport configuration is now handled via system flags (--s-mcp-*)
+      // The subcommand parser should not have transport flags
       const serveCommand = parser.getSubCommands().get("serve");
       const transportFlags = serveCommand?.parser.flags;
 
+      // Transport flags should not exist in subcommand - they're now system flags
       const transportFlag = transportFlags?.find((f: any) => f.name === "transport");
-      expect(transportFlag).toBeDefined();
-      expect(transportFlag?.defaultValue).toBe("stdio"); // CLI default should remain
+      expect(transportFlag).toBeUndefined();
+
+      // System flags are handled at the parser level, not in subcommands
+      // The preset configuration would be used as defaults when no system flags are provided
+      expect(typeof parser.parse).toBe("function");
     });
   });
 

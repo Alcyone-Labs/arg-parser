@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { ArgParser } from "../../../src";
-import { generateMcpToolsFromArgParser } from "../../../src/mcp-integration";
+import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
 describe("Real-World MCP Examples Integration Tests", () => {
   describe("File Processing Example", () => {

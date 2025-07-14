@@ -3,8 +3,8 @@
  */
 
 import { describe, test, expect, beforeEach } from "vitest";
-import { McpResourcesManager, ResourceTemplateParser, createFileResource, createJsonResource } from "../../../src/mcp-resources.js";
-import type { McpResourceConfig } from "../../../src/mcp-resources.js";
+import { McpResourcesManager, ResourceTemplateParser, createFileResource, createJsonResource } from "../../../src/mcp/mcp-resources.js";
+import type { McpResourceConfig } from "../../../src/mcp/mcp-resources.js";
 
 describe("McpResourcesManager", () => {
   let manager: McpResourcesManager;

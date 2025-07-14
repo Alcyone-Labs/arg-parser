@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import chalk from "chalk";
 import { ArgParser } from "../../../dist/index.mjs";
 
@@ -220,7 +219,12 @@ async function main() {
     const result = await cli.parseAsync(process.argv.slice(2));
 
     // Handle ParseResult objects when autoExit is false
-    if (result && typeof result === 'object' && 'success' in result && 'exitCode' in result) {
+    if (
+      result &&
+      typeof result === "object" &&
+      "success" in result &&
+      "exitCode" in result
+    ) {
       const parseResult = result;
       if (parseResult.shouldExit) {
         process.exit(parseResult.exitCode);

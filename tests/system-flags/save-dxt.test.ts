@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ArgParser } from "../../src/ArgParser";
+import { ArgParser } from "../../src/core/ArgParser";
 
 describe("--s-build-dxt System Flag", () => {
   const testOutputDir = "./test-dxt-output";

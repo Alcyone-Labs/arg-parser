@@ -4,14 +4,14 @@
 
 import { describe, test, expect, beforeEach } from "vitest";
 import { z } from "zod";
-import { 
-  McpPromptsManager, 
-  createCodeReviewPrompt, 
+import {
+  McpPromptsManager,
+  createCodeReviewPrompt,
   createSummarizationPrompt,
   createTranslationPrompt,
   createDocumentationPrompt
-} from "../../../src/mcp-prompts.js";
-import type { McpPromptConfig } from "../../../src/mcp-prompts.js";
+} from "../../../src/mcp/mcp-prompts.js";
+import type { McpPromptConfig } from "../../../src/mcp/mcp-prompts.js";
 
 describe("McpPromptsManager", () => {
   let manager: McpPromptsManager;

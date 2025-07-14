@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { ArgParser } from "../../../src";
-import { generateMcpToolsFromArgParser } from "../../../src/mcp-integration";
+import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
 describe("MCP Performance and Reliability Tests", () => {
   describe("Response Time Performance", () => {

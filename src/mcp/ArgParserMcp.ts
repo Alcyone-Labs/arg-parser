@@ -1,6 +1,6 @@
-import { ArgParser } from "./ArgParser";
-import type { IArgParserParams } from "./ArgParserBase";
-import type { IFlag } from "./types";
+import { ArgParser } from "../core/ArgParser";
+import type { IArgParserParams } from "../core/ArgParserBase";
+import type { IFlag } from "../core/types";
 
 /**
  * MCP-optimized ArgParser that excludes config file functionality

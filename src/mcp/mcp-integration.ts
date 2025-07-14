@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { ZodRawShape, ZodTypeAny } from "zod";
-import { ArgParserBase } from "./ArgParserBase";
-import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "./";
+import { ArgParserBase } from "../core/ArgParserBase";
+import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "../core/types";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 
 // Assuming these types are correctly exported from src/index.ts

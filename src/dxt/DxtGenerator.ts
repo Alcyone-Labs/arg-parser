@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import chalk from "@alcyone-labs/simple-chalk";
-import type { ParseResult } from "./types";
+import type { ParseResult } from "../core/types";
 
 
 /**
@@ -884,7 +884,7 @@ For autonomous packages, follow the build instructions above.
           type: this.mapFlagTypeToUserConfigType(flag['type']),
           title: this.generateUserConfigTitle(envVarName),
           description: flag['description'] || `${envVarName} environment variable`,
-          required: !!flag['mandatory'],
+          required: true, // Always require env vars in user_config for better UX
           sensitive: this.isSensitiveField(envVarName)
         };
       }
@@ -913,7 +913,7 @@ For autonomous packages, follow the build instructions above.
                 type: this.mapFlagTypeToUserConfigType(flag['type']),
                 title: this.generateUserConfigTitle(envVarName),
                 description: flag['description'] || `${envVarName} environment variable`,
-                required: !!flag['mandatory'],
+                required: true, // Always require env vars in user_config for better UX
                 sensitive: this.isSensitiveField(envVarName)
               };
             }
@@ -1706,7 +1706,7 @@ export default defineConfig({
           type: "string",
           title: envVar.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
           description: flag.description || `${envVar} environment variable`,
-          required: flag.required || false,
+          required: true, // Always require env vars in user_config for better UX
           sensitive: true // Assume env vars are sensitive
         };
       }
@@ -1728,7 +1728,7 @@ export default defineConfig({
               type: "string",
               title: envVar.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
               description: flag.description || `${envVar} environment variable`,
-              required: flag.required || flag.mandatory || false,
+              required: true, // Always require env vars in user_config for better UX
               sensitive: true // Assume env vars are sensitive
             };
           }

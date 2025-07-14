@@ -3,14 +3,14 @@
  */
 
 import { describe, test, expect, beforeEach, vi } from "vitest";
-import { 
-  McpNotificationsManager, 
+import {
+  McpNotificationsManager,
   createDebouncedNotifier,
   createFilteredListener,
   createLoggingListener,
   globalNotificationsManager
-} from "../../../src/mcp-notifications.js";
-import type { McpChangeEvent, McpChangeListener } from "../../../src/mcp-notifications.js";
+} from "../../../src/mcp/mcp-notifications.js";
+import type { McpChangeEvent, McpChangeListener } from "../../../src/mcp/mcp-notifications.js";
 
 describe("McpNotificationsManager", () => {
   let manager: McpNotificationsManager;

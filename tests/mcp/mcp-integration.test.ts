@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { ArgParser } from "../../src";
 import type { IFlag } from "../../src";
-import { generateMcpToolsFromArgParser } from "../../src/mcp-integration";
+import { generateMcpToolsFromArgParser } from "../../src/mcp/mcp-integration";
 
 describe("MCP Integration", () => {
   describe("generateMcpToolsFromArgParser", () => {
