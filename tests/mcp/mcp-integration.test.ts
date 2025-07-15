@@ -463,12 +463,16 @@ describe("MCP Integration", () => {
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
-      const result = await tool.execute({ optional: "value" });
+      const result = await tool.executeForTesting!({ optional: "value" });
 
       expect(result).toEqual({
         success: false,
         message: expect.stringContaining("Missing mandatory flags"),
-        data: expect.any(Object),
+        error: expect.stringContaining("Missing mandatory flags"),
+        data: expect.objectContaining({
+          error: expect.stringContaining("Missing mandatory flags")
+        }),
+        exitCode: 1,
       });
     });
 

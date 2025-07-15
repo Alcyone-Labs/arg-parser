@@ -6,7 +6,7 @@ import { ArgParser } from "../src";
 import type { IFlag, IHandlerContext } from "../src";
 import type {
   IParseExecutionResult,
-} from "../src/mcp-integration";
+} from "../src/mcp/mcp-integration";
 
 export interface IFzfSearchResult {
   files: string[];

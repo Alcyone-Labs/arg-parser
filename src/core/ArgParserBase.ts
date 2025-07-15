@@ -103,7 +103,7 @@ export interface IArgParserParams<THandlerReturn = any> {
   inheritParentFlags?: boolean;
 }
 
-interface IParseOptions {
+export interface IParseOptions {
   /**
    * When true, skips help flag processing (doesn't exit or show help)
    * @default false
@@ -114,6 +114,12 @@ interface IParseOptions {
    * @default false
    */
   skipHandlers?: boolean;
+  /**
+   * When true (default), automatically awaits async handlers before returning.
+   * When false, returns immediately with _asyncHandlerPromise for manual handling.
+   * @default true
+   */
+  deep?: boolean;
 }
 
 type TParsedArgsWithRouting<T = any> = T & {
@@ -1065,6 +1071,33 @@ export class ArgParserBase<THandlerReturn = any> {
         options?.skipHandlers ?? false,
       );
 
+      // Handle deep option for async handlers (default: true)
+      const shouldAwaitHandlers = options?.deep !== false;
+      if (shouldAwaitHandlers && (finalArgs as any)._asyncHandlerPromise) {
+        try {
+          const handlerResult = await (finalArgs as any)._asyncHandlerPromise;
+          (finalArgs as any).handlerResponse = handlerResult;
+
+          // Merge handler result into final args if it's an object
+          if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+            Object.assign(finalArgs, handlerResult);
+          }
+
+          // Clean up the async handler info since we've awaited it
+          delete (finalArgs as any)._asyncHandlerPromise;
+          delete (finalArgs as any)._asyncHandlerInfo;
+        } catch (error) {
+          // Handle async handler errors - respect the handleErrors setting
+          if (this.#handleErrors) {
+            this.#displayErrorAndExit(
+              new ArgParserError(`Handler error: ${error}`, []),
+            );
+          } else {
+            throw error;
+          }
+        }
+      }
+
       return finalArgs;
     } catch (error) {
       if (error instanceof ArgParserError) {
@@ -1079,6 +1112,19 @@ export class ArgParserBase<THandlerReturn = any> {
         throw error;
       }
     }
+  }
+
+  /**
+   * Alias for parse() method for backward compatibility
+   * Since parse() is already async, this just calls parse()
+   *
+   * @deprecated Use parse() instead. This method will be removed in a future version.
+   */
+  public parseAsync(
+    processArgs: string[],
+    options?: IParseOptions,
+  ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
+    return this.parse(processArgs, options);
   }
 
   /**

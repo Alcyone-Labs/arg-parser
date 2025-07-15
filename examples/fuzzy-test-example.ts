@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
-import { ArgParser } from "../src/ArgParser";
-import { ArgParserFuzzyTester } from "../src/fuzzy-tester";
+import { ArgParser } from "../src/index";
+import { ArgParserFuzzyTester } from "../src/testing/fuzzy-tester";
 
 // Create a complex ArgParser instance for testing
 const exampleParser = new ArgParser({

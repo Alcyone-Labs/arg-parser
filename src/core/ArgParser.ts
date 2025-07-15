@@ -854,8 +854,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       return result;
     }
 
-    // Process the result through our async handler processor
-    result = await this.#processAsyncHandlerPromise(result);
+    // Only process async handler promise if deep option is true (default) and ArgParserBase didn't handle it
+    // When deep is false, leave _asyncHandlerPromise for manual handling
+    const shouldAutoProcess = options?.deep !== false;
+    if (shouldAutoProcess && (result as any)._asyncHandlerPromise) {
+      result = await this.#processAsyncHandlerPromise(result);
+    }
 
     return result;
   }
@@ -877,6 +881,16 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     }
 
     return result;
+  }
+
+  /**
+   * Alias for parse() method for backward compatibility
+   * Since parse() is already async, this just calls parse()
+   *
+   * @deprecated Use parse() instead. This method will be removed in a future version.
+   */
+  public parseAsync(processArgs: string[], options?: any): Promise<any> {
+    return this.parse(processArgs, options);
   }
 
 

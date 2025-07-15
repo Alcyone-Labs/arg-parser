@@ -180,9 +180,12 @@ export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolRespo
 
   // Handle error responses
   if (mcpResponse.isError) {
+    const errorMessage = mcpResponse.content?.[0]?.text || "Unknown error";
     return {
       success: false,
-      error: mcpResponse.content?.[0]?.text || "Unknown error",
+      error: errorMessage,
+      message: errorMessage, // Include message field for test compatibility
+      data: { error: errorMessage }, // Include data field for test compatibility
       exitCode: 1
     };
   }
@@ -614,29 +617,9 @@ export function generateMcpToolsFromArgParser(
                 message: `Cmd error: ${errorDetails.type} - ${errorDetails.message}`,
                 details: errorDetails.details,
               };
-              if (options?.outputSchemaMap?.[toolName]) {
-                // Return structured data with both content and structuredContent when custom output schema is defined
-                const errorData = {
-                  error: errPayload.message,
-                  files: [],
-                  commandExecuted: null,
-                  stderrOutput: errPayload.details?.stderr || null,
-                };
-                return {
-                  content: [
-                    {
-                      type: "text",
-                      text: JSON.stringify(errorData, null, 2)
-                    }
-                  ],
-                  structuredContent: errorData
-                };
-              }
-              return {
-                success: false,
-                message: errPayload.message,
-                data: errPayload.details,
-              };
+              // Always return standard MCP error response format for errors
+              // Custom output schemas only apply to successful responses
+              return createMcpErrorResponse(errPayload.message);
             }
 
             let handlerResponse = parseResult["handlerResponse"];
@@ -747,8 +730,14 @@ export function generateMcpToolsFromArgParser(
 
               if (finalParser && finalHandler) {
                 const handlerToCall = finalHandler as Function;
+
+                // For MCP execution, use the original MCP input args instead of the merged parse result
+                // This prevents the nested args issue where handler response gets merged into args
+                const cleanArgs = { ...mcpInputArgs };
+                delete cleanArgs['help']; // Remove help flag
+
                 const handlerContext: IHandlerContext<any, any> = {
-                  args: currentArgs,
+                  args: cleanArgs,
                   commandChain: chain,
                   parser: finalParser,
                   parentArgs: resolvedParentArgs,
@@ -805,40 +794,18 @@ export function generateMcpToolsFromArgParser(
             // Check if this is a handler error that was thrown due to handleErrors: false
             // In this case, we want to format it consistently with the $error handling above
             let errorMsg: string;
-            let errorDetails: any = e;
 
             if (e instanceof Error && e.message) {
               // This is likely a handler error thrown when handleErrors: false
               errorMsg = `Cmd error: handler_error - ${e.message}`;
-              errorDetails = { details: e };
             } else {
               // Other types of errors (parsing errors, etc.)
               errorMsg = `MCP tool exec failed: ${e.message || String(e)}`;
             }
 
-            if (options?.outputSchemaMap?.[toolName]) {
-              // Return structured data with both content and structuredContent when custom output schema is defined
-              const errorData = {
-                error: errorMsg,
-                files: [],
-                commandExecuted: null,
-                stderrOutput: errorDetails?.stderr || null,
-              };
-              return {
-                content: [
-                  {
-                    type: "text",
-                    text: JSON.stringify(errorData, null, 2)
-                  }
-                ],
-                structuredContent: errorData
-              };
-            }
-            return {
-              success: false,
-              message: errorMsg,
-              data: errorDetails
-            };
+            // Always return standard MCP error response format for errors
+            // Custom output schemas only apply to successful responses
+            return createMcpErrorResponse(errorMsg);
           }
         },
         async executeForTesting(mcpInputArgs: Record<string, any>): Promise<SimplifiedToolResponse> {

@@ -1,4 +1,4 @@
-export { ArgParserBase, ArgParserError } from "./core/ArgParserBase";
+export { ArgParserBase, ArgParserError, type IParseOptions } from "./core/ArgParserBase";
 export {
   ArgParser,
   type McpTransportConfig,

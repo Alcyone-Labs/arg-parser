@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+
+// This CLI was provided, with permission, in an earlier form by Lucas Jans - 
+
 import chalk from "chalk";
 import { ArgParser } from "../../../dist/index.mjs";
 
@@ -216,6 +219,7 @@ const cli = ArgParser.withMcp({
 
 async function main() {
   try {
+    // Using the new deep option (default: true) to automatically await async handlers
     const result = await cli.parse(process.argv.slice(2));
 
     // Handle ParseResult objects when autoExit is false
@@ -229,6 +233,13 @@ async function main() {
       if (parseResult.shouldExit) {
         process.exit(parseResult.exitCode);
       }
+    }
+
+    // Check for handler errors in the parse result
+    if (result && typeof result === "object" && result.$error) {
+      const error = result.$error;
+      console.error("Error:", error.message);
+      process.exit(1);
     }
   } catch (error) {
     console.error("Error:", error.message);

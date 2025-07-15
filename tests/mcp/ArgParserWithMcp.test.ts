@@ -645,6 +645,10 @@ describe("ArgParser", () => {
       expect(result).toEqual({
         success: false,
         error: expect.stringContaining("Handler error"),
+        message: expect.stringContaining("Handler error"),
+        data: expect.objectContaining({
+          error: expect.stringContaining("Handler error")
+        }),
         exitCode: 1,
       });
     });

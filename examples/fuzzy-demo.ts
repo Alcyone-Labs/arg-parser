@@ -2,7 +2,7 @@
 
 // Demonstration of the --s-enable-fuzzy system flag with logging
 
-import { ArgParser } from '../src/ArgParser';
+import { ArgParser } from '../src/index';
 
 const demoParser = new ArgParser({
   appName: "Demo CLI",

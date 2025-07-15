@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { ArgParser } from "../dist/src/index.js";
+import { ArgParser } from "../dist/index.mjs";
 
 // Demo of the new unified tool architecture
 // This example shows how to create tools that work in both CLI and MCP modes
