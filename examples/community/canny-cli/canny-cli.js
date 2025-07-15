@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-// This CLI was provided, with permission, in an earlier form by Lucas Jans - 
-
+// This CLI was provided, with permission, in an earlier form by Lucas Jans - https://x.com/lucasjans
 import chalk from "chalk";
 import { ArgParser } from "../../../dist/index.mjs";
 

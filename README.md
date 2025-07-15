@@ -1,15 +1,45 @@
 # ArgParser - Type-Safe Command Line Argument Parser
 
-A powerful, type-safe TypeScript library for building command-line interfaces with automatic MCP (Model Context Protocol) integration, hierarchical sub-commands, and comprehensive tooling support.
+A modern, type-safe command line argument parser with built-in MCP (Model Context Protocol) integration and automatic Claude Desktop Extension (DXT) generation.
 
----
+## Table of Contents
+
+- [Features Overview](#features-overview)
+- [Installation](#installation)
+- [Quick Start: The Unified `addTool` API](#quick-start-the-unified-addtool-api)
+- [How to Run It](#how-to-run-it)
+  - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
+- [Parsing Command-Line Arguments](#parsing-command-line-arguments)
+  - [Cannonical Usage Pattern](#cannonical-usage-pattern)
+  - [Top-level await](#top-level-await)
+  - [Promise-based parsing](#promise-based-parsing)
+- [Migrating from v1.x to the v2.0 `addTool` API](#migrating-from-v1x-to-the-v20-addtool-api)
+  - [Before v2.0: Separate Definitions](#before-v20-separate-definitions)
+  - [After v2.0: The Unified `addTool()` Method](#after-v20-the-unified-addtool-method)
+- [Core Concepts](#core-concepts)
+  - [Defining Flags](#defining-flags)
+  - [Type Handling and Validation](#type-handling-and-validation)
+  - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
+    - [MCP Exposure Control](#mcp-exposure-control)
+  - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
+- [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
+  - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
+  - [MCP Transports](#mcp-transports)
+  - [Automatic Console Safety](#automatic-console-safety)
+  - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
+  - [Logo Configuration](#logo-configuration)
+  - [How DXT Generation Works](#how-dxt-generation-works)
+- [System Flags & Configuration](#system-flags--configuration)
+- [Changelog](#changelog)
+- [Backlog](#backlog)
 
 ## Features Overview
 
 - **Unified Tool Architecture**: Define tools once with `addTool()` and they automatically function as both CLI subcommands and MCP tools.
 - **Type-safe flag definitions** with full TypeScript support and autocompletion.
 - **Automatic MCP Integration**: Transform any CLI into a compliant MCP server with a single command (`--s-mcp-serve`).
-- **Console Safe**: `console.log` and other methods are automatically handled in MCP mode to prevent protocol contamination, requiring no changes to your code.
+- **Console Safe**: `console.log` and other methods
+  are automatically handled in MCP mode to prevent protocol contamination, requiring no changes to your code.
 - **DXT Package Generation**: Generate complete, ready-to-install Claude Desktop Extension (`.dxt`) packages with the `--s-build-dxt` command.
 - **Hierarchical Sub-commands**: Create complex, nested sub-command structures (e.g., `git commit`, `docker container ls`) with flag inheritance.
 - **Configuration Management**: Easily load (`--s-with-env`) and save (`--s-save-to-env`) configurations from/to `.env`, `.json`, `.yaml`, and `.toml` files.
@@ -107,8 +137,9 @@ mycli --s-mcp-serve
 
 # 3. Generate a DXT package for Claude Desktop (2-steps)
 mycli --s-build-dxt ./my-dxt-package
-npx @anthropic-ai/dxt pack ./my-dxt-package
 ```
+
+Read more on generating the DXT package here: [Generating DXT Packages](#generating-dxt-packages---s-build-dxt)
 
 ### Setting Up System-Wide CLI Access
 
@@ -210,7 +241,7 @@ const cli = ArgParser.withMcp({
     // Works with both sync and async operations
     const result = await someAsyncOperation(ctx.args.input);
     return { success: true, result };
-  }
+  },
 });
 
 // parse() is async and works with both sync and async handlers
@@ -226,7 +257,7 @@ async function main() {
 }
 ```
 
-### Top-level await 
+### Top-level await
 
 Works in ES modules or Node.js >=18 with top-level await
 
@@ -245,7 +276,8 @@ try {
 If you need synchronous contexts, you can simply rely on promise-based APIs
 
 ```javascript
-cli.parse(process.argv.slice(2))
+cli
+  .parse(process.argv.slice(2))
   .then((result) => {
     console.log("Success:", result);
   })
@@ -254,7 +286,6 @@ cli.parse(process.argv.slice(2))
     process.exit(1);
   });
 ```
-
 
 ---
 
@@ -483,7 +514,6 @@ const cli = ArgParser.withMcp({
 });
 ```
 
-
 ### Automatic Console Safety
 
 A major challenge in MCP is preventing `console.log` from corrupting the JSON-RPC communication over `STDOUT`. ArgParser solves this automatically.
@@ -506,7 +536,50 @@ my-cli-app --s-build-dxt ./my-dxt-package
 # 2. (Optional) Pack the folder into a .dxt file for distribution
 npx @anthropic-ai/dxt pack ./my-dxt-package
 
+# 3. (Optional) Sign the DXT package
+npx @anthropic-ai/dxt sign ./my-dxt-package.dxt
+
 # Then drag & drop the .dxt file into Claude Desktop to install it, in the Settings > Extensions screen.
+```
+
+### Logo Configuration
+
+The logo will appear in Claude Desktop's Extensions settings and when users interact with your MCP tools. Note that neither ArgParser nor Anthropic packer will modify the logo, so make sure to use a reasonable size, such as 256x256 pixels or 512x512 pixels maximum. Any image type that can display in a browser is supported.
+
+You can customize the logo/icon that appears in Claude Desktop for your DXT package by configuring the `logo` property in your `serverInfo`:
+
+```typescript
+const cli = ArgParser.withMcp({
+  appName: "My CLI",
+  appCommandName: "mycli",
+  mcp: {
+    // This will appear in Claude Desktop's Extensions settings
+    serverInfo: {
+      name: "my-mcp-server",
+      version: "1.0.0",
+      description: "My CLI as an MCP server",
+      logo: "./assets/my-logo.png", // Local file path
+    },
+  },
+});
+```
+
+If no custom logo is provided or loading fails, a default ArgParser logo is included
+
+#### Supported Logo Sources
+
+**Local File Path:**
+
+```typescript
+logo: "./assets/my-logo.png"; // Relative to your project
+logo: "/absolute/path/to/logo.jpg"; // Absolute path
+```
+
+**HTTP/HTTPS URL:**
+
+```typescript
+logo: "https://example.com/logo.png"; // Downloaded automatically
+logo: "https://cdn.example.com/icon.svg";
 ```
 
 ### How DXT Generation Works
@@ -550,7 +623,7 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ### v2.0.0
 
 - **Unified Tool Architecture**: Introduced `.addTool()` to define CLI subcommands and MCP tools in a single declaration.
-- **Environment Variables Support**: The `env` property on any IFlag now automatically pull value from the `process.env[${ENV}]` key and generates `user_config` entries in the DXT manifest and fills the flag value to the ENV value if found (process.env). 
+- **Environment Variables Support**: The `env` property on any IFlag now automatically pull value from the `process.env[${ENV}]` key and generates `user_config` entries in the DXT manifest and fills the flag value to the ENV value if found (process.env).
 - **Enhanced DXT Generation**: The `env` property on flags now automatically generates `user_config` entries in the DXT manifest.
 - **Automatic Console Safety**: Console output is automatically and safely redirected in MCP mode to prevent protocol contamination.
 - **Breaking Changes**: The `addMcpSubCommand()` and separate `addSubCommand()` for MCP tools are deprecated in favor of `addTool()` and `--s-mcp-serve`.
@@ -589,4 +662,3 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ### (known) Bugs / DX improvement points
 
 - [ ] When a flag with `flagOnly: false` is going to consume a value that appears like a valid flag from the set, raise the appropriate warning
-- [ ] When a flag with `allowMultiple: false` and `flagOnly: true` is passed multiple times (regardless of the options, for example "-1" and later "--one", both being valid), raise the correct error
