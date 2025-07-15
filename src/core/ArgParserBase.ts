@@ -369,6 +369,10 @@ export class ArgParserBase<THandlerReturn = any> {
       subParser.#appCommandName = this.#appCommandName;
     }
 
+    // Inherit autoExit setting from parent to ensure consistent error handling
+    // across the parser hierarchy. Child parsers should follow parent's exit behavior.
+    subParser.#autoExit = this.#autoExit;
+
     if (subParser.#inheritParentFlags) {
       const parentFlags = this.#flagManager.flags;
       for (const parentFlag of parentFlags) {

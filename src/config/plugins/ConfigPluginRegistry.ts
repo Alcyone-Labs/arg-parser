@@ -105,11 +105,39 @@ export class ConfigPluginRegistry {
     } catch (error) {
       // TOML plugin not available, continue without it
     }
-    
+
     // Try to register YAML plugin
     try {
       const { createYamlPlugin } = require('./YamlConfigPlugin');
       const yamlPlugin = createYamlPlugin();
+      if (yamlPlugin) {
+        this.registerPlugin(yamlPlugin);
+      }
+    } catch (error) {
+      // YAML plugin not available, continue without it
+    }
+  }
+
+  /**
+   * Async version of auto-register optional plugins with ESM support
+   * This method attempts to load TOML and YAML plugins without throwing errors
+   */
+  public async autoRegisterOptionalPluginsAsync(): Promise<void> {
+    // Try to register TOML plugin
+    try {
+      const { createTomlPluginAsync } = await import('./TomlConfigPlugin');
+      const tomlPlugin = await createTomlPluginAsync();
+      if (tomlPlugin) {
+        this.registerPlugin(tomlPlugin);
+      }
+    } catch (error) {
+      // TOML plugin not available, continue without it
+    }
+
+    // Try to register YAML plugin
+    try {
+      const { createYamlPluginAsync } = await import('./YamlConfigPlugin');
+      const yamlPlugin = await createYamlPluginAsync();
       if (yamlPlugin) {
         this.registerPlugin(yamlPlugin);
       }
@@ -131,6 +159,14 @@ export const globalConfigPluginRegistry = new ConfigPluginRegistry();
  */
 export function enableOptionalConfigPlugins(): void {
   globalConfigPluginRegistry.autoRegisterOptionalPlugins();
+}
+
+/**
+ * Async convenience function to register optional plugins with ESM support
+ * Call this once at application startup if you want TOML/YAML support in ESM environments
+ */
+export async function enableOptionalConfigPluginsAsync(): Promise<void> {
+  await globalConfigPluginRegistry.autoRegisterOptionalPluginsAsync();
 }
 
 /**

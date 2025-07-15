@@ -179,7 +179,7 @@ describe("Backward Compatibility", () => {
       ]);
 
       // Test parsing
-      const result = await parser.parseAsync(["--name", "World", "--verbose"]);
+      const result = await parser.parse(["--name", "World", "--verbose"]);
 
       expect(result).toBeDefined();
 
@@ -257,7 +257,7 @@ describe("Backward Compatibility", () => {
       expect(typeof parser.addFlags).toBe("function");
       expect(typeof parser.addSubCommand).toBe("function");
       expect(typeof parser.parse).toBe("function");
-      expect(typeof parser.parseAsync).toBe("function");
+      // parseAsync() method has been removed - parse() is now async
       expect(typeof parser.getSubCommands).toBe("function");
       expect(typeof parser.getAppName).toBe("function");
       expect(typeof parser.getAppCommandName).toBe("function");

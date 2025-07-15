@@ -164,7 +164,7 @@ async function main() {
     console.log("🎯 Traditional ArgParser Syntax Demo (v2.0.0 Backward Compatibility)");
     console.log("=" .repeat(70));
     
-    const result = await cli.parseAsync(process.argv.slice(2));
+    const result = await cli.parse(process.argv.slice(2));
     
     if (result._asyncHandlerPromise) {
       const handlerResult = await result._asyncHandlerPromise;

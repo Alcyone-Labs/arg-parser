@@ -39,7 +39,7 @@ describe("ArgParser", () => {
         },
       ]);
 
-      let result = await parser.parseAsync(["--input", "test-value"]);
+      let result = await parser.parse(["--input", "test-value"]);
       console.log("Async handler result:", result);
 
       // Temporary workaround: manually process async handler promise if it exists
@@ -531,7 +531,7 @@ describe("ArgParser", () => {
       ]);
 
       const mcpParser = ArgParser.fromArgParser(originalParser);
-      let result = await mcpParser.parseAsync(["--test", "value"]);
+      let result = await mcpParser.parse(["--test", "value"]);
 
       // Temporary workaround: manually process async handler promise if it exists
       if ((result as any)._asyncHandlerPromise) {

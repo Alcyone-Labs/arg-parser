@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "A robust, type-safe command line argument parser with plugin architecture, dependency injection, Claude Desktop compliant MCP integration, autonomous DXT builds, and zero-dependency core functionality.",
   "type": "module",
   "main": "dist/index.cjs",
@@ -26,6 +26,7 @@
     "dist/index.min.mjs.map",
     "dist/src/**/*.d.ts",
     "dist/src/**/*.d.ts.map",
+    "dist/assets/**/*",
     "README.md",
     "LICENSE"
   ],
@@ -83,19 +84,17 @@
     "dxt:verify": "npx @anthropic-ai/dxt verify"
   },
   "dependencies": {
-    "@iarna/toml": "^2.2.5",
-    "adm-zip": "^0.5.16",
-    "dotenv": "^16.6.1",
-    "fflate": "^0.8.2",
-    "js-yaml": "^4.1.0",
-    "magic-regexp": "^0.10.0",
-    "zod": "^3.25.76",
+    "@alcyone-labs/simple-chalk": "^1.0.1",
     "@alcyone-labs/simple-mcp-logger": "^1.0.1",
-    "@alcyone-labs/simple-chalk": "^1.0.1"
+    "magic-regexp": "^0.10.0",
+    "zod": "^3.25.76"
   },
   "optionalDependencies": {
     "@modelcontextprotocol/sdk": "^1.15.1",
     "express": "^5.1.0",
+    "smol-toml": "^1.4.1",
+    "dotenv": "^16.6.1",
+    "js-yaml": "^4.1.0",
     "tsdown": "^0.12.9"
   },
   "devDependencies": {

@@ -1,32 +1,38 @@
 import { ConfigPlugin } from './ConfigPlugin';
 
 /**
- * TOML configuration plugin (requires @iarna/toml dependency)
+ * TOML configuration plugin (requires smol-toml dependency)
  * This plugin is optional and only loaded when TOML support is needed
  */
 export class TomlConfigPlugin extends ConfigPlugin {
   readonly supportedExtensions = ['.toml', '.tml'];
   readonly name = 'toml';
-  
+
   private tomlModule: any = null;
-  
-  constructor() {
+
+  constructor(tomlModule?: any) {
     super();
-    this.loadTomlModule();
+    if (tomlModule) {
+      this.tomlModule = tomlModule;
+    } else {
+      this.loadTomlModule();
+    }
   }
-  
+
   private loadTomlModule(): void {
     try {
       // Dynamic import to avoid bundling issues
       if (typeof require !== 'undefined') {
-        this.tomlModule = require('@iarna/toml');
+        this.tomlModule = require('smol-toml');
       } else {
+        // For ESM environments, we need to use dynamic import
+        // This will be handled asynchronously in the factory function
         throw new Error('TOML module not available in this environment');
       }
     } catch (error) {
       throw new Error(
-        'TOML plugin requires @iarna/toml dependency. ' +
-        'Install it with: npm install @iarna/toml'
+        'TOML plugin requires smol-toml dependency. ' +
+        'Install it with: npm install smol-toml'
       );
     }
   }
@@ -143,6 +149,31 @@ export class TomlConfigPlugin extends ConfigPlugin {
 export function createTomlPlugin(): TomlConfigPlugin | null {
   try {
     return new TomlConfigPlugin();
+  } catch (error) {
+    console.warn('TOML plugin not available:', error instanceof Error ? error.message : String(error));
+    return null;
+  }
+}
+
+/**
+ * Async factory function to create TOML plugin with ESM support
+ * Returns null if TOML dependency is not available
+ */
+export async function createTomlPluginAsync(): Promise<TomlConfigPlugin | null> {
+  try {
+    // Try CommonJS first
+    if (typeof require !== 'undefined') {
+      try {
+        const tomlModule = require('smol-toml');
+        return new TomlConfigPlugin(tomlModule);
+      } catch (error) {
+        // Fall through to ESM import
+      }
+    }
+
+    // Try ESM dynamic import
+    const tomlModule = await import('smol-toml');
+    return new TomlConfigPlugin(tomlModule);
   } catch (error) {
     console.warn('TOML plugin not available:', error instanceof Error ? error.message : String(error));
     return null;

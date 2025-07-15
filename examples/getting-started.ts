@@ -201,4 +201,16 @@ export default cli;
 
 // Run the CLI when executed directly
 // The --s-enable-fuzzy system flag automatically prevents execution during fuzzy testing
-cli.parse(process.argv.slice(2));
+async function main() {
+  try {
+    await cli.parse(process.argv.slice(2));
+  } catch (error) {
+    console.error("Error:", error.message);
+    process.exit(1);
+  }
+}
+
+// Only run if this file is executed directly
+if (import.meta.main) {
+  main();
+}

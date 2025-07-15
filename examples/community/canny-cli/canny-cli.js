@@ -216,7 +216,7 @@ const cli = ArgParser.withMcp({
 
 async function main() {
   try {
-    const result = await cli.parseAsync(process.argv.slice(2));
+    const result = await cli.parse(process.argv.slice(2));
 
     // Handle ParseResult objects when autoExit is false
     if (

@@ -12,7 +12,7 @@ export default defineConfig({
   target: 'node18',
   bundle: true,
   splitting: false, // Disable code splitting for single autonomous file
-  noExternal: ['@alcyone-labs/arg-parser', '@modelcontextprotocol/sdk', 'zod', 'js-yaml', '@iarna/toml', 'dotenv'],
+  noExternal: ['@alcyone-labs/arg-parser', '@modelcontextprotocol/sdk', 'zod', 'js-yaml', 'smol-toml', 'dotenv'],
   minify: false,
   sourcemap: false,
   clean: false, // Don't clean server directory

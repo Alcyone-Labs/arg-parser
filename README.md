@@ -77,12 +77,28 @@ const cli = ArgParser.withMcp({
     },
   });
 
-cli.parse(process.argv.slice(2));
+// parse() is async and works with both sync and async handlers
+async function main() {
+  try {
+    await cli.parse(process.argv.slice(2));
+  } catch (error) {
+    console.error("Error:", error.message);
+    process.exit(1);
+  }
+}
+
+main();
+
+// Export if you want to test, use the CLI programmatically
+// or use the --s-enable-fuzzing system flag to run fuzzy tests on your CLI
+export default cli;
 ```
 
-**How to Run It:**
+## How to Run It
 
 ```bash
+# This assumes `mycli` is your CLI's entry point
+
 # 1. As a standard CLI subcommand
 mycli greet --name Jane --style formal
 
@@ -93,6 +109,152 @@ mycli --s-mcp-serve
 mycli --s-build-dxt ./my-dxt-package
 npx @anthropic-ai/dxt pack ./my-dxt-package
 ```
+
+### Setting Up System-Wide CLI Access
+
+To make your CLI available system-wide as a binary command, you need to configure the `bin` field in your `package.json` and use package linking:
+
+**1. Configure your package.json:**
+
+```json
+{
+  "name": "my-cli-app",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "mycli": "./cli.js"
+  }
+}
+```
+
+**2. Make your CLI file executable:**
+
+```bash
+chmod +x cli.js
+```
+
+**3. Add a shebang to your CLI file:**
+
+```javascript
+#!/usr/bin/env node
+# or #!/usr/bin/env bun for native typescript runtime
+
+import { ArgParser } from '@alcyone-labs/arg-parser';
+
+const cli = ArgParser.withMcp({
+  appName: "My CLI",
+  appCommandName: "mycli",
+  // ... your configuration
+});
+
+// Parse command line arguments
+await cli.parse(process.argv.slice(2));
+```
+
+**4. Link the package globally:**
+
+```bash
+# Using npm
+npm link
+
+# Using pnpm
+pnpm link --global
+
+# Using bun
+bun link
+
+# Using yarn
+yarn link
+```
+
+**5. Use your CLI from anywhere:**
+
+```bash
+# Now you can run your CLI from any directory
+mycli --help
+mycli greet --name "World"
+
+# Or use with npx/pnpx if you prefer
+npx mycli --help
+pnpx mycli greet --name "World"
+```
+
+**To unlink later:**
+
+```bash
+# Using npm
+npm unlink --global my-cli-app
+
+# Using pnpm
+pnpm unlink --global
+
+# Using bun
+bun unlink
+
+# Using yarn
+yarn unlink
+```
+
+---
+
+## Parsing Command-Line Arguments
+
+ArgParser's `parse()` method is async and automatically handles both synchronous and asynchronous handlers:
+
+### Cannonical Usage Pattern
+
+```typescript
+const cli = ArgParser.withMcp({
+  appName: "My CLI",
+  handler: async (ctx) => {
+    // Works with both sync and async operations
+    const result = await someAsyncOperation(ctx.args.input);
+    return { success: true, result };
+  }
+});
+
+// parse() is async and works with both sync and async handlers
+async function main() {
+  try {
+    const result = await cli.parse(process.argv.slice(2));
+    // Handler results are automatically awaited and merged
+    console.log(result.success); // true
+  } catch (error) {
+    console.error("Error:", error.message);
+    process.exit(1);
+  }
+}
+```
+
+### Top-level await 
+
+Works in ES modules or Node.js >=18 with top-level await
+
+```javascript
+try {
+  const result = await cli.parse(process.argv.slice(2));
+  console.log("Success:", result);
+} catch (error) {
+  console.error("Error:", error.message);
+  process.exit(1);
+}
+```
+
+### Promise-based parsing
+
+If you need synchronous contexts, you can simply rely on promise-based APIs
+
+```javascript
+cli.parse(process.argv.slice(2))
+  .then((result) => {
+    console.log("Success:", result);
+  })
+  .catch((error) => {
+    console.error("Error:", error.message);
+    process.exit(1);
+  });
+```
+
 
 ---
 

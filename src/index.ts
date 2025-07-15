@@ -52,11 +52,14 @@ export {
   ConfigPluginRegistry,
   globalConfigPluginRegistry,
   enableOptionalConfigPlugins,
+  enableOptionalConfigPluginsAsync,
   enableConfigPlugins,
   TomlConfigPlugin,
   createTomlPlugin,
+  createTomlPluginAsync,
   YamlConfigPlugin,
   createYamlPlugin,
+  createYamlPluginAsync,
 } from "./config/plugins";
 
 export { ArgParserFuzzyTester } from "./testing/fuzzy-tester";

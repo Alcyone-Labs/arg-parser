@@ -1401,17 +1401,6 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         target: "node22",
         // Bundle EVERYTHING except Node.js built-ins for true autonomy
         noExternal: (id: string) => {
-          // Always bundle these critical packages
-          if (id.startsWith('@alcyone-labs/')) return true;
-          if (id.startsWith('@modelcontextprotocol/')) return true;
-          if (id === 'zod') return true;
-          if (id === 'chalk') return true;
-          if (id === 'magic-regexp') return true;
-          if (id === 'js-yaml') return true;
-          if (id === '@iarna/toml') return true;
-          if (id === 'dotenv') return true;
-          if (id === 'adm-zip') return true;
-
           // Bundle all other npm packages by default
           if (!id.startsWith('node:') && !this.isNodeBuiltin(id)) return true;
 

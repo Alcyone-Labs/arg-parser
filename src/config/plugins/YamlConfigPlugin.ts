@@ -7,14 +7,18 @@ import { ConfigPlugin } from './ConfigPlugin';
 export class YamlConfigPlugin extends ConfigPlugin {
   readonly supportedExtensions = ['.yaml', '.yml'];
   readonly name = 'yaml';
-  
+
   private yamlModule: any = null;
-  
-  constructor() {
+
+  constructor(yamlModule?: any) {
     super();
-    this.loadYamlModule();
+    if (yamlModule) {
+      this.yamlModule = yamlModule;
+    } else {
+      this.loadYamlModule();
+    }
   }
-  
+
   private loadYamlModule(): void {
     try {
       // Dynamic import to avoid bundling issues
@@ -127,6 +131,31 @@ export class YamlConfigPlugin extends ConfigPlugin {
 export function createYamlPlugin(): YamlConfigPlugin | null {
   try {
     return new YamlConfigPlugin();
+  } catch (error) {
+    console.warn('YAML plugin not available:', error instanceof Error ? error.message : String(error));
+    return null;
+  }
+}
+
+/**
+ * Async factory function to create YAML plugin with ESM support
+ * Returns null if YAML dependency is not available
+ */
+export async function createYamlPluginAsync(): Promise<YamlConfigPlugin | null> {
+  try {
+    // Try CommonJS first
+    if (typeof require !== 'undefined') {
+      try {
+        const yamlModule = require('js-yaml');
+        return new YamlConfigPlugin(yamlModule);
+      } catch (error) {
+        // Fall through to ESM import
+      }
+    }
+
+    // Try ESM dynamic import
+    const yamlModule = await import('js-yaml');
+    return new YamlConfigPlugin(yamlModule);
   } catch (error) {
     console.warn('YAML plugin not available:', error instanceof Error ? error.message : String(error));
     return null;

@@ -301,7 +301,7 @@ export class ConfigurationManager {
     }
 
     // Fallback: Simple TOML parsing for basic key-value pairs
-    console.warn('TOML plugin not available, using simple parser. Install @iarna/toml and enable TOML plugin for full support.');
+    console.warn('TOML plugin not available, using simple parser. Install smol-toml and enable TOML plugin for full support.');
     const config: Record<string, any> = {};
     const lines = content.split('\n');
 

@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ArgParser } from "../src";
+import { ArgParser, enableOptionalConfigPluginsAsync } from "../src";
 import type { IFlag } from "../src";
 
 describe("--s-with-env system flag", () => {
   const testDir = path.join(__dirname, "temp-env-test");
-  
-  beforeEach(() => {
+
+  beforeEach(async () => {
+    // Enable optional config plugins (TOML, YAML) for testing
+    await enableOptionalConfigPluginsAsync();
+
     // Create test directory
     if (!fs.existsSync(testDir)) {
       fs.mkdirSync(testDir, { recursive: true });
@@ -69,7 +72,7 @@ tags=tag1,tag2,tag3
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = await parser.parseAsync(["--s-with-env", envFile]);
+      const result = await parser.parse(["--s-with-env", envFile]);
 
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("test-output.txt");
@@ -91,7 +94,7 @@ count=10
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = await parser.parseAsync([
+      const result = await parser.parse([
         "--s-with-env", envFile,
         "--verbose",
         "--output", "cli-output.txt"
@@ -121,7 +124,7 @@ tags:
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = await parser.parseAsync(["--s-with-env", yamlFile]);
+      const result = await parser.parse(["--s-with-env", yamlFile]);
 
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("yaml-output.txt");
@@ -146,7 +149,7 @@ tags:
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = await parser.parseAsync(["--s-with-env", jsonFile]);
+      const result = await parser.parse(["--s-with-env", jsonFile]);
 
       expect(result.verbose).toBe(false);
       expect(result.output).toBe("json-output.txt");
@@ -171,7 +174,7 @@ tags = ["toml-tag1", "toml-tag2"]
         handler: (ctx) => ctx.args,
       }).addFlags(flags);
 
-      const result = await parser.parseAsync(["--s-with-env", tomlFile]);
+      const result = await parser.parse(["--s-with-env", tomlFile]);
 
       expect(result.verbose).toBe(true);
       expect(result.output).toBe("toml-output.txt");

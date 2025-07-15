@@ -844,17 +844,19 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     }
   }
 
+  public async parse(processArgs: string[], options?: any): Promise<any> {
+    // Call the base class parse method directly to avoid any override issues
+    let result = await ArgParserBase.prototype.parse.call(this, processArgs, options);
 
-  public parse(processArgs: string[], options?: any): any {
-    const result = super.parse(processArgs, options);
-
+    // If fuzzy mode prevented execution, return the result as-is
     const anyResult = result as any;
     if (anyResult._fuzzyModePreventedExecution) {
       return result;
     }
 
-    // For synchronous parse, we don't process async handlers
-    // Users should call parseAsync() for async handler support
+    // Process the result through our async handler processor
+    result = await this.#processAsyncHandlerPromise(result);
+
     return result;
   }
 
@@ -877,29 +879,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     return result;
   }
 
-  /**
-   * Async version of parse for when async handlers are detected
-   */
-  public async parseAsync(processArgs: string[], options?: any): Promise<any> {
-    // Call the base class parse method directly to avoid any override issues
-    let result = ArgParserBase.prototype.parse.call(this, processArgs, options);
 
-    // If the result is a Promise (which happens with async handlers), await it
-    if (result instanceof Promise) {
-      result = await result;
-    }
-
-    // If fuzzy mode prevented execution, return the result as-is
-    const anyResult = result as any;
-    if (anyResult._fuzzyModePreventedExecution) {
-      return result;
-    }
-
-    // Process the result through our async handler processor
-    result = await this.#processAsyncHandlerPromise(result);
-
-    return result;
-  }
 
   async #processAsyncHandlerPromise(result: any): Promise<any> {
     const anyResult = result as any;
