@@ -140,29 +140,33 @@ async function main() {
     const testCode = `
 import { ArgParser } from '${PACKAGE_NAME}';
 
-const parser = new ArgParser({
-  appName: "Test CLI",
-  appCommandName: "test-cli",
-  description: "Testing ESM import",
-  handleErrors: false
-}).addFlags([
-  {
-    name: "input",
-    description: "Input file",
-    options: ["--input", "-i"],
-    type: "string",
-    mandatory: true
-  }
-]);
+async function test() {
+  const parser = new ArgParser({
+    appName: "Test CLI",
+    appCommandName: "test-cli",
+    description: "Testing ESM import",
+    handleErrors: false
+  }).addFlags([
+    {
+      name: "input",
+      description: "Input file",
+      options: ["--input", "-i"],
+      type: "string",
+      mandatory: true
+    }
+  ]);
 
-const result = parser.parse(['--input', 'test.txt']);
-console.log(JSON.stringify({ success: result.input === 'test.txt' }));
+  const result = await parser.parse(['--input', 'test.txt']);
+  console.log(JSON.stringify({ success: result.input === 'test.txt' }));
+}
+
+test().catch(console.error);
 `;
 
     fs.writeFileSync(join(tempDir, 'test-esm.mjs'), testCode);
     const result = await runCommand('node test-esm.mjs', tempDir, { silent: true });
     const output = JSON.parse(result.stdout.trim());
-    
+
     if (!output.success) {
       throw new Error('ESM import test failed');
     }
@@ -176,29 +180,33 @@ console.log(JSON.stringify({ success: result.input === 'test.txt' }));
     const testCode = `
 const { ArgParser } = require('${PACKAGE_NAME}');
 
-const parser = new ArgParser({
-  appName: "CJS Test CLI",
-  appCommandName: "cjs-test",
-  description: "Testing CJS import",
-  handleErrors: false
-}).addFlags([
-  {
-    name: "output",
-    description: "Output file",
-    options: ["--output", "-o"],
-    type: "string",
-    defaultValue: "output.txt"
-  }
-]);
+async function test() {
+  const parser = new ArgParser({
+    appName: "CJS Test CLI",
+    appCommandName: "cjs-test",
+    description: "Testing CJS import",
+    handleErrors: false
+  }).addFlags([
+    {
+      name: "output",
+      description: "Output file",
+      options: ["--output", "-o"],
+      type: "string",
+      defaultValue: "output.txt"
+    }
+  ]);
 
-const result = parser.parse(['--output', 'result.txt']);
-console.log(JSON.stringify({ success: result.output === 'result.txt' }));
+  const result = await parser.parse(['--output', 'result.txt']);
+  console.log(JSON.stringify({ success: result.output === 'result.txt' }));
+}
+
+test().catch(console.error);
 `;
 
     fs.writeFileSync(join(tempDir, 'test-cjs.cjs'), testCode);
     const result = await runCommand('node test-cjs.cjs', tempDir, { silent: true });
     const output = JSON.parse(result.stdout.trim());
-    
+
     if (!output.success) {
       throw new Error('CommonJS import test failed');
     }
