@@ -11,6 +11,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
+import {
+  DEFAULT_MCP_PROTOCOL_VERSION,
+  CURRENT_MCP_PROTOCOL_VERSION,
+  MCP_PROTOCOL_VERSIONS,
+  ALL_MCP_VERSIONS,
+  VERSION_TEST_DATA,
+  isValidMcpVersionFormat,
+  isAnyMcpVersion,
+  negotiateProtocolVersion,
+  getVersionCompatibilityInfo
+} from '../../../src/mcp/mcp-protocol-versions';
+import {
+  McpComplianceValidator,
+  DEFAULT_COMPLIANCE_CONFIG
+} from './mcp-compliance-framework';
 
 interface McpMessage {
   jsonrpc: string;
@@ -205,24 +220,201 @@ describe('MCP Specification Compliance', () => {
       expect(typeof initResponse.result.capabilities.tools).toBe('object');
     });
 
-    it('should handle version negotiation', async () => {
-      // Test with supported version
-      const response1 = await client.sendRequest('initialize', {
+    it('should handle version negotiation according to MCP specification', async () => {
+      // Use centralized version configuration
+      const ALL_SUPPORTED_VERSIONS = [...ALL_MCP_VERSIONS];
+      const STABLE_VERSIONS = [...MCP_PROTOCOL_VERSIONS];
+      const UNSUPPORTED_VERSIONS = VERSION_TEST_DATA.unsupportedVersions;
+
+      // Test 1: Server behavior with all supported MCP versions
+      console.log(`\nTesting all ${ALL_SUPPORTED_VERSIONS.length} supported MCP versions:`);
+      for (const mcpVersion of ALL_SUPPORTED_VERSIONS) {
+        try {
+          const response = await client.sendRequest('initialize', {
+            protocolVersion: mcpVersion,
+            capabilities: {},
+            clientInfo: { name: 'TestClient', version: '1.0.0' }
+          });
+
+          if (response.result && response.result.protocolVersion) {
+            const returnedVersion = response.result.protocolVersion;
+
+            if (returnedVersion === mcpVersion) {
+              console.log(`✅ ${mcpVersion}: Server returned same version`);
+              expect(returnedVersion).toBe(mcpVersion);
+            } else if (isAnyMcpVersion(returnedVersion)) {
+              console.log(`🔄 ${mcpVersion}: Server negotiated to ${returnedVersion}`);
+              expect(returnedVersion).toBeDefined();
+              expect(isAnyMcpVersion(returnedVersion)).toBe(true);
+            } else {
+              console.log(`❌ ${mcpVersion}: Server returned invalid version ${returnedVersion}`);
+              expect(isAnyMcpVersion(returnedVersion)).toBe(true);
+            }
+          }
+        } catch (error) {
+          console.log(`⚠️  ${mcpVersion}: Server rejected version - ${error}`);
+          // Server rejection is valid behavior for unsupported versions
+        }
+      }
+
+      // Test 2: Server MUST respond with a supported version when given unsupported version
+      for (const unsupportedVersion of UNSUPPORTED_VERSIONS) {
+        const response = await client.sendRequest('initialize', {
+          protocolVersion: unsupportedVersion,
+          capabilities: {},
+          clientInfo: { name: 'TestClient', version: '1.0.0' }
+        });
+
+        // Server MUST respond with a different (supported) version
+        expect(response.result.protocolVersion).toBeDefined();
+        expect(response.result.protocolVersion).not.toBe(unsupportedVersion);
+
+        // Server SHOULD respond with latest supported version
+        // Note: This is a SHOULD requirement, so we log but don't fail if not met
+        if (response.result.protocolVersion !== CURRENT_MCP_PROTOCOL_VERSION) {
+          console.log(`Server returned ${response.result.protocolVersion} instead of current ${CURRENT_MCP_PROTOCOL_VERSION} for unsupported version ${unsupportedVersion}`);
+        }
+      }
+
+      // Test 3: Verify the current implementation supports at least 2024-11-05
+      const currentVersionResponse = await client.sendRequest('initialize', {
         protocolVersion: '2024-11-05',
         capabilities: {},
         clientInfo: { name: 'TestClient', version: '1.0.0' }
       });
 
-      expect(response1.result.protocolVersion).toBe('2024-11-05');
+      expect(currentVersionResponse.result.protocolVersion).toBe('2024-11-05');
+    });
 
-      // Test with potentially unsupported version (should still work or return supported version)
-      const response2 = await client.sendRequest('initialize', {
-        protocolVersion: '2023-01-01',
+    it('should support all available MCP protocol versions', async () => {
+      const versionInfo = getVersionCompatibilityInfo();
+      console.log('\nMCP Version Compatibility Info:', JSON.stringify(versionInfo, null, 2));
+
+      // Test each stable version
+      console.log('\n=== Testing Stable Versions ===');
+      for (const stableVersion of versionInfo.stableVersions) {
+        const response = await client.sendRequest('initialize', {
+          protocolVersion: stableVersion,
+          capabilities: {},
+          clientInfo: { name: 'StableVersionTestClient', version: '1.0.0' }
+        });
+
+        expect(response.result.protocolVersion).toBeDefined();
+        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(true);
+
+        const status = versionInfo.versionStatus[stableVersion as keyof typeof versionInfo.versionStatus];
+        console.log(`✅ ${stableVersion} (${status}): Server responded with ${response.result.protocolVersion}`);
+      }
+
+      // Test draft version
+      console.log('\n=== Testing Draft Versions ===');
+      for (const draftVersion of versionInfo.draftVersions) {
+        const response = await client.sendRequest('initialize', {
+          protocolVersion: draftVersion,
+          capabilities: {},
+          clientInfo: { name: 'DraftVersionTestClient', version: '1.0.0' }
+        });
+
+        expect(response.result.protocolVersion).toBeDefined();
+        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(true);
+
+        const status = versionInfo.versionStatus[draftVersion as keyof typeof versionInfo.versionStatus];
+        console.log(`🚧 ${draftVersion} (${status}): Server responded with ${response.result.protocolVersion}`);
+      }
+
+      // Verify current version is properly supported
+      console.log('\n=== Testing Current Version ===');
+      const currentResponse = await client.sendRequest('initialize', {
+        protocolVersion: versionInfo.currentVersion,
+        capabilities: {},
+        clientInfo: { name: 'CurrentVersionTestClient', version: '1.0.0' }
+      });
+
+      expect(currentResponse.result.protocolVersion).toBeDefined();
+      console.log(`🎯 Current version ${versionInfo.currentVersion}: Server responded with ${currentResponse.result.protocolVersion}`);
+
+      // The server should ideally support the current version
+      if (currentResponse.result.protocolVersion === versionInfo.currentVersion) {
+        console.log('✅ Server fully supports current MCP protocol version');
+      } else {
+        console.log(`ℹ️  Server negotiated current version to ${currentResponse.result.protocolVersion}`);
+      }
+    });
+
+    it('should handle version negotiation edge cases', async () => {
+      // Use centralized test data for malformed versions
+      const malformedVersions = VERSION_TEST_DATA.malformedVersions;
+
+      for (const malformedVersion of malformedVersions) {
+        try {
+          const response = await client.sendRequest('initialize', {
+            protocolVersion: malformedVersion,
+            capabilities: {},
+            clientInfo: { name: 'TestClient', version: '1.0.0' }
+          });
+
+          // Server should handle malformed versions gracefully
+          // Either return a valid version or return an error
+          if (response.result) {
+            expect(response.result.protocolVersion).toBeDefined();
+            // Returned version should be valid YYYY-MM-DD format
+            expect(response.result.protocolVersion).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          }
+        } catch (error) {
+          // Server rejecting malformed versions is also acceptable
+          console.log(`Server rejected malformed version ${malformedVersion}: ${error}`);
+        }
+      }
+    });
+
+    it('should maintain version consistency across multiple requests', async () => {
+      // Initialize with a specific version
+      const initResponse = await client.sendRequest('initialize', {
+        protocolVersion: '2024-11-05',
         capabilities: {},
         clientInfo: { name: 'TestClient', version: '1.0.0' }
       });
 
-      expect(response2.result.protocolVersion).toBeDefined();
+      const negotiatedVersion = initResponse.result.protocolVersion;
+      expect(negotiatedVersion).toBeDefined();
+
+      // Send initialized notification
+      client.sendNotification('notifications/initialized');
+
+      // All subsequent protocol interactions should use the negotiated version
+      // This is implicit in the protocol - once negotiated, the version is fixed for the session
+
+      // Test that server continues to work with the negotiated version
+      const toolsResponse = await client.sendRequest('tools/list');
+      expect(toolsResponse.jsonrpc).toBe('2.0');
+      expect(toolsResponse.result).toBeDefined();
+    });
+
+    it('should validate version negotiation response structure', async () => {
+      const response = await client.sendRequest('initialize', {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: { name: 'TestClient', version: '1.0.0' }
+      });
+
+      // Validate response structure according to MCP specification
+      expect(response.jsonrpc).toBe('2.0');
+      expect(response.id).toBeDefined();
+      expect(response.result).toBeDefined();
+
+      // Protocol version must be present and valid
+      expect(response.result.protocolVersion).toBeDefined();
+      expect(typeof response.result.protocolVersion).toBe('string');
+      expect(response.result.protocolVersion).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      // Server info must be present
+      expect(response.result.serverInfo).toBeDefined();
+      expect(response.result.serverInfo.name).toBeDefined();
+      expect(response.result.serverInfo.version).toBeDefined();
+
+      // Capabilities must be present
+      expect(response.result.capabilities).toBeDefined();
+      expect(typeof response.result.capabilities).toBe('object');
     });
   });
 
@@ -456,6 +648,138 @@ describe('MCP Specification Compliance', () => {
       if (response.error.data) {
         expect(typeof response.error.data).toBe('object');
       }
+    });
+  });
+
+  describe('Comprehensive MCP Compliance Validation', () => {
+    let validator: McpComplianceValidator;
+
+    beforeEach(() => {
+      validator = new McpComplianceValidator({
+        ...DEFAULT_COMPLIANCE_CONFIG,
+        requiredCapabilities: ['tools'],
+        testVersionEdgeCases: true,
+        testErrorHandling: true,
+      });
+    });
+
+    it('should pass comprehensive initialization compliance checks', async () => {
+      const initResponse = await client.sendRequest('initialize', {
+        protocolVersion: DEFAULT_MCP_PROTOCOL_VERSION,
+        capabilities: {
+          roots: { listChanged: true },
+          sampling: {},
+          elicitation: {}
+        },
+        clientInfo: {
+          name: 'ComplianceTestClient',
+          title: 'MCP Compliance Test Client',
+          version: '1.0.0'
+        }
+      });
+
+      // Validate using the compliance framework
+      const validationResults = validator.validateInitializationResponse(initResponse);
+
+      // Log all results for debugging
+      validationResults.forEach(result => {
+        if (result.severity === 'error' && !result.passed) {
+          console.error(`❌ ${result.message}`, result.details);
+        } else if (result.severity === 'warning' && !result.passed) {
+          console.warn(`⚠️  ${result.message}`, result.details);
+        } else if (result.passed) {
+          console.log(`✅ ${result.message}`, result.details);
+        }
+      });
+
+      // All error-level validations must pass
+      const errors = validationResults.filter(r => r.severity === 'error' && !r.passed);
+      expect(errors).toHaveLength(0);
+
+      // Get summary
+      const summary = validator.getSummary();
+      console.log('Compliance Summary:', summary);
+
+      // Expect high pass rate (allowing for some warnings)
+      expect(summary.errors).toBe(0);
+      expect(summary.passRate).toBeGreaterThan(80);
+    });
+
+    it('should validate version negotiation compliance', async () => {
+      const testCases = [
+        { requested: DEFAULT_MCP_PROTOCOL_VERSION, description: 'default version (2024-11-05)' },
+        { requested: CURRENT_MCP_PROTOCOL_VERSION, description: 'current version (2025-06-18)' },
+        { requested: '2025-03-26', description: 'intermediate stable version' },
+        { requested: 'draft', description: 'draft version' },
+        { requested: '2023-01-01', description: 'unsupported old version' },
+        { requested: '2030-12-31', description: 'unsupported future version' },
+      ];
+
+      for (const testCase of testCases) {
+        validator.clearResults();
+
+        const response = await client.sendRequest('initialize', {
+          protocolVersion: testCase.requested,
+          capabilities: {},
+          clientInfo: { name: 'VersionTestClient', version: '1.0.0' }
+        });
+
+        const negotiationResults = validator.validateVersionNegotiation(
+          testCase.requested,
+          response.result.protocolVersion
+        );
+
+        console.log(`\nVersion negotiation test: ${testCase.description}`);
+        negotiationResults.forEach(result => {
+          if (result.severity === 'error' && !result.passed) {
+            console.error(`❌ ${result.message}`, result.details);
+          } else if (result.severity === 'warning' && !result.passed) {
+            console.warn(`⚠️  ${result.message}`, result.details);
+          } else if (result.passed) {
+            console.log(`✅ ${result.message}`, result.details);
+          }
+        });
+
+        // No errors should occur in version negotiation
+        const errors = negotiationResults.filter(r => r.severity === 'error' && !r.passed);
+        expect(errors).toHaveLength(0);
+      }
+    });
+
+    it('should validate tools list compliance', async () => {
+      // Initialize first
+      await client.sendRequest('initialize', {
+        protocolVersion: DEFAULT_MCP_PROTOCOL_VERSION,
+        capabilities: {},
+        clientInfo: { name: 'ToolsTestClient', version: '1.0.0' }
+      });
+      client.sendNotification('notifications/initialized');
+
+      // Get tools list
+      const toolsResponse = await client.sendRequest('tools/list');
+
+      // Validate using compliance framework
+      validator.clearResults();
+      const toolsResults = validator.validateToolsListResponse(toolsResponse);
+
+      console.log('\nTools list compliance validation:');
+      toolsResults.forEach(result => {
+        if (result.severity === 'error' && !result.passed) {
+          console.error(`❌ ${result.message}`, result.details);
+        } else if (result.severity === 'warning' && !result.passed) {
+          console.warn(`⚠️  ${result.message}`, result.details);
+        } else if (result.passed) {
+          console.log(`✅ ${result.message}`, result.details);
+        }
+      });
+
+      // All error-level validations must pass
+      const errors = toolsResults.filter(r => r.severity === 'error' && !r.passed);
+      expect(errors).toHaveLength(0);
+
+      const summary = validator.getSummary();
+      console.log('Tools compliance summary:', summary);
+      expect(summary.errors).toBe(0);
     });
   });
 });
