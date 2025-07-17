@@ -60,14 +60,18 @@ export class DxtGenerator {
         return this._handleExit(1, "Entry point file not found", "error");
       }
 
+      // Get the output directory from arguments (defaults to './dxt')
+      const outputDir = processArgs[buildDxtIndex + 1] || './dxt';
+
       console.log(chalk.cyan(`\n🔧 Building DXT package for entry point: ${path.basename(entryPointFile)}`));
+      console.log(chalk.gray(`Output directory: ${outputDir}`));
 
       // Build the DXT package using TSDown
-      await this.buildDxtWithTsdown(entryPointFile);
+      await this.buildDxtWithTsdown(entryPointFile, outputDir);
 
       console.log(chalk.green(`\n✅ DXT package generation completed!`));
 
-      return this._handleExit(0, "DXT package generation completed", "success", { entryPoint: entryPointFile });
+      return this._handleExit(0, "DXT package generation completed", "success", { entryPoint: entryPointFile, outputDir });
     } catch (error) {
       console.error(chalk.red(`Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`));
       return this._handleExit(1, `Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`, "error");
@@ -953,7 +957,7 @@ For autonomous packages, follow the build instructions above.
    * Adds the logo to the build folder if available
    * @returns The filename of the logo that was added, or undefined if no logo was added
    */
-  private async addLogoToFolder(buildDir: string, serverInfo?: any): Promise<string | undefined> {
+  private async addLogoToFolder(buildDir: string, serverInfo?: any, entryPointFile?: string): Promise<string | undefined> {
     try {
       let logoBuffer: Buffer | null = null;
       let logoFilename = 'logo.jpg';
@@ -984,7 +988,18 @@ For autonomous packages, follow the build instructions above.
           }
         } else {
           // Try to read logo from local file path
-          const logoPath = path.resolve(customLogo);
+          // If entryPointFile is provided and customLogo is relative, resolve relative to entry point
+          let logoPath: string;
+          if (entryPointFile && !path.isAbsolute(customLogo)) {
+            // Resolve relative to the directory containing the entry point file
+            const entryDir = path.dirname(entryPointFile);
+            logoPath = path.resolve(entryDir, customLogo);
+            console.log(`📍 Resolving logo path relative to entry point: ${logoPath}`);
+          } else {
+            // Absolute path or no entry point provided - resolve relative to cwd
+            logoPath = path.resolve(customLogo);
+          }
+
           if (fs.existsSync(logoPath)) {
             logoBuffer = fs.readFileSync(logoPath);
             logoFilename = path.basename(logoPath);
@@ -1253,7 +1268,7 @@ if (process.argv.includes('serve')) {
   /**
    * Builds a complete DXT package using TSDown CLI for autonomous execution
    */
-  private async buildDxtWithTsdown(entryPointFile: string): Promise<void> {
+  private async buildDxtWithTsdown(entryPointFile: string, outputDir: string = './dxt'): Promise<void> {
     try {
       console.log(chalk.cyan('🔧 Building DXT package with TSDown...'));
 
@@ -1283,7 +1298,7 @@ if (process.argv.includes('serve')) {
         // Use TSDown build method with configuration options directly
         const buildConfig = {
           entry: [entryFileName],
-          outDir: "dxt",
+          outDir: path.resolve(process.cwd(), outputDir),
           format: ["esm"],
           target: "node22",
           noExternal: () => true,
@@ -1353,14 +1368,14 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         console.log(chalk.green('✅ TSDown bundling completed'));
 
         // Manual logo copy since TSDown's copy option doesn't work programmatically
-        await this.copyLogoManually();
+        await this.copyLogoManually(outputDir);
 
-        // Copy manifest and logo to the dxt output directory
-        await this.setupDxtPackageFiles(entryPointFile);
+        // Copy manifest and logo to the output directory
+        await this.setupDxtPackageFiles(entryPointFile, outputDir);
 
         // Run dxt pack (temporarily disabled due to dynamic import issues)
         console.log(chalk.cyan('📦 DXT package ready for packing'));
-        console.log(chalk.gray('To complete the process, run: npx @anthropic-ai/dxt pack dxt/'));
+        console.log(chalk.gray(`To complete the process, run: npx @anthropic-ai/dxt pack ${outputDir}/`));
         // await this.packDxtPackage();
 
       } finally {
@@ -1612,12 +1627,12 @@ export default defineConfig({
   }
 
   /**
-   * Sets up DXT package files (manifest.json) in the dxt output directory
+   * Sets up DXT package files (manifest.json) in the output directory
    */
-  private async setupDxtPackageFiles(entryPointFile: string): Promise<void> {
-    const dxtDir = './dxt';
+  private async setupDxtPackageFiles(entryPointFile: string, outputDir: string = './dxt'): Promise<void> {
+    const dxtDir = path.resolve(process.cwd(), outputDir);
     if (!fs.existsSync(dxtDir)) {
-      throw new Error('TSDown output directory (dxt) not found');
+      throw new Error(`TSDown output directory (${outputDir}) not found`);
     }
 
     // Read package.json for project information
@@ -1729,6 +1744,15 @@ export default defineConfig({
     // Get server info from withMcp() configuration or fallback to package.json
     const serverInfo = this.extractMcpServerInfo();
 
+    // Handle custom logo if specified in serverInfo
+    let logoFilename = 'logo.jpg'; // Default
+    if (serverInfo?.logo) {
+      const customLogoFilename = await this.addLogoToFolder(dxtDir, serverInfo, entryPointFile);
+      if (customLogoFilename) {
+        logoFilename = customLogoFilename;
+      }
+    }
+
     // Create DXT manifest using server info and package.json data
     const entryFileName = path.basename(entryPointFile);
 
@@ -1756,7 +1780,7 @@ export default defineConfig({
         }
       },
       tools: tools,
-      icon: "logo.jpg",
+      icon: logoFilename,
       ...(Object.keys(userConfig).length > 0 && { user_config: userConfig }),
       repository: {
         type: "git",
@@ -1775,10 +1799,10 @@ export default defineConfig({
   /**
    * Manually copy logo since TSDown's copy option doesn't work programmatically
    */
-  private async copyLogoManually(): Promise<void> {
-    const dxtDir = './dxt';
+  private async copyLogoManually(outputDir: string = './dxt'): Promise<void> {
+    const dxtDir = path.resolve(process.cwd(), outputDir);
     if (!fs.existsSync(dxtDir)) {
-      console.warn(chalk.yellow('⚠ DXT directory not found, skipping logo copy'));
+      console.warn(chalk.yellow(`⚠ Output directory (${outputDir}) not found, skipping logo copy`));
       return;
     }
 

@@ -66,12 +66,18 @@ graph TD
 **Trigger**: `--s-build-dxt` system flag
 
 ```typescript
-// Usage: No parameters needed - uses calling script automatically
-node my-cli.js --s-build-dxt
+// Usage: Specify output directory (defaults to './dxt')
+node my-cli.js --s-build-dxt [output-directory]
+
+// Examples:
+node my-cli.js --s-build-dxt           # Builds to ./dxt
+node my-cli.js --s-build-dxt ./my-dxt  # Builds to ./my-dxt
+node my-cli.js --s-build-dxt /tmp/build # Builds to /tmp/build
 ```
 
 The system automatically detects:
 - **Entry Point**: `process.argv[1]` (the calling script)
+- **Output Directory**: Command line argument or `./dxt` default
 - **Working Directory**: `process.cwd()`
 - **Package Info**: From `package.json`
 - **Flag Definitions**: From ArgParser instance
@@ -370,18 +376,18 @@ my-cli-1.0.0.dxt               # Final package (2.8MB compressed, 13.4MB unpacke
 
 ### Basic Usage
 ```bash
-node my-cli.js --s-build-dxt
-npx @anthropic-ai/dxt pack dxt/
+node my-cli.js --s-build-dxt [output-dir]
+npx @anthropic-ai/dxt pack [output-dir]/
 ```
 
 ### Debug Mode
 ```bash
-DEBUG=1 node my-cli.js --s-build-dxt
+DEBUG=1 node my-cli.js --s-build-dxt ./debug-output
 ```
 
 ### Manual Testing
 ```bash
-cd dxt
+cd [output-dir]
 npx tsdown -c tsdown.config.dxt.ts
 node my-cli.js serve
 ```

@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "A robust, type-safe command line argument parser with plugin architecture, dependency injection, Claude Desktop compliant MCP integration, autonomous DXT builds, and zero-dependency core functionality.",
   "type": "module",
   "main": "dist/index.cjs",

@@ -124,6 +124,12 @@ export interface IParseOptions {
    * @default true
    */
   deep?: boolean;
+  /**
+   * When true, indicates this is being called from MCP mode
+   * @default false
+   * @internal
+   */
+  isMcp?: boolean;
 }
 
 type TParsedArgsWithRouting<T = any> = T & {
@@ -1064,9 +1070,36 @@ export class ArgParserBase<THandlerReturn = any> {
   }
 
   async parse(
-    processArgs: string[],
+    processArgs?: string[],
     options?: IParseOptions,
   ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
+    // Handle automatic argument detection when no arguments provided
+    if (processArgs === undefined) {
+      // Check if we're in a Node.js environment
+      if (typeof process !== "undefined" && process.argv && Array.isArray(process.argv)) {
+        processArgs = process.argv.slice(2);
+
+        // Display warning in CLI mode (when we have appCommandName set and not in MCP mode)
+        const isCliMode = !this.#parentParser && !!this.#appCommandName;
+        const isMcpMode = options?.isMcp || (globalThis as any).console?.mcpError;
+
+        if (isCliMode && !isMcpMode) {
+          console.warn(
+            `Warning: parse() called without arguments. Auto-detected Node.js environment and using process.argv.slice(2).`
+          );
+          console.warn(
+            `For explicit control, call parse(process.argv.slice(2)) instead.`
+          );
+        }
+      } else {
+        // Not in Node.js environment, throw an error
+        throw new Error(
+          "parse() called without arguments in non-Node.js environment. " +
+          "Please provide arguments explicitly: parse(['--flag', 'value'])"
+        );
+      }
+    }
+
     // Store original args for fuzzy mode logging
     const originalProcessArgs = [...processArgs];
 
@@ -1211,7 +1244,7 @@ export class ArgParserBase<THandlerReturn = any> {
    * @deprecated Use parse() instead. This method will be removed in a future version.
    */
   public parseAsync(
-    processArgs: string[],
+    processArgs?: string[],
     options?: IParseOptions,
   ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
     return this.parse(processArgs, options);

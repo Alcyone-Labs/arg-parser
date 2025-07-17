@@ -1264,7 +1264,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     }
   }
 
-  public async parse(processArgs: string[], options?: any): Promise<any> {
+  public async parse(processArgs?: string[], options?: any): Promise<any> {
     // Call the base class parse method directly to avoid any override issues
     let result = await ArgParserBase.prototype.parse.call(
       this,
@@ -1293,7 +1293,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    * When autoExit is false, this method will call process.exit() based on ParseResult
    * This ensures backward compatibility for CLI applications
    */
-  public parseForCli(processArgs: string[], options?: any): any {
+  public parseForCli(processArgs?: string[], options?: any): any {
     const result = this.parse(processArgs, options);
 
     // Handle ParseResult objects when autoExit is false
@@ -1322,7 +1322,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    *
    * @deprecated Use parse() instead. This method will be removed in a future version.
    */
-  public parseAsync(processArgs: string[], options?: any): Promise<any> {
+  public parseAsync(processArgs?: string[], options?: any): Promise<any> {
     return this.parse(processArgs, options);
   }
 

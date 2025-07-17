@@ -364,7 +364,7 @@ cli.parse(process.argv.slice(2));
 
 ```bash
 # Generate DXT package with local library
-LOCAL_BUILD=1 node weather.js --s-save-DXT ./output
+LOCAL_BUILD=1 node weather.js --s-build-dxt ./output
 
 # Build autonomous package
 cd output/weather-mcp-server-dxt

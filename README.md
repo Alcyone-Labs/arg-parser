@@ -257,6 +257,44 @@ yarn unlink
 
 ArgParser's `parse()` method is async and automatically handles both synchronous and asynchronous handlers:
 
+### Automatic Argument Detection
+
+`parse()` can now be called without arguments for improved developer experience:
+
+```typescript
+const cli = ArgParser.withMcp({
+  appName: "My CLI",
+  appCommandName: "my-cli",
+  handler: async (ctx) => ({ success: true, data: ctx.args }),
+});
+
+// NEW: Call parse() without arguments
+// Automatically detects Node.js environment and uses process.argv.slice(2)
+async function main() {
+  try {
+    const result = await cli.parse(); // No arguments needed!
+    console.log("Success:", result);
+  } catch (error) {
+    console.error("Error:", error.message);
+    process.exit(1);
+  }
+}
+```
+
+**How it works:**
+
+- ✅ **Auto-detection**: When `parse()` is called without arguments, ArgParser automatically detects if it's running in Node.js
+- ✅ **Smart fallback**: Uses `process.argv.slice(2)` automatically in Node.js environments
+- ✅ **User-friendly warning**: Shows a helpful warning in CLI mode to inform users about the behavior
+- ✅ **Error handling**: Throws a clear error in non-Node.js environments when arguments are required
+- ✅ **Backward compatible**: Explicit arguments still work exactly as before
+
+**When warnings are shown:**
+
+- ✅ CLI mode (when `appCommandName` is set)
+- ❌ Library/programmatic usage (no `appCommandName`)
+- ❌ MCP mode (warnings suppressed for clean MCP output)
+
 ### Cannonical Usage Pattern
 
 ```typescript
@@ -272,7 +310,12 @@ const cli = ArgParser.withMcp({
 // parse() is async and works with both sync and async handlers
 async function main() {
   try {
-    const result = await cli.parse(process.argv.slice(2));
+    // Option 1: Auto-detection (NEW) - convenient for simple scripts
+    const result = await cli.parse();
+
+    // Option 2: Explicit arguments - full control
+    // const result = await cli.parse(process.argv.slice(2));
+
     // Handler results are automatically awaited and merged
     console.log(result.success); // true
   } catch (error) {
@@ -288,7 +331,12 @@ Works in ES modules or Node.js >=18 with top-level await
 
 ```javascript
 try {
-  const result = await cli.parse(process.argv.slice(2));
+  // Auto-detection approach (recommended for simple scripts)
+  const result = await cli.parse();
+
+  // Or explicit approach for full control
+  // const result = await cli.parse(process.argv.slice(2));
+
   console.log("Success:", result);
 } catch (error) {
   console.error("Error:", error.message);
@@ -301,8 +349,9 @@ try {
 If you need synchronous contexts, you can simply rely on promise-based APIs
 
 ```javascript
+// Auto-detection approach
 cli
-  .parse(process.argv.slice(2))
+  .parse()
   .then((result) => {
     console.log("Success:", result);
   })
@@ -310,6 +359,17 @@ cli
     console.error("Error:", error.message);
     process.exit(1);
   });
+
+// Or explicit approach
+// cli
+//   .parse(process.argv.slice(2))
+//   .then((result) => {
+//     console.log("Success:", result);
+//   })
+//   .catch((error) => {
+//     console.error("Error:", error.message);
+//     process.exit(1);
+//   });
 ```
 
 ---
@@ -428,7 +488,9 @@ ArgParser provides **strong typing** for flag definitions with comprehensive val
 You can define flag types using either **constructor functions** or **string literals**:
 
 ```typescript
-const parser = new ArgParser({ /* ... */ }).addFlags([
+const parser = new ArgParser({
+  /* ... */
+}).addFlags([
   // Constructor functions (recommended for TypeScript)
   { name: "count", options: ["--count"], type: Number },
   { name: "enabled", options: ["--enabled"], type: Boolean, flagOnly: true },
@@ -445,7 +507,7 @@ const parser = new ArgParser({ /* ... */ }).addFlags([
   {
     name: "date",
     options: ["--date"],
-    type: (value: string) => new Date(value)
+    type: (value: string) => new Date(value),
   },
 
   // Async custom parser functions
@@ -453,9 +515,9 @@ const parser = new ArgParser({ /* ... */ }).addFlags([
     name: "config",
     options: ["--config"],
     type: async (filePath: string) => {
-      const content = await fs.readFile(filePath, 'utf8');
+      const content = await fs.readFile(filePath, "utf8");
       return JSON.parse(content);
-    }
+    },
   },
   {
     name: "user",
@@ -463,8 +525,8 @@ const parser = new ArgParser({ /* ... */ }).addFlags([
     type: async (userId: string) => {
       const response = await fetch(`/api/users/${userId}`);
       return response.json();
-    }
-  }
+    },
+  },
 ]);
 ```
 
@@ -496,14 +558,16 @@ The type system validates flag definitions at runtime and throws descriptive err
 Custom parser functions can be **asynchronous**, enabling powerful use cases like file I/O, API calls, and database lookups:
 
 ```typescript
-const parser = new ArgParser({ /* ... */ }).addFlags([
+const parser = new ArgParser({
+  /* ... */
+}).addFlags([
   {
     name: "config",
     options: ["--config"],
     type: async (filePath: string) => {
-      const content = await fs.readFile(filePath, 'utf8');
+      const content = await fs.readFile(filePath, "utf8");
       return JSON.parse(content);
-    }
+    },
   },
   {
     name: "user",
@@ -512,8 +576,8 @@ const parser = new ArgParser({ /* ... */ }).addFlags([
       const response = await fetch(`/api/users/${userId}`);
       if (!response.ok) throw new Error(`User not found: ${userId}`);
       return response.json();
-    }
-  }
+    },
+  },
 ]);
 
 // Usage: --config ./settings.json --user-id 123
@@ -523,6 +587,7 @@ const result = await parser.parse(process.argv.slice(2));
 ```
 
 **Key Features:**
+
 - ✅ **Backward compatible** - existing sync parsers continue to work
 - ✅ **Automatic detection** - no configuration needed, just return a Promise
 - ✅ **Error handling** - async errors are properly propagated
@@ -1017,7 +1082,7 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 | --------------------------- | ---------------------------------------------------------------------------------------------- |
 | **MCP & DXT**               |                                                                                                |
 | `--s-mcp-serve`             | Starts the application in MCP server mode, exposing all tools.                                 |
-| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop.                               |
+| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop in the specified directory.    |
 | `--s-mcp-transport <type>`  | Overrides the MCP transport (`stdio`, `sse`, `streamable-http`).                               |
 | `--s-mcp-transports <json>` | Overrides transports with a JSON array for multi-transport setups.                             |
 | `--s-mcp-port <number>`     | Sets the port for HTTP-based transports (`sse`, `streamable-http`).                            |
@@ -1034,9 +1099,22 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
+### v2.2.0
+
+**Feat**
+
+- IFlag function-based `type` now supports async methods such as `type: async () => Promise<string>`.
+
+**Fixes and changes**
+
+- `.parse()` can now work without arguments, it will try to infer that if you are in CLI mode and on a Node environment, it should use `process.argv` as the input. You can still pass parameters to control more granularly.
+- `--s-build-dxt` now takes an optional path to specify where to prepare the assets prior to packing, the path you pass is in relation to process.cwd() (current working directory).
+- `--s-build-dxt` logo detection now resolves paths more accurately...
+
 ### v2.1.1
 
 **Fixes and changes**
+
 - Fix missing missing types fr
 
 ### v2.1.0
@@ -1047,7 +1125,8 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 - Add support for MCP output_schema field for clients that support it, CLI isn't impacted by it, this helps a lot the interactivity, self-documentation, and improves the API guarantees
 
 **Fixes and changes**
-- Improved MCP version compliance 
+
+- Improved MCP version compliance
 
 ### v2.0.0
 
