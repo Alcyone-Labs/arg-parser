@@ -1,13 +1,26 @@
-import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
-import {
-  generateMcpToolsFromArgParser,
-  convertFlagsToZodSchema,
-  createMcpSuccessResponse,
-  createMcpErrorResponse,
-} from "../mcp/mcp-integration";
-import type { GenerateMcpToolsOptions, IMcpToolStructure } from "../mcp/mcp-integration";
-import type { IHandlerContext, ParseResult, IFlag } from "./types";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+import {
+  convertFlagsToZodSchema,
+  createMcpErrorResponse,
+  createMcpSuccessResponse,
+  generateMcpToolsFromArgParser,
+} from "../mcp/mcp-integration";
+import type {
+  GenerateMcpToolsOptions,
+  IMcpToolStructure,
+} from "../mcp/mcp-integration";
+import {
+  compareVersions,
+  CURRENT_MCP_PROTOCOL_VERSION,
+} from "../mcp/mcp-protocol-versions";
+import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
+import type {
+  IFlag,
+  IHandlerContext,
+  OutputSchemaConfig,
+  ParseResult,
+} from "./types";
+import { createOutputSchema } from "./types";
 
 /**
  * Configuration for a single MCP transport
@@ -31,7 +44,8 @@ export type McpSubCommandOptions = {
 };
 
 /**
- * Extended server information for DXT package generation
+ * Extended server information for DXT package generation and MCP server metadata
+ * This type includes logo support for MCP servers and DXT packages
  */
 export type DxtServerInfo = {
   name: string;
@@ -58,7 +72,10 @@ export type DxtServerInfo = {
   support?: string;
   /** Keywords for DXT manifest */
   keywords?: string[];
-  /** Logo/icon for DXT manifest - can be a local file path or URL */
+  /**
+   * Logo/icon for DXT manifest and MCP server - can be a local file path or URL
+   * This is where logo support is provided for MCP-enabled ArgParser instances
+   */
   logo?: string;
 };
 
@@ -80,10 +97,18 @@ export type McpServerOptions = {
 /**
  * Combined options for withMcp() method
  */
-export type WithMcpOptions<THandlerReturn = any> = IArgParserParams<THandlerReturn> & {
-  /** MCP-specific server configuration */
-  mcp?: McpServerOptions;
-};
+export type WithMcpOptions<THandlerReturn = any> =
+  IArgParserParams<THandlerReturn> & {
+    /** MCP-specific server configuration */
+    mcp?: McpServerOptions;
+  };
+
+/**
+ * Type alias for clarity - ArgParser options with MCP capabilities
+ * This provides a clearer name for WithMcpOptions
+ */
+export type ArgParserWithMcpOptions<THandlerReturn = any> =
+  WithMcpOptions<THandlerReturn>;
 
 /**
  * Configuration for an individual MCP tool (deprecated - use ToolConfig instead)
@@ -114,6 +139,8 @@ export type ToolConfig = {
   flags: readonly IFlag[];
   /** Handler function for the tool */
   handler: (ctx: IHandlerContext) => Promise<any> | any;
+  /** Output schema for this tool (predefined pattern, Zod schema, or schema definition object) */
+  outputSchema?: OutputSchemaConfig;
 };
 
 /**
@@ -139,7 +166,6 @@ export type ToolConfig = {
 export class ArgParser<
   THandlerReturn = any,
 > extends ArgParserBase<THandlerReturn> {
-
   /** Stored MCP server configuration from withMcp() */
   private _mcpServerConfig?: McpServerOptions;
 
@@ -149,12 +175,77 @@ export class ArgParser<
   /** Registered unified tools */
   private _tools: Map<string, ToolConfig> = new Map();
 
+  /** Output schema management */
+  private _defaultOutputSchema?: import("zod").ZodTypeAny;
+  private _outputSchemaMap: Map<string, import("zod").ZodTypeAny> = new Map();
+  private _autoGenerateOutputSchema?:
+    | boolean
+    | keyof typeof import("./types").OutputSchemaPatterns;
+
+  /** MCP version for output schema compatibility */
+  private _mcpProtocolVersion: string = CURRENT_MCP_PROTOCOL_VERSION;
+
   /**
    * Get the stored MCP server configuration
    * @returns MCP server configuration if set via withMcp(), undefined otherwise
    */
   public getMcpServerConfig(): McpServerOptions | undefined {
     return this._mcpServerConfig;
+  }
+
+  /**
+   * Set a default output schema for all MCP tools generated from this parser
+   * @param schema - Predefined pattern name, Zod schema, or schema definition object
+   * @returns This ArgParser instance for chaining
+   */
+  public setDefaultOutputSchema(schema: OutputSchemaConfig): this {
+    this._defaultOutputSchema = createOutputSchema(schema);
+    return this;
+  }
+
+  /**
+   * Set an output schema for a specific tool/command
+   * @param toolName - Name of the tool/command
+   * @param schema - Predefined pattern name, Zod schema, or schema definition object
+   * @returns This ArgParser instance for chaining
+   */
+  public setOutputSchema(toolName: string, schema: OutputSchemaConfig): this {
+    this._outputSchemaMap.set(toolName, createOutputSchema(schema));
+    return this;
+  }
+
+  /**
+   * Enable automatic output schema generation for MCP tools
+   * @param pattern - True for default pattern, or specific pattern name
+   * @returns This ArgParser instance for chaining
+   */
+  public enableAutoOutputSchema(
+    pattern:
+      | boolean
+      | keyof typeof import("./types").OutputSchemaPatterns = true,
+  ): this {
+    this._autoGenerateOutputSchema = pattern;
+    return this;
+  }
+
+  /**
+   * Set the MCP protocol version for compatibility checks
+   * @param version - MCP protocol version (e.g., "2025-06-18")
+   * @returns This ArgParser instance for chaining
+   */
+  public setMcpProtocolVersion(version: string): this {
+    this._mcpProtocolVersion = version;
+    return this;
+  }
+
+  /**
+   * Check if the current MCP protocol version supports output schemas
+   * Output schemas were introduced in MCP version 2025-06-18
+   * @returns true if output schemas are supported
+   */
+  private supportsOutputSchemas(): boolean {
+    // Output schemas were introduced in MCP version 2025-06-18
+    return compareVersions(this._mcpProtocolVersion, "2025-06-18") >= 0;
   }
 
   /**
@@ -171,16 +262,16 @@ export class ArgParser<
     }
 
     // Validate tool configuration
-    if (!toolConfig.name || typeof toolConfig.name !== 'string') {
-      throw new Error('Tool name is required and must be a string');
+    if (!toolConfig.name || typeof toolConfig.name !== "string") {
+      throw new Error("Tool name is required and must be a string");
     }
 
-    if (!toolConfig.handler || typeof toolConfig.handler !== 'function') {
-      throw new Error('Tool handler is required and must be a function');
+    if (!toolConfig.handler || typeof toolConfig.handler !== "function") {
+      throw new Error("Tool handler is required and must be a function");
     }
 
     if (!Array.isArray(toolConfig.flags)) {
-      throw new Error('Tool flags must be an array');
+      throw new Error("Tool flags must be an array");
     }
 
     // Store the tool configuration
@@ -198,11 +289,15 @@ export class ArgParser<
    */
   #registerToolAsSubCommand(toolConfig: ToolConfig): void {
     // Create a new ArgParser instance for this tool's subcommand
-    const toolParser = new ArgParserBase({
-      appName: `${this.getAppName()} ${toolConfig.name}`,
-      description: toolConfig.description || `Execute ${toolConfig.name} tool`,
-      handler: toolConfig.handler,
-    }, toolConfig.flags);
+    const toolParser = new ArgParserBase(
+      {
+        appName: `${this.getAppName()} ${toolConfig.name}`,
+        description:
+          toolConfig.description || `Execute ${toolConfig.name} tool`,
+        handler: toolConfig.handler,
+      },
+      toolConfig.flags,
+    );
 
     // Add the subcommand to this parser
     this.addSubCommand({
@@ -264,11 +359,17 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     const cliTools = generateMcpToolsFromArgParser(this, options);
     const unifiedToolNames = Array.from(this._tools.keys());
     const legacyMcpToolNames = Array.from(this._mcpTools.keys());
-    const cliToolNames = cliTools.map(t => t.name);
+    const cliToolNames = cliTools.map((t) => t.name);
 
     // Find duplicates (tools that exist in multiple categories)
-    const allToolNames = [...unifiedToolNames, ...legacyMcpToolNames, ...cliToolNames];
-    const duplicates = allToolNames.filter((name, index) => allToolNames.indexOf(name) !== index);
+    const allToolNames = [
+      ...unifiedToolNames,
+      ...legacyMcpToolNames,
+      ...cliToolNames,
+    ];
+    const duplicates = allToolNames.filter(
+      (name, index) => allToolNames.indexOf(name) !== index,
+    );
 
     // Calculate total unique tools (unified tools take precedence)
     const uniqueToolNames = new Set(allToolNames);
@@ -278,7 +379,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       legacyMcpTools: legacyMcpToolNames,
       cliTools: cliToolNames,
       totalTools: uniqueToolNames.size,
-      duplicates: Array.from(new Set(duplicates))
+      duplicates: Array.from(new Set(duplicates)),
     };
   }
 
@@ -299,7 +400,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       manualTools: [...toolInfo.unifiedTools, ...toolInfo.legacyMcpTools],
       cliTools: toolInfo.cliTools,
       totalTools: toolInfo.totalTools,
-      duplicates: toolInfo.duplicates
+      duplicates: toolInfo.duplicates,
     };
   }
 
@@ -334,7 +435,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     // Validate that unified tools are registered in both CLI and MCP
     for (const [toolName] of this._tools) {
       if (!cliSubcommands.includes(toolName)) {
-        issues.push(`Unified tool '${toolName}' is not registered as CLI subcommand`);
+        issues.push(
+          `Unified tool '${toolName}' is not registered as CLI subcommand`,
+        );
       }
       if (!mcpTools.includes(toolName)) {
         issues.push(`Unified tool '${toolName}' is not registered as MCP tool`);
@@ -345,7 +448,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       isValid: issues.length === 0,
       issues,
       cliSubcommands,
-      mcpTools
+      mcpTools,
     };
   }
 
@@ -356,7 +459,10 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    * @param args Arguments to pass to the tool
    * @returns Promise with the tool execution result or error
    */
-  public async testMcpToolRouting(toolName: string, args: any = {}): Promise<{
+  public async testMcpToolRouting(
+    toolName: string,
+    args: any = {},
+  ): Promise<{
     success: boolean;
     result?: any;
     error?: string;
@@ -364,12 +470,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
   }> {
     try {
       const tools = this.toMcpTools();
-      const tool = tools.find(t => t.name === toolName);
+      const tool = tools.find((t) => t.name === toolName);
 
       if (!tool) {
         return {
           success: false,
-          error: `Tool '${toolName}' not found. Available tools: ${tools.map(t => t.name).join(', ')}`
+          error: `Tool '${toolName}' not found. Available tools: ${tools.map((t) => t.name).join(", ")}`,
         };
       }
 
@@ -380,12 +486,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       return {
         success: true,
         result,
-        executionTime
+        executionTime,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -396,89 +502,201 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    * @returns Array of MCP tool structures ready for server registration
    */
   public toMcpTools(options?: GenerateMcpToolsOptions): IMcpToolStructure[] {
+    // Merge instance-level output schema settings with options
+    const mergedOptions: GenerateMcpToolsOptions = {
+      ...options,
+      // Merge output schema maps (options take precedence)
+      outputSchemaMap: {
+        ...Object.fromEntries(this._outputSchemaMap),
+        ...options?.outputSchemaMap,
+      },
+      // Use instance default if not specified in options
+      defaultOutputSchema:
+        options?.defaultOutputSchema || this._defaultOutputSchema,
+      // Use instance auto-generate setting if not specified in options
+      autoGenerateOutputSchema:
+        options?.autoGenerateOutputSchema ?? this._autoGenerateOutputSchema,
+    };
+
     // Generate tools from CLI structure (legacy approach)
-    const cliTools = generateMcpToolsFromArgParser(this, options);
+    const cliTools = generateMcpToolsFromArgParser(this, mergedOptions);
 
     // Convert unified tools to MCP tool structures
-    const unifiedTools: IMcpToolStructure[] = Array.from(this._tools.values()).map(toolConfig => ({
-      name: toolConfig.name,
-      description: toolConfig.description || `Executes the ${toolConfig.name} tool.`,
-      inputSchema: convertFlagsToZodSchema(toolConfig.flags),
-      execute: async (args: any) => {
-        // Hijack console for MCP mode to prevent STDOUT contamination
-        const originalConsole = globalThis.console;
-        let mcpLogger: any = null;
+    const unifiedTools: IMcpToolStructure[] = Array.from(
+      this._tools.values(),
+    ).map((toolConfig) => {
+      // Determine output schema for this tool
+      let outputSchema: import("zod").ZodTypeAny | undefined;
 
-        try {
-          // Try to import and setup MCP logger for this tool execution
-          try {
-            const mcpLoggerModule = await (Function('return import("@alcyone-labs/simple-mcp-logger")')());
-            mcpLogger = mcpLoggerModule.createMcpLogger(`MCP-Tool-${toolConfig.name}`);
-            // Hijack console globally to prevent STDOUT contamination
-            (globalThis as any).console = mcpLogger;
-          } catch {
-            // Fallback: create a minimal logger that redirects to stderr
-            // Use originalConsole to avoid circular reference
-            mcpLogger = {
-              log: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
-              info: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
-              warn: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
-              error: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
-              debug: (...args: any[]) => originalConsole.error(`[${toolConfig.name}]`, ...args),
-            };
-            (globalThis as any).console = mcpLogger;
-          }
-
-          // Create handler context similar to CLI mode
-          const context: IHandlerContext = {
-            args,
-            parentArgs: {},
-            commandChain: [toolConfig.name],
-            parser: this,
-            isMcp: true
-          };
-
-          const startTime = Date.now();
-          const result = await toolConfig.handler(context);
-          const executionTime = Date.now() - startTime;
-
-          // Log successful execution for debugging
-          if (process.env['MCP_DEBUG']) {
-            console.error(`[MCP Tool] '${toolConfig.name}' executed successfully in ${executionTime}ms`);
-          }
-
-          // Ensure the result is properly formatted for MCP
-          if (result && typeof result === 'object' && 'content' in result) {
-            // Already in MCP format
-            return result;
-          } else {
-            // Wrap in standard MCP response format
-            return createMcpSuccessResponse(result);
-          }
-        } catch (error) {
-          // Enhanced error handling with proper MCP error response format
-          const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
-
-          if (process.env['MCP_DEBUG']) {
-            console.error(`[MCP Tool Error] ${errorMessage}`);
-            if (error instanceof Error && error.stack) {
-              console.error(`[MCP Tool Stack] ${error.stack}`);
-            }
-          }
-
-          // Return MCP-compliant error response
-          return createMcpErrorResponse(errorMessage);
-        } finally {
-          // Restore original console
-          globalThis.console = originalConsole;
+      // Priority: explicit schema map > tool-level schema > default schema > auto-generated schema
+      if (mergedOptions.outputSchemaMap?.[toolConfig.name]) {
+        outputSchema = mergedOptions.outputSchemaMap[toolConfig.name];
+      } else if (toolConfig.outputSchema) {
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] Tool '${toolConfig.name}' has outputSchema:`,
+            typeof toolConfig.outputSchema,
+          );
+          console.error(
+            `[MCP Debug] outputSchema has _def:`,
+            !!(
+              toolConfig.outputSchema &&
+              typeof toolConfig.outputSchema === "object" &&
+              "_def" in toolConfig.outputSchema
+            ),
+          );
+        }
+        outputSchema = createOutputSchema(toolConfig.outputSchema);
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] Created output schema for '${toolConfig.name}':`,
+            !!outputSchema,
+          );
+        }
+      } else if (mergedOptions.defaultOutputSchema) {
+        outputSchema = mergedOptions.defaultOutputSchema;
+      } else if (mergedOptions.autoGenerateOutputSchema) {
+        if (typeof mergedOptions.autoGenerateOutputSchema === "string") {
+          outputSchema = createOutputSchema(
+            mergedOptions.autoGenerateOutputSchema,
+          );
+        } else if (mergedOptions.autoGenerateOutputSchema === true) {
+          outputSchema = createOutputSchema("successWithData");
         }
       }
-    }));
+
+      // Only include output schema if the MCP protocol version supports it
+      if (outputSchema && !this.supportsOutputSchemas()) {
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] Output schema for '${toolConfig.name}' removed due to MCP version ${this._mcpProtocolVersion} not supporting output schemas`,
+          );
+        }
+        outputSchema = undefined;
+      }
+
+      return {
+        name: toolConfig.name,
+        description:
+          toolConfig.description || `Executes the ${toolConfig.name} tool.`,
+        inputSchema: convertFlagsToZodSchema(toolConfig.flags),
+        outputSchema,
+        execute: async (args: any) => {
+          // Hijack console for MCP mode to prevent STDOUT contamination
+          const originalConsole = globalThis.console;
+          let mcpLogger: any = null;
+
+          try {
+            // Try to import and setup MCP logger for this tool execution
+            try {
+              const mcpLoggerModule = await Function(
+                'return import("@alcyone-labs/simple-mcp-logger")',
+              )();
+              mcpLogger = mcpLoggerModule.createMcpLogger(
+                `MCP-Tool-${toolConfig.name}`,
+              );
+              // Hijack console globally to prevent STDOUT contamination
+              (globalThis as any).console = mcpLogger;
+            } catch {
+              // Fallback: create a minimal logger that redirects to stderr
+              // Use originalConsole to avoid circular reference
+              mcpLogger = {
+                log: (...args: any[]) =>
+                  originalConsole.error(`[${toolConfig.name}]`, ...args),
+                info: (...args: any[]) =>
+                  originalConsole.error(`[${toolConfig.name}]`, ...args),
+                warn: (...args: any[]) =>
+                  originalConsole.error(`[${toolConfig.name}]`, ...args),
+                error: (...args: any[]) =>
+                  originalConsole.error(`[${toolConfig.name}]`, ...args),
+                debug: (...args: any[]) =>
+                  originalConsole.error(`[${toolConfig.name}]`, ...args),
+              };
+              (globalThis as any).console = mcpLogger;
+            }
+
+            // Create handler context similar to CLI mode
+            const context: IHandlerContext = {
+              args,
+              parentArgs: {},
+              commandChain: [toolConfig.name],
+              parser: this,
+              isMcp: true,
+            };
+
+            const startTime = Date.now();
+            const result = await toolConfig.handler(context);
+            const executionTime = Date.now() - startTime;
+
+            // Log successful execution for debugging
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Tool] '${toolConfig.name}' executed successfully in ${executionTime}ms`,
+              );
+            }
+
+            // Ensure the result is properly formatted for MCP
+            if (result && typeof result === "object" && "content" in result) {
+              // Already in MCP format - ensure structuredContent is present if output schema exists and is supported
+              if (
+                outputSchema &&
+                this.supportsOutputSchemas() &&
+                !result.structuredContent
+              ) {
+                result.structuredContent = result;
+              }
+              return result;
+            } else {
+              // Format response consistently - include structuredContent when output schema is present and supported
+              if (
+                outputSchema &&
+                this.supportsOutputSchemas() &&
+                result &&
+                typeof result === "object"
+              ) {
+                // Include structuredContent when output schema is present and version supports it
+                return {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(result, null, 2),
+                    },
+                  ],
+                  structuredContent: result,
+                };
+              } else {
+                // Wrap in standard MCP response format
+                return createMcpSuccessResponse(result);
+              }
+            }
+          } catch (error) {
+            // Enhanced error handling with proper MCP error response format
+            const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(`[MCP Tool Error] ${errorMessage}`);
+              if (error instanceof Error && error.stack) {
+                console.error(`[MCP Tool Stack] ${error.stack}`);
+              }
+            }
+
+            // Return MCP-compliant error response
+            return createMcpErrorResponse(errorMessage);
+          } finally {
+            // Restore original console
+            globalThis.console = originalConsole;
+          }
+        },
+      };
+    });
 
     // Convert legacy MCP tools to MCP tool structures (deprecated)
-    const legacyMcpTools: IMcpToolStructure[] = Array.from(this._mcpTools.values()).map(toolConfig => ({
+    const legacyMcpTools: IMcpToolStructure[] = Array.from(
+      this._mcpTools.values(),
+    ).map((toolConfig) => ({
       name: toolConfig.name,
-      description: toolConfig.description || `Executes the ${toolConfig.name} tool.`,
+      description:
+        toolConfig.description || `Executes the ${toolConfig.name} tool.`,
       inputSchema: toolConfig.inputSchema || { type: "object", properties: {} },
       outputSchema: toolConfig.outputSchema,
       execute: async (args: any) => {
@@ -487,25 +705,54 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const result = await toolConfig.handler(args);
           const executionTime = Date.now() - startTime;
 
-          if (process.env['MCP_DEBUG']) {
-            console.error(`[MCP Tool] '${toolConfig.name}' (legacy) executed successfully in ${executionTime}ms`);
+          if (process.env["MCP_DEBUG"]) {
+            console.error(
+              `[MCP Tool] '${toolConfig.name}' (legacy) executed successfully in ${executionTime}ms`,
+            );
           }
 
-          if (result && typeof result === 'object' && 'content' in result) {
+          if (result && typeof result === "object" && "content" in result) {
+            // If tool has output schema and version supports it, ensure structuredContent is present
+            if (
+              toolConfig.outputSchema &&
+              this.supportsOutputSchemas() &&
+              !result.structuredContent
+            ) {
+              result.structuredContent = result;
+            }
             return result;
           } else {
-            return createMcpSuccessResponse(result);
+            // Format response consistently with CLI-generated tools
+            if (
+              toolConfig.outputSchema &&
+              this.supportsOutputSchemas() &&
+              result &&
+              typeof result === "object"
+            ) {
+              // Include structuredContent when output schema is present and version supports it
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify(result, null, 2),
+                  },
+                ],
+                structuredContent: result,
+              };
+            } else {
+              return createMcpSuccessResponse(result);
+            }
           }
         } catch (error) {
           const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
 
-          if (process.env['MCP_DEBUG']) {
+          if (process.env["MCP_DEBUG"]) {
             console.error(`[MCP Tool Error] ${errorMessage}`);
           }
 
           return createMcpErrorResponse(errorMessage);
         }
-      }
+      },
     }));
 
     // Combine all tools (unified tools take precedence over legacy tools, which take precedence over CLI-generated tools)
@@ -516,9 +763,14 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         acc.push(tool);
       } else {
         // Log when a tool is being overridden
-        const toolSource = unifiedTools.find(t => t.name === tool.name) ? 'unified' :
-                          legacyMcpTools.find(t => t.name === tool.name) ? 'legacy MCP' : 'CLI-generated';
-        console.warn(`[MCP Tool Registration] ${toolSource} tool '${tool.name}' overrides other tool definitions`);
+        const toolSource = unifiedTools.find((t) => t.name === tool.name)
+          ? "unified"
+          : legacyMcpTools.find((t) => t.name === tool.name)
+            ? "legacy MCP"
+            : "CLI-generated";
+        console.warn(
+          `[MCP Tool Registration] ${toolSource} tool '${tool.name}' overrides other tool definitions`,
+        );
       }
       return acc;
     }, [] as IMcpToolStructure[]);
@@ -533,29 +785,45 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    * @returns Configured MCP server instance
    */
   public async createMcpServer(
-    serverInfo: DxtServerInfo,
+    serverInfo?: DxtServerInfo,
     toolOptions?: GenerateMcpToolsOptions,
   ): Promise<any> {
-    const logger = createMcpLogger("MCP Server Creation");
+    const logger = createMcpLogger("MCP Server Creation", "./logs/mcp.log");
 
     try {
-      logger.mcpError(`Creating MCP server: ${serverInfo.name} v${serverInfo.version}`);
+      // Use provided serverInfo or fall back to internal MCP configuration
+      const effectiveServerInfo =
+        serverInfo || this._mcpServerConfig?.serverInfo;
+
+      if (!effectiveServerInfo) {
+        throw new Error(
+          "No MCP server configuration found. Use withMcp() to configure server info or provide serverInfo parameter.",
+        );
+      }
+
+      logger.mcpError(
+        `Creating MCP server: ${effectiveServerInfo.name} v${effectiveServerInfo.version}`,
+      );
 
       // Dynamic import to avoid circular dependencies and support ES modules
-      const { McpServer } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+      const { McpServer } = await import(
+        "@modelcontextprotocol/sdk/server/mcp.js"
+      );
       logger.mcpError("Successfully imported McpServer from SDK");
 
       const server = new McpServer({
-        id: serverInfo.name,
-        version: serverInfo.version,
-        name: serverInfo.name,
-        description: serverInfo.description,
+        id: effectiveServerInfo.name,
+        version: effectiveServerInfo.version,
+        name: effectiveServerInfo.name,
+        description: effectiveServerInfo.description,
       });
 
       logger.mcpError("Successfully created McpServer instance");
 
       // Note: We now register actual resources and prompts below, so no need for internal handlers
-      logger.mcpError("MCP server will register actual resources and prompts for full capability support");
+      logger.mcpError(
+        "MCP server will register actual resources and prompts for full capability support",
+      );
 
       // Generate tools from this ArgParser instance
       logger.mcpError("Generating MCP tools from ArgParser");
@@ -570,59 +838,181 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         return acc;
       }, [] as IMcpToolStructure[]);
 
-      logger.mcpError(`After deduplication: ${uniqueTools.length} unique tools`);
+      logger.mcpError(
+        `After deduplication: ${uniqueTools.length} unique tools`,
+      );
 
       // Register tools
       uniqueTools.forEach((tool) => {
         logger.mcpError(`Registering tool: ${tool.name}`);
+
+        // Convert Zod object schema to the format MCP SDK expects: { key: zodSchema, ... }
+        let inputSchema: any;
+
+        if (tool.inputSchema === null || tool.inputSchema === undefined) {
+          // Empty object for tools with no input parameters
+          inputSchema = {};
+        } else if (
+          tool.inputSchema &&
+          typeof tool.inputSchema === "object" &&
+          tool.inputSchema !== null &&
+          tool.inputSchema._def
+        ) {
+          // For Zod object schemas, extract the shape directly as the MCP SDK expects
+          const zodObjectSchema = tool.inputSchema as any;
+          if (zodObjectSchema._def.typeName === "ZodObject") {
+            // In newer versions of Zod, _def.shape is a function that needs to be called
+            const shapeGetter = zodObjectSchema._def.shape;
+            const shape =
+              typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;
+
+            // Use the shape directly - this matches the working minimal MCP server format
+            inputSchema = shape;
+          } else {
+            // Not a Zod object, use as-is
+            inputSchema = tool.inputSchema;
+          }
+        } else {
+          // Use as-is if it's not a Zod object
+          inputSchema = tool.inputSchema || {};
+        }
+
         const toolConfig: any = {
+          title: tool.name, // MCP SDK requires title field
           description: tool.description || "No description provided.",
-          inputSchema: (tool.inputSchema as any).shape || tool.inputSchema,
+          inputSchema: inputSchema, // Use Zod shape directly for MCP SDK compatibility
         };
 
-        // WORKAROUND: Don't register output schema with MCP SDK due to bug
-        // The output schema will be handled in our response processing instead
-        // if (tool.outputSchema) {
-        //   toolConfig.outputSchema = (tool.outputSchema as any).shape || tool.outputSchema;
-        // }
+        // TODO: Include output schema in MCP tool registration for MCP 2025-06-18+ clients
+        // Currently commented out as MCP SDK v1.15.1 doesn't support outputSchema in registerTool
+        // This should be conditionally enabled based on negotiated protocol version
+        // Unlike input schemas, output schemas should remain as Zod schema objects
+        // for proper validation by the MCP integration layer
+        /*
+        if (tool.outputSchema) {
+          toolConfig.outputSchema = tool.outputSchema;
+        }
+        */
 
-        server.registerTool(tool.name, toolConfig, tool.execute);
+        // Simple tool execution that matches the working minimal MCP server pattern
+        const simpleExecute = async (args: any) => {
+          if (process.env["MCP_DEBUG"]) {
+            console.error(
+              `[MCP Simple Execute] 🎯 TOOL CALLED: '${tool.name}' with args:`,
+              JSON.stringify(args, null, 2),
+            );
+          }
+
+          try {
+            // Call the tool's execute method directly
+            const result = await tool.execute(args);
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Simple Execute] Tool '${tool.name}' returned:`,
+                JSON.stringify(result, null, 2),
+              );
+            }
+
+            // If result already has content field, return as-is
+            if (
+              result &&
+              typeof result === "object" &&
+              result.content &&
+              Array.isArray(result.content)
+            ) {
+              return result;
+            }
+
+            // Otherwise, wrap in MCP content format
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text:
+                    typeof result === "string"
+                      ? result
+                      : JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Simple Execute] Tool '${tool.name}' error:`,
+                errorMessage,
+              );
+            }
+
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Error: ${errorMessage}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+        };
+
+        server.registerTool(tool.name, toolConfig, simpleExecute);
       });
 
       logger.mcpError("Successfully registered all tools with MCP server");
 
       // TODO: Register resources (temporarily disabled due to MCP SDK type compatibility issues)
       const resources = this.getMcpResources();
-      logger.mcpError(`Found ${resources.length} MCP resources (registration temporarily disabled)`);
+      logger.mcpError(
+        `Found ${resources.length} MCP resources (registration temporarily disabled)`,
+      );
 
       // Note: Resource registration will be implemented in a future update once MCP SDK types are resolved
       if (resources.length > 0) {
-        logger.mcpError("Resource registration is temporarily disabled due to MCP SDK type compatibility");
-        logger.mcpError("Resources are stored and will be available once SDK integration is completed");
+        logger.mcpError(
+          "Resource registration is temporarily disabled due to MCP SDK type compatibility",
+        );
+        logger.mcpError(
+          "Resources are stored and will be available once SDK integration is completed",
+        );
       }
 
-      logger.mcpError("Resource registration step completed (temporarily disabled)");
+      logger.mcpError(
+        "Resource registration step completed (temporarily disabled)",
+      );
 
       // TODO: Register prompts (temporarily disabled due to MCP SDK type compatibility issues)
       const prompts = this.getMcpPrompts();
-      logger.mcpError(`Found ${prompts.length} MCP prompts (registration temporarily disabled)`);
+      logger.mcpError(
+        `Found ${prompts.length} MCP prompts (registration temporarily disabled)`,
+      );
 
       // Note: Prompt registration will be implemented in a future update once MCP SDK types are resolved
       if (prompts.length > 0) {
-        logger.mcpError("Prompt registration is temporarily disabled due to MCP SDK type compatibility");
-        logger.mcpError("Prompts are stored and will be available once SDK integration is completed");
+        logger.mcpError(
+          "Prompt registration is temporarily disabled due to MCP SDK type compatibility",
+        );
+        logger.mcpError(
+          "Prompts are stored and will be available once SDK integration is completed",
+        );
       }
 
-      logger.mcpError("Prompt registration step completed (temporarily disabled)");
+      logger.mcpError(
+        "Prompt registration step completed (temporarily disabled)",
+      );
 
       // Set up change notifications
       this.setupMcpChangeNotifications(server);
       logger.mcpError("Successfully set up MCP change notifications");
 
       return server;
-
     } catch (error) {
-      logger.mcpError(`Error creating MCP server: ${error instanceof Error ? error.message : String(error)}`);
+      logger.mcpError(
+        `Error creating MCP server: ${error instanceof Error ? error.message : String(error)}`,
+      );
       if (error instanceof Error && error.stack) {
         logger.mcpError(`Stack trace: ${error.stack}`);
       }
@@ -643,7 +1033,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       // When resources/prompts change, we could notify connected clients
       // The actual notification sending would happen when clients are connected
       const logger = createMcpLogger("MCP Change Notifications");
-      logger.mcpError(`MCP ${event.type} ${event.action}: ${event.entityName || 'unknown'}`);
+      logger.mcpError(
+        `MCP ${event.type} ${event.action}: ${event.entityName || "unknown"}`,
+      );
     });
   }
 
@@ -661,7 +1053,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     },
     toolOptions?: GenerateMcpToolsOptions,
   ): Promise<void> {
-    return this.startMcpServerWithTransport(serverInfo, "stdio", {}, toolOptions);
+    return this.startMcpServerWithTransport(
+      serverInfo,
+      "stdio",
+      {},
+      toolOptions,
+    );
   }
 
   /**
@@ -690,7 +1087,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     const startPromises: Promise<void>[] = [];
 
     for (const transportConfig of transports) {
-      const promise = this.#_startSingleTransport(server, serverInfo, transportConfig);
+      const promise = this.#_startSingleTransport(
+        server,
+        serverInfo,
+        transportConfig,
+      );
       startPromises.push(promise);
     }
 
@@ -741,15 +1142,19 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       sessionIdGenerator?: () => string;
     },
   ): Promise<void> {
-    const logger = createMcpLogger("MCP Transport");
+    const logger = createMcpLogger("MCP Transport", "./logs/mcp.log");
 
     try {
-      logger.mcpError(`Starting ${transportConfig.type} transport for server: ${serverInfo.name}`);
+      logger.mcpError(
+        `Starting ${transportConfig.type} transport for server: ${serverInfo.name}`,
+      );
 
       switch (transportConfig.type) {
         case "stdio": {
           logger.mcpError("Importing StdioServerTransport from SDK");
-          const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+          const { StdioServerTransport } = await import(
+            "@modelcontextprotocol/sdk/server/stdio.js"
+          );
           logger.mcpError("Creating StdioServerTransport instance");
           const transport = new StdioServerTransport();
           logger.mcpError("Connecting server to stdio transport");
@@ -758,85 +1163,100 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           break;
         }
 
-      case "sse": {
-        const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
-        const express = (await import("express")).default;
+        case "sse": {
+          const { SSEServerTransport } = await import(
+            "@modelcontextprotocol/sdk/server/sse.js"
+          );
+          const express = (await import("express")).default;
 
-        const app = express();
-        app.use(express.json());
+          const app = express();
+          app.use(express.json());
 
-        const port = transportConfig.port || 3000;
-        const path = transportConfig.path || "/sse";
+          const port = transportConfig.port || 3000;
+          const path = transportConfig.path || "/sse";
 
-        app.get(path, (_req: any, res: any) => {
-          const transport = new SSEServerTransport(path, res);
-          server.connect(transport);
-        });
-
-        await new Promise<void>((resolve) => {
-          app.listen(port, transportConfig.host || "localhost", () => {
-            console.error(`[${serverInfo.name}] MCP Server listening on http://${transportConfig.host || "localhost"}:${port}${path} (SSE)`);
-            resolve();
+          app.get(path, (_req: any, res: any) => {
+            const transport = new SSEServerTransport(path, res);
+            server.connect(transport);
           });
-        });
-        break;
-      }
 
-      case "streamable-http": {
-        const { StreamableHTTPServerTransport } = await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
-        const express = (await import("express")).default;
-
-        const app = express();
-        app.use(express.json());
-
-        const port = transportConfig.port || 3000;
-        const path = transportConfig.path || "/mcp";
-
-        const transports: { [sessionId: string]: any } = {};
-
-        app.all(path, async (req: any, res: any) => {
-          const sessionId = req.headers['mcp-session-id'] as string | undefined;
-          let transport: any;
-
-          if (sessionId && transports[sessionId]) {
-            transport = transports[sessionId];
-          } else {
-            transport = new StreamableHTTPServerTransport({
-              sessionIdGenerator: transportConfig.sessionIdGenerator || (() => Math.random().toString(36).substring(7)),
-              onsessioninitialized: (sessionId: string) => {
-                transports[sessionId] = transport;
-              }
+          await new Promise<void>((resolve) => {
+            app.listen(port, transportConfig.host || "localhost", () => {
+              console.error(
+                `[${serverInfo.name}] MCP Server listening on http://${transportConfig.host || "localhost"}:${port}${path} (SSE)`,
+              );
+              resolve();
             });
-
-            transport.onclose = () => {
-              if (transport.sessionId) {
-                delete transports[transport.sessionId];
-              }
-            };
-
-            await server.connect(transport);
-          }
-
-          await transport.handleRequest(req, res, req.body);
-        });
-
-        await new Promise<void>((resolve) => {
-          app.listen(port, transportConfig.host || "localhost", () => {
-            resolve();
           });
-        });
-        break;
-      }
+          break;
+        }
+
+        case "streamable-http": {
+          const { StreamableHTTPServerTransport } = await import(
+            "@modelcontextprotocol/sdk/server/streamableHttp.js"
+          );
+          const express = (await import("express")).default;
+
+          const app = express();
+          app.use(express.json());
+
+          const port = transportConfig.port || 3000;
+          const path = transportConfig.path || "/mcp";
+
+          const transports: { [sessionId: string]: any } = {};
+
+          app.all(path, async (req: any, res: any) => {
+            const sessionId = req.headers["mcp-session-id"] as
+              | string
+              | undefined;
+            let transport: any;
+
+            if (sessionId && transports[sessionId]) {
+              transport = transports[sessionId];
+            } else {
+              transport = new StreamableHTTPServerTransport({
+                sessionIdGenerator:
+                  transportConfig.sessionIdGenerator ||
+                  (() => Math.random().toString(36).substring(7)),
+                onsessioninitialized: (sessionId: string) => {
+                  transports[sessionId] = transport;
+                },
+              });
+
+              transport.onclose = () => {
+                if (transport.sessionId) {
+                  delete transports[transport.sessionId];
+                }
+              };
+
+              await server.connect(transport);
+            }
+
+            await transport.handleRequest(req, res, req.body);
+          });
+
+          await new Promise<void>((resolve) => {
+            app.listen(port, transportConfig.host || "localhost", () => {
+              resolve();
+            });
+          });
+          break;
+        }
 
         default:
-          logger.mcpError(`Unsupported transport type: ${transportConfig.type}`);
-          throw new Error(`Unsupported transport type: ${transportConfig.type}`);
+          logger.mcpError(
+            `Unsupported transport type: ${transportConfig.type}`,
+          );
+          throw new Error(
+            `Unsupported transport type: ${transportConfig.type}`,
+          );
       }
 
       logger.mcpError(`Successfully started ${transportConfig.type} transport`);
-
     } catch (error) {
-      logger.mcpError(`Error starting ${transportConfig.type} transport: ${error instanceof Error ? error.message : String(error)}`);
+      logger.mcpError(
+        `Error starting ${transportConfig.type} transport: ${error instanceof Error ? error.message : String(error)}`,
+      );
       if (error instanceof Error && error.stack) {
         logger.mcpError(`Stack trace: ${error.stack}`);
       }
@@ -846,7 +1266,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
   public async parse(processArgs: string[], options?: any): Promise<any> {
     // Call the base class parse method directly to avoid any override issues
-    let result = await ArgParserBase.prototype.parse.call(this, processArgs, options);
+    let result = await ArgParserBase.prototype.parse.call(
+      this,
+      processArgs,
+      options,
+    );
 
     // If fuzzy mode prevented execution, return the result as-is
     const anyResult = result as any;
@@ -873,9 +1297,18 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     const result = this.parse(processArgs, options);
 
     // Handle ParseResult objects when autoExit is false
-    if (result && typeof result === 'object' && 'success' in result && 'exitCode' in result) {
+    if (
+      result &&
+      typeof result === "object" &&
+      "success" in result &&
+      "exitCode" in result
+    ) {
       const parseResult = result as ParseResult;
-      if (parseResult.shouldExit && typeof process === "object" && typeof process.exit === "function") {
+      if (
+        parseResult.shouldExit &&
+        typeof process === "object" &&
+        typeof process.exit === "function"
+      ) {
         process.exit(parseResult.exitCode as never);
       }
     }
@@ -893,8 +1326,6 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     return this.parse(processArgs, options);
   }
 
-
-
   async #processAsyncHandlerPromise(result: any): Promise<any> {
     const anyResult = result as any;
 
@@ -905,7 +1336,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         anyResult.handlerResponse = handlerResult;
 
         // Merge handler result into final args if it's an object
-        if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+        if (
+          handlerResult &&
+          typeof handlerResult === "object" &&
+          !Array.isArray(handlerResult)
+        ) {
           Object.assign(anyResult, handlerResult);
         }
       } catch (error) {
@@ -962,7 +1397,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
   public addMcpSubCommand(
     subCommandName: string | undefined = "mcp-server",
     serverInfo: DxtServerInfo,
-    optionsOrToolOptions?: (McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions }) | GenerateMcpToolsOptions,
+    optionsOrToolOptions?:
+      | (McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions })
+      | GenerateMcpToolsOptions,
   ): this {
     // Emit deprecation warning
     console.warn(`[DEPRECATED] addMcpSubCommand() is deprecated and will be removed in v2.0.
@@ -971,16 +1408,27 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
     // Handle backward compatibility: if the third parameter is a GenerateMcpToolsOptions object
     // (detected by checking if it has properties that only exist in GenerateMcpToolsOptions)
-    let options: McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions };
+    let options: McpSubCommandOptions & {
+      toolOptions?: GenerateMcpToolsOptions;
+    };
 
-    if (optionsOrToolOptions &&
-        (typeof optionsOrToolOptions === 'object') &&
-        ('includeSubCommands' in optionsOrToolOptions || 'toolNamePrefix' in optionsOrToolOptions || 'toolNameSuffix' in optionsOrToolOptions)) {
+    if (
+      optionsOrToolOptions &&
+      typeof optionsOrToolOptions === "object" &&
+      ("includeSubCommands" in optionsOrToolOptions ||
+        "toolNamePrefix" in optionsOrToolOptions ||
+        "toolNameSuffix" in optionsOrToolOptions)
+    ) {
       // This is the old GenerateMcpToolsOptions format
-      options = { toolOptions: optionsOrToolOptions as GenerateMcpToolsOptions };
+      options = {
+        toolOptions: optionsOrToolOptions as GenerateMcpToolsOptions,
+      };
     } else {
       // This is the new options format or undefined
-      options = (optionsOrToolOptions as McpSubCommandOptions & { toolOptions?: GenerateMcpToolsOptions }) || {};
+      options =
+        (optionsOrToolOptions as McpSubCommandOptions & {
+          toolOptions?: GenerateMcpToolsOptions;
+        }) || {};
     }
 
     const { defaultTransports, defaultTransport, toolOptions } = options;
@@ -1002,11 +1450,15 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       (globalThis as any).console = logger;
 
       try {
-        logger.mcpError("MCP handler started - console hijacked for MCP safety");
+        logger.mcpError(
+          "MCP handler started - console hijacked for MCP safety",
+        );
         logger.mcpError(`Handler context args: ${JSON.stringify(ctx.args)}`);
 
         if (!ctx.parentParser) {
-          logger.mcpError("Critical: MCP server handler called without a parent parser context.");
+          logger.mcpError(
+            "Critical: MCP server handler called without a parent parser context.",
+          );
           process.exit(1);
         }
 
@@ -1019,23 +1471,43 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         const transports = ctx.args["transports"] as string;
 
         if (transports) {
-          logger.mcpError(`Multiple transports specified via CLI: ${transports}`);
+          logger.mcpError(
+            `Multiple transports specified via CLI: ${transports}`,
+          );
           // Parse multiple transports configuration from CLI
           try {
             const transportConfigs = JSON.parse(transports);
-            logger.mcpError(`Parsed transport configs: ${JSON.stringify(transportConfigs)}`);
-            await mcpParser.startMcpServerWithMultipleTransports(serverInfo, transportConfigs, toolOptions);
+            logger.mcpError(
+              `Parsed transport configs: ${JSON.stringify(transportConfigs)}`,
+            );
+            await mcpParser.startMcpServerWithMultipleTransports(
+              serverInfo,
+              transportConfigs,
+              toolOptions,
+            );
           } catch (error: any) {
-            logger.mcpError(`Error parsing transports configuration: ${error.message}`);
-            logger.mcpError("Expected JSON format: '[{\"type\":\"stdio\"},{\"type\":\"sse\",\"port\":3001}]'");
+            logger.mcpError(
+              `Error parsing transports configuration: ${error.message}`,
+            );
+            logger.mcpError(
+              'Expected JSON format: \'[{"type":"stdio"},{"type":"sse","port":3001}]\'',
+            );
             process.exit(1);
           }
         } else if (defaultTransports && defaultTransports.length > 0) {
-          logger.mcpError(`Using preset multiple transports: ${JSON.stringify(defaultTransports)}`);
+          logger.mcpError(
+            `Using preset multiple transports: ${JSON.stringify(defaultTransports)}`,
+          );
           // Use preset multiple transports configuration
-          await mcpParser.startMcpServerWithMultipleTransports(serverInfo, defaultTransports, toolOptions);
+          await mcpParser.startMcpServerWithMultipleTransports(
+            serverInfo,
+            defaultTransports,
+            toolOptions,
+          );
         } else if (defaultTransport) {
-          logger.mcpError(`Using preset single transport: ${JSON.stringify(defaultTransport)}`);
+          logger.mcpError(
+            `Using preset single transport: ${JSON.stringify(defaultTransport)}`,
+          );
           // Use preset single transport configuration
           await mcpParser.startMcpServerWithTransport(
             serverInfo,
@@ -1046,27 +1518,37 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               path: defaultTransport.path,
               sessionIdGenerator: defaultTransport.sessionIdGenerator,
             },
-            toolOptions
+            toolOptions,
           );
         } else {
           // Single transport mode from CLI flags (backwards compatibility)
-          const transportType = (ctx.args["transport"] as "stdio" | "sse" | "streamable-http") || "stdio";
+          const transportType =
+            (ctx.args["transport"] as "stdio" | "sse" | "streamable-http") ||
+            "stdio";
           const transportOptions = {
             port: ctx.args["port"] as number,
             host: ctx.args["host"] as string,
             path: ctx.args["path"] as string,
           };
 
-          logger.mcpError(`Using single transport mode: ${transportType} with options: ${JSON.stringify(transportOptions)}`);
-          await mcpParser.startMcpServerWithTransport(serverInfo, transportType, transportOptions, toolOptions);
+          logger.mcpError(
+            `Using single transport mode: ${transportType} with options: ${JSON.stringify(transportOptions)}`,
+          );
+          await mcpParser.startMcpServerWithTransport(
+            serverInfo,
+            transportType,
+            transportOptions,
+            toolOptions,
+          );
         }
 
         logger.mcpError("MCP server setup completed, keeping process alive");
         // Keep the process alive
         return new Promise(() => {});
-
       } catch (error) {
-        logger.mcpError(`Error in MCP handler: ${error instanceof Error ? error.message : String(error)}`);
+        logger.mcpError(
+          `Error in MCP handler: ${error instanceof Error ? error.message : String(error)}`,
+        );
         if (error instanceof Error && error.stack) {
           logger.mcpError(`Stack trace: ${error.stack}`);
         }
@@ -1154,9 +1636,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     return new ArgParser<T>(libraryOptions as any, initialFlags);
   }
 
-  public static fromArgParser<T = any>(
-    parser: ArgParserBase<T>,
-  ): ArgParser<T> {
+  public static fromArgParser<T = any>(parser: ArgParserBase<T>): ArgParser<T> {
     const originalParser = parser as any;
 
     const mcpParser = new ArgParser<T>({

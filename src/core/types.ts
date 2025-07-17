@@ -272,6 +272,168 @@ export type IHandlerContext<
 export type FlagsArray = readonly ProcessedFlag[];
 
 /**
+ * Converts a flag type to a JSON Schema type string.
+ * This function handles all possible flag type formats and returns a valid JSON Schema type.
+ *
+ * @param flagType - The flag type from IFlag or ProcessedFlag
+ * @returns A JSON Schema type string: "string" | "number" | "boolean" | "array" | "object"
+ *
+ * @example
+ * ```typescript
+ * getJsonSchemaTypeFromFlag(String) // returns "string"
+ * getJsonSchemaTypeFromFlag("number") // returns "number"
+ * getJsonSchemaTypeFromFlag((val) => parseInt(val)) // returns "string" (fallback for custom functions)
+ * ```
+ */
+export function getJsonSchemaTypeFromFlag(flagType: TParsedArgsTypeFromFlagDef): "string" | "number" | "boolean" | "array" | "object" {
+  // Handle constructor functions
+  if (typeof flagType === "function") {
+    // Check if it's a built-in constructor
+    if (flagType === String) return "string";
+    if (flagType === Number) return "number";
+    if (flagType === Boolean) return "boolean";
+    if (flagType === Array) return "array";
+    if (flagType === Object) return "object";
+
+    // For custom parser functions, we can't determine the return type at compile time
+    // so we default to "string" as the safest fallback for JSON Schema
+    return "string";
+  }
+
+  // Handle string literals
+  if (typeof flagType === "string") {
+    const normalizedType = flagType.toLowerCase();
+    switch (normalizedType) {
+      case "string": return "string";
+      case "number": return "number";
+      case "boolean": return "boolean";
+      case "array": return "array";
+      case "object": return "object";
+      default:
+        // Unknown string type, default to string
+        return "string";
+    }
+  }
+
+  // Fallback for any other type
+  return "string";
+}
+
+/**
+ * Common output schema patterns for typical CLI/MCP tool responses
+ */
+export const OutputSchemaPatterns = {
+  /**
+   * Simple success/error response pattern
+   * @example { success: true, message: "Operation completed" }
+   */
+  successError: () => z.object({
+    success: z.boolean().describe("Whether the operation was successful"),
+    message: z.string().optional().describe("Optional message about the operation"),
+    error: z.string().optional().describe("Error message if operation failed"),
+  }),
+
+  /**
+   * Success response with data payload
+   * @example { success: true, data: {...}, message: "Data retrieved" }
+   */
+  successWithData: (dataSchema?: z.ZodTypeAny) => z.object({
+    success: z.boolean().describe("Whether the operation was successful"),
+    data: dataSchema || z.any().describe("The response data"),
+    message: z.string().optional().describe("Optional message about the operation"),
+    error: z.string().optional().describe("Error message if operation failed"),
+  }),
+
+  /**
+   * List/array response pattern
+   * @example { items: [...], count: 5, hasMore: false }
+   */
+  list: (itemSchema?: z.ZodTypeAny) => z.object({
+    items: z.array(itemSchema || z.any()).describe("Array of items"),
+    count: z.number().optional().describe("Total number of items"),
+    hasMore: z.boolean().optional().describe("Whether there are more items available"),
+  }),
+
+  /**
+   * File operation response pattern
+   * @example { path: "/path/to/file", size: 1024, created: true }
+   */
+  fileOperation: () => z.object({
+    path: z.string().describe("File path"),
+    size: z.number().optional().describe("File size in bytes"),
+    created: z.boolean().optional().describe("Whether the file was created"),
+    modified: z.boolean().optional().describe("Whether the file was modified"),
+    exists: z.boolean().optional().describe("Whether the file exists"),
+  }),
+
+  /**
+   * Process execution response pattern
+   * @example { exitCode: 0, stdout: "output", stderr: "", duration: 1500 }
+   */
+  processExecution: () => z.object({
+    exitCode: z.number().describe("Process exit code"),
+    stdout: z.string().optional().describe("Standard output"),
+    stderr: z.string().optional().describe("Standard error output"),
+    duration: z.number().optional().describe("Execution duration in milliseconds"),
+    command: z.string().optional().describe("The command that was executed"),
+  }),
+} as const;
+
+/**
+ * Type for output schema pattern names with auto-completion support
+ */
+export type OutputSchemaPatternName = keyof typeof OutputSchemaPatterns;
+
+/**
+ * Type for output schema configuration - supports pattern names, Zod schemas, or schema definition objects
+ */
+export type OutputSchemaConfig =
+  | OutputSchemaPatternName
+  | z.ZodTypeAny
+  | Record<string, z.ZodTypeAny>;
+
+/**
+ * Creates a Zod output schema from a pattern or custom definition
+ *
+ * @param pattern - Either a predefined pattern name, a Zod schema, or a schema definition object
+ * @returns A Zod schema for output validation
+ *
+ * @example
+ * ```typescript
+ * // Using a predefined pattern
+ * const schema1 = createOutputSchema('successError');
+ *
+ * // Using a custom Zod schema
+ * const schema2 = createOutputSchema(z.object({ result: z.string() }));
+ *
+ * // Using a schema definition object
+ * const schema3 = createOutputSchema({
+ *   result: z.string().describe("The result"),
+ *   timestamp: z.string().describe("When the operation completed")
+ * });
+ * ```
+ */
+export function createOutputSchema(pattern: OutputSchemaConfig): z.ZodTypeAny {
+  // Handle predefined patterns
+  if (typeof pattern === "string" && pattern in OutputSchemaPatterns) {
+    return OutputSchemaPatterns[pattern]();
+  }
+
+  // Handle Zod schema directly
+  if (pattern && typeof pattern === "object" && "_def" in pattern) {
+    return pattern as z.ZodTypeAny;
+  }
+
+  // Handle schema definition object
+  if (pattern && typeof pattern === "object") {
+    return z.object(pattern as Record<string, z.ZodTypeAny>);
+  }
+
+  // Fallback to a generic success pattern
+  return OutputSchemaPatterns.successError();
+}
+
+/**
  * Defines a subcommand within an ArgParser setup.
  * @template TSubCommandFlags Flags defined specifically FOR this subcommand.
  * @template TParentCommandFlags Flags defined for the PARENT of this subcommand.
@@ -327,8 +489,20 @@ export interface ParseResult<T = any> {
 
 /**
  * Configuration options for ArgParser behavior
+ * @deprecated Use IArgParserParams for full configuration options. This interface will be removed in v3.0.
  */
 export interface ArgParserOptions {
+  /** Whether to automatically call process.exit() based on ParseResult (default: true for backward compatibility) */
+  autoExit?: boolean;
+  /** Whether to handle errors by exiting or throwing (default: true for backward compatibility) */
+  handleErrors?: boolean;
+}
+
+/**
+ * Configuration options for ArgParser runtime behavior
+ * This is a more clearly named version of ArgParserOptions
+ */
+export interface ArgParserBehaviorOptions {
   /** Whether to automatically call process.exit() based on ParseResult (default: true for backward compatibility) */
   autoExit?: boolean;
   /** Whether to handle errors by exiting or throwing (default: true for backward compatibility) */

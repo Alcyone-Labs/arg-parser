@@ -12,8 +12,8 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1
       '@alcyone-labs/simple-mcp-logger':
-        specifier: ^1.0.1
-        version: 1.0.1
+        specifier: ^1.1.0
+        version: 1.1.0
       magic-regexp:
         specifier: ^0.10.0
         version: 0.10.0
@@ -86,8 +86,8 @@ packages:
     resolution: {integrity: sha512-X17ZrsYd/oK5Rq0vbMv+Bv2+auHXdYxbyF7+qkhSPXPaFxzmS6tZrDB9chfufpvVsTWD+ZIzdyiV7uDV8TTDuQ==}
     engines: {node: '>=14.0.0'}
 
-  '@alcyone-labs/simple-mcp-logger@1.0.1':
-    resolution: {integrity: sha512-8kZiaFlPVLpwqMYDt6+uhcHvNYg91Qdkx5oUBByHSHzayyI21rlaB8TeR2iz1AXXo3sMb9fTUhziAJspoPL1ZQ==}
+  '@alcyone-labs/simple-mcp-logger@1.1.0':
+    resolution: {integrity: sha512-ty1F/+815Bo8PPA8csH2vGNApiqfZhhcOKWyZztmTJiszB40wtPz2bedQ4CorLZvU/1fSbwqAjEy4pBOHC8pJg==}
     peerDependencies:
       pino: ^8.0.0 || ^9.0.0
       winston: ^3.0.0
@@ -1948,7 +1948,7 @@ snapshots:
 
   '@alcyone-labs/simple-chalk@1.0.1': {}
 
-  '@alcyone-labs/simple-mcp-logger@1.0.1': {}
+  '@alcyone-labs/simple-mcp-logger@1.1.0': {}
 
   '@babel/code-frame@7.27.1':
     dependencies:

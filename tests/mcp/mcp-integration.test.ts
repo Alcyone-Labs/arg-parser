@@ -352,7 +352,10 @@ describe("MCP Integration", () => {
             type: "text",
             text: expect.stringContaining('"result": "success"')
           }
-        ]
+        ],
+        structuredContent: expect.objectContaining({
+          result: "success"
+        })
       });
     });
 
@@ -388,7 +391,11 @@ describe("MCP Integration", () => {
             type: "text",
             text: expect.stringContaining("Handler failed")
           }
-        ]
+        ],
+        structuredContent: expect.objectContaining({
+          success: false,
+          error: expect.stringContaining("Handler failed")
+        })
       });
     });
 
@@ -434,7 +441,14 @@ describe("MCP Integration", () => {
             type: "text",
             text: expect.stringContaining("Processing failed")
           }
-        ]
+        ],
+        structuredContent: expect.objectContaining({
+          success: false,
+          error: expect.stringContaining("Processing failed"),
+          message: expect.stringContaining("Processing failed"),
+          result: "",
+          files: null
+        })
       });
     });
 
@@ -645,7 +659,11 @@ describe("MCP Integration", () => {
             type: "text",
             text: expect.stringContaining('"success": true')
           }
-        ]
+        ],
+        structuredContent: expect.objectContaining({
+          success: true,
+          contextReceived: true
+        })
       });
     });
 

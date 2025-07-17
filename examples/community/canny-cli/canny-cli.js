@@ -3,6 +3,7 @@
 // This CLI was provided, with permission, in an earlier form by Lucas Jans - https://x.com/lucasjans
 import chalk from "chalk";
 import { ArgParser } from "../../../dist/index.mjs";
+import { z } from "zod";
 
 // Canny API helper function
 async function searchCanny(apiKey, query, limit = 10) {
@@ -69,8 +70,43 @@ const cli = ArgParser.withMcp({
         defaultValue: 10,
       },
     ],
+    // 🎉 NEW: Output schema directly in tool definition!
+    outputSchema: z.object({
+      success: z.boolean().describe("Whether the search was successful"),
+      query: z.string().describe("The search query that was executed"),
+      results: z.array(z.object({
+        id: z.string().describe("Unique post ID"),
+        title: z.string().describe("Post title"),
+        details: z.string().optional().describe("Post details/description"),
+        status: z.string().describe("Current status of the post"),
+        score: z.number().describe("Post score/votes"),
+        commentCount: z.number().describe("Number of comments"),
+        url: z.string().describe("URL to the post"),
+        author: z.object({
+          id: z.string(),
+          name: z.string(),
+          email: z.string().optional()
+        }).optional().describe("Post author information"),
+        board: z.object({
+          id: z.string(),
+          name: z.string()
+        }).optional().describe("Board information"),
+        category: z.object({
+          id: z.string(),
+          name: z.string()
+        }).optional().describe("Category information"),
+        created: z.string().optional().describe("Creation timestamp"),
+        eta: z.string().optional().describe("Estimated time of arrival")
+      })).describe("Array of matching Canny posts"),
+      total: z.number().describe("Total number of results returned"),
+      timestamp: z.string().describe("When the search was performed (ISO 8601)")
+    }),
     handler: async (ctx) => {
       const args = ctx.args;
+
+      if (process.env['MCP_DEBUG']) {
+        console.error(`[Canny Debug] Handler called with args:`, JSON.stringify(args, null, 2));
+      }
 
       // Get API key from args or environment variable
       const apiKey = args.apiKey || process.env.CANNY_API_KEY;
@@ -114,13 +150,17 @@ const cli = ArgParser.withMcp({
         }
 
         // Return structured data for both CLI and MCP modes
-        return {
+        const response = {
           success: true,
           query: args.query,
           results: results.posts || [],
           total: results.posts ? results.posts.length : 0,
           timestamp: new Date().toISOString(),
         };
+
+
+
+        return response;
       } catch (error) {
         // Always show error output - ArgParser handles MCP mode automatically
         console.error(chalk.red(`❌ Error: ${error.message}`));
@@ -140,6 +180,21 @@ const cli = ArgParser.withMcp({
         env: "CANNY_API_KEY", // This will be used in DXT packages and auto-detected
       },
     ],
+    // 🎉 NEW: Output schema for boards listing
+    outputSchema: {
+      success: z.boolean().describe("Whether the boards listing was successful"),
+      boards: z.array(z.object({
+        id: z.string().describe("Unique board ID"),
+        name: z.string().describe("Board name"),
+        description: z.string().optional().describe("Board description"),
+        postCount: z.number().optional().describe("Number of posts in this board"),
+        url: z.string().optional().describe("Board URL"),
+        created: z.string().optional().describe("Board creation timestamp"),
+        isPrivate: z.boolean().optional().describe("Whether the board is private")
+      })).describe("Array of available Canny boards"),
+      total: z.number().describe("Total number of boards returned"),
+      timestamp: z.string().describe("When the boards were fetched (ISO 8601)")
+    },
     handler: async (ctx) => {
       const args = ctx.args;
 

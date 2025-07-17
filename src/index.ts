@@ -6,6 +6,7 @@ export {
   type DxtServerInfo,
   type McpServerOptions,
   type WithMcpOptions,
+  type ArgParserWithMcpOptions,
   type McpToolConfig,
   type ToolConfig
 } from "./core/ArgParser";
@@ -26,6 +27,13 @@ export {
   type MainHandler,
   type ISubCommand,
   type ArgParserInstance,
+  getJsonSchemaTypeFromFlag,
+  OutputSchemaPatterns,
+  type OutputSchemaPatternName,
+  type OutputSchemaConfig,
+  createOutputSchema,
+  type ArgParserOptions,
+  type ArgParserBehaviorOptions,
 } from "./core/types";
 
 export {

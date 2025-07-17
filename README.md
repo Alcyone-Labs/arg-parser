@@ -23,15 +23,32 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
 - [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
+  - [Output Schema Support](#output-schema-support)
+    - [Basic Usage](#basic-usage)
+    - [Predefined Schema Patterns](#predefined-schema-patterns)
+    - [Custom Zod Schemas](#custom-zod-schemas)
+    - [MCP Version Compatibility](#mcp-version-compatibility)
+    - [Automatic Error Handling](#automatic-error-handling)
+  - [Writing Effective MCP Tool Descriptions](#writing-effective-mcp-tool-descriptions)
+    - [Best Practices for Tool Descriptions](#best-practices-for-tool-descriptions)
+    - [Complete Example: Well-Documented Tool](#complete-example-well-documented-tool)
+    - [Parameter Description Guidelines](#parameter-description-guidelines)
+    - [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
   - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
   - [MCP Transports](#mcp-transports)
   - [Automatic Console Safety](#automatic-console-safety)
   - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
   - [Logo Configuration](#logo-configuration)
+    - [Supported Logo Sources](#supported-logo-sources)
   - [How DXT Generation Works](#how-dxt-generation-works)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.0.0](#v200)
+  - [v1.3.0](#v130)
+  - [v1.2.0](#v120)
+  - [v1.1.0](#v110)
 - [Backlog](#backlog)
+  - [(known) Bugs / DX improvement points](#known-bugs--dx-improvement-points)
 
 ## Features Overview
 
@@ -62,6 +79,7 @@ pnpm add @alcyone-labs/arg-parser
 The modern way to build with ArgParser is using the `.addTool()` method. It creates a single, self-contained unit that works as both a CLI subcommand and an MCP tool.
 
 ```typescript
+import { z } from "zod";
 import { ArgParser } from "@alcyone-labs/arg-parser";
 
 // Use ArgParser.withMcp to enable MCP and DXT features
@@ -93,6 +111,13 @@ const cli = ArgParser.withMcp({
         description: "Greeting style",
       },
     ],
+    // Optional: Define output schema for MCP clients (Claude Desktop, etc.)
+    // This only affects MCP mode - CLI mode works the same regardless
+    outputSchema: {
+      success: z.boolean().describe("Whether the greeting was successful"),
+      greeting: z.string().describe("The formatted greeting message"),
+      name: z.string().describe("The name that was greeted"),
+    },
     handler: async (ctx) => {
       // Use console.log freely - it's automatically safe in MCP mode!
       console.log(`Greeting ${ctx.args.name} in a ${ctx.args.style} style...`);
@@ -368,6 +393,7 @@ cli.addTool({
 - **Simpler Logic**: No more manual MCP mode detection or response formatting.
 - **Automatic Schemas**: Flags are automatically converted into the `input_schema` for MCP tools.
 - **Automatic Console Safety**: `console.log` is automatically redirected in MCP mode.
+- **Optional Output Schemas**: Add `outputSchema` only if you want structured responses for MCP clients - CLI mode works perfectly without them.
 
 ---
 
@@ -395,12 +421,81 @@ interface IFlag {
 
 ### Type Handling and Validation
 
-ArgParser automatically handles type conversion and validation:
+ArgParser provides **strong typing** for flag definitions with comprehensive validation at both compile-time and runtime. The `type` property accepts multiple formats and ensures type safety throughout your application.
 
-- **String flags**: `--name value` or `--name="quoted value"`
-- **Number flags**: `--count 42` (automatically parsed)
-- **Boolean flags**: `--verbose` (presence implies `true`)
-- **Array flags**: `--tags tag1,tag2,tag3` or multiple `--tag value1 --tag value2` (requires `allowMultiple: true`)
+#### Supported Type Formats
+
+You can define flag types using either **constructor functions** or **string literals**:
+
+```typescript
+const parser = new ArgParser({ /* ... */ }).addFlags([
+  // Constructor functions (recommended for TypeScript)
+  { name: "count", options: ["--count"], type: Number },
+  { name: "enabled", options: ["--enabled"], type: Boolean, flagOnly: true },
+  { name: "files", options: ["--files"], type: Array, allowMultiple: true },
+
+  // String literals (case-insensitive)
+  { name: "name", options: ["--name"], type: "string" },
+  { name: "port", options: ["--port"], type: "number" },
+  { name: "verbose", options: ["-v"], type: "boolean", flagOnly: true },
+  { name: "tags", options: ["--tags"], type: "array", allowMultiple: true },
+  { name: "config", options: ["--config"], type: "object" },
+
+  // Custom parser functions
+  {
+    name: "date",
+    options: ["--date"],
+    type: (value: string) => new Date(value)
+  }
+]);
+```
+
+#### Runtime Type Validation
+
+The type system validates flag definitions at runtime and throws descriptive errors for invalid configurations:
+
+```typescript
+// ✅ Valid - these work
+{ name: "count", options: ["--count"], type: Number }
+{ name: "count", options: ["--count"], type: "number" }
+{ name: "count", options: ["--count"], type: "NUMBER" } // case-insensitive
+
+// ❌ Invalid - these throw ZodError
+{ name: "count", options: ["--count"], type: "invalid-type" }
+{ name: "count", options: ["--count"], type: 42 } // primitive instead of constructor
+{ name: "count", options: ["--count"], type: null }
+```
+
+#### Automatic Type Processing
+
+- **String literals** are automatically converted to constructor functions internally
+- **Constructor functions** are preserved as-is
+- **Custom parser functions** allow complex transformations
+- **undefined** falls back to the default `"string"` type
+
+#### Type Conversion Examples
+
+```typescript
+// String flags
+--name value          → "value"
+--name="quoted value" → "quoted value"
+
+// Number flags
+--count 42           → 42
+--port=8080          → 8080
+
+// Boolean flags (flagOnly: true)
+--verbose            → true
+(no flag)            → false
+
+// Array flags (allowMultiple: true)
+--tags tag1,tag2,tag3           → ["tag1", "tag2", "tag3"]
+--file file1.txt --file file2.txt → ["file1.txt", "file2.txt"]
+
+// Custom parser functions
+--date "2023-01-01"  → Date object
+--json '{"key":"val"}' → parsed JSON object
+```
 
 ### Hierarchical CLIs (Sub-Commands)
 
@@ -467,6 +562,266 @@ parentParser.addSubCommand({ name: "deploy", parser: childParser });
 ---
 
 ## MCP & Claude Desktop Integration
+
+### Output Schema Support
+
+Output schemas are **completely optional** and **only affect MCP mode** (Claude Desktop, MCP clients). They have **zero impact** on CLI usage - your CLI will work exactly the same with or without them.
+
+**When do I need output schemas?**
+
+- ❌ **CLI-only usage**: Never needed - skip this section entirely
+- ✅ **MCP integration**: Optional but recommended for better structured responses
+- ✅ **Claude Desktop**: Helpful for Claude to understand your tool's output format
+
+**Key Points:**
+
+- ✅ **CLI works perfectly without them**: Your command-line interface is unaffected
+- ✅ **MCP-only feature**: Only used when running with `--s-mcp-serve`
+- ✅ **Version-aware**: Automatically included only for compatible MCP clients (v2025-06-18+)
+- ✅ **Flexible**: Use predefined patterns or custom Zod schemas
+
+#### Basic Usage
+
+```typescript
+import { z } from "zod";
+
+.addTool({
+  name: "process-file",
+  description: "Process a file",
+  flags: [
+    { name: "path", options: ["--path"], type: "string", mandatory: true }
+  ],
+  // Optional: Only needed if you want structured MCP responses
+  // CLI mode works exactly the same whether this is present or not
+  outputSchema: {
+    success: z.boolean().describe("Whether processing succeeded"),
+    filePath: z.string().describe("Path to the processed file"),
+    size: z.number().describe("File size in bytes"),
+    lastModified: z.string().describe("Last modification timestamp")
+  },
+  handler: async (ctx) => {
+    // Your logic here - same code for both CLI and MCP
+    // The outputSchema doesn't change how this function works
+    return {
+      success: true,
+      filePath: ctx.args.path,
+      size: 1024,
+      lastModified: new Date().toISOString()
+    };
+  }
+})
+
+// CLI usage (outputSchema ignored): mycli process-file --path /my/file.txt
+// MCP usage (outputSchema provides structure): mycli --s-mcp-serve
+```
+
+#### Predefined Schema Patterns
+
+For common use cases, use predefined patterns:
+
+```typescript
+// For simple success/error responses
+outputSchema: "successError";
+
+// For operations that return data
+outputSchema: "successWithData";
+
+// For file operations
+outputSchema: "fileOperation";
+
+// For process execution
+outputSchema: "processExecution";
+
+// For list operations
+outputSchema: "list";
+```
+
+#### Custom Zod Schemas
+
+For complex data structures:
+
+```typescript
+outputSchema: z.object({
+  analysis: z.object({
+    summary: z.string(),
+    wordCount: z.number(),
+    sentiment: z.enum(["positive", "negative", "neutral"]),
+  }),
+  metadata: z.object({
+    timestamp: z.string(),
+    processingTime: z.number(),
+  }),
+});
+```
+
+#### MCP Version Compatibility
+
+Output schemas are automatically handled based on MCP client version:
+
+- **MCP v2025-06-18+**: Full output schema support with `structuredContent`
+- **Earlier versions**: Schemas ignored, standard JSON text response only
+
+To explicitly set the MCP version for testing:
+
+```typescript
+const cli = ArgParser.withMcp({
+  // ... your config
+}).setMcpProtocolVersion("2025-06-18"); // Enable output schema support
+```
+
+**Important**:
+
+- **CLI users**: You can ignore MCP versions entirely - they don't affect command-line usage
+- **MCP users**: ArgParser handles version detection automatically based on client capabilities
+
+#### Automatic Error Handling
+
+ArgParser automatically handles errors differently based on execution context, so your handlers can simply throw errors without worrying about CLI vs MCP mode:
+
+```typescript
+const cli = ArgParser.withMcp({
+  // ... config
+}).addTool({
+  name: "process-data",
+  handler: async (ctx) => {
+    // Simply throw errors - ArgParser handles the rest automatically
+    if (!ctx.args.apiKey) {
+      throw new Error("API key is required");
+    }
+
+    // Do your work and return results
+    return { success: true, data: processedData };
+  },
+});
+```
+
+**How it works:**
+
+- **CLI mode**: Thrown errors cause the process to exit with error code 1
+- **MCP mode**: Thrown errors are automatically converted to structured MCP error responses
+- **No manual checks needed**: Handlers don't need to check `ctx.isMcp` or handle different response formats
+
+### Writing Effective MCP Tool Descriptions
+
+**Why descriptions matter**: When your tools are exposed to Claude Desktop or other MCP clients, the `description` field is the primary way LLMs understand what your tool does and when to use it. A well-written description significantly improves tool selection accuracy and user experience.
+
+#### Best Practices for Tool Descriptions
+
+**1. Start with the action** - Begin with a clear verb describing what the tool does:
+
+```typescript
+// ✅ Good: Action-first, specific
+description: "Analyzes text files and returns detailed statistics including word count, character count, and sentiment analysis";
+
+// ❌ Avoid: Vague or noun-heavy
+description: "File analysis tool";
+```
+
+**2. Include context and use cases** - Explain when and why to use the tool:
+
+```typescript
+// ✅ Good: Provides context
+description: "Converts image files between formats (PNG, JPEG, WebP). Use this when you need to change image format, resize images, or optimize file sizes. Supports batch processing of multiple files.";
+
+// ❌ Avoid: No context
+description: "Converts images";
+```
+
+**3. Mention key parameters and constraints** - Reference important inputs and limitations:
+
+```typescript
+// ✅ Good: Mentions key parameters and constraints
+description: "Searches through project files using regex patterns. Specify the search pattern and optionally filter by file type. Supports JavaScript, TypeScript, Python, and text files up to 10MB.";
+
+// ❌ Avoid: No parameter guidance
+description: "Searches files";
+```
+
+**4. Be specific about outputs** - Describe what the tool returns:
+
+```typescript
+// ✅ Good: Clear output description
+description: "Analyzes code complexity and returns metrics including cyclomatic complexity, lines of code, and maintainability index. Results include detailed breakdown by function and overall file scores.";
+
+// ❌ Avoid: Unclear output
+description: "Analyzes code";
+```
+
+#### Complete Example: Well-Documented Tool
+
+```typescript
+.addTool({
+  name: "analyze-repository",
+  description: "Analyzes a Git repository and generates comprehensive statistics including commit history, contributor activity, code quality metrics, and dependency analysis. Use this to understand project health, identify bottlenecks, or prepare reports. Supports Git repositories up to 1GB with history up to 5 years.",
+  flags: [
+    {
+      name: "path",
+      description: "Path to the Git repository root directory",
+      options: ["--path", "-p"],
+      type: "string",
+      mandatory: true,
+    },
+    {
+      name: "include-dependencies",
+      description: "Include analysis of package.json dependencies and security vulnerabilities",
+      options: ["--include-dependencies", "-d"],
+      type: "boolean",
+      flagOnly: true,
+    },
+    {
+      name: "output-format",
+      description: "Output format for the analysis report",
+      options: ["--output-format", "-f"],
+      type: "string",
+      choices: ["json", "markdown", "html"],
+      defaultValue: "json",
+    }
+  ],
+  handler: async (ctx) => {
+    // Implementation here
+  }
+})
+```
+
+#### Parameter Description Guidelines
+
+Each flag should have a clear, concise description:
+
+```typescript
+// ✅ Good parameter descriptions
+{
+  name: "timeout",
+  description: "Maximum execution time in seconds (default: 30, max: 300)",
+  options: ["--timeout", "-t"],
+  type: "number",
+}
+
+{
+  name: "verbose",
+  description: "Enable detailed logging output including debug information",
+  options: ["--verbose", "-v"],
+  type: "boolean",
+  flagOnly: true,
+}
+
+{
+  name: "format",
+  description: "Output format for results (json: structured data, csv: spreadsheet-friendly, pretty: human-readable)",
+  options: ["--format"],
+  type: "string",
+  choices: ["json", "csv", "pretty"],
+}
+```
+
+#### Common Pitfalls to Avoid
+
+- **Don't be overly technical**: Avoid jargon that doesn't help with tool selection
+- **Don't repeat the tool name**: The name is already visible, focus on functionality
+- **Don't use generic terms**: "Process data" or "handle files" are too vague
+- **Don't forget constraints**: Mention important limitations or requirements
+- **Don't ignore parameter descriptions**: Each flag should have a helpful description
+
+**Remember**: A good description helps the LLM choose the right tool for the task and use it correctly. Invest time in writing clear, comprehensive descriptions - it directly impacts the user experience in Claude Desktop and other MCP clients.
 
 ### Automatic MCP Server Mode (`--s-mcp-serve`)
 
@@ -619,6 +974,17 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.1.0
+
+**Feat**
+
+- IFlag function-based `type` handling must now define the type it returns, this unlocks nice features such as providing nicer Intellisense, `output schemas` support and makes it easier to upgrade to Zod V4
+- Add support for MCP output_schema field for clients that support it, CLI isn't impacted by it, this helps a lot the interactivity, self-documentation, and improves the API guarantees
+
+**Fixes and changes**
+- Fix missing missing types
+- Improved MCP version compliance 
 
 ### v2.0.0
 

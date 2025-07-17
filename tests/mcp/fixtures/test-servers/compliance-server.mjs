@@ -1,5 +1,6 @@
 
 import { ArgParser } from "@alcyone-labs/arg-parser";
+import { z } from "zod";
 
 const cli = ArgParser.withMcp({
   appName: "Protocol Compliance Server",
@@ -102,6 +103,43 @@ const cli = ArgParser.withMcp({
     }
   ])
 })
+.addMcpTools([
+  {
+    name: "echo",
+    description: "Echo back the input text",
+    inputSchema: z.object({
+      text: z.string().describe("Text to echo back")
+    }),
+    outputSchema: z.object({
+      echoed: z.string().describe("The echoed text"),
+      timestamp: z.string().describe("When the echo was performed")
+    }),
+    handler: async (args) => {
+      return {
+        echoed: args.text,
+        timestamp: new Date().toISOString()
+      };
+    }
+  },
+  {
+    name: "add",
+    description: "Add two numbers together",
+    inputSchema: z.object({
+      a: z.number().describe("First number"),
+      b: z.number().describe("Second number")
+    }),
+    outputSchema: z.object({
+      result: z.number().describe("Sum of the two numbers"),
+      operation: z.string().describe("Description of the operation")
+    }),
+    handler: async (args) => {
+      return {
+        result: args.a + args.b,
+        operation: `${args.a} + ${args.b} = ${args.a + args.b}`
+      };
+    }
+  }
+])
 .addMcpSubCommand("serve", {
   name: "compliance-test-server",
   version: "1.0.0",

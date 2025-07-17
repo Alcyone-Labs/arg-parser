@@ -4,7 +4,7 @@
   "exclude": ["./tests/**/*.ts", "./script/**/*.ts", "./examples/**/*.ts", "./dist/**/*"],
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist/src",
+    "outDir": "./dist",
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Node",

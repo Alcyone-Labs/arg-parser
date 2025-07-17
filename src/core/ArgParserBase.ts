@@ -1,23 +1,27 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import chalk from "@alcyone-labs/simple-chalk";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
-
-
-import { FlagManager } from "./FlagManager";
-import { DxtGenerator } from "../dxt/DxtGenerator";
+import chalk from "@alcyone-labs/simple-chalk";
 import { ConfigurationManager } from "../config/ConfigurationManager";
+import { DxtGenerator } from "../dxt/DxtGenerator";
+import {
+  McpChangeType,
+  McpNotificationsManager,
+} from "../mcp/mcp-notifications.js";
+import { McpPromptConfig, McpPromptsManager } from "../mcp/mcp-prompts.js";
+import {
+  McpResourceConfig,
+  McpResourcesManager,
+} from "../mcp/mcp-resources.js";
+import { FlagManager } from "./FlagManager";
 import type {
   IFlag,
   IHandlerContext,
   ISubCommand,
+  ParseResult,
   ProcessedFlag,
   TParsedArgs,
-  ParseResult,
 } from "./types";
-import { McpResourcesManager, McpResourceConfig } from "../mcp/mcp-resources.js";
-import { McpPromptsManager, McpPromptConfig } from "../mcp/mcp-prompts.js";
-import { McpNotificationsManager, McpChangeType } from "../mcp/mcp-notifications.js";
 
 export class ArgParserError extends Error {
   public commandChain: string[];
@@ -159,7 +163,8 @@ export class ArgParserBase<THandlerReturn = any> {
   // MCP-related managers
   #mcpResourcesManager: McpResourcesManager = new McpResourcesManager();
   #mcpPromptsManager: McpPromptsManager = new McpPromptsManager();
-  #mcpNotificationsManager: McpNotificationsManager = new McpNotificationsManager();
+  #mcpNotificationsManager: McpNotificationsManager =
+    new McpNotificationsManager();
 
   constructor(
     options: IArgParserParams<THandlerReturn> = {},
@@ -263,17 +268,26 @@ export class ArgParserBase<THandlerReturn = any> {
    * Helper method to handle exit logic based on autoExit setting
    * Returns a ParseResult instead of calling process.exit() when autoExit is false
    */
-  private _handleExit(exitCode: number, message?: string, type?: ParseResult['type'], data?: any): ParseResult | never {
+  private _handleExit(
+    exitCode: number,
+    message?: string,
+    type?: ParseResult["type"],
+    data?: any,
+  ): ParseResult | never {
     const result: ParseResult = {
       success: exitCode === 0,
       exitCode,
       message,
-      type: type || (exitCode === 0 ? 'success' : 'error'),
+      type: type || (exitCode === 0 ? "success" : "error"),
       shouldExit: true,
-      data
+      data,
     };
 
-    if (this.#autoExit && typeof process === "object" && typeof process.exit === "function") {
+    if (
+      this.#autoExit &&
+      typeof process === "object" &&
+      typeof process.exit === "function"
+    ) {
       process.exit(exitCode as never);
     }
 
@@ -482,7 +496,10 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     const subCommandConfig = currentParser.#subCommands.get(subCommandName);
-    if (!subCommandConfig || !(subCommandConfig.parser instanceof ArgParserBase)) {
+    if (
+      !subCommandConfig ||
+      !(subCommandConfig.parser instanceof ArgParserBase)
+    ) {
       throw new Error(
         `Internal error: Subcommand '${subCommandName!}' configuration is invalid or parser is missing.`,
       );
@@ -528,29 +545,56 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     // Handle --s-with-env system flag early to modify processArgs before parsing
-    const withEnvIndex = processArgs.findIndex(arg => arg === "--s-with-env");
+    const withEnvIndex = processArgs.findIndex((arg) => arg === "--s-with-env");
     if (withEnvIndex !== -1) {
       if (withEnvIndex + 1 >= processArgs.length) {
-        console.error(chalk.red("Error: --s-with-env requires a file path argument"));
-        return this._handleExit(1, "--s-with-env requires a file path argument", "error");
+        console.error(
+          chalk.red("Error: --s-with-env requires a file path argument"),
+        );
+        return this._handleExit(
+          1,
+          "--s-with-env requires a file path argument",
+          "error",
+        );
       }
 
       const filePath = processArgs[withEnvIndex + 1];
       if (!filePath || filePath.startsWith("-")) {
-        console.error(chalk.red("Error: --s-with-env requires a file path argument"));
-        return this._handleExit(1, "--s-with-env requires a file path argument", "error");
+        console.error(
+          chalk.red("Error: --s-with-env requires a file path argument"),
+        );
+        return this._handleExit(
+          1,
+          "--s-with-env requires a file path argument",
+          "error",
+        );
       }
 
       try {
         // Identify the final parser and parser chain for loading configuration
-        const { finalParser: identifiedFinalParser, parserChain: identifiedParserChain } =
-          this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+        const {
+          finalParser: identifiedFinalParser,
+          parserChain: identifiedParserChain,
+        } = this.#_identifyCommandChainAndParsers(
+          processArgs,
+          this,
+          [],
+          [this],
+        );
 
-        const envConfigArgs = identifiedFinalParser.#configurationManager.loadEnvFile(filePath, identifiedParserChain);
+        const envConfigArgs =
+          identifiedFinalParser.#configurationManager.loadEnvFile(
+            filePath,
+            identifiedParserChain,
+          );
         if (envConfigArgs) {
           // Merge environment configuration with process args
           // CLI args take precedence over file configuration
-          const mergedArgs = identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(envConfigArgs, processArgs);
+          const mergedArgs =
+            identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
+              envConfigArgs,
+              processArgs,
+            );
 
           // Replace the original processArgs array contents
           processArgs.length = 0;
@@ -559,31 +603,51 @@ export class ArgParserBase<THandlerReturn = any> {
 
         // Remove the --s-with-env flag and its file path argument from processArgs
         // This must be done after merging to avoid interfering with the merge process
-        const finalWithEnvIndex = processArgs.findIndex(arg => arg === "--s-with-env");
+        const finalWithEnvIndex = processArgs.findIndex(
+          (arg) => arg === "--s-with-env",
+        );
         if (finalWithEnvIndex !== -1) {
           processArgs.splice(finalWithEnvIndex, 2); // Remove both --s-with-env and the file path
         }
       } catch (error) {
-        console.error(chalk.red(`Error loading environment file: ${error instanceof Error ? error.message : String(error)}`));
-        return this._handleExit(1, `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`, "error");
+        console.error(
+          chalk.red(
+            `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+        );
+        return this._handleExit(
+          1,
+          `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        );
       }
     }
 
     const { finalParser: identifiedFinalParser } =
       this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-    const buildDxtIndex = processArgs.findIndex(arg => (arg ?? "").toLowerCase() === "--s-build-dxt");
+    const buildDxtIndex = processArgs.findIndex(
+      (arg) => (arg ?? "").toLowerCase() === "--s-build-dxt",
+    );
     if (buildDxtIndex !== -1) {
-      const dxtResult = await this.#_handleBuildDxtFlag(processArgs, buildDxtIndex);
+      const dxtResult = await this.#_handleBuildDxtFlag(
+        processArgs,
+        buildDxtIndex,
+      );
       if (dxtResult !== false) {
         return dxtResult === true ? true : dxtResult;
       }
     }
 
     // Handle --s-mcp-serve system flag to start all MCP servers
-    const mcpServeIndex = processArgs.findIndex(arg => arg === "--s-mcp-serve");
+    const mcpServeIndex = processArgs.findIndex(
+      (arg) => arg === "--s-mcp-serve",
+    );
     if (mcpServeIndex !== -1) {
-      const mcpServeResult = await this.#_handleMcpServeFlag(processArgs, mcpServeIndex);
+      const mcpServeResult = await this.#_handleMcpServeFlag(
+        processArgs,
+        mcpServeIndex,
+      );
       if (mcpServeResult !== false) {
         return mcpServeResult === true ? true : mcpServeResult;
       }
@@ -813,8 +877,6 @@ export class ArgParserBase<THandlerReturn = any> {
       }
     }
 
-
-
     for (let i = 0; i < parsersToValidate.length; i++) {
       const parser = parsersToValidate[i];
       const currentCommandChain = parser.getCommandChain();
@@ -832,15 +894,16 @@ export class ArgParserBase<THandlerReturn = any> {
 
           // If the immediate child inherits parent flags AND has this flag,
           // then this flag is inherited and should be validated by the child
-          if (immediateChild.#inheritParentFlags && immediateChild.#flagManager.hasFlag(flag["name"])) {
+          if (
+            immediateChild.#inheritParentFlags &&
+            immediateChild.#flagManager.hasFlag(flag["name"])
+          ) {
             flagIsInheritedByChild = true;
           }
         }
 
         // Skip validation if this flag is inherited by a child (child will validate it)
         if (flagIsInheritedByChild) continue;
-
-
 
         const isMandatory =
           typeof flag["mandatory"] === "function"
@@ -928,10 +991,14 @@ export class ArgParserBase<THandlerReturn = any> {
       const args = handlerToExecute.context.args || {};
 
       // Try to get the original input arguments from the final args if available
-      const inputArgs = (finalArgs as any)._originalInputArgs || 'unknown';
-      const inputArgsStr = Array.isArray(inputArgs) ? inputArgs.join(' ') : inputArgs;
+      const inputArgs = (finalArgs as any)._originalInputArgs || "unknown";
+      const inputArgsStr = Array.isArray(inputArgs)
+        ? inputArgs.join(" ")
+        : inputArgs;
 
-      console.log(`[--s-enable-fuzzy] handler() skipped for command chain: ${commandChain.join(' ') || '(root)'}`);
+      console.log(
+        `[--s-enable-fuzzy] handler() skipped for command chain: ${commandChain.join(" ") || "(root)"}`,
+      );
       console.log(`  Input args: [${inputArgsStr}]`);
       console.log(`  Parsed args: ${JSON.stringify(args)}`);
       return;
@@ -975,7 +1042,11 @@ export class ArgParserBase<THandlerReturn = any> {
       (finalArgs as any).handlerResponse = handlerResult;
 
       // Merge handler result into final args if it's an object
-      if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+      if (
+        handlerResult &&
+        typeof handlerResult === "object" &&
+        !Array.isArray(handlerResult)
+      ) {
         Object.assign(finalArgs, handlerResult);
       }
     } catch (error) {
@@ -1003,25 +1074,31 @@ export class ArgParserBase<THandlerReturn = any> {
     // 1. ARGPARSER_FUZZY_MODE environment variable is set (during fuzzy test imports)
     // 2. OR --s-enable-fuzzy is in process.argv but not in current processArgs (global fuzzy testing)
     // 3. AND skipHelpHandling is not true (not a programmatic call from fuzzy tester)
-    const shouldPreventExecution = typeof process !== 'undefined' && (
-        (process.env['ARGPARSER_FUZZY_MODE'] === 'true') ||
+    const shouldPreventExecution =
+      typeof process !== "undefined" &&
+      (process.env["ARGPARSER_FUZZY_MODE"] === "true" ||
         (process.argv &&
-         process.argv.includes('--s-enable-fuzzy') &&
-         !processArgs.includes('--s-enable-fuzzy'))
-    ) && !options?.skipHelpHandling;
+          process.argv.includes("--s-enable-fuzzy") &&
+          !processArgs.includes("--s-enable-fuzzy"))) &&
+      !options?.skipHelpHandling;
 
     if (shouldPreventExecution) {
       // Return a minimal result that indicates fuzzy mode prevented execution
       return {
         _fuzzyModePreventedExecution: true,
-        _originalInputArgs: originalProcessArgs
+        _originalInputArgs: originalProcessArgs,
       } as TParsedArgsWithRouting<any>;
     }
 
-    const globalCheckResult = await this.#_handleGlobalChecks(processArgs, options);
+    const globalCheckResult = await this.#_handleGlobalChecks(
+      processArgs,
+      options,
+    );
     if (globalCheckResult !== false) {
       // If it's a ParseResult, return it; otherwise return empty object for backward compatibility
-      return globalCheckResult === true ? {} as TParsedArgsWithRouting<any> : globalCheckResult;
+      return globalCheckResult === true
+        ? ({} as TParsedArgsWithRouting<any>)
+        : globalCheckResult;
     }
 
     try {
@@ -1031,9 +1108,14 @@ export class ArgParserBase<THandlerReturn = any> {
         parserChain: identifiedParserChain,
       } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-      const saveToEnvResult = identifiedFinalParser.#_handleSaveToEnvFlag(processArgs, identifiedParserChain);
+      const saveToEnvResult = identifiedFinalParser.#_handleSaveToEnvFlag(
+        processArgs,
+        identifiedParserChain,
+      );
       if (saveToEnvResult !== false) {
-        return saveToEnvResult === true ? {} as TParsedArgsWithRouting<any> : saveToEnvResult;
+        return saveToEnvResult === true
+          ? ({} as TParsedArgsWithRouting<any>)
+          : saveToEnvResult;
       }
 
       const { finalArgs, handlerToExecute } = this._parseRecursive(
@@ -1079,7 +1161,11 @@ export class ArgParserBase<THandlerReturn = any> {
           (finalArgs as any).handlerResponse = handlerResult;
 
           // Merge handler result into final args if it's an object
-          if (handlerResult && typeof handlerResult === 'object' && !Array.isArray(handlerResult)) {
+          if (
+            handlerResult &&
+            typeof handlerResult === "object" &&
+            !Array.isArray(handlerResult)
+          ) {
             Object.assign(finalArgs, handlerResult);
           }
 
@@ -1104,7 +1190,9 @@ export class ArgParserBase<THandlerReturn = any> {
         if (this.#handleErrors) {
           const errorResult = this.#displayErrorAndExit(error);
           // If autoExit is false, return the ParseResult; otherwise return empty object
-          return this.#autoExit ? {} as TParsedArgsWithRouting<any> : errorResult;
+          return this.#autoExit
+            ? ({} as TParsedArgsWithRouting<any>)
+            : errorResult;
         } else {
           throw error;
         }
@@ -1209,7 +1297,10 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     const subCommandConfig = currentParser.#subCommands.get(subCommandName!);
-    if (!subCommandConfig || !(subCommandConfig.parser instanceof ArgParserBase)) {
+    if (
+      !subCommandConfig ||
+      !(subCommandConfig.parser instanceof ArgParserBase)
+    ) {
       // This should ideally not be reached if addSubCommand validated the parser instance
       throw new ArgParserError(
         `Internal error: Subcommand '${subCommandName!}' is misconfigured or its parser is not a valid ArgParser instance.`,
@@ -1568,8 +1659,8 @@ ${descriptionLines
         success: false,
         exitCode: 1,
         message: error.message,
-        type: 'error',
-        shouldExit: true
+        type: "error",
+        shouldExit: true,
       };
     }
   }
@@ -1814,10 +1905,6 @@ ${descriptionLines
     return config;
   }
 
-
-
-
-
   // ===== MCP API Methods =====
 
   /**
@@ -1825,7 +1912,11 @@ ${descriptionLines
    */
   addMcpResource(config: McpResourceConfig): this {
     this.#mcpResourcesManager.addResource(config);
-    this.#mcpNotificationsManager.notifyChange('resources', 'added', config.name);
+    this.#mcpNotificationsManager.notifyChange(
+      "resources",
+      "added",
+      config.name,
+    );
     return this;
   }
 
@@ -1835,7 +1926,7 @@ ${descriptionLines
   removeMcpResource(name: string): this {
     const removed = this.#mcpResourcesManager.removeResource(name);
     if (removed) {
-      this.#mcpNotificationsManager.notifyChange('resources', 'removed', name);
+      this.#mcpNotificationsManager.notifyChange("resources", "removed", name);
     }
     return this;
   }
@@ -1852,7 +1943,7 @@ ${descriptionLines
    */
   addMcpPrompt(config: McpPromptConfig): this {
     this.#mcpPromptsManager.addPrompt(config);
-    this.#mcpNotificationsManager.notifyChange('prompts', 'added', config.name);
+    this.#mcpNotificationsManager.notifyChange("prompts", "added", config.name);
     return this;
   }
 
@@ -1862,7 +1953,7 @@ ${descriptionLines
   removeMcpPrompt(name: string): this {
     const removed = this.#mcpPromptsManager.removePrompt(name);
     if (removed) {
-      this.#mcpNotificationsManager.notifyChange('prompts', 'removed', name);
+      this.#mcpNotificationsManager.notifyChange("prompts", "removed", name);
     }
     return this;
   }
@@ -1877,7 +1968,13 @@ ${descriptionLines
   /**
    * Add a change listener for MCP entities
    */
-  onMcpChange(listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void): this {
+  onMcpChange(
+    listener: (event: {
+      type: McpChangeType;
+      action: string;
+      entityName?: string;
+    }) => void,
+  ): this {
     this.#mcpNotificationsManager.addGlobalListener(listener);
     return this;
   }
@@ -1885,7 +1982,13 @@ ${descriptionLines
   /**
    * Remove a change listener for MCP entities
    */
-  offMcpChange(listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void): this {
+  offMcpChange(
+    listener: (event: {
+      type: McpChangeType;
+      action: string;
+      entityName?: string;
+    }) => void,
+  ): this {
     this.#mcpNotificationsManager.removeGlobalListener(listener);
     return this;
   }
@@ -1914,62 +2017,102 @@ ${descriptionLines
   /**
    * Handles the --s-save-to-env system flag at the final parser level
    */
-  #_handleSaveToEnvFlag(processArgs: string[], parserChain: ArgParserBase[]): boolean | ParseResult {
+  #_handleSaveToEnvFlag(
+    processArgs: string[],
+    parserChain: ArgParserBase[],
+  ): boolean | ParseResult {
     try {
-      const result = this.#configurationManager.handleSaveToEnvFlag(processArgs, parserChain);
+      const result = this.#configurationManager.handleSaveToEnvFlag(
+        processArgs,
+        parserChain,
+      );
       if (result) {
         // Configuration was saved successfully
-        return this._handleExit(0, "Configuration saved successfully", "success");
+        return this._handleExit(
+          0,
+          "Configuration saved successfully",
+          "success",
+        );
       }
       return result;
     } catch (error) {
       // Configuration save failed
-      return this._handleExit(1, error instanceof Error ? error.message : String(error), "error");
+      return this._handleExit(
+        1,
+        error instanceof Error ? error.message : String(error),
+        "error",
+      );
     }
   }
 
   /**
    * Handles the --s-build-dxt system flag to generate DXT packages for MCP servers
    */
-  async #_handleBuildDxtFlag(processArgs: string[], buildDxtIndex: number): Promise<boolean | ParseResult> {
-    return await this.#dxtGenerator.handleBuildDxtFlag(processArgs, buildDxtIndex);
+  async #_handleBuildDxtFlag(
+    processArgs: string[],
+    buildDxtIndex: number,
+  ): Promise<boolean | ParseResult> {
+    return await this.#dxtGenerator.handleBuildDxtFlag(
+      processArgs,
+      buildDxtIndex,
+    );
   }
 
   /**
    * Handles the --s-mcp-serve system flag to start all MCP servers
    */
-  async #_handleMcpServeFlag(processArgs: string[], _mcpServeIndex: number): Promise<boolean | ParseResult> {
+  async #_handleMcpServeFlag(
+    processArgs: string[],
+    _mcpServeIndex: number,
+  ): Promise<boolean | ParseResult> {
     // Setup MCP logger with console hijacking
     let mcpLogger: any;
     try {
       // Try to import simple-mcp-logger if available
-      const mcpLoggerModule = await (Function('return import("@alcyone-labs/simple-mcp-logger")')());
-      mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve");
+      const mcpLoggerModule = await Function(
+        'return import("@alcyone-labs/simple-mcp-logger")',
+      )();
+      mcpLogger = mcpLoggerModule.createMcpLogger(
+        "MCP Serve",
+        "./logs/mcp.log",
+      );
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
     } catch {
       // Fallback if simple-mcp-logger is not available
       mcpLogger = {
-        mcpError: (message: string) => console.error(`[MCP Serve] ${message}`)
+        mcpError: (message: string) => console.error(`[MCP Serve] ${message}`),
       };
     }
 
     try {
-      mcpLogger.mcpError("Starting --s-mcp-serve system flag handler - console hijacked for MCP safety");
+      mcpLogger.mcpError(
+        "Starting --s-mcp-serve system flag handler - console hijacked for MCP safety",
+      );
 
       // Get MCP server configuration - prefer withMcp() config, fallback to addMcpSubCommand() config
       const mcpServerConfig = this.#_getMcpServerConfiguration();
 
       if (!mcpServerConfig) {
-        mcpLogger.mcpError("No MCP server configuration found. Use withMcp() or addMcpSubCommand() to configure MCP server.");
-        return this._handleExit(1, "No MCP server configuration found", "error");
+        mcpLogger.mcpError(
+          "No MCP server configuration found. Use withMcp() or addMcpSubCommand() to configure MCP server.",
+        );
+        return this._handleExit(
+          1,
+          "No MCP server configuration found",
+          "error",
+        );
       }
 
-      mcpLogger.mcpError(`Found MCP server configuration: ${mcpServerConfig.serverInfo?.name || 'unnamed'}`);
+      mcpLogger.mcpError(
+        `Found MCP server configuration: ${mcpServerConfig.serverInfo?.name || "unnamed"}`,
+      );
 
       // Parse transport options from command line arguments
       const transportOptions = this.#_parseMcpTransportOptions(processArgs);
-      mcpLogger.mcpError(`Transport options: ${JSON.stringify(transportOptions)}`);
+      mcpLogger.mcpError(
+        `Transport options: ${JSON.stringify(transportOptions)}`,
+      );
 
       // Start the unified MCP server
       try {
@@ -1977,21 +2120,34 @@ ${descriptionLines
         await this.#_startUnifiedMcpServer(mcpServerConfig, transportOptions);
         mcpLogger.mcpError("Successfully started unified MCP server");
       } catch (error) {
-        mcpLogger.mcpError(`Failed to start unified MCP server: ${error instanceof Error ? error.message : String(error)}`);
-        return this._handleExit(1, `Failed to start MCP server: ${error instanceof Error ? error.message : String(error)}`, "error");
+        mcpLogger.mcpError(
+          `Failed to start unified MCP server: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return this._handleExit(
+          1,
+          `Failed to start MCP server: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        );
       }
 
-      mcpLogger.mcpError("MCP server started successfully, keeping process alive");
+      mcpLogger.mcpError(
+        "MCP server started successfully, keeping process alive",
+      );
 
       // Keep the process alive indefinitely
       return new Promise(() => {});
-
     } catch (error) {
-      mcpLogger.mcpError(`Error in --s-mcp-serve handler: ${error instanceof Error ? error.message : String(error)}`);
+      mcpLogger.mcpError(
+        `Error in --s-mcp-serve handler: ${error instanceof Error ? error.message : String(error)}`,
+      );
       if (error instanceof Error && error.stack) {
         mcpLogger.mcpError(`Stack trace: ${error.stack}`);
       }
-      return this._handleExit(1, `MCP serve failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      return this._handleExit(
+        1,
+        `MCP serve failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   }
 
@@ -2035,29 +2191,46 @@ ${descriptionLines
       host?: string;
       path?: string;
       transports?: string;
-    }
+    },
   ): Promise<void> {
     // We need to cast this to ArgParser to access MCP methods
     const mcpParser = this as any;
 
-    if (!mcpParser.createMcpServer || !mcpParser.startMcpServerWithTransport || !mcpParser.startMcpServerWithMultipleTransports) {
-      throw new Error("MCP server methods not available. This parser may not support MCP functionality.");
+    if (
+      !mcpParser.createMcpServer ||
+      !mcpParser.startMcpServerWithTransport ||
+      !mcpParser.startMcpServerWithMultipleTransports
+    ) {
+      throw new Error(
+        "MCP server methods not available. This parser may not support MCP functionality.",
+      );
     }
 
-    const { serverInfo, toolOptions, defaultTransports, defaultTransport } = mcpServerConfig;
+    const { serverInfo, toolOptions, defaultTransports, defaultTransport } =
+      mcpServerConfig;
 
     // Determine which transport configuration to use
     if (transportOptions.transports) {
       // Multiple transports specified via CLI
       try {
         const transportConfigs = JSON.parse(transportOptions.transports);
-        await mcpParser.startMcpServerWithMultipleTransports(serverInfo, transportConfigs, toolOptions);
+        await mcpParser.startMcpServerWithMultipleTransports(
+          serverInfo,
+          transportConfigs,
+          toolOptions,
+        );
       } catch (error: any) {
-        throw new Error(`Error parsing transports configuration: ${error.message}. Expected JSON format: '[{"type":"stdio"},{"type":"sse","port":3001}]'`);
+        throw new Error(
+          `Error parsing transports configuration: ${error.message}. Expected JSON format: '[{"type":"stdio"},{"type":"sse","port":3001}]'`,
+        );
       }
     } else if (defaultTransports && defaultTransports.length > 0) {
       // Use preset multiple transports configuration
-      await mcpParser.startMcpServerWithMultipleTransports(serverInfo, defaultTransports, toolOptions);
+      await mcpParser.startMcpServerWithMultipleTransports(
+        serverInfo,
+        defaultTransports,
+        toolOptions,
+      );
     } else if (defaultTransport) {
       // Use preset single transport configuration
       await mcpParser.startMcpServerWithTransport(
@@ -2069,18 +2242,27 @@ ${descriptionLines
           path: defaultTransport.path,
           sessionIdGenerator: defaultTransport.sessionIdGenerator,
         },
-        toolOptions
+        toolOptions,
       );
     } else {
       // Single transport mode from CLI flags or defaults
-      const transportType = (transportOptions.transportType as "stdio" | "sse" | "streamable-http") || "stdio";
+      const transportType =
+        (transportOptions.transportType as
+          | "stdio"
+          | "sse"
+          | "streamable-http") || "stdio";
       const finalTransportOptions = {
         port: transportOptions.port,
         host: transportOptions.host || "localhost",
         path: transportOptions.path || "/mcp",
       };
 
-      await mcpParser.startMcpServerWithTransport(serverInfo, transportType, finalTransportOptions, toolOptions);
+      await mcpParser.startMcpServerWithTransport(
+        serverInfo,
+        transportType,
+        finalTransportOptions,
+        toolOptions,
+      );
     }
   }
 
@@ -2104,7 +2286,7 @@ ${descriptionLines
         mcpSubCommands.push({
           subCommand: subCommand,
           serverInfo: subCommand.mcpServerInfo,
-          toolOptions: subCommand.mcpToolOptions || {}
+          toolOptions: subCommand.mcpToolOptions || {},
         });
       }
     }
@@ -2112,7 +2294,9 @@ ${descriptionLines
     // Recursively check child parsers
     for (const [_name, subCommand] of this.#subCommands.entries()) {
       if (subCommand.parser) {
-        const childMcpCommands = (subCommand.parser as ArgParserBase).#_findAllMcpSubCommands();
+        const childMcpCommands = (
+          subCommand.parser as ArgParserBase
+        ).#_findAllMcpSubCommands();
         mcpSubCommands.push(...childMcpCommands);
       }
     }
@@ -2181,7 +2365,9 @@ ${descriptionLines
         case "--host":
         case "--path":
         case "--transports":
-          console.warn(`Warning: ${arg} is deprecated. Use --s-mcp-${arg.slice(2)} instead.`);
+          console.warn(
+            `Warning: ${arg} is deprecated. Use --s-mcp-${arg.slice(2)} instead.`,
+          );
           // Fall through to handle the old flag for now
           if (arg === "--transport" && nextArg && !nextArg.startsWith("-")) {
             options.transportType = nextArg;
@@ -2195,7 +2381,11 @@ ${descriptionLines
           } else if (arg === "--path" && nextArg && !nextArg.startsWith("-")) {
             options.path = nextArg;
             i++;
-          } else if (arg === "--transports" && nextArg && !nextArg.startsWith("-")) {
+          } else if (
+            arg === "--transports" &&
+            nextArg &&
+            !nextArg.startsWith("-")
+          ) {
             options.transports = nextArg;
             i++;
           }
@@ -2205,15 +2395,4 @@ ${descriptionLines
 
     return options;
   }
-
-
-
-
-
-
-
-
-
-
-
 }

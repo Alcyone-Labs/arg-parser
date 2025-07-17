@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import chalk from "@alcyone-labs/simple-chalk";
 import type { ParseResult } from "../core/types";
+import { getJsonSchemaTypeFromFlag } from "../core/types";
 
 
 /**
@@ -1653,7 +1654,7 @@ export default defineConfig({
         if (flag.name === 'help' || flag.name.startsWith('s-')) continue;
 
         properties[flag.name] = {
-          type: this.mapFlagTypeToJsonSchema(flag.type as any),
+          type: getJsonSchemaTypeFromFlag(flag.type as any),
           description: flag.description || `${flag.name} parameter`
         };
 
@@ -1769,30 +1770,7 @@ export default defineConfig({
     console.log(chalk.gray('✅ DXT package files set up'));
   }
 
-  /**
-   * Maps ArgParser flag types to JSON Schema types
-   */
-  private mapFlagTypeToJsonSchema(flagType: any): string {
-    if (typeof flagType === 'function') {
-      const typeName = flagType.name.toLowerCase();
-      switch (typeName) {
-        case 'string': return 'string';
-        case 'number': return 'number';
-        case 'boolean': return 'boolean';
-        case 'array': return 'array';
-        default: return 'string';
-      }
-    }
 
-    const typeStr = String(flagType).toLowerCase();
-    switch (typeStr) {
-      case 'string': return 'string';
-      case 'number': return 'number';
-      case 'boolean': return 'boolean';
-      case 'array': return 'array';
-      default: return 'string';
-    }
-  }
 
   /**
    * Manually copy logo since TSDown's copy option doesn't work programmatically

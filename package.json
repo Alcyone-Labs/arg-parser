@@ -89,16 +89,16 @@
   },
   "dependencies": {
     "@alcyone-labs/simple-chalk": "^1.0.1",
-    "@alcyone-labs/simple-mcp-logger": "^1.0.1",
+    "@alcyone-labs/simple-mcp-logger": "^1.1.0",
     "magic-regexp": "^0.10.0",
     "zod": "^3.25.76"
   },
   "optionalDependencies": {
     "@modelcontextprotocol/sdk": "^1.15.1",
-    "express": "^5.1.0",
-    "smol-toml": "^1.4.1",
     "dotenv": "^16.6.1",
+    "express": "^5.1.0",
     "js-yaml": "^4.1.0",
+    "smol-toml": "^1.4.1",
     "tsdown": "^0.12.9"
   },
   "devDependencies": {

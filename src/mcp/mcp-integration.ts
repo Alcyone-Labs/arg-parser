@@ -1,8 +1,18 @@
 import { z } from "zod";
 import type { ZodRawShape, ZodTypeAny } from "zod";
-import { ArgParserBase } from "../core/ArgParserBase";
-import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "../core/types";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+import { ArgParserBase } from "../core/ArgParserBase";
+import type {
+  IFlag,
+  IHandlerContext,
+  ProcessedFlag,
+  TParsedArgs,
+} from "../core/types";
+// Import the centralized utility functions
+import {
+  createOutputSchema,
+  getJsonSchemaTypeFromFlag,
+} from "../core/types.js";
 
 // Assuming these types are correctly exported from src/index.ts
 
@@ -15,6 +25,7 @@ export interface McpResponse {
     text: string;
   }>;
   isError?: boolean;
+  structuredContent?: any;
 }
 
 /**
@@ -25,9 +36,9 @@ export function createMcpSuccessResponse(data: any): McpResponse {
     content: [
       {
         type: "text",
-        text: typeof data === 'string' ? data : JSON.stringify(data, null, 2)
-      }
-    ]
+        text: typeof data === "string" ? data : JSON.stringify(data, null, 2),
+      },
+    ],
   };
 }
 
@@ -36,33 +47,17 @@ export function createMcpSuccessResponse(data: any): McpResponse {
  */
 export function createMcpErrorResponse(error: string | Error): McpResponse {
   const errorMessage = error instanceof Error ? error.message : error;
+  const errorData = { error: errorMessage, success: false };
   return {
     isError: true,
     content: [
       {
         type: "text",
-        text: `Error: ${errorMessage}`
-      }
-    ]
+        text: `Error: ${errorMessage}`,
+      },
+    ],
+    structuredContent: errorData,
   };
-}
-
-/**
- * Convert ArgParser flag type to JSON Schema type
- */
-function mapFlagTypeToJsonSchemaType(flagType: string): string {
-  switch (flagType) {
-    case 'string':
-      return 'string';
-    case 'number':
-      return 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'array':
-      return 'array';
-    default:
-      return 'string'; // Default fallback
-  }
 }
 
 /**
@@ -73,8 +68,8 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
   isRequired: boolean;
 } {
   const property: any = {
-    type: mapFlagTypeToJsonSchemaType(flag.type),
-    description: flag.description || `${flag.name} parameter`
+    type: getJsonSchemaTypeFromFlag(flag.type),
+    description: flag.description || `${flag.name} parameter`,
   };
 
   // Handle enums
@@ -86,12 +81,18 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
   const defaultValue = (flag as any).defaultValue || (flag as any).default;
   if (defaultValue !== undefined) {
     property.default = defaultValue;
+  } else if (
+    flag.flagOnly &&
+    getJsonSchemaTypeFromFlag(flag.type) === "boolean"
+  ) {
+    // For flagOnly boolean flags, default to false when not explicitly set
+    property.default = false;
   }
 
   // Handle array items
-  if (flag.type === 'array' && (flag as any).itemType) {
+  if (flag.type === "array" && (flag as any).itemType) {
     property.items = {
-      type: mapFlagTypeToJsonSchemaType((flag as any).itemType)
+      type: getJsonSchemaTypeFromFlag((flag as any).itemType),
     };
   }
 
@@ -104,7 +105,9 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
 /**
  * Convert ArgParser flags to MCP JSON Schema
  */
-export function convertFlagsToJsonSchema(flags: readonly (IFlag | ProcessedFlag)[]): {
+export function convertFlagsToJsonSchema(
+  flags: readonly (IFlag | ProcessedFlag)[],
+): {
   type: "object";
   properties: Record<string, any>;
   required: string[];
@@ -114,7 +117,7 @@ export function convertFlagsToJsonSchema(flags: readonly (IFlag | ProcessedFlag)
 
   for (const flag of flags) {
     // Skip help flag and system flags
-    if (flag.name === 'help' || flag.name.startsWith('s-')) {
+    if (flag.name === "help" || flag.name.startsWith("s-")) {
       continue;
     }
 
@@ -129,19 +132,21 @@ export function convertFlagsToJsonSchema(flags: readonly (IFlag | ProcessedFlag)
   return {
     type: "object",
     properties,
-    required
+    required,
   };
 }
 
 /**
  * Convert ArgParser flags to Zod schema for MCP tools
  */
-export function convertFlagsToZodSchema(flags: readonly (IFlag | ProcessedFlag)[]): ZodTypeAny {
+export function convertFlagsToZodSchema(
+  flags: readonly (IFlag | ProcessedFlag)[],
+): ZodTypeAny {
   const zodProperties: ZodRawShape = {};
 
   for (const flag of flags) {
     // Skip help flag and system flags
-    if (flag.name === 'help' || flag.name.startsWith('s-')) {
+    if (flag.name === "help" || flag.name.startsWith("s-")) {
       continue;
     }
 
@@ -166,15 +171,21 @@ export interface SimplifiedToolResponse {
 /**
  * Extract simplified response from MCP protocol response
  */
-export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolResponse {
+export function extractSimplifiedResponse(
+  mcpResponse: any,
+): SimplifiedToolResponse {
   // Handle responses that are already in simplified format
-  if (typeof mcpResponse === 'object' && mcpResponse !== null && 'success' in mcpResponse) {
+  if (
+    typeof mcpResponse === "object" &&
+    mcpResponse !== null &&
+    "success" in mcpResponse
+  ) {
     return {
       success: mcpResponse.success,
       data: mcpResponse.data,
       error: mcpResponse.error || mcpResponse.message, // Ensure error is populated
       message: mcpResponse.message || mcpResponse.error, // Ensure message is populated
-      exitCode: mcpResponse.exitCode
+      exitCode: mcpResponse.exitCode,
     };
   }
 
@@ -186,7 +197,7 @@ export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolRespo
       error: errorMessage,
       message: errorMessage, // Include message field for test compatibility
       data: { error: errorMessage }, // Include data field for test compatibility
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -194,7 +205,7 @@ export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolRespo
   if (mcpResponse.structuredContent) {
     return {
       success: true,
-      data: mcpResponse.structuredContent
+      data: mcpResponse.structuredContent,
     };
   }
 
@@ -207,14 +218,14 @@ export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolRespo
         const parsedData = JSON.parse(textContent);
         return {
           success: true,
-          data: parsedData
+          data: parsedData,
         };
       }
     } catch {
       // If parsing fails, return the raw text
       return {
         success: true,
-        data: mcpResponse.content[0]?.text || "No content"
+        data: mcpResponse.content[0]?.text || "No content",
       };
     }
   }
@@ -223,7 +234,7 @@ export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolRespo
   return {
     success: false,
     error: "Unexpected response format",
-    exitCode: 1
+    exitCode: 1,
   };
 }
 
@@ -238,7 +249,7 @@ export interface IMcpToolStructure {
 }
 
 function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
-  let zodSchema: ZodTypeAny;
+  let zodSchema: ZodTypeAny = z.string(); // Initialize with default value
   const flagTypeOpt = flag["type"];
   let typeName: string;
 
@@ -345,7 +356,9 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
         break;
       default:
         const logger = createMcpLogger("MCP Integration");
-        logger.mcpError(`Flag '${flag["name"]}' has an unknown type '${typeName}'. Defaulting to z.string().`);
+        logger.mcpError(
+          `Flag '${flag["name"]}' has an unknown type '${typeName}'. Defaulting to z.string().`,
+        );
         zodSchema = z.string();
         break;
     }
@@ -370,6 +383,10 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
 export interface GenerateMcpToolsOptions {
   outputSchemaMap?: Record<string, ZodTypeAny>;
   defaultOutputSchema?: ZodTypeAny;
+  /** Automatically generate output schemas for tools that don't have explicit schemas */
+  autoGenerateOutputSchema?:
+    | boolean
+    | keyof typeof import("../core/types").OutputSchemaPatterns;
   generateToolName?: (commandPath: string[], appName?: string) => string;
   includeSubCommands?: boolean;
   toolNamePrefix?: string;
@@ -411,8 +428,6 @@ export function generateMcpToolsFromArgParser(
       ? typedCurrentParser.getHandler()
       : typedCurrentParser["#handler"];
 
-
-
     // ArgParser.ts (line 196) has a public getter `get flags()`
     const currentParserFlags = typedCurrentParser.flags as (
       | IFlag
@@ -448,8 +463,6 @@ export function generateMcpToolsFromArgParser(
         ? commandPathParts[commandPathParts.length - 1]
         : appName);
 
-
-
     let toolName: string;
     if (options?.generateToolName) {
       toolName = options.generateToolName(commandPathParts, appName);
@@ -479,7 +492,7 @@ export function generateMcpToolsFromArgParser(
     if (currentParserHandler) {
       const flags = currentParserFlags as ProcessedFlag[];
       const zodProperties: ZodRawShape = {};
-      const hasHelpFlag = flags.some(flag => flag["name"] === "help");
+      const hasHelpFlag = flags.some((flag) => flag["name"] === "help");
 
       for (const flag of flags) {
         // Skip help flag - it doesn't make sense in MCP tool context
@@ -499,17 +512,27 @@ export function generateMcpToolsFromArgParser(
 
       let outputSchema: ZodTypeAny | undefined;
 
+      // Priority order: explicit schema map > default schema > auto-generated schema
       if (options?.outputSchemaMap && options.outputSchemaMap[toolName]) {
         const customSchema = options.outputSchemaMap[toolName];
         outputSchema =
-          typeof customSchema === "object" && !customSchema._def
+          typeof customSchema === "object" &&
+          customSchema !== null &&
+          !customSchema._def
             ? z.object(customSchema as unknown as ZodRawShape)
             : customSchema;
       } else if (options?.defaultOutputSchema) {
         outputSchema = options.defaultOutputSchema;
+      } else if (options?.autoGenerateOutputSchema) {
+        // Auto-generate output schema based on the option value
+        if (typeof options.autoGenerateOutputSchema === "string") {
+          // Use specific pattern
+          outputSchema = createOutputSchema(options.autoGenerateOutputSchema);
+        } else if (options.autoGenerateOutputSchema === true) {
+          // Use default success/error pattern
+          outputSchema = createOutputSchema("successWithData");
+        }
       }
-
-
 
       const tool: IMcpToolStructure = {
         name: toolName,
@@ -518,15 +541,27 @@ export function generateMcpToolsFromArgParser(
         inputSchema: inputSchema,
         outputSchema: outputSchema,
         async execute(mcpInputArgs: Record<string, any>) {
+          if (process.env["MCP_DEBUG"]) {
+            console.error(
+              `[MCP Execute] Starting execution for tool '${toolName}'`,
+            );
+            console.error(
+              `[MCP Execute] Input args:`,
+              JSON.stringify(mcpInputArgs, null, 2),
+            );
+          }
+
           // Check if help is requested first, before any other processing
-          if (mcpInputArgs['help'] === true) {
+          if (mcpInputArgs["help"] === true) {
             // Generate help text for the specific command path
             let helpParser = rootParser;
             const pathParts = [...commandPathParts];
 
             // Navigate to the correct parser for help
             for (const part of pathParts) {
-              const subCmd = (helpParser as any).getSubCommand ? (helpParser as any).getSubCommand(part) : undefined;
+              const subCmd = (helpParser as any).getSubCommand
+                ? (helpParser as any).getSubCommand(part)
+                : undefined;
               if (subCmd && subCmd.parser) {
                 helpParser = subCmd.parser;
               } else {
@@ -534,7 +569,9 @@ export function generateMcpToolsFromArgParser(
               }
             }
 
-            const helpText = (helpParser as any).helpText ? (helpParser as any).helpText() : "Help not available";
+            const helpText = (helpParser as any).helpText
+              ? (helpParser as any).helpText()
+              : "Help not available";
 
             if (options?.outputSchemaMap?.[toolName]) {
               const helpData = {
@@ -548,10 +585,10 @@ export function generateMcpToolsFromArgParser(
                 content: [
                   {
                     type: "text",
-                    text: JSON.stringify(helpData, null, 2)
-                  }
+                    text: JSON.stringify(helpData, null, 2),
+                  },
                 ],
-                structuredContent: helpData
+                structuredContent: helpData,
               };
             }
             return { success: true, message: helpText };
@@ -606,10 +643,125 @@ export function generateMcpToolsFromArgParser(
           }
 
           try {
-            // ArgParser instance (rootParser) should be configured with handleErrors: false in its constructor.
-            const parseResult = (await rootParser.parse(
-              argv,
-            )) as IParseExecutionResult;
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Execute] Starting try block for tool '${toolName}'`,
+              );
+            }
+
+            // Check if this is a unified tool - if so, handle it directly without recursive parsing
+            const rootParserTyped = rootParser as any;
+            const unifiedTools = rootParserTyped._tools;
+            const isUnifiedTool = unifiedTools && unifiedTools.has(toolName);
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Tool Debug] Checking tool '${toolName}' for unified execution`,
+              );
+              console.error(`[MCP Tool Debug] Has _tools:`, !!unifiedTools);
+              console.error(
+                `[MCP Tool Debug] Available tools:`,
+                unifiedTools ? Array.from(unifiedTools.keys()) : [],
+              );
+              console.error(`[MCP Tool Debug] Is unified tool:`, isUnifiedTool);
+            }
+
+            let parseResult: IParseExecutionResult;
+
+            if (isUnifiedTool) {
+              // For unified tools, bypass the recursive parse call and execute directly
+              const toolConfig = unifiedTools.get(toolName);
+              if (process.env["MCP_DEBUG"]) {
+                console.error(
+                  `[MCP Tool Debug] Found unified tool config:`,
+                  !!toolConfig,
+                );
+                console.error(
+                  `[MCP Tool Debug] Has handler:`,
+                  !!(toolConfig && toolConfig.handler),
+                );
+              }
+              if (toolConfig && toolConfig.handler) {
+                try {
+                  if (process.env["MCP_DEBUG"]) {
+                    console.error(
+                      `[MCP Tool Debug] Executing unified tool handler for '${toolName}'`,
+                    );
+                    console.error(
+                      `[MCP Tool Debug] Handler args:`,
+                      JSON.stringify(mcpInputArgs, null, 2),
+                    );
+                  }
+                  const handlerContext: IHandlerContext<any, any> = {
+                    args: mcpInputArgs,
+                    commandChain: [toolName],
+                    parser: rootParser,
+                    parentArgs: undefined,
+                    isMcp: true,
+                  };
+
+                  const handlerResult =
+                    await toolConfig.handler(handlerContext);
+
+                  // Create a mock parse result that mimics successful execution
+                  if (process.env["MCP_DEBUG"]) {
+                    console.error(
+                      `[MCP Tool Debug] Handler result:`,
+                      JSON.stringify(handlerResult, null, 2),
+                    );
+                  }
+                  parseResult = {
+                    handlerResponse: handlerResult,
+                    $commandChain: [toolName],
+                    ...mcpInputArgs,
+                  } as IParseExecutionResult;
+                } catch (handlerError: any) {
+                  // Create error parse result
+                  if (process.env["MCP_DEBUG"]) {
+                    console.error(
+                      `[MCP Tool Debug] Handler error:`,
+                      handlerError,
+                    );
+                  }
+                  parseResult = {
+                    $error: {
+                      type: "handler_error",
+                      message:
+                        handlerError instanceof Error
+                          ? handlerError.message
+                          : String(handlerError),
+                      details: handlerError,
+                    },
+                    ...mcpInputArgs,
+                  } as IParseExecutionResult;
+                }
+              } else {
+                // Tool not found error
+                parseResult = {
+                  $error: {
+                    type: "tool_not_found",
+                    message: `Unified tool '${toolName}' not found or has no handler`,
+                    details: { toolName },
+                  },
+                  ...mcpInputArgs,
+                } as IParseExecutionResult;
+              }
+            } else {
+              // For CLI-generated tools, use the original parse approach
+              // ArgParser instance (rootParser) should be configured with handleErrors: false in its constructor.
+              if (process.env["MCP_DEBUG"]) {
+                console.error(
+                  `[MCP Tool Debug] Using CLI-generated tool parsing for '${toolName}'`,
+                );
+                console.error(
+                  `[MCP Tool Debug] Parse argv:`,
+                  JSON.stringify(argv, null, 2),
+                );
+              }
+              parseResult = (await rootParser.parse(
+                argv,
+              )) as IParseExecutionResult;
+            }
 
             if (parseResult["$error"]) {
               const errorDetails = parseResult["$error"]!;
@@ -617,6 +769,93 @@ export function generateMcpToolsFromArgParser(
                 message: `Cmd error: ${errorDetails.type} - ${errorDetails.message}`,
                 details: errorDetails.details,
               };
+              // For tools with output schemas, we need to provide structured content even for errors
+              if (outputSchema) {
+                // Try to create a structured error response that matches the output schema
+                // We need to provide all required fields from the schema
+                const structuredError: any = {
+                  success: false,
+                  error: errPayload.message,
+                  message: errPayload.message,
+                };
+
+                // Try to extract schema requirements and provide default values
+                if (
+                  outputSchema &&
+                  typeof outputSchema === "object" &&
+                  outputSchema !== null &&
+                  outputSchema._def
+                ) {
+                  const zodSchema = outputSchema as any;
+                  if (process.env["MCP_DEBUG"]) {
+                    console.error(
+                      `[MCP Debug] Output schema type:`,
+                      zodSchema._def.typeName,
+                    );
+                  }
+                  if (zodSchema._def.typeName === "ZodObject") {
+                    const shapeGetter = zodSchema._def.shape;
+                    const shape =
+                      typeof shapeGetter === "function"
+                        ? shapeGetter()
+                        : shapeGetter;
+
+                    if (process.env["MCP_DEBUG"]) {
+                      console.error(
+                        `[MCP Debug] Schema shape keys:`,
+                        Object.keys(shape),
+                      );
+                    }
+
+                    // Provide default values for required fields
+                    Object.keys(shape).forEach((key) => {
+                      if (!(key in structuredError)) {
+                        const fieldSchema = shape[key];
+                        if (fieldSchema && fieldSchema._def) {
+                          switch (fieldSchema._def.typeName) {
+                            case "ZodString":
+                              structuredError[key] = "";
+                              break;
+                            case "ZodNumber":
+                              structuredError[key] = 0;
+                              break;
+                            case "ZodBoolean":
+                              structuredError[key] = false;
+                              break;
+                            case "ZodArray":
+                              structuredError[key] = [];
+                              break;
+                            case "ZodObject":
+                              structuredError[key] = {};
+                              break;
+                            default:
+                              structuredError[key] = null;
+                          }
+                        }
+                      }
+                    });
+                  }
+                }
+
+                if (process.env["MCP_DEBUG"]) {
+                  console.error(
+                    `[MCP Debug] Final structured error:`,
+                    JSON.stringify(structuredError, null, 2),
+                  );
+                }
+
+                return {
+                  isError: true,
+                  content: [
+                    {
+                      type: "text",
+                      text: `Error: ${errPayload.message}`,
+                    },
+                  ],
+                  structuredContent: structuredError,
+                };
+              }
+
               // Always return standard MCP error response format for errors
               // Custom output schemas only apply to successful responses
               return createMcpErrorResponse(errPayload.message);
@@ -630,7 +869,9 @@ export function generateMcpToolsFromArgParser(
                 handlerResponse = await parseResult["_asyncHandlerPromise"];
               } catch (error: any) {
                 // Use standardized MCP error response for async handler errors
-                return createMcpErrorResponse(error instanceof Error ? error : new Error(String(error)));
+                return createMcpErrorResponse(
+                  error instanceof Error ? error : new Error(String(error)),
+                );
               }
             }
 
@@ -651,7 +892,8 @@ export function generateMcpToolsFromArgParser(
               }
             }
 
-            const needsHandlerExecution = handlerResponse === undefined ||
+            const needsHandlerExecution =
+              handlerResponse === undefined ||
               (handlerResponse !== undefined && commandChain);
 
             if (needsHandlerExecution && commandChain) {
@@ -734,7 +976,7 @@ export function generateMcpToolsFromArgParser(
                 // For MCP execution, use the original MCP input args instead of the merged parse result
                 // This prevents the nested args issue where handler response gets merged into args
                 const cleanArgs = { ...mcpInputArgs };
-                delete cleanArgs['help']; // Remove help flag
+                delete cleanArgs["help"]; // Remove help flag
 
                 const handlerContext: IHandlerContext<any, any> = {
                   args: cleanArgs,
@@ -753,44 +995,111 @@ export function generateMcpToolsFromArgParser(
             }
 
             // Automatically format response for MCP
-            if (handlerResponse && typeof handlerResponse === 'object') {
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Execute] Formatting response for tool '${toolName}'`,
+              );
+              console.error(
+                `[MCP Execute] Handler response:`,
+                JSON.stringify(handlerResponse, null, 2),
+              );
+            }
+
+            if (handlerResponse && typeof handlerResponse === "object") {
               // If handler already returned MCP format with content field, use it
-              if (handlerResponse.content && Array.isArray(handlerResponse.content)) {
+              if (
+                handlerResponse.content &&
+                Array.isArray(handlerResponse.content)
+              ) {
+                // If tool has output schema, ensure structuredContent is present
+                if (outputSchema && !handlerResponse.structuredContent) {
+                  handlerResponse.structuredContent = handlerResponse;
+                }
+
+                if (process.env["MCP_DEBUG"]) {
+                  console.error(
+                    `[MCP Execute] Returning MCP format response for '${toolName}'`,
+                  );
+                }
                 return handlerResponse;
               } else {
                 // Handler returned plain data, wrap it in MCP format
-                if (options?.outputSchemaMap?.[toolName]) {
-                  // Return structured data with both content and structuredContent when custom output schema is defined
-                  return {
-                    content: [
-                      {
-                        type: "text",
-                        text: JSON.stringify(handlerResponse, null, 2)
-                      }
-                    ],
-                    structuredContent: handlerResponse
-                  };
-                } else {
-                  return createMcpSuccessResponse(handlerResponse);
+                // Always include structuredContent for object responses to ensure MCP compliance
+                // This is safe because structuredContent is optional in the MCP spec
+                const mcpResponse = {
+                  content: [
+                    {
+                      type: "text",
+                      text: JSON.stringify(handlerResponse, null, 2),
+                    },
+                  ],
+                  structuredContent: handlerResponse,
+                };
+
+                if (process.env["MCP_DEBUG"]) {
+                  console.error(
+                    `[MCP Execute] Wrapping plain response in MCP format for '${toolName}'`,
+                  );
+                  console.error(
+                    `[MCP Execute] Final MCP response:`,
+                    JSON.stringify(mcpResponse, null, 2),
+                  );
                 }
+                return mcpResponse;
               }
             }
 
             // For non-object responses, wrap in MCP format
             const defaultResponse = handlerResponse || { success: true };
-            if (options?.outputSchemaMap?.[toolName] && typeof defaultResponse === 'object') {
-              return {
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Execute] Using default response for tool '${toolName}'`,
+              );
+              console.error(
+                `[MCP Execute] Default response:`,
+                JSON.stringify(defaultResponse, null, 2),
+              );
+            }
+
+            // Always include structuredContent for object responses to ensure MCP compliance
+            if (typeof defaultResponse === "object") {
+              const finalResponse = {
                 content: [
                   {
                     type: "text",
-                    text: JSON.stringify(defaultResponse, null, 2)
-                  }
+                    text: JSON.stringify(defaultResponse, null, 2),
+                  },
                 ],
-                structuredContent: defaultResponse
+                structuredContent: defaultResponse,
               };
+
+              if (process.env["MCP_DEBUG"]) {
+                console.error(
+                  `[MCP Execute] Returning structured default response for '${toolName}'`,
+                );
+                console.error(
+                  `[MCP Execute] Final response:`,
+                  JSON.stringify(finalResponse, null, 2),
+                );
+              }
+              return finalResponse;
+            }
+
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Execute] Returning success response for '${toolName}'`,
+              );
             }
             return createMcpSuccessResponse(defaultResponse);
           } catch (e: any) {
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Execute] Exception caught in tool '${toolName}':`,
+                e,
+              );
+            }
+
             // Check if this is a handler error that was thrown due to handleErrors: false
             // In this case, we want to format it consistently with the $error handling above
             let errorMsg: string;
@@ -803,12 +1112,81 @@ export function generateMcpToolsFromArgParser(
               errorMsg = `MCP tool exec failed: ${e.message || String(e)}`;
             }
 
+            // For tools with output schemas, we need to provide structured content even for errors
+            // to satisfy MCP SDK validation requirements
+            if (outputSchema) {
+              // Try to create a structured error response that matches the output schema
+              const structuredError: any = {
+                success: false,
+                error: errorMsg,
+                message: errorMsg,
+              };
+
+              // Try to extract schema requirements and provide default values
+              if (
+                outputSchema &&
+                typeof outputSchema === "object" &&
+                outputSchema !== null &&
+                outputSchema._def
+              ) {
+                const zodSchema = outputSchema as any;
+                if (zodSchema._def.typeName === "ZodObject") {
+                  const shapeGetter = zodSchema._def.shape;
+                  const shape =
+                    typeof shapeGetter === "function"
+                      ? shapeGetter()
+                      : shapeGetter;
+
+                  // Provide default values for required fields
+                  Object.keys(shape).forEach((key) => {
+                    if (!(key in structuredError)) {
+                      const fieldSchema = shape[key];
+                      if (fieldSchema && fieldSchema._def) {
+                        switch (fieldSchema._def.typeName) {
+                          case "ZodString":
+                            structuredError[key] = "";
+                            break;
+                          case "ZodNumber":
+                            structuredError[key] = 0;
+                            break;
+                          case "ZodBoolean":
+                            structuredError[key] = false;
+                            break;
+                          case "ZodArray":
+                            structuredError[key] = [];
+                            break;
+                          case "ZodObject":
+                            structuredError[key] = {};
+                            break;
+                          default:
+                            structuredError[key] = null;
+                        }
+                      }
+                    }
+                  });
+                }
+              }
+
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: "text",
+                    text: `Error: ${errorMsg}`,
+                  },
+                ],
+                structuredContent: structuredError,
+              };
+            }
+
             // Always return standard MCP error response format for errors
             // Custom output schemas only apply to successful responses
             return createMcpErrorResponse(errorMsg);
           }
         },
-        async executeForTesting(mcpInputArgs: Record<string, any>): Promise<SimplifiedToolResponse> {
+        async executeForTesting(
+          mcpInputArgs: Record<string, any>,
+        ): Promise<SimplifiedToolResponse> {
           try {
             const mcpResponse = await this.execute(mcpInputArgs);
             return extractSimplifiedResponse(mcpResponse);
@@ -816,16 +1194,16 @@ export function generateMcpToolsFromArgParser(
             return {
               success: false,
               error: error.message || String(error),
-              exitCode: 1
+              exitCode: 1,
             };
           }
-        }
+        },
       };
       tools.push(tool);
     }
 
     const subCommands = currentParserSubCommands;
-    if (subCommands && (options?.includeSubCommands !== false)) {
+    if (subCommands && options?.includeSubCommands !== false) {
       for (const subCmdObj of subCommands) {
         // Skip MCP server sub-commands to avoid infinite recursion
         if ((subCmdObj as any).isMcp === true) {

@@ -57,7 +57,11 @@ class McpTestClient {
   async startServer(serverPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.process = spawn('node', [serverPath, '--s-mcp-serve'], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          CANNY_API_KEY: 'test-api-key-for-compliance-testing'
+        }
       });
 
       this.process.stdout?.on('data', (data) => {
