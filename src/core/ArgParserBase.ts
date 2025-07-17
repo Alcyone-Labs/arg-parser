@@ -302,7 +302,7 @@ export class ArgParserBase<THandlerReturn = any> {
     return this.#subCommands;
   }
 
-  private _addToOutput(
+  private async _addToOutput(
     flag: ProcessedFlag, // Changed from Flags[number]
     arg: any,
     output: TParsedArgs<ProcessedFlag[]>,
@@ -319,7 +319,9 @@ export class ArgParserBase<THandlerReturn = any> {
         value = new (flag["type"] as ObjectConstructor)(value);
       }
     } else if (typeof flag["type"] === "function") {
-      value = (flag["type"] as Function)(value as string);
+      const result = (flag["type"] as Function)(value as string);
+      // Handle both sync and async custom parser functions
+      value = result && typeof result.then === "function" ? await result : result;
     } else if (typeof flag["type"] === "object") {
       value = new (flag["type"] as ObjectConstructor)(value);
     }
@@ -689,7 +691,7 @@ export class ArgParserBase<THandlerReturn = any> {
           : remainingArgs.slice(0, rootSubCommandIndex);
       parsingSteps.push({ level: "(root)", argsSlice: rootArgsSlice });
       try {
-        const { parsedArgs: rootParsedArgs } = currentParser.#parseFlags(
+        const { parsedArgs: rootParsedArgs } = await currentParser.#parseFlags(
           rootArgsSlice,
           { skipHelpHandling: true },
         );
@@ -736,7 +738,7 @@ export class ArgParserBase<THandlerReturn = any> {
 
         try {
           const { parsedArgs: currentLevelParsedArgs } =
-            currentParser.#parseFlags(currentLevelArgsSlice, {
+            await currentParser.#parseFlags(currentLevelArgsSlice, {
               skipHelpHandling: true,
             });
           stepInfo.parsed = currentLevelParsedArgs;
@@ -1118,7 +1120,7 @@ export class ArgParserBase<THandlerReturn = any> {
           : saveToEnvResult;
       }
 
-      const { finalArgs, handlerToExecute } = this._parseRecursive(
+      const { finalArgs, handlerToExecute } = await this._parseRecursive(
         processArgs,
         this,
         {},
@@ -1219,14 +1221,14 @@ export class ArgParserBase<THandlerReturn = any> {
    * Recursive helper for parsing arguments and handling sub-commands.
    * This method assumes the global help check has already been performed in `parse`.
    */
-  private _parseRecursive(
+  private async _parseRecursive(
     argsToParse: string[],
     currentParser: ArgParserBase,
     accumulatedParentArgs: TParsedArgs<any>,
     commandChainSoFar: string[],
     options?: IParseOptions,
     parentParser?: ArgParserBase,
-  ): RecursiveParseResult {
+  ): Promise<RecursiveParseResult> {
     let subCommandIndex = -1;
     let subCommandName: string | null = null;
 
@@ -1248,7 +1250,7 @@ export class ArgParserBase<THandlerReturn = any> {
 
     // Parse flags for the current level using #parseFlags
     const { parsedArgs: currentLevelArgs, firstUnconsumedIndex } =
-      currentParser.#parseFlags(argsForCurrentLevel, options);
+      await currentParser.#parseFlags(argsForCurrentLevel, options);
 
     // Apply default values for the current parser's flags to its args
     currentParser.#_applyDefaultValues(currentLevelArgs, currentParser);
@@ -1315,7 +1317,7 @@ export class ArgParserBase<THandlerReturn = any> {
       ...currentLevelArgs,
     };
 
-    return this._parseRecursive(
+    return await this._parseRecursive(
       nextArgs,
       nextParser,
       combinedArgsForNextLevel,
@@ -1325,13 +1327,13 @@ export class ArgParserBase<THandlerReturn = any> {
     );
   }
 
-  #parseFlags(
+  async #parseFlags(
     args: string[],
     options?: IParseOptions,
-  ): {
+  ): Promise<{
     parsedArgs: TParsedArgs<ProcessedFlag[]>;
     firstUnconsumedIndex: number;
-  } {
+  }> {
     const flags = this.#flagManager.flags;
 
     const output: TParsedArgs<ProcessedFlag[]> = Object.fromEntries(
@@ -1356,7 +1358,7 @@ export class ArgParserBase<THandlerReturn = any> {
           const itemToCheck = args[i];
           const matches = regex.exec(`${itemToCheck}`);
           if (matches?.groups?.["arg"]) {
-            this._addToOutput(
+            await this._addToOutput(
               flagToCheck,
               matches?.groups?.["arg"],
               output,
@@ -1385,12 +1387,12 @@ export class ArgParserBase<THandlerReturn = any> {
           consumedIndices.add(index);
 
           if (flagToCheck["flagOnly"]) {
-            this._addToOutput(flagToCheck, true, output, options);
+            await this._addToOutput(flagToCheck, true, output, options);
           } else if (nextValueExists && !nextValueIsFlag) {
-            this._addToOutput(flagToCheck, nextValue, output, options);
+            await this._addToOutput(flagToCheck, nextValue, output, options);
             consumedIndices.add(nextIndex);
           } else if (flagToCheck["type"] === Boolean) {
-            this._addToOutput(flagToCheck, true, output, options);
+            await this._addToOutput(flagToCheck, true, output, options);
           }
           if (!flagToCheck["allowMultiple"]) break;
         }

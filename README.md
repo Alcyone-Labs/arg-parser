@@ -441,11 +441,29 @@ const parser = new ArgParser({ /* ... */ }).addFlags([
   { name: "tags", options: ["--tags"], type: "array", allowMultiple: true },
   { name: "config", options: ["--config"], type: "object" },
 
-  // Custom parser functions
+  // Custom parser functions (sync)
   {
     name: "date",
     options: ["--date"],
     type: (value: string) => new Date(value)
+  },
+
+  // Async custom parser functions
+  {
+    name: "config",
+    options: ["--config"],
+    type: async (filePath: string) => {
+      const content = await fs.readFile(filePath, 'utf8');
+      return JSON.parse(content);
+    }
+  },
+  {
+    name: "user",
+    options: ["--user-id"],
+    type: async (userId: string) => {
+      const response = await fetch(`/api/users/${userId}`);
+      return response.json();
+    }
   }
 ]);
 ```
@@ -470,8 +488,45 @@ The type system validates flag definitions at runtime and throws descriptive err
 
 - **String literals** are automatically converted to constructor functions internally
 - **Constructor functions** are preserved as-is
-- **Custom parser functions** allow complex transformations
+- **Custom parser functions** (sync and async) allow complex transformations
 - **undefined** falls back to the default `"string"` type
+
+#### Async Custom Parser Support
+
+Custom parser functions can be **asynchronous**, enabling powerful use cases like file I/O, API calls, and database lookups:
+
+```typescript
+const parser = new ArgParser({ /* ... */ }).addFlags([
+  {
+    name: "config",
+    options: ["--config"],
+    type: async (filePath: string) => {
+      const content = await fs.readFile(filePath, 'utf8');
+      return JSON.parse(content);
+    }
+  },
+  {
+    name: "user",
+    options: ["--user-id"],
+    type: async (userId: string) => {
+      const response = await fetch(`/api/users/${userId}`);
+      if (!response.ok) throw new Error(`User not found: ${userId}`);
+      return response.json();
+    }
+  }
+]);
+
+// Usage: --config ./settings.json --user-id 123
+const result = await parser.parse(process.argv.slice(2));
+// result.config contains parsed JSON from file
+// result.user contains user data from API
+```
+
+**Key Features:**
+- ✅ **Backward compatible** - existing sync parsers continue to work
+- ✅ **Automatic detection** - no configuration needed, just return a Promise
+- ✅ **Error handling** - async errors are properly propagated
+- ✅ **Performance** - parsers run concurrently when possible
 
 #### Type Conversion Examples
 
@@ -492,9 +547,13 @@ The type system validates flag definitions at runtime and throws descriptive err
 --tags tag1,tag2,tag3           → ["tag1", "tag2", "tag3"]
 --file file1.txt --file file2.txt → ["file1.txt", "file2.txt"]
 
-// Custom parser functions
+// Custom parser functions (sync)
 --date "2023-01-01"  → Date object
 --json '{"key":"val"}' → parsed JSON object
+
+// Async custom parser functions
+--config "./settings.json" → parsed JSON from file (async)
+--user-id "123"            → user data from API (async)
 ```
 
 ### Hierarchical CLIs (Sub-Commands)
@@ -975,6 +1034,11 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
+### v2.1.1
+
+**Fixes and changes**
+- Fix missing missing types fr
+
 ### v2.1.0
 
 **Feat**
@@ -983,7 +1047,6 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 - Add support for MCP output_schema field for clients that support it, CLI isn't impacted by it, this helps a lot the interactivity, self-documentation, and improves the API guarantees
 
 **Fixes and changes**
-- Fix missing missing types
 - Improved MCP version compliance 
 
 ### v2.0.0
@@ -1018,10 +1081,10 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 - [x] Rename --LIB-\* flags to --s-\*
 - [x] Make it possible to pass a `--s-save-to-env /path/to/file` parameter that saves all the parameters to a file (works with Bash-style .env, JSON, YAML, TOML)
 - [x] Make it possible to pass a `--s-with-env /path/to/file` parameter that loads all the parameters from a file (works with Bash-style .env, JSON, YAML, TOML)
+- [x] Add support for async type function to enable more flexibility
 - [ ] Add System flags to args.systemArgs
 - [ ] Improve flag options collision prevention
 - [ ] Add support for locales / translations
-- [ ] Add support for async type function to enable more flexibility
 - [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
 - [ ] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
 

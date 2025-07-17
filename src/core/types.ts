@@ -55,7 +55,7 @@ export const zodFlagSchema = z
           // Native Object constructor
           message: "Must be Object constructor",
         }),
-        z.function().args(z.string()).returns(z.any()), // Custom parser function (value: string) => any
+        z.function().args(z.string()).returns(z.union([z.any(), z.promise(z.any())])), // Custom parser function (value: string) => any | Promise<any>
         z.string().refine(
           // String literal types
           (value) =>
@@ -142,7 +142,8 @@ export type TParsedArgsTypeFromFlagDef =
   | BooleanConstructor
   | ArrayConstructor
   | ObjectConstructor
-  | ((value: string) => any) // Custom parser function
+  | ((value: string) => any) // Sync custom parser function
+  | ((value: string) => Promise<any>) // Async custom parser function
   | "string"
   | "number"
   | "boolean"
