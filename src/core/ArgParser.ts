@@ -14,6 +14,7 @@ import {
   CURRENT_MCP_PROTOCOL_VERSION,
 } from "../mcp/mcp-protocol-versions";
 import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
+import { resolveLogPath, type LogPath } from "./log-path-utils";
 import type {
   IFlag,
   IHandlerContext,
@@ -92,6 +93,16 @@ export type McpServerOptions = {
   defaultTransport?: McpTransportConfig;
   /** Tool generation options for the MCP server */
   toolOptions?: GenerateMcpToolsOptions;
+  /**
+   * Custom log file path for MCP server logs (default: "./logs/mcp.log" relative to entry point)
+   *
+   * Can be:
+   * - Simple string: "./logs/app.log" (relative to entry point)
+   * - Absolute path: "/tmp/app.log"
+   * - Explicit cwd: "cwd:./logs/app.log" (relative to process.cwd())
+   * - Config object: { path: "./logs/app.log", relativeTo: "entry" | "cwd" | "absolute" }
+   */
+  logPath?: LogPath;
 };
 
 /**
@@ -787,8 +798,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
   public async createMcpServer(
     serverInfo?: DxtServerInfo,
     toolOptions?: GenerateMcpToolsOptions,
+    logPath?: LogPath,
   ): Promise<any> {
-    const logger = createMcpLogger("MCP Server Creation", "./logs/mcp.log");
+    const resolvedLogPath = resolveLogPath(
+      logPath || this._mcpServerConfig?.logPath || "./logs/mcp.log",
+    );
+    const logger = createMcpLogger("MCP Server Creation", resolvedLogPath);
 
     try {
       // Use provided serverInfo or fall back to internal MCP configuration
@@ -1082,8 +1097,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       sessionIdGenerator?: () => string;
     }>,
     toolOptions?: GenerateMcpToolsOptions,
+    logPath?: LogPath,
   ): Promise<void> {
-    const server = await this.createMcpServer(serverInfo, toolOptions);
+    const server = await this.createMcpServer(serverInfo, toolOptions, logPath);
     const startPromises: Promise<void>[] = [];
 
     for (const transportConfig of transports) {
@@ -1091,6 +1107,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         server,
         serverInfo,
         transportConfig,
+        logPath,
       );
       startPromises.push(promise);
     }
@@ -1120,12 +1137,18 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       sessionIdGenerator?: () => string;
     } = {},
     toolOptions?: GenerateMcpToolsOptions,
+    logPath?: LogPath,
   ): Promise<void> {
-    const server = await this.createMcpServer(serverInfo, toolOptions);
-    await this.#_startSingleTransport(server, serverInfo, {
-      type: transportType,
-      ...transportOptions,
-    });
+    const server = await this.createMcpServer(serverInfo, toolOptions, logPath);
+    await this.#_startSingleTransport(
+      server,
+      serverInfo,
+      {
+        type: transportType,
+        ...transportOptions,
+      },
+      logPath,
+    );
   }
 
   /**
@@ -1141,8 +1164,10 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       path?: string;
       sessionIdGenerator?: () => string;
     },
+    logPath?: LogPath,
   ): Promise<void> {
-    const logger = createMcpLogger("MCP Transport", "./logs/mcp.log");
+    const resolvedLogPath = resolveLogPath(logPath || "./logs/mcp.log");
+    const logger = createMcpLogger("MCP Transport", resolvedLogPath);
 
     try {
       logger.mcpError(

@@ -89,7 +89,7 @@ export default defineConfig(({ command, mode }) => {
             "querystring",
             "stream",
             "util",
-            "async_hooks"
+            "async_hooks",
           ],
           output: {
             // Prevent code splitting for library builds

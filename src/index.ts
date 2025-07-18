@@ -1,4 +1,8 @@
-export { ArgParserBase, ArgParserError, type IParseOptions } from "./core/ArgParserBase";
+export {
+  ArgParserBase,
+  ArgParserError,
+  type IParseOptions,
+} from "./core/ArgParserBase";
 export {
   ArgParser,
   type McpTransportConfig,
@@ -8,8 +12,21 @@ export {
   type WithMcpOptions,
   type ArgParserWithMcpOptions,
   type McpToolConfig,
-  type ToolConfig
+  type ToolConfig,
 } from "./core/ArgParser";
+
+// Log path configuration exports
+export {
+  resolveLogPath,
+  detectEntryPoint,
+  getEntryPointFromImportMeta,
+  entryRelative,
+  cwdRelative,
+  absolutePath,
+  legacyCwdPath,
+  type LogPath,
+  type LogPathConfig,
+} from "./core/log-path-utils";
 export { ArgParserMcp, createMcpArgParser } from "./mcp/ArgParserMcp";
 
 export {
@@ -71,7 +88,11 @@ export {
 } from "./config/plugins";
 
 export { ArgParserFuzzyTester } from "./testing/fuzzy-tester";
-export type { FuzzyTestOptions, TestResult, FuzzyTestReport } from "./testing/fuzzy-tester";
+export type {
+  FuzzyTestOptions,
+  TestResult,
+  FuzzyTestReport,
+} from "./testing/fuzzy-tester";
 
 // SimpleChalk export for chalk replacement in autonomous builds
 export { default as SimpleChalk } from "@alcyone-labs/simple-chalk";
@@ -83,5 +104,5 @@ export {
   createMcpLogger,
   createCliLogger,
   type LogLevel,
-  type LoggerConfig
+  type LoggerConfig,
 } from "@alcyone-labs/simple-mcp-logger";

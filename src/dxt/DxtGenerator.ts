@@ -4,7 +4,6 @@ import chalk from "@alcyone-labs/simple-chalk";
 import type { ParseResult } from "../core/types";
 import { getJsonSchemaTypeFromFlag } from "../core/types";
 
-
 /**
  * DxtGenerator handles the generation of DXT (Desktop Extension) packages
  * for MCP servers created from ArgParser instances.
@@ -19,17 +18,26 @@ export class DxtGenerator {
   /**
    * Helper method to handle exit logic based on autoExit setting
    */
-  private _handleExit(exitCode: number, message?: string, type?: ParseResult['type'], data?: any): ParseResult | never {
+  private _handleExit(
+    exitCode: number,
+    message?: string,
+    type?: ParseResult["type"],
+    data?: any,
+  ): ParseResult | never {
     const result: ParseResult = {
       success: exitCode === 0,
       exitCode,
       message,
-      type: type || (exitCode === 0 ? 'success' : 'error'),
+      type: type || (exitCode === 0 ? "success" : "error"),
       shouldExit: true,
-      data
+      data,
     };
 
-    if (this.argParserInstance.getAutoExit() && typeof process === "object" && typeof process.exit === "function") {
+    if (
+      this.argParserInstance.getAutoExit() &&
+      typeof process === "object" &&
+      typeof process.exit === "function"
+    ) {
       process.exit(exitCode as never);
     }
 
@@ -39,31 +47,44 @@ export class DxtGenerator {
   /**
    * Handles the --s-build-dxt system flag to generate DXT packages for MCP servers
    */
-  public async handleBuildDxtFlag(processArgs: string[], buildDxtIndex: number): Promise<boolean | ParseResult> {
+  public async handleBuildDxtFlag(
+    processArgs: string[],
+    buildDxtIndex: number,
+  ): Promise<boolean | ParseResult> {
     try {
       // Check if we're in test mode (vitest/jest environment)
-      const isTestMode = process.env['NODE_ENV'] === 'test' ||
-                        process.argv[0]?.includes('vitest') ||
-                        process.argv[1]?.includes('vitest') ||
-                        process.argv[1]?.includes('tinypool');
+      const isTestMode =
+        process.env["NODE_ENV"] === "test" ||
+        process.argv[0]?.includes("vitest") ||
+        process.argv[1]?.includes("vitest") ||
+        process.argv[1]?.includes("tinypool");
 
       if (isTestMode) {
         // In test mode, generate a mock DXT package structure
-        return await this.handleTestModeDxtGeneration(processArgs, buildDxtIndex);
+        return await this.handleTestModeDxtGeneration(
+          processArgs,
+          buildDxtIndex,
+        );
       }
 
       // The entry point is the script that called this flag (process.argv[1])
       const entryPointFile = process.argv[1];
 
       if (!entryPointFile || !fs.existsSync(entryPointFile)) {
-        console.error(chalk.red(`Error: Entry point file not found: ${entryPointFile}`));
+        console.error(
+          chalk.red(`Error: Entry point file not found: ${entryPointFile}`),
+        );
         return this._handleExit(1, "Entry point file not found", "error");
       }
 
       // Get the output directory from arguments (defaults to './dxt')
-      const outputDir = processArgs[buildDxtIndex + 1] || './dxt';
+      const outputDir = processArgs[buildDxtIndex + 1] || "./dxt";
 
-      console.log(chalk.cyan(`\n🔧 Building DXT package for entry point: ${path.basename(entryPointFile)}`));
+      console.log(
+        chalk.cyan(
+          `\n🔧 Building DXT package for entry point: ${path.basename(entryPointFile)}`,
+        ),
+      );
       console.log(chalk.gray(`Output directory: ${outputDir}`));
 
       // Build the DXT package using TSDown
@@ -71,20 +92,36 @@ export class DxtGenerator {
 
       console.log(chalk.green(`\n✅ DXT package generation completed!`));
 
-      return this._handleExit(0, "DXT package generation completed", "success", { entryPoint: entryPointFile, outputDir });
+      return this._handleExit(
+        0,
+        "DXT package generation completed",
+        "success",
+        { entryPoint: entryPointFile, outputDir },
+      );
     } catch (error) {
-      console.error(chalk.red(`Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`));
-      return this._handleExit(1, `Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`, "error");
+      console.error(
+        chalk.red(
+          `Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      return this._handleExit(
+        1,
+        `Error generating DXT package: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   }
 
   /**
    * Handles DXT generation in test mode by creating mock DXT package structure
    */
-  private async handleTestModeDxtGeneration(processArgs: string[], buildDxtIndex: number): Promise<ParseResult> {
+  private async handleTestModeDxtGeneration(
+    processArgs: string[],
+    buildDxtIndex: number,
+  ): Promise<ParseResult> {
     try {
       // Get output directory from arguments (test mode expects directory argument)
-      const outputDir = processArgs[buildDxtIndex + 1] || './dxt-packages';
+      const outputDir = processArgs[buildDxtIndex + 1] || "./dxt-packages";
 
       // Check if we have MCP configuration
       const mcpTools = this.argParserInstance.toMcpTools();
@@ -117,17 +154,20 @@ export class DxtGenerator {
           mcp_config: {
             command: "node",
             args: ["${__dirname}/server/index.mjs", "--s-mcp-serve"],
-            env: {}
-          }
+            env: {},
+          },
         },
         tools: mcpTools.map((tool: any) => ({
           name: tool.name,
-          description: tool.description
+          description: tool.description,
         })),
-        icon: "logo.jpg"
+        icon: "logo.jpg",
       };
 
-      fs.writeFileSync(path.join(buildDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+      fs.writeFileSync(
+        path.join(buildDir, "manifest.json"),
+        JSON.stringify(manifest, null, 2),
+      );
 
       // Create mock package.json
       const packageJson = {
@@ -135,24 +175,39 @@ export class DxtGenerator {
         version: serverInfo.version,
         description: serverInfo.description,
         main: "index.mjs",
-        type: "module"
+        type: "module",
       };
-      fs.writeFileSync(path.join(buildDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+      fs.writeFileSync(
+        path.join(buildDir, "package.json"),
+        JSON.stringify(packageJson, null, 2),
+      );
 
       // Create mock README.md
       const readme = `# ${serverInfo.name}\n\n${serverInfo.description}\n\nGenerated by @alcyone-labs/arg-parser`;
-      fs.writeFileSync(path.join(buildDir, 'README.md'), readme);
+      fs.writeFileSync(path.join(buildDir, "README.md"), readme);
 
       // Create mock build script
       const buildScript = `#!/bin/bash\necho "Mock DXT build script for ${serverInfo.name}"`;
-      fs.writeFileSync(path.join(buildDir, 'build-dxt-package.sh'), buildScript);
+      fs.writeFileSync(
+        path.join(buildDir, "build-dxt-package.sh"),
+        buildScript,
+      );
 
-      return this._handleExit(0, "DXT package generation completed", "success", {
-        entryPoint: "test-mode",
-        outputDir: buildDir
-      });
+      return this._handleExit(
+        0,
+        "DXT package generation completed",
+        "success",
+        {
+          entryPoint: "test-mode",
+          outputDir: buildDir,
+        },
+      );
     } catch (error) {
-      return this._handleExit(1, `Test mode DXT generation failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+      return this._handleExit(
+        1,
+        `Test mode DXT generation failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
     }
   }
 
@@ -160,7 +215,10 @@ export class DxtGenerator {
    * Generates a DXT package for the unified MCP server
    * Now supports both withMcp() configuration and legacy addMcpSubCommand()
    */
-  public async generateDxtPackage(mcpSubCommand?: any, outputDir?: string): Promise<void> {
+  public async generateDxtPackage(
+    mcpSubCommand?: any,
+    outputDir?: string,
+  ): Promise<void> {
     // Extract server information (now supports withMcp() configuration)
     const serverInfo = this.extractMcpServerInfo(mcpSubCommand);
 
@@ -168,7 +226,7 @@ export class DxtGenerator {
     const tools = this.generateMcpToolsForDxt(mcpSubCommand);
 
     // Use provided output directory or default
-    const finalOutputDir = outputDir || './dxt-packages';
+    const finalOutputDir = outputDir || "./dxt-packages";
 
     // Create build-ready folder instead of ZIP file
     const folderName = `${serverInfo.name.replace(/[^a-zA-Z0-9_-]/g, "_")}-dxt`;
@@ -180,7 +238,7 @@ export class DxtGenerator {
     }
 
     // Create server directory
-    const serverDir = path.join(buildDir, 'server');
+    const serverDir = path.join(buildDir, "server");
     if (!fs.existsSync(serverDir)) {
       fs.mkdirSync(serverDir, { recursive: true });
     }
@@ -189,13 +247,21 @@ export class DxtGenerator {
     const logoFilename = await this.addLogoToFolder(buildDir, serverInfo);
 
     // Create manifest.json (after logo to get correct filename)
-    const manifest = this.createDxtManifest(serverInfo, tools, mcpSubCommand, logoFilename);
+    const manifest = this.createDxtManifest(
+      serverInfo,
+      tools,
+      mcpSubCommand,
+      logoFilename,
+    );
 
     // Validate manifest before creating files
     this.validateDxtManifest(manifest);
 
     // Write manifest.json
-    fs.writeFileSync(path.join(buildDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+    fs.writeFileSync(
+      path.join(buildDir, "manifest.json"),
+      JSON.stringify(manifest, null, 2),
+    );
 
     // Add original CLI source for handler execution
     this.addOriginalCliToFolder(buildDir);
@@ -205,46 +271,56 @@ export class DxtGenerator {
 
     // Create a complete server entry point
     const serverScript = this.createServerScript(serverInfo, bundledCliPath);
-    const serverScriptPath = path.join(serverDir, 'index.mjs');
+    const serverScriptPath = path.join(serverDir, "index.mjs");
     fs.writeFileSync(serverScriptPath, serverScript);
 
     // Make the server script executable (required for MCP)
     try {
       fs.chmodSync(serverScriptPath, 0o755);
     } catch (error) {
-      console.warn('⚠ Could not set executable permission on server script:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "⚠ Could not set executable permission on server script:",
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     // Create package.json for the DXT package
     const packageJson = this.createDxtPackageJson(serverInfo);
-    fs.writeFileSync(path.join(buildDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+    fs.writeFileSync(
+      path.join(buildDir, "package.json"),
+      JSON.stringify(packageJson, null, 2),
+    );
 
     // Add README with installation instructions
     const readme = this.createDxtReadme(serverInfo);
-    fs.writeFileSync(path.join(buildDir, 'README.md'), readme);
+    fs.writeFileSync(path.join(buildDir, "README.md"), readme);
 
     // Add simple build script for DXT packaging
     const buildScript = this.createSimpleBuildScript(serverInfo);
-    fs.writeFileSync(path.join(buildDir, 'build-dxt.sh'), buildScript);
+    fs.writeFileSync(path.join(buildDir, "build-dxt.sh"), buildScript);
 
     // Add .dxtignore file to exclude build artifacts
     const dxtIgnore = this.createDxtIgnore();
-    fs.writeFileSync(path.join(buildDir, '.dxtignore'), dxtIgnore);
+    fs.writeFileSync(path.join(buildDir, ".dxtignore"), dxtIgnore);
 
     // Make build script executable
     try {
-      fs.chmodSync(path.join(buildDir, 'build-dxt.sh'), 0o755);
+      fs.chmodSync(path.join(buildDir, "build-dxt.sh"), 0o755);
     } catch (error) {
       // Ignore chmod errors on Windows
     }
 
     console.log(chalk.green(`  ✓ Generated DXT package folder: ${folderName}`));
-    console.log(chalk.gray(`    Server: ${serverInfo.name} v${serverInfo.version}`));
+    console.log(
+      chalk.gray(`    Server: ${serverInfo.name} v${serverInfo.version}`),
+    );
     console.log(chalk.gray(`    Tools: ${tools.length} tool(s)`));
     console.log(chalk.gray(`    Location: ${buildDir}`));
 
     // Provide clear instructions for manual DXT package creation
-    console.log(chalk.cyan(`\n📦 Creating DXT package using Anthropic's dxt pack...`));
+    console.log(
+      chalk.cyan(`\n📦 Creating DXT package using Anthropic's dxt pack...`),
+    );
     console.log(chalk.cyan(`\n📋 Manual steps to create your DXT package:`));
     console.log(chalk.white(`   cd ${path.relative(process.cwd(), buildDir)}`));
     console.log(chalk.white(`   ./build-dxt.sh`));
@@ -253,18 +329,23 @@ export class DxtGenerator {
   /**
    * Reads package.json to extract fallback information for DXT manifest
    */
-  private readPackageJsonInfo(): { author?: any; repository?: any; license?: string; homepage?: string } | null {
+  private readPackageJsonInfo(): {
+    author?: any;
+    repository?: any;
+    license?: string;
+    homepage?: string;
+  } | null {
     try {
       const packageJsonPath = path.join(process.cwd(), "package.json");
       if (fs.existsSync(packageJsonPath)) {
         const packageContent = fs.readFileSync(packageJsonPath, "utf-8");
         const packageData = JSON.parse(packageContent);
-        
+
         return {
           author: packageData.author,
           repository: packageData.repository,
           license: packageData.license,
-          homepage: packageData.homepage
+          homepage: packageData.homepage,
         };
       }
     } catch (error) {
@@ -294,40 +375,51 @@ export class DxtGenerator {
     // Final fallback: Generate default info from ArgParser instance
     const appName = this.argParserInstance.getAppName();
     const appCommandName = this.argParserInstance.getAppCommandName();
-    const description = (this.argParserInstance as any).getDescription?.() || "MCP server generated from ArgParser";
+    const description =
+      (this.argParserInstance as any).getDescription?.() ||
+      "MCP server generated from ArgParser";
 
     const defaultInfo = {
-      name: appCommandName || appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") || "mcp-server",
+      name:
+        appCommandName ||
+        appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") ||
+        "mcp-server",
       version: "1.0.0",
-      description: description
+      description: description,
     };
 
     return defaultInfo;
   }
 
   // Additional methods will be added in subsequent edits...
-  
-  private generateMcpToolsForDxt(mcpSubCommand?: any): Array<{ name: string; description?: string }> {
+
+  private generateMcpToolsForDxt(
+    mcpSubCommand?: any,
+  ): Array<{ name: string; description?: string }> {
     try {
       // Check if this is an ArgParser instance with MCP capabilities
-      if (typeof (this.argParserInstance as any).toMcpTools === 'function') {
+      if (typeof (this.argParserInstance as any).toMcpTools === "function") {
         // Get tool options from withMcp() configuration or fallback to subcommand
         let toolOptions = mcpSubCommand?.mcpToolOptions;
 
         // Try to get tool options from withMcp() configuration
         if ((this.argParserInstance as any).getMcpServerConfig) {
-          const mcpConfig = (this.argParserInstance as any).getMcpServerConfig();
+          const mcpConfig = (
+            this.argParserInstance as any
+          ).getMcpServerConfig();
           if (mcpConfig?.toolOptions) {
             toolOptions = mcpConfig.toolOptions;
           }
         }
 
         // Use the unified MCP tool generation (includes both CLI-generated and manual tools)
-        const mcpTools = (this.argParserInstance as any).toMcpTools(toolOptions);
+        const mcpTools = (this.argParserInstance as any).toMcpTools(
+          toolOptions,
+        );
 
         return mcpTools.map((tool: any) => ({
           name: tool.name,
-          description: tool.description
+          description: tool.description,
         }));
       }
 
@@ -335,54 +427,83 @@ export class DxtGenerator {
       const tools: Array<{ name: string; description?: string }> = [];
 
       // Add main command tool if there's a handler
-      if (this.argParserInstance.getHandler && this.argParserInstance.getHandler()) {
+      if (
+        this.argParserInstance.getHandler &&
+        this.argParserInstance.getHandler()
+      ) {
         const appName = this.argParserInstance.getAppName() || "main";
-        const commandName = this.argParserInstance.getAppCommandName() || appName.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_");
+        const commandName =
+          this.argParserInstance.getAppCommandName() ||
+          appName.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_");
 
         tools.push({
           name: commandName,
-          description: this.argParserInstance.getDescription() || `Execute ${appName} command`
+          description:
+            this.argParserInstance.getDescription() ||
+            `Execute ${appName} command`,
         });
       }
 
       // Add subcommand tools (excluding MCP subcommands to avoid recursion)
       for (const [name, subCmd] of this.argParserInstance.getSubCommands()) {
         if (!(subCmd as any).isMcp) {
-          const commandName = this.argParserInstance.getAppCommandName() || this.argParserInstance.getAppName()?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") || "main";
+          const commandName =
+            this.argParserInstance.getAppCommandName() ||
+            this.argParserInstance
+              .getAppName()
+              ?.toLowerCase()
+              .replace(/[^a-zA-Z0-9_-]/g, "_") ||
+            "main";
           tools.push({
             name: `${commandName}_${name}`,
-            description: (subCmd as any).description || `Execute ${name} subcommand`
+            description:
+              (subCmd as any).description || `Execute ${name} subcommand`,
           });
         }
       }
 
-      return tools.length > 0 ? tools : [{
-        name: "main",
-        description: "Main command tool"
-      }];
+      return tools.length > 0
+        ? tools
+        : [
+            {
+              name: "main",
+              description: "Main command tool",
+            },
+          ];
     } catch (error) {
-      console.warn(chalk.yellow(`Warning: Could not generate detailed tool list: ${error instanceof Error ? error.message : String(error)}`));
-      return [{
-        name: "main",
-        description: "Main command tool"
-      }];
+      console.warn(
+        chalk.yellow(
+          `Warning: Could not generate detailed tool list: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      return [
+        {
+          name: "main",
+          description: "Main command tool",
+        },
+      ];
     }
   }
 
-  private createDxtManifest(serverInfo: any, tools: Array<{ name: string; description?: string }>, mcpSubCommand?: any, logoFilename?: string): any {
+  private createDxtManifest(
+    serverInfo: any,
+    tools: Array<{ name: string; description?: string }>,
+    mcpSubCommand?: any,
+    logoFilename?: string,
+  ): any {
     // Get fallback information from package.json
     const packageInfo = this.readPackageJsonInfo();
 
     // Parse author information
     let author = serverInfo.author;
     if (!author && packageInfo?.author) {
-      if (typeof packageInfo.author === 'string') {
+      if (typeof packageInfo.author === "string") {
         // Parse "Name <email>" format
         const match = packageInfo.author.match(/^([^<]+?)(?:\s*<([^>]+)>)?$/);
         if (match) {
           author = {
             name: match[1].trim(),
-            email: match[2]?.trim()
+            email: match[2]?.trim(),
           };
         } else {
           author = { name: packageInfo.author };
@@ -394,7 +515,9 @@ export class DxtGenerator {
 
     // Ensure we have required author field
     if (!author) {
-      throw new Error("DXT manifest requires author information. Please provide it via withMcp() serverInfo.author, addMcpSubCommand serverInfo.author, or in package.json");
+      throw new Error(
+        "DXT manifest requires author information. Please provide it via withMcp() serverInfo.author, addMcpSubCommand serverInfo.author, or in package.json",
+      );
     }
 
     // Generate CLI arguments from flags
@@ -408,7 +531,8 @@ export class DxtGenerator {
       dxt_version: "0.1",
       name: serverInfo.name,
       version: serverInfo.version,
-      description: serverInfo.description || "MCP server generated from ArgParser",
+      description:
+        serverInfo.description || "MCP server generated from ArgParser",
       author: author,
       server: {
         type: "node",
@@ -416,13 +540,13 @@ export class DxtGenerator {
         mcp_config: {
           command: "node",
           args: ["${__dirname}/server/index.mjs", ...cliArgs],
-          env: envVars
-        }
+          env: envVars,
+        },
       },
-      tools: tools.map(tool => ({
+      tools: tools.map((tool) => ({
         name: tool.name,
-        description: tool.description
-      }))
+        description: tool.description,
+      })),
     };
 
     // Add icon reference if logo was successfully added
@@ -454,7 +578,8 @@ export class DxtGenerator {
     const errors: string[] = [];
 
     // Required fields
-    if (!manifest.dxt_version) errors.push("Missing required field: dxt_version");
+    if (!manifest.dxt_version)
+      errors.push("Missing required field: dxt_version");
     if (!manifest.name) errors.push("Missing required field: name");
     if (!manifest.version) errors.push("Missing required field: version");
     if (!manifest.server) errors.push("Missing required field: server");
@@ -462,21 +587,31 @@ export class DxtGenerator {
 
     // Server configuration validation
     if (manifest.server) {
-      if (!manifest.server.type) errors.push("Missing required field: server.type");
-      if (!manifest.server.entry_point) errors.push("Missing required field: server.entry_point");
-      if (!manifest.server.mcp_config) errors.push("Missing required field: server.mcp_config");
+      if (!manifest.server.type)
+        errors.push("Missing required field: server.type");
+      if (!manifest.server.entry_point)
+        errors.push("Missing required field: server.entry_point");
+      if (!manifest.server.mcp_config)
+        errors.push("Missing required field: server.mcp_config");
 
       if (manifest.server.mcp_config) {
-        if (!manifest.server.mcp_config.command) errors.push("Missing required field: server.mcp_config.command");
-        if (!manifest.server.mcp_config.args || !Array.isArray(manifest.server.mcp_config.args)) {
-          errors.push("Missing or invalid field: server.mcp_config.args (must be array)");
+        if (!manifest.server.mcp_config.command)
+          errors.push("Missing required field: server.mcp_config.command");
+        if (
+          !manifest.server.mcp_config.args ||
+          !Array.isArray(manifest.server.mcp_config.args)
+        ) {
+          errors.push(
+            "Missing or invalid field: server.mcp_config.args (must be array)",
+          );
         }
       }
     }
 
     // Author validation
-    if (manifest.author && typeof manifest.author === 'object') {
-      if (!manifest.author.name) errors.push("Missing required field: author.name");
+    if (manifest.author && typeof manifest.author === "object") {
+      if (!manifest.author.name)
+        errors.push("Missing required field: author.name");
     }
 
     // DXT version validation
@@ -485,13 +620,18 @@ export class DxtGenerator {
     }
 
     if (errors.length > 0) {
-      throw new Error(`DXT manifest validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}`);
+      throw new Error(
+        `DXT manifest validation failed:\n${errors.map((e) => `  - ${e}`).join("\n")}`,
+      );
     }
   }
 
-  private createServerScript(serverInfo: any, bundledCliPath?: string | null): string {
+  private createServerScript(
+    serverInfo: any,
+    bundledCliPath?: string | null,
+  ): string {
     // Use bundled CLI if available, otherwise fall back to original
-    const cliImportPath = bundledCliPath || 'original-cli.mjs';
+    const cliImportPath = bundledCliPath || "original-cli.mjs";
 
     return `#!/usr/bin/env node
 
@@ -515,7 +655,7 @@ const serverInfo = ${JSON.stringify(serverInfo, null, 2)};
 console.error(\`MCP Server: \${serverInfo.name} v\${serverInfo.version}\`);
 console.error(\`Description: \${serverInfo.description}\`);
 console.error(\`Generated from @alcyone-labs/arg-parser with built-in MCP functionality\`);
-${bundledCliPath ? 'console.error(`Using bundled CLI for autonomous execution`);' : ''}
+${bundledCliPath ? "console.error(`Using bundled CLI for autonomous execution`);" : ""}
 
 // The original CLI has MCP functionality configured via withMcp() or addMcpSubCommand()
 // We use the centralized --s-mcp-serve system flag to start the unified MCP server
@@ -529,19 +669,26 @@ originalCli.parse(['--s-mcp-serve']);
   private createDxtPackageJson(serverInfo: any): any {
     // Use proper npm version for production DXT packages
     // Only use local file path for development when LOCAL_BUILD=1 is set
-    const useLocalBuild = process.env['LOCAL_BUILD'] === '1';
-    const argParserDependency = useLocalBuild ? "file:../../arg-parser-local.tgz" : "^1.3.0";
+    const useLocalBuild = process.env["LOCAL_BUILD"] === "1";
+    const argParserDependency = useLocalBuild
+      ? "file:../../arg-parser-local.tgz"
+      : "^1.3.0";
 
     // Read the original package.json to get all dependencies
     let originalDependencies = {};
     try {
       const originalPackageJsonPath = path.join(process.cwd(), "package.json");
       if (fs.existsSync(originalPackageJsonPath)) {
-        const originalPackageJson = JSON.parse(fs.readFileSync(originalPackageJsonPath, 'utf8'));
+        const originalPackageJson = JSON.parse(
+          fs.readFileSync(originalPackageJsonPath, "utf8"),
+        );
         originalDependencies = originalPackageJson.dependencies || {};
       }
     } catch (error) {
-      console.warn('⚠ Could not read original package.json for dependencies:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "⚠ Could not read original package.json for dependencies:",
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     // Merge original dependencies with required MCP dependencies
@@ -550,20 +697,26 @@ originalCli.parse(['--s-mcp-serve']);
       "@alcyone-labs/arg-parser": argParserDependency,
       "@alcyone-labs/simple-mcp-logger": "^1.0.0",
       "@modelcontextprotocol/sdk": "^1.15.0",
-      "zod": "^3.22.4"
+      zod: "^3.22.4",
     };
 
     // Add dev dependencies for building
     const devDependencies = {
-      "tsup": "^8.3.5"
+      tsup: "^8.3.5",
     };
 
     // Remove any file: dependencies except for arg-parser in local build mode
-    Object.keys(dependencies).forEach(key => {
+    Object.keys(dependencies).forEach((key) => {
       const depValue = dependencies[key as keyof typeof dependencies];
-      if (key !== "@alcyone-labs/arg-parser" && typeof depValue === 'string' && depValue.startsWith('file:')) {
+      if (
+        key !== "@alcyone-labs/arg-parser" &&
+        typeof depValue === "string" &&
+        depValue.startsWith("file:")
+      ) {
         delete (dependencies as any)[key];
-        console.warn(`⚠ Removed file: dependency ${key} from DXT package (not suitable for distribution)`);
+        console.warn(
+          `⚠ Removed file: dependency ${key} from DXT package (not suitable for distribution)`,
+        );
       }
     });
 
@@ -575,16 +728,16 @@ originalCli.parse(['--s-mcp-serve']);
       type: "module",
       scripts: {
         start: "node server/index.mjs",
-        "build-dxt": "./build-dxt.sh"
+        "build-dxt": "./build-dxt.sh",
       },
       dependencies,
       devDependencies,
       engines: {
-        node: ">=22.0.0"
+        node: ">=22.0.0",
       },
       author: serverInfo.author,
       license: serverInfo.license || "MIT",
-      repository: serverInfo.repository
+      repository: serverInfo.repository,
     };
   }
 
@@ -721,8 +874,6 @@ echo "📁 DXT file location: $(pwd)/${serverInfo.name}.dxt"
 `;
   }
 
-
-
   private createDxtReadme(serverInfo: any): string {
     return `# ${serverInfo.name}
 
@@ -743,7 +894,9 @@ Open this .dxt file with Claude Desktop or other DXT-compatible applications for
 ## Tools
 
 This MCP server provides the following tools:
-${this.generateMcpToolsForDxt().map(tool => `- **${tool.name}**: ${tool.description}`).join('\n')}
+${this.generateMcpToolsForDxt()
+  .map((tool) => `- **${tool.name}**: ${tool.description}`)
+  .join("\n")}
 
 ## Building DXT Packages
 
@@ -806,45 +959,37 @@ For autonomous packages, follow the build instructions above.
 `;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   /**
    * Maps ArgParser flag types to DXT user config types
    */
   private mapFlagTypeToUserConfigType(flagType: any): string {
     // Handle constructor functions (processed flags)
-    if (typeof flagType === 'function') {
-      if (flagType === String) return 'string';
-      if (flagType === Number) return 'number';
-      if (flagType === Boolean) return 'boolean';
-      if (flagType === Array) return 'array';
-      if (flagType === Object) return 'object';
+    if (typeof flagType === "function") {
+      if (flagType === String) return "string";
+      if (flagType === Number) return "number";
+      if (flagType === Boolean) return "boolean";
+      if (flagType === Array) return "array";
+      if (flagType === Object) return "object";
       // Custom function types default to string
-      return 'string';
+      return "string";
     }
 
     // Handle string literals (raw flag definitions)
     switch (String(flagType).toLowerCase()) {
-      case 'string': return 'string';
-      case 'number': return 'number';
-      case 'boolean': return 'boolean';
-      case 'table': return 'array';
-      case 'array': return 'array';
-      case 'object': return 'object';
-      default: return 'string';
+      case "string":
+        return "string";
+      case "number":
+        return "number";
+      case "boolean":
+        return "boolean";
+      case "table":
+        return "array";
+      case "array":
+        return "array";
+      case "object":
+        return "object";
+      default:
+        return "string";
     }
   }
 
@@ -868,58 +1013,63 @@ For autonomous packages, follow the build instructions above.
   /**
    * Generates environment variables and user config for DXT manifest
    */
-  private generateEnvAndUserConfig(): { envVars: Record<string, string>, userConfig: Record<string, any> } {
+  private generateEnvAndUserConfig(): {
+    envVars: Record<string, string>;
+    userConfig: Record<string, any>;
+  } {
     const envVars: Record<string, string> = {};
     const userConfig: Record<string, any> = {};
 
     // Check main parser flags
     const flags = this.argParserInstance.flags || [];
     for (const flag of flags) {
-      const flagName = flag['name'];
+      const flagName = flag["name"];
 
       // Skip help and mcp flags
-      if (flagName === 'help' || flagName === 'mcp') continue;
+      if (flagName === "help" || flagName === "mcp") continue;
 
       // Handle flags with environment variable mapping
-      if ((flag as any)['env']) {
-        const envVarName = (flag as any)['env'];
+      if ((flag as any)["env"]) {
+        const envVarName = (flag as any)["env"];
         envVars[envVarName] = `\${user_config.${envVarName}}`;
 
         userConfig[envVarName] = {
-          type: this.mapFlagTypeToUserConfigType(flag['type']),
+          type: this.mapFlagTypeToUserConfigType(flag["type"]),
           title: this.generateUserConfigTitle(envVarName),
-          description: flag['description'] || `${envVarName} environment variable`,
+          description:
+            flag["description"] || `${envVarName} environment variable`,
           required: true, // Always require env vars in user_config for better UX
-          sensitive: this.isSensitiveField(envVarName)
+          sensitive: this.isSensitiveField(envVarName),
         };
       }
     }
 
     // Check unified tools for environment variables
-    if (typeof (this.argParserInstance as any).getTools === 'function') {
+    if (typeof (this.argParserInstance as any).getTools === "function") {
       const tools = (this.argParserInstance as any).getTools();
       for (const [, toolConfig] of tools) {
         const toolFlags = (toolConfig as any).flags || [];
         for (const flag of toolFlags) {
-          const flagName = flag['name'];
+          const flagName = flag["name"];
 
           // Skip help and system flags
-          if (flagName === 'help' || flagName.startsWith('s-')) continue;
+          if (flagName === "help" || flagName.startsWith("s-")) continue;
 
           // Handle flags with environment variable mapping
-          if ((flag as any)['env']) {
-            const envVarName = (flag as any)['env'];
+          if ((flag as any)["env"]) {
+            const envVarName = (flag as any)["env"];
 
             // Only add if not already present (avoid duplicates)
             if (!envVars[envVarName]) {
               envVars[envVarName] = `\${user_config.${envVarName}}`;
 
               userConfig[envVarName] = {
-                type: this.mapFlagTypeToUserConfigType(flag['type']),
+                type: this.mapFlagTypeToUserConfigType(flag["type"]),
                 title: this.generateUserConfigTitle(envVarName),
-                description: flag['description'] || `${envVarName} environment variable`,
+                description:
+                  flag["description"] || `${envVarName} environment variable`,
                 required: true, // Always require env vars in user_config for better UX
-                sensitive: this.isSensitiveField(envVarName)
+                sensitive: this.isSensitiveField(envVarName),
               };
             }
           }
@@ -936,8 +1086,8 @@ For autonomous packages, follow the build instructions above.
   private generateUserConfigTitle(flagName: string): string {
     return flagName
       .split(/[-_]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
   }
 
   /**
@@ -945,28 +1095,38 @@ For autonomous packages, follow the build instructions above.
    */
   private isSensitiveField(fieldName: string): boolean {
     const sensitivePatterns = [
-      /key/i, /token/i, /secret/i, /password/i, /auth/i, /credential/i
+      /key/i,
+      /token/i,
+      /secret/i,
+      /password/i,
+      /auth/i,
+      /credential/i,
     ];
 
-    return sensitivePatterns.some(pattern => pattern.test(fieldName));
+    return sensitivePatterns.some((pattern) => pattern.test(fieldName));
   }
-
-
 
   /**
    * Adds the logo to the build folder if available
    * @returns The filename of the logo that was added, or undefined if no logo was added
    */
-  private async addLogoToFolder(buildDir: string, serverInfo?: any, entryPointFile?: string): Promise<string | undefined> {
+  private async addLogoToFolder(
+    buildDir: string,
+    serverInfo?: any,
+    entryPointFile?: string,
+  ): Promise<string | undefined> {
     try {
       let logoBuffer: Buffer | null = null;
-      let logoFilename = 'logo.jpg';
+      let logoFilename = "logo.jpg";
 
       // First, try to use custom logo from serverInfo
       if (serverInfo?.logo) {
         const customLogo = serverInfo.logo;
 
-        if (customLogo.startsWith('http://') || customLogo.startsWith('https://')) {
+        if (
+          customLogo.startsWith("http://") ||
+          customLogo.startsWith("https://")
+        ) {
           // Download logo from URL
           try {
             console.log(`📥 Downloading logo from: ${customLogo}`);
@@ -976,15 +1136,20 @@ For autonomous packages, follow the build instructions above.
               // Extract filename from URL or use default
               const urlPath = new URL(customLogo).pathname;
               const urlFilename = path.basename(urlPath);
-              if (urlFilename && urlFilename.includes('.')) {
+              if (urlFilename && urlFilename.includes(".")) {
                 logoFilename = urlFilename;
               }
-              console.log('✓ Downloaded logo from URL');
+              console.log("✓ Downloaded logo from URL");
             } else {
-              console.warn(`⚠ Failed to download logo: HTTP ${response.status}`);
+              console.warn(
+                `⚠ Failed to download logo: HTTP ${response.status}`,
+              );
             }
           } catch (error) {
-            console.warn('⚠ Failed to download logo from URL:', error instanceof Error ? error.message : String(error));
+            console.warn(
+              "⚠ Failed to download logo from URL:",
+              error instanceof Error ? error.message : String(error),
+            );
           }
         } else {
           // Try to read logo from local file path
@@ -994,7 +1159,9 @@ For autonomous packages, follow the build instructions above.
             // Resolve relative to the directory containing the entry point file
             const entryDir = path.dirname(entryPointFile);
             logoPath = path.resolve(entryDir, customLogo);
-            console.log(`📍 Resolving logo path relative to entry point: ${logoPath}`);
+            console.log(
+              `📍 Resolving logo path relative to entry point: ${logoPath}`,
+            );
           } else {
             // Absolute path or no entry point provided - resolve relative to cwd
             logoPath = path.resolve(customLogo);
@@ -1003,7 +1170,7 @@ For autonomous packages, follow the build instructions above.
           if (fs.existsSync(logoPath)) {
             logoBuffer = fs.readFileSync(logoPath);
             logoFilename = path.basename(logoPath);
-            console.log('✓ Added custom logo from local file');
+            console.log("✓ Added custom logo from local file");
           } else {
             console.warn(`⚠ Custom logo file not found: ${logoPath}`);
           }
@@ -1016,24 +1183,39 @@ For autonomous packages, follow the build instructions above.
         const currentDir = path.dirname(new URL(import.meta.url).pathname);
 
         // Try to find the default logo in the dist/assets folder (built version)
-        let logoPath = path.join(currentDir, 'assets', 'logo_1_small.jpg');
+        let logoPath = path.join(currentDir, "assets", "logo_1_small.jpg");
 
         // If not found, try the source location (development)
         if (!fs.existsSync(logoPath)) {
-          logoPath = path.join(currentDir, '..', 'docs', 'MCP', 'icons', 'logo_1_small.jpg');
+          logoPath = path.join(
+            currentDir,
+            "..",
+            "docs",
+            "MCP",
+            "icons",
+            "logo_1_small.jpg",
+          );
         }
 
         // If still not found, try relative to process.cwd()
         if (!fs.existsSync(logoPath)) {
-          logoPath = path.join(process.cwd(), 'docs', 'MCP', 'icons', 'logo_1_small.jpg');
+          logoPath = path.join(
+            process.cwd(),
+            "docs",
+            "MCP",
+            "icons",
+            "logo_1_small.jpg",
+          );
         }
 
         if (fs.existsSync(logoPath)) {
           logoBuffer = fs.readFileSync(logoPath);
-          logoFilename = 'logo.jpg'; // Use default filename
-          console.log('✓ Added default logo to build folder');
+          logoFilename = "logo.jpg"; // Use default filename
+          console.log("✓ Added default logo to build folder");
         } else {
-          console.warn('⚠ No logo found (custom or default), build folder will be created without icon');
+          console.warn(
+            "⚠ No logo found (custom or default), build folder will be created without icon",
+          );
           return undefined;
         }
       }
@@ -1046,12 +1228,13 @@ For autonomous packages, follow the build instructions above.
 
       return undefined;
     } catch (error) {
-      console.warn('⚠ Failed to add logo to build folder:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "⚠ Failed to add logo to build folder:",
+        error instanceof Error ? error.message : String(error),
+      );
       return undefined;
     }
   }
-
-
 
   /**
    * Processes CLI source code to replace global console with MCP-compliant Logger
@@ -1092,14 +1275,19 @@ globalThis.console = {
 
     // Add the console replacement at the beginning of the file
     // Find the last import statement to insert after it
-    const lines = cliSource.split('\n');
+    const lines = cliSource.split("\n");
     let lastImportIndex = -1;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line.startsWith('import ') && line.includes('from')) {
+      if (line.startsWith("import ") && line.includes("from")) {
         lastImportIndex = i;
-      } else if (line && !line.startsWith('//') && !line.startsWith('/*') && lastImportIndex >= 0) {
+      } else if (
+        line &&
+        !line.startsWith("//") &&
+        !line.startsWith("/*") &&
+        lastImportIndex >= 0
+      ) {
         // Found first non-import, non-comment line after imports
         break;
       }
@@ -1107,8 +1295,13 @@ globalThis.console = {
 
     if (lastImportIndex >= 0) {
       // Insert after the last import
-      lines.splice(lastImportIndex + 1, 0, '', ...consoleReplacement.trim().split('\n'));
-      return lines.join('\n');
+      lines.splice(
+        lastImportIndex + 1,
+        0,
+        "",
+        ...consoleReplacement.trim().split("\n"),
+      );
+      return lines.join("\n");
     } else {
       // No imports found, add at the beginning
       return consoleReplacement + cliSource;
@@ -1127,24 +1320,42 @@ globalThis.console = {
 
       const possibleCliFiles = [
         // Current working directory common patterns
-        path.join(process.cwd(), 'index.js'),
-        path.join(process.cwd(), 'index.mjs'),
-        path.join(process.cwd(), 'cli.js'),
-        path.join(process.cwd(), 'cli.mjs'),
-        path.join(process.cwd(), 'main.js'),
-        path.join(process.cwd(), 'main.mjs'),
+        path.join(process.cwd(), "index.js"),
+        path.join(process.cwd(), "index.mjs"),
+        path.join(process.cwd(), "cli.js"),
+        path.join(process.cwd(), "cli.mjs"),
+        path.join(process.cwd(), "main.js"),
+        path.join(process.cwd(), "main.mjs"),
         // Look for files with the app command name
         path.join(process.cwd(), `${appCommandName}.js`),
         path.join(process.cwd(), `${appCommandName}.mjs`),
         // Look for files with the app command name (sanitized)
-        path.join(process.cwd(), `${appCommandName.replace(/[^a-zA-Z0-9-]/g, '-')}.js`),
-        path.join(process.cwd(), `${appCommandName.replace(/[^a-zA-Z0-9-]/g, '-')}.mjs`),
+        path.join(
+          process.cwd(),
+          `${appCommandName.replace(/[^a-zA-Z0-9-]/g, "-")}.js`,
+        ),
+        path.join(
+          process.cwd(),
+          `${appCommandName.replace(/[^a-zA-Z0-9-]/g, "-")}.mjs`,
+        ),
         // Look for files with app name patterns
-        path.join(process.cwd(), `${appName.toLowerCase().replace(/\s+/g, '-')}-cli.js`),
-        path.join(process.cwd(), `${appName.toLowerCase().replace(/\s+/g, '-')}-cli.mjs`),
+        path.join(
+          process.cwd(),
+          `${appName.toLowerCase().replace(/\s+/g, "-")}-cli.js`,
+        ),
+        path.join(
+          process.cwd(),
+          `${appName.toLowerCase().replace(/\s+/g, "-")}-cli.mjs`,
+        ),
         // Look for files with first word of app name + cli
-        path.join(process.cwd(), `${appName.split(' ')[0].toLowerCase()}-cli.js`),
-        path.join(process.cwd(), `${appName.split(' ')[0].toLowerCase()}-cli.mjs`),
+        path.join(
+          process.cwd(),
+          `${appName.split(" ")[0].toLowerCase()}-cli.js`,
+        ),
+        path.join(
+          process.cwd(),
+          `${appName.split(" ")[0].toLowerCase()}-cli.mjs`,
+        ),
       ];
 
       let cliSourcePath = null;
@@ -1156,18 +1367,18 @@ globalThis.console = {
       }
 
       if (cliSourcePath) {
-        let cliSource = fs.readFileSync(cliSourcePath, 'utf8');
+        let cliSource = fs.readFileSync(cliSourcePath, "utf8");
 
         // Fix import paths to use the installed package instead of relative paths
         cliSource = cliSource.replace(
           /import\s*{\s*([^}]+)\s*}\s*from\s*['"][^'"]*\/dist\/index\.mjs['"];?/g,
-          "import { $1 } from '@alcyone-labs/arg-parser';"
+          "import { $1 } from '@alcyone-labs/arg-parser';",
         );
 
         // Also handle default imports
         cliSource = cliSource.replace(
           /import\s+(\w+)\s+from\s*['"][^'"]*\/dist\/index\.mjs['"];?/g,
-          "import $1 from '@alcyone-labs/arg-parser';"
+          "import $1 from '@alcyone-labs/arg-parser';",
         );
 
         // Replace console calls with MCP-compliant Logger calls
@@ -1175,7 +1386,9 @@ globalThis.console = {
 
         // Modify the CLI source to export the parser instance
         // Find the parser instance (usually assigned to 'cli' or similar variable)
-        const parserVariableMatch = cliSource.match(/const\s+(\w+)\s*=\s*ArgParser\.withMcp\(/);
+        const parserVariableMatch = cliSource.match(
+          /const\s+(\w+)\s*=\s*ArgParser\.withMcp\(/,
+        );
         if (parserVariableMatch) {
           const parserVariable = parserVariableMatch[1];
 
@@ -1244,33 +1457,48 @@ if (process.argv.includes('serve')) {
 }
 `;
         } else {
-          console.warn('⚠ Could not find ArgParser instance in CLI source, MCP server may not work properly');
+          console.warn(
+            "⚠ Could not find ArgParser instance in CLI source, MCP server may not work properly",
+          );
         }
 
         // Create server directory if it doesn't exist
-        const serverDir = path.join(buildDir, 'server');
+        const serverDir = path.join(buildDir, "server");
         if (!fs.existsSync(serverDir)) {
           fs.mkdirSync(serverDir, { recursive: true });
         }
 
         // Write the fixed CLI source to the build folder
-        fs.writeFileSync(path.join(serverDir, 'original-cli.mjs'), cliSource);
-        console.log(`✓ Added original CLI source to build folder: ${path.basename(cliSourcePath)}`);
+        fs.writeFileSync(path.join(serverDir, "original-cli.mjs"), cliSource);
+        console.log(
+          `✓ Added original CLI source to build folder: ${path.basename(cliSourcePath)}`,
+        );
       } else {
-        console.warn('⚠ Original CLI source not found, handlers may not work properly');
-        console.warn('  Searched for:', possibleCliFiles.map(f => path.basename(f)).join(', '));
+        console.warn(
+          "⚠ Original CLI source not found, handlers may not work properly",
+        );
+        console.warn(
+          "  Searched for:",
+          possibleCliFiles.map((f) => path.basename(f)).join(", "),
+        );
       }
     } catch (error) {
-      console.warn('⚠ Failed to add original CLI source:', error instanceof Error ? error.message : String(error));
+      console.warn(
+        "⚠ Failed to add original CLI source:",
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
   /**
    * Builds a complete DXT package using TSDown CLI for autonomous execution
    */
-  private async buildDxtWithTsdown(entryPointFile: string, outputDir: string = './dxt'): Promise<void> {
+  private async buildDxtWithTsdown(
+    entryPointFile: string,
+    outputDir: string = "./dxt",
+  ): Promise<void> {
     try {
-      console.log(chalk.cyan('🔧 Building DXT package with TSDown...'));
+      console.log(chalk.cyan("🔧 Building DXT package with TSDown..."));
 
       // Get the directory containing the entry point
       const entryDir = path.dirname(entryPointFile);
@@ -1282,7 +1510,7 @@ if (process.argv.includes('serve')) {
       // Copy .dxtignore template
       const dxtIgnorePath = this.getDxtIgnoreTemplatePath();
       if (fs.existsSync(dxtIgnorePath)) {
-        fs.copyFileSync(dxtIgnorePath, path.join(entryDir, '.dxtignore'));
+        fs.copyFileSync(dxtIgnorePath, path.join(entryDir, ".dxtignore"));
       }
 
       // Run TSDown build from the entry point directory
@@ -1291,7 +1519,7 @@ if (process.argv.includes('serve')) {
         process.chdir(entryDir);
 
         // Dynamic import TSDown to handle optional dependency
-        const { build } = await import('tsdown');
+        const { build } = await import("tsdown");
 
         console.log(chalk.gray(`Building with TSDown: ${entryFileName}`));
 
@@ -1305,48 +1533,85 @@ if (process.argv.includes('serve')) {
           minify: false,
           sourcemap: false,
           clean: false,
-          silent: process.env['NO_SILENCE'] !== '1',
+          silent: process.env["NO_SILENCE"] !== "1",
           copy: [
             // Copy logo from assets - try multiple possible locations
-            ...((() => {
+            ...(() => {
               const possibleLogoPaths = [
                 // From built library assets
-                path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', 'logo_1_small.jpg'),
+                path.join(
+                  path.dirname(new URL(import.meta.url).pathname),
+                  "..",
+                  "assets",
+                  "logo_1_small.jpg",
+                ),
                 // From node_modules
-                path.join(process.cwd(), 'node_modules', '@alcyone-labs', 'arg-parser', 'dist', 'assets', 'logo_1_small.jpg'),
+                path.join(
+                  process.cwd(),
+                  "node_modules",
+                  "@alcyone-labs",
+                  "arg-parser",
+                  "dist",
+                  "assets",
+                  "logo_1_small.jpg",
+                ),
                 // From package root dist/assets (for local build)
-                path.join(process.cwd(), 'dist', 'assets', 'logo_1_small.jpg'),
+                path.join(process.cwd(), "dist", "assets", "logo_1_small.jpg"),
                 // From library root (development)
-                path.join(process.cwd(), '..', '..', '..', 'docs', 'MCP', 'icons', 'logo_1_small.jpg'),
+                path.join(
+                  process.cwd(),
+                  "..",
+                  "..",
+                  "..",
+                  "docs",
+                  "MCP",
+                  "icons",
+                  "logo_1_small.jpg",
+                ),
               ];
 
               for (const logoPath of possibleLogoPaths) {
                 if (fs.existsSync(logoPath)) {
                   console.log(chalk.gray(`Found logo at: ${logoPath}`));
-                  return [{ from: logoPath, to: 'logo.jpg' }];
+                  return [{ from: logoPath, to: "logo.jpg" }];
                 }
               }
-              console.log(chalk.yellow('⚠ Logo not found in any expected location'));
+              console.log(
+                chalk.yellow("⚠ Logo not found in any expected location"),
+              );
               return []; // No logo found
-            })())
+            })(),
           ],
           external: [
             // Node.js built-ins only - everything else should be bundled for true autonomy
-            "stream", "fs", "path", "url", "util", "events", "child_process",
-            "os", "tty", "process", "crypto", "http", "https", "net", "zlib",
+            "stream",
+            "fs",
+            "path",
+            "url",
+            "util",
+            "events",
+            "child_process",
+            "os",
+            "tty",
+            "process",
+            "crypto",
+            "http",
+            "https",
+            "net",
+            "zlib",
           ],
           platform: "node" as const,
           plugins: [],
         };
 
         // Debug output and config file generation
-        if (process.env['DEBUG'] === '1') {
-          console.log(chalk.cyan('🐛 DEBUG: TSDown build configuration:'));
+        if (process.env["DEBUG"] === "1") {
+          console.log(chalk.cyan("🐛 DEBUG: TSDown build configuration:"));
           console.log(JSON.stringify(buildConfig, null, 2));
 
           // Create dxt directory if it doesn't exist
-          if (!fs.existsSync('dxt')) {
-            fs.mkdirSync('dxt', { recursive: true });
+          if (!fs.existsSync("dxt")) {
+            fs.mkdirSync("dxt", { recursive: true });
           }
 
           // Write config to file for debugging
@@ -1359,89 +1624,161 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 // To run manually:
 // npx tsdown -c tsdown.config.dxt.ts
 `;
-          fs.writeFileSync(path.join('dxt', 'tsdown.config.dxt.ts'), configContent);
-          console.log(chalk.gray('📝 Debug config written to dxt/tsdown.config.dxt.ts'));
+          fs.writeFileSync(
+            path.join("dxt", "tsdown.config.dxt.ts"),
+            configContent,
+          );
+          console.log(
+            chalk.gray("📝 Debug config written to dxt/tsdown.config.dxt.ts"),
+          );
         }
 
         await build(buildConfig as any);
 
-        console.log(chalk.green('✅ TSDown bundling completed'));
+        console.log(chalk.green("✅ TSDown bundling completed"));
+
+        // Determine the actual output filename from TSDown
+        const actualOutputFilename = this.detectTsdownOutputFile(
+          outputDir,
+          entryFileName,
+        );
 
         // Manual logo copy since TSDown's copy option doesn't work programmatically
         await this.copyLogoManually(outputDir);
 
         // Copy manifest and logo to the output directory
-        await this.setupDxtPackageFiles(entryPointFile, outputDir);
+        await this.setupDxtPackageFiles(
+          entryPointFile,
+          outputDir,
+          actualOutputFilename ?? undefined,
+        );
 
         // Run dxt pack (temporarily disabled due to dynamic import issues)
-        console.log(chalk.cyan('📦 DXT package ready for packing'));
-        console.log(chalk.gray(`To complete the process, run: npx @anthropic-ai/dxt pack ${outputDir}/`));
+        console.log(chalk.cyan("📦 DXT package ready for packing"));
+        console.log(
+          chalk.gray(
+            `To complete the process, run: npx @anthropic-ai/dxt pack ${outputDir}/`,
+          ),
+        );
         // await this.packDxtPackage();
-
       } finally {
         process.chdir(originalCwd);
       }
-
     } catch (error) {
-      throw new Error(`TSDown DXT build failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `TSDown DXT build failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * Bundles the original CLI using TSDown for autonomous execution (legacy method)
    */
-  private async bundleOriginalCliWithTsdown(serverDir: string): Promise<string | null> {
+  private async bundleOriginalCliWithTsdown(
+    serverDir: string,
+  ): Promise<string | null> {
     try {
       // Dynamic import TSDown to handle optional dependency
-      const { build } = await import('tsdown');
+      const { build } = await import("tsdown");
 
-      console.log(chalk.cyan('🔧 Bundling CLI with TSDown for autonomous execution...'));
+      console.log(
+        chalk.cyan("🔧 Bundling CLI with TSDown for autonomous execution..."),
+      );
 
       // Copy TSDown config to the server directory for use
       const configContent = this.getTsdownConfigContent();
-      const localConfigPath = path.join(serverDir, 'tsdown.config.mjs');
+      const localConfigPath = path.join(serverDir, "tsdown.config.mjs");
       fs.writeFileSync(localConfigPath, configContent);
 
       // Set up entry point and output directory
-      const originalCliPath = path.join(serverDir, 'original-cli.mjs');
+      const originalCliPath = path.join(serverDir, "original-cli.mjs");
       if (!fs.existsSync(originalCliPath)) {
-        console.warn(chalk.yellow('⚠ Original CLI not found, skipping TSDown bundling'));
+        console.warn(
+          chalk.yellow("⚠ Original CLI not found, skipping TSDown bundling"),
+        );
         return null;
       }
 
       // Configure TSDown build options for true autonomous bundling
       const buildOptions = {
-        entry: ['original-cli.mjs'], // Use relative path since we'll chdir to serverDir
-        outDir: '.', // Output to current directory (serverDir)
+        entry: ["original-cli.mjs"], // Use relative path since we'll chdir to serverDir
+        outDir: ".", // Output to current directory (serverDir)
         format: "esm" as const,
         target: "node22",
         // Bundle EVERYTHING except Node.js built-ins for true autonomy
         noExternal: (id: string) => {
           // Bundle all other npm packages by default
-          if (!id.startsWith('node:') && !this.isNodeBuiltin(id)) return true;
+          if (!id.startsWith("node:") && !this.isNodeBuiltin(id)) return true;
 
           return false; // Don't bundle Node.js built-ins
         },
         minify: false,
         sourcemap: false,
         clean: false,
-        outExtension: () => ({ js: '.bundled.mjs' }),
+        outExtension: () => ({ js: ".bundled.mjs" }),
         alias: {
           // Alias chalk to SimpleChalk for autonomous builds
-          chalk: path.resolve(process.cwd(), "node_modules/@alcyone-labs/arg-parser/dist/SimpleChalk.mjs"),
+          chalk: path.resolve(
+            process.cwd(),
+            "node_modules/@alcyone-labs/arg-parser/dist/SimpleChalk.mjs",
+          ),
         },
         external: [
           // Only Node.js built-ins - everything else gets bundled for true autonomy
-          "node:stream", "node:fs", "node:path", "node:url", "node:util",
-          "node:events", "node:child_process", "node:os", "node:tty",
-          "node:process", "node:crypto", "node:http", "node:https",
-          "node:net", "node:zlib", "node:fs/promises", "node:timers",
-          "stream", "fs", "path", "url", "util", "events", "child_process",
-          "os", "tty", "process", "crypto", "http", "https", "net", "zlib",
-          "fs/promises", "timers", "timers/promises", "perf_hooks", "async_hooks",
-          "inspector", "v8", "vm", "assert", "constants", "module", "repl",
-          "string_decoder", "punycode", "domain", "querystring", "readline",
-          "worker_threads", "cluster", "dgram", "dns", "buffer"
+          "node:stream",
+          "node:fs",
+          "node:path",
+          "node:url",
+          "node:util",
+          "node:events",
+          "node:child_process",
+          "node:os",
+          "node:tty",
+          "node:process",
+          "node:crypto",
+          "node:http",
+          "node:https",
+          "node:net",
+          "node:zlib",
+          "node:fs/promises",
+          "node:timers",
+          "stream",
+          "fs",
+          "path",
+          "url",
+          "util",
+          "events",
+          "child_process",
+          "os",
+          "tty",
+          "process",
+          "crypto",
+          "http",
+          "https",
+          "net",
+          "zlib",
+          "fs/promises",
+          "timers",
+          "timers/promises",
+          "perf_hooks",
+          "async_hooks",
+          "inspector",
+          "v8",
+          "vm",
+          "assert",
+          "constants",
+          "module",
+          "repl",
+          "string_decoder",
+          "punycode",
+          "domain",
+          "querystring",
+          "readline",
+          "worker_threads",
+          "cluster",
+          "dgram",
+          "dns",
+          "buffer",
         ],
         platform: "node" as const,
         plugins: [],
@@ -1449,9 +1786,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         resolve: {
           alias: {
             // Handle local monorepo dependencies
-            '@alcyone-labs/arg-parser': path.resolve(process.cwd()),
-          }
-        }
+            "@alcyone-labs/arg-parser": path.resolve(process.cwd()),
+          },
+        },
       };
 
       // Run TSDown build from the server directory to resolve dependencies correctly
@@ -1465,9 +1802,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       // TSDown creates files based on the entry name, check for various possible outputs
       const possibleBundledFiles = [
-        'original-cli.bundled.mjs',
-        'original-cli.js',
-        'original-cli.mjs'
+        "original-cli.bundled.mjs",
+        "original-cli.js",
+        "original-cli.mjs",
       ];
 
       let bundledPath: string | null = null;
@@ -1475,7 +1812,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       for (const fileName of possibleBundledFiles) {
         const filePath = path.join(serverDir, fileName);
-        if (fs.existsSync(filePath) && fileName !== 'original-cli.mjs') { // Don't use the original file
+        if (fs.existsSync(filePath) && fileName !== "original-cli.mjs") {
+          // Don't use the original file
           bundledPath = filePath;
           bundledFileName = fileName;
           break;
@@ -1483,13 +1821,20 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       }
 
       if (bundledPath && bundledFileName) {
-        console.log(chalk.green(`✅ TSDown bundling completed successfully: ${bundledFileName}`));
+        console.log(
+          chalk.green(
+            `✅ TSDown bundling completed successfully: ${bundledFileName}`,
+          ),
+        );
 
         // Rename to our expected bundled name if needed
-        const expectedBundledPath = path.join(serverDir, 'original-cli.bundled.mjs');
+        const expectedBundledPath = path.join(
+          serverDir,
+          "original-cli.bundled.mjs",
+        );
         if (bundledPath !== expectedBundledPath) {
           fs.renameSync(bundledPath, expectedBundledPath);
-          bundledFileName = 'original-cli.bundled.mjs';
+          bundledFileName = "original-cli.bundled.mjs";
         }
 
         // Clean up the temporary config file
@@ -1503,18 +1848,26 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         try {
           fs.chmodSync(expectedBundledPath, 0o755);
         } catch (error) {
-          console.warn('⚠ Could not set executable permission on bundled file:', error instanceof Error ? error.message : String(error));
+          console.warn(
+            "⚠ Could not set executable permission on bundled file:",
+            error instanceof Error ? error.message : String(error),
+          );
         }
 
         return bundledFileName;
       } else {
-        console.warn(chalk.yellow('⚠ TSDown bundling failed, bundled file not found'));
+        console.warn(
+          chalk.yellow("⚠ TSDown bundling failed, bundled file not found"),
+        );
         return null;
       }
-
     } catch (error) {
-      console.warn(chalk.yellow(`⚠ TSDown bundling failed: ${error instanceof Error ? error.message : String(error)}`));
-      console.log(chalk.gray('  Falling back to non-bundled approach'));
+      console.warn(
+        chalk.yellow(
+          `⚠ TSDown bundling failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      console.log(chalk.gray("  Falling back to non-bundled approach"));
       return null;
     }
   }
@@ -1524,15 +1877,46 @@ export default ${JSON.stringify(buildConfig, null, 2)};
    */
   private isNodeBuiltin(id: string): boolean {
     const nodeBuiltins = [
-      'stream', 'fs', 'path', 'url', 'util', 'events', 'child_process',
-      'os', 'tty', 'process', 'crypto', 'http', 'https', 'net', 'zlib',
-      'fs/promises', 'timers', 'timers/promises', 'perf_hooks', 'async_hooks',
-      'inspector', 'v8', 'vm', 'assert', 'constants', 'module', 'repl',
-      'string_decoder', 'punycode', 'domain', 'querystring', 'readline',
-      'worker_threads', 'cluster', 'dgram', 'dns', 'buffer'
+      "stream",
+      "fs",
+      "path",
+      "url",
+      "util",
+      "events",
+      "child_process",
+      "os",
+      "tty",
+      "process",
+      "crypto",
+      "http",
+      "https",
+      "net",
+      "zlib",
+      "fs/promises",
+      "timers",
+      "timers/promises",
+      "perf_hooks",
+      "async_hooks",
+      "inspector",
+      "v8",
+      "vm",
+      "assert",
+      "constants",
+      "module",
+      "repl",
+      "string_decoder",
+      "punycode",
+      "domain",
+      "querystring",
+      "readline",
+      "worker_threads",
+      "cluster",
+      "dgram",
+      "dns",
+      "buffer",
     ];
 
-    return nodeBuiltins.includes(id) || id.startsWith('node:');
+    return nodeBuiltins.includes(id) || id.startsWith("node:");
   }
 
   /**
@@ -1541,31 +1925,53 @@ export default ${JSON.stringify(buildConfig, null, 2)};
   private getTsdownConfigContent(): string {
     // Try to find the config in the assets directory first (relative to the built library)
     const currentDir = path.dirname(new URL(import.meta.url).pathname);
-    const assetsConfigPath = path.join(currentDir, '..', 'assets', 'tsdown.dxt.config.ts');
+    const assetsConfigPath = path.join(
+      currentDir,
+      "..",
+      "assets",
+      "tsdown.dxt.config.ts",
+    );
 
     if (fs.existsSync(assetsConfigPath)) {
       try {
-        const content = fs.readFileSync(assetsConfigPath, 'utf-8');
+        const content = fs.readFileSync(assetsConfigPath, "utf-8");
         // Convert TypeScript config to ES module format
         return content
-          .replace('/// <reference types="tsdown" />', '')
-          .replace('import { defineConfig } from "tsdown/config";', 'import { defineConfig } from "tsdown";')
-          .replace('export default defineConfig(', 'export default defineConfig(');
+          .replace('/// <reference types="tsdown" />', "")
+          .replace(
+            'import { defineConfig } from "tsdown/config";',
+            'import { defineConfig } from "tsdown";',
+          )
+          .replace(
+            "export default defineConfig(",
+            "export default defineConfig(",
+          );
       } catch (error) {
-        console.warn(chalk.yellow('⚠ Could not read TSDown config from assets, using fallback'));
+        console.warn(
+          chalk.yellow(
+            "⚠ Could not read TSDown config from assets, using fallback",
+          ),
+        );
       }
     }
 
     // Fallback to the root directory
-    const rootConfigPath = path.join(process.cwd(), 'tsdown.dxt.config.ts');
+    const rootConfigPath = path.join(process.cwd(), "tsdown.dxt.config.ts");
     if (fs.existsSync(rootConfigPath)) {
       try {
-        const content = fs.readFileSync(rootConfigPath, 'utf-8');
+        const content = fs.readFileSync(rootConfigPath, "utf-8");
         return content
-          .replace('/// <reference types="tsdown" />', '')
-          .replace('import { defineConfig } from "tsdown/config";', 'import { defineConfig } from "tsdown";');
+          .replace('/// <reference types="tsdown" />', "")
+          .replace(
+            'import { defineConfig } from "tsdown/config";',
+            'import { defineConfig } from "tsdown";',
+          );
       } catch (error) {
-        console.warn(chalk.yellow('⚠ Could not read TSDown config from root, using default'));
+        console.warn(
+          chalk.yellow(
+            "⚠ Could not read TSDown config from root, using default",
+          ),
+        );
       }
     }
 
@@ -1593,8 +1999,6 @@ export default defineConfig({
 });`;
   }
 
-
-
   /**
    * Gets the path to the .dxtignore template file in assets
    */
@@ -1602,16 +2006,29 @@ export default defineConfig({
     // Try multiple locations for the .dxtignore template
     const possiblePaths = [
       // 1. From the built library assets (when installed via npm)
-      path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', '.dxtignore.template'),
+      path.join(
+        path.dirname(new URL(import.meta.url).pathname),
+        "..",
+        "assets",
+        ".dxtignore.template",
+      ),
 
       // 2. From node_modules/@alcyone-labs/arg-parser/dist/assets (when installed via npm)
-      path.join(process.cwd(), 'node_modules', '@alcyone-labs', 'arg-parser', 'dist', 'assets', '.dxtignore.template'),
+      path.join(
+        process.cwd(),
+        "node_modules",
+        "@alcyone-labs",
+        "arg-parser",
+        "dist",
+        "assets",
+        ".dxtignore.template",
+      ),
 
       // 3. From the root directory (development/local build)
-      path.join(process.cwd(), '.dxtignore.template'),
+      path.join(process.cwd(), ".dxtignore.template"),
 
       // 4. From the library root (when using local file dependency)
-      path.join(process.cwd(), '..', '..', '..', '.dxtignore.template'),
+      path.join(process.cwd(), "..", "..", "..", ".dxtignore.template"),
     ];
 
     for (const ignorePath of possiblePaths) {
@@ -1622,27 +2039,31 @@ export default defineConfig({
     }
 
     // Return empty string if not found - we'll skip copying the template
-    console.log(chalk.yellow('⚠ .dxtignore template not found, skipping'));
-    return '';
+    console.log(chalk.yellow("⚠ .dxtignore template not found, skipping"));
+    return "";
   }
 
   /**
    * Sets up DXT package files (manifest.json) in the output directory
    */
-  private async setupDxtPackageFiles(entryPointFile: string, outputDir: string = './dxt'): Promise<void> {
+  private async setupDxtPackageFiles(
+    entryPointFile: string,
+    outputDir: string = "./dxt",
+    actualOutputFilename?: string,
+  ): Promise<void> {
     const dxtDir = path.resolve(process.cwd(), outputDir);
     if (!fs.existsSync(dxtDir)) {
       throw new Error(`TSDown output directory (${outputDir}) not found`);
     }
 
     // Read package.json for project information
-    const packageJsonPath = path.join(process.cwd(), 'package.json');
+    const packageJsonPath = path.join(process.cwd(), "package.json");
     let packageInfo: any = {};
     if (fs.existsSync(packageJsonPath)) {
       try {
-        packageInfo = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        packageInfo = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
       } catch (error) {
-        console.warn(chalk.yellow('Warning: Could not read package.json'));
+        console.warn(chalk.yellow("Warning: Could not read package.json"));
       }
     }
 
@@ -1654,10 +2075,14 @@ export default defineConfig({
       const mcpTools = this.generateMcpToolsForDxt();
       tools = mcpTools.map((tool: any) => ({
         name: tool.name,
-        description: tool.description
+        description: tool.description,
       }));
     } catch (error) {
-      console.warn(chalk.yellow(`Warning: Could not generate unified tool list: ${error instanceof Error ? error.message : String(error)}`));
+      console.warn(
+        chalk.yellow(
+          `Warning: Could not generate unified tool list: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
 
       // Fallback: Generate tools from main parser flags
       const mainFlags = this.argParserInstance.flags;
@@ -1666,11 +2091,11 @@ export default defineConfig({
 
       for (const flag of mainFlags) {
         // Skip help flag and system flags
-        if (flag.name === 'help' || flag.name.startsWith('s-')) continue;
+        if (flag.name === "help" || flag.name.startsWith("s-")) continue;
 
         properties[flag.name] = {
           type: getJsonSchemaTypeFromFlag(flag.type as any),
-          description: flag.description || `${flag.name} parameter`
+          description: flag.description || `${flag.name} parameter`,
         };
 
         if (flag.enum) {
@@ -1688,10 +2113,15 @@ export default defineConfig({
 
       // Create fallback tool from the parser's configuration (DXT-compliant)
       const commandName = this.argParserInstance.getAppCommandName();
-      tools = [{
-        name: commandName || packageInfo.name || 'cli-tool',
-        description: packageInfo.description || this.argParserInstance.getDescription() || 'CLI tool'
-      }];
+      tools = [
+        {
+          name: commandName || packageInfo.name || "cli-tool",
+          description:
+            packageInfo.description ||
+            this.argParserInstance.getDescription() ||
+            "CLI tool",
+        },
+      ];
     }
 
     // Extract environment variables and user config from the ArgParser instance
@@ -1709,32 +2139,37 @@ export default defineConfig({
         // Add to user_config - use the original env var name to maintain compatibility
         userConfig[envVar] = {
           type: "string",
-          title: envVar.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          title: envVar
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase()),
           description: flag.description || `${envVar} environment variable`,
           required: true, // Always require env vars in user_config for better UX
-          sensitive: true // Assume env vars are sensitive
+          sensitive: true, // Assume env vars are sensitive
         };
       }
     }
 
     // Also check unified tools for environment variables
-    if (typeof (this.argParserInstance as any).getTools === 'function') {
+    if (typeof (this.argParserInstance as any).getTools === "function") {
       const tools = (this.argParserInstance as any).getTools();
       for (const [, toolConfig] of tools) {
         const toolFlags = (toolConfig as any).flags || [];
         for (const flag of toolFlags) {
           const envVar = (flag as any).env || (flag as any).envVar;
-          if (envVar && !envVars[envVar]) { // Only add if not already present
+          if (envVar && !envVars[envVar]) {
+            // Only add if not already present
             // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
             envVars[envVar] = `\${user_config.${envVar}}`;
 
             // Add to user_config - use the original env var name to maintain compatibility
             userConfig[envVar] = {
               type: "string",
-              title: envVar.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              title: envVar
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l: string) => l.toUpperCase()),
               description: flag.description || `${envVar} environment variable`,
               required: true, // Always require env vars in user_config for better UX
-              sensitive: true // Assume env vars are sensitive
+              sensitive: true, // Assume env vars are sensitive
             };
           }
         }
@@ -1745,90 +2180,229 @@ export default defineConfig({
     const serverInfo = this.extractMcpServerInfo();
 
     // Handle custom logo if specified in serverInfo
-    let logoFilename = 'logo.jpg'; // Default
+    let logoFilename = "logo.jpg"; // Default
     if (serverInfo?.logo) {
-      const customLogoFilename = await this.addLogoToFolder(dxtDir, serverInfo, entryPointFile);
+      const customLogoFilename = await this.addLogoToFolder(
+        dxtDir,
+        serverInfo,
+        entryPointFile,
+      );
       if (customLogoFilename) {
         logoFilename = customLogoFilename;
       }
     }
 
     // Create DXT manifest using server info and package.json data
-    const entryFileName = path.basename(entryPointFile);
+    const entryFileName =
+      actualOutputFilename ||
+      path.basename(entryPointFile).replace(/\.ts$/, ".js");
 
     // Use server info if available, otherwise fallback to package.json (DXT-compliant)
     const manifest = {
       dxt_version: "0.1",
-      name: serverInfo.name || packageInfo.name || 'mcp-server',
-      version: serverInfo.version || packageInfo.version || '1.0.0',
-      description: serverInfo.description || packageInfo.description || 'MCP server generated by @alcyone-labs/arg-parser',
+      name: serverInfo.name || packageInfo.name || "mcp-server",
+      version: serverInfo.version || packageInfo.version || "1.0.0",
+      description:
+        serverInfo.description ||
+        packageInfo.description ||
+        "MCP server generated by @alcyone-labs/arg-parser",
       author: serverInfo.author || {
-        name: packageInfo.author?.name || packageInfo.author || '@alcyone-labs/arg-parser',
+        name:
+          packageInfo.author?.name ||
+          packageInfo.author ||
+          "@alcyone-labs/arg-parser",
         ...(packageInfo.author?.email && { email: packageInfo.author.email }),
-        url: packageInfo.author?.url || packageInfo.homepage || packageInfo.repository?.url || 'https://github.com/alcyone-labs/arg-parser'
+        url:
+          packageInfo.author?.url ||
+          packageInfo.homepage ||
+          packageInfo.repository?.url ||
+          "https://github.com/alcyone-labs/arg-parser",
       },
       server: {
         type: "node",
         entry_point: entryFileName,
         mcp_config: {
           command: "node",
-          args: [
-            `\${__dirname}/${entryFileName}`,
-            "--s-mcp-serve"
-          ],
-          env: envVars
-        }
+          args: [`\${__dirname}/${entryFileName}`, "--s-mcp-serve"],
+          env: envVars,
+        },
       },
       tools: tools,
       icon: logoFilename,
       ...(Object.keys(userConfig).length > 0 && { user_config: userConfig }),
       repository: {
         type: "git",
-        url: packageInfo.repository?.url || 'https://github.com/alcyone-labs/arg-parser'
+        url:
+          packageInfo.repository?.url ||
+          "https://github.com/alcyone-labs/arg-parser",
       },
-      license: packageInfo.license || 'MIT'
+      license: packageInfo.license || "MIT",
     };
 
-    fs.writeFileSync(path.join(dxtDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+    fs.writeFileSync(
+      path.join(dxtDir, "manifest.json"),
+      JSON.stringify(manifest, null, 2),
+    );
 
-    console.log(chalk.gray('✅ DXT package files set up'));
+    console.log(chalk.gray("✅ DXT package files set up"));
   }
-
-
 
   /**
    * Manually copy logo since TSDown's copy option doesn't work programmatically
    */
-  private async copyLogoManually(outputDir: string = './dxt'): Promise<void> {
+  private async copyLogoManually(outputDir: string = "./dxt"): Promise<void> {
     const dxtDir = path.resolve(process.cwd(), outputDir);
     if (!fs.existsSync(dxtDir)) {
-      console.warn(chalk.yellow(`⚠ Output directory (${outputDir}) not found, skipping logo copy`));
+      console.warn(
+        chalk.yellow(
+          `⚠ Output directory (${outputDir}) not found, skipping logo copy`,
+        ),
+      );
       return;
     }
 
     const possibleLogoPaths = [
       // From built library assets
-      path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', 'logo_1_small.jpg'),
+      path.join(
+        path.dirname(new URL(import.meta.url).pathname),
+        "..",
+        "assets",
+        "logo_1_small.jpg",
+      ),
       // From node_modules
-      path.join(process.cwd(), 'node_modules', '@alcyone-labs', 'arg-parser', 'dist', 'assets', 'logo_1_small.jpg'),
+      path.join(
+        process.cwd(),
+        "node_modules",
+        "@alcyone-labs",
+        "arg-parser",
+        "dist",
+        "assets",
+        "logo_1_small.jpg",
+      ),
       // From package root dist/assets (for local build)
-      path.join(process.cwd(), 'dist', 'assets', 'logo_1_small.jpg'),
+      path.join(process.cwd(), "dist", "assets", "logo_1_small.jpg"),
       // From library root (development)
-      path.join(process.cwd(), '..', '..', '..', 'docs', 'MCP', 'icons', 'logo_1_small.jpg'),
+      path.join(
+        process.cwd(),
+        "..",
+        "..",
+        "..",
+        "docs",
+        "MCP",
+        "icons",
+        "logo_1_small.jpg",
+      ),
     ];
 
     for (const logoPath of possibleLogoPaths) {
       if (fs.existsSync(logoPath)) {
         try {
-          fs.copyFileSync(logoPath, path.join(dxtDir, 'logo.jpg'));
+          fs.copyFileSync(logoPath, path.join(dxtDir, "logo.jpg"));
           console.log(chalk.gray(`✅ Logo copied from: ${logoPath}`));
           return;
         } catch (error) {
-          console.warn(chalk.yellow(`⚠ Failed to copy logo from ${logoPath}: ${error}`));
+          console.warn(
+            chalk.yellow(`⚠ Failed to copy logo from ${logoPath}: ${error}`),
+          );
         }
       }
     }
 
-    console.warn(chalk.yellow('⚠ Logo not found in any expected location'));
+    console.warn(chalk.yellow("⚠ Logo not found in any expected location"));
+  }
+
+  /**
+   * Detects the actual output filename generated by TSDown
+   */
+  private detectTsdownOutputFile(
+    outputDir: string,
+    expectedBaseName: string,
+  ): string | null {
+    try {
+      const dxtDir = path.resolve(process.cwd(), outputDir);
+      if (!fs.existsSync(dxtDir)) {
+        console.warn(
+          chalk.yellow(`⚠ Output directory (${outputDir}) not found`),
+        );
+        return null;
+      }
+
+      // List all .js and .mjs files in the output directory
+      const files = fs
+        .readdirSync(dxtDir)
+        .filter(
+          (file) =>
+            (file.endsWith(".js") || file.endsWith(".mjs")) &&
+            !file.includes("chunk-") &&
+            !file.includes("dist-") &&
+            !file.startsWith("."),
+        );
+
+      // First, try to find exact match based on the base name
+      const baseNameWithoutExt = path.parse(expectedBaseName).name;
+
+      // Look for exact matches first
+      for (const ext of [".js", ".mjs"]) {
+        const exactMatch = `${baseNameWithoutExt}${ext}`;
+        if (files.includes(exactMatch)) {
+          console.log(chalk.gray(`✓ Detected TSDown output: ${exactMatch}`));
+          return exactMatch;
+        }
+      }
+
+      // If no exact match, look for the largest non-chunk file (likely the main entry)
+      const mainFiles = files.filter(
+        (file) =>
+          !file.includes("chunk") &&
+          !file.includes("dist") &&
+          file !== "logo.jpg" &&
+          file !== "manifest.json",
+      );
+
+      if (mainFiles.length === 1) {
+        console.log(chalk.gray(`✓ Detected TSDown output: ${mainFiles[0]}`));
+        return mainFiles[0];
+      }
+
+      // If multiple candidates, pick the one with the most similar name or largest size
+      if (mainFiles.length > 1) {
+        let bestMatch = mainFiles[0];
+        let bestScore = 0;
+
+        for (const file of mainFiles) {
+          const filePath = path.join(dxtDir, file);
+          const stats = fs.statSync(filePath);
+
+          // Score based on name similarity and file size
+          const nameScore = file.includes(baseNameWithoutExt) ? 100 : 0;
+          const sizeScore = Math.min(stats.size / 1000, 50); // Cap at 50KB for scoring
+          const totalScore = nameScore + sizeScore;
+
+          if (totalScore > bestScore) {
+            bestScore = totalScore;
+            bestMatch = file;
+          }
+        }
+
+        console.log(
+          chalk.gray(
+            `✓ Detected TSDown output: ${bestMatch} (best match from ${mainFiles.length} candidates)`,
+          ),
+        );
+        return bestMatch;
+      }
+
+      console.warn(
+        chalk.yellow(`⚠ Could not detect TSDown output file in ${outputDir}`),
+      );
+      return null;
+    } catch (error) {
+      console.warn(
+        chalk.yellow(
+          `⚠ Error detecting TSDown output: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      return null;
+    }
   }
 }

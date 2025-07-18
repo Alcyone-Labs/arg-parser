@@ -957,6 +957,19 @@ my-cli-app --s-mcp-serve
 
 # You can also override transports and ports using system flags
 my-cli-app --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3001
+
+# Configure custom log file path for MCP server logs
+my-cli-app --s-mcp-serve --s-mcp-log-path ./custom-logs/mcp-server.log
+
+# Or configure log path programmatically in withMcp()
+const cli = ArgParser.withMcp({
+  appName: 'My CLI App',
+  appCommandName: 'my-cli-app',
+  mcp: {
+    serverInfo: { name: 'my-server', version: '1.0.0' },
+    logPath: './my-logs/mcp-server.log'  // Programmatic log path
+  }
+});
 ```
 
 ### MCP Transports
@@ -973,11 +986,23 @@ my-tool --s-mcp-serve --s-mcp-transports '[{"type":"stdio"},{"type":"sse","port"
 # Single transport with custom options
 my-tool --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3000 --s-mcp-host 0.0.0.0
 
-# Multiple transports (configured via --s-mcp-serve system flag)
+# Custom log path via CLI flag (logs to specified file instead of ./logs/mcp.log)
+my-tool --s-mcp-serve --s-mcp-log-path /var/log/my-mcp-server.log
+
+# Custom log path via programmatic configuration
+const parser = ArgParser.withMcp({
+  mcp: {
+    serverInfo: { name: 'my-tool', version: '1.0.0' },
+    logPath: '/var/log/my-mcp-server.log'
+  }
+});
+
+# Multiple transports and custom log path (configured via --s-mcp-serve system flag)
 const cli = ArgParser.withMcp({
   appName: 'multi-tool',
   appCommandName: 'multi-tool',
   mcp: {
+    logPath: './logs/multi-tool-mcp.log',  // Custom log path
     serverInfo: {
       name: 'multi-tool-mcp',
       version: '1.0.0'
@@ -992,6 +1017,31 @@ const cli = ArgParser.withMcp({
   }
 });
 ```
+
+### MCP Log Path Configuration
+
+MCP server logs can be configured through multiple methods with the following priority order:
+
+1. **CLI Flag (Highest Priority)**: `--s-mcp-log-path <path>`
+2. **Programmatic Configuration**: `mcp.logPath` in `withMcp()`
+3. **Default Path (Fallback)**: `./logs/mcp.log`
+
+```typescript
+// Programmatic configuration
+const parser = ArgParser.withMcp({
+  appName: "My CLI",
+  appCommandName: "my-cli",
+  mcp: {
+    serverInfo: { name: "my-server", version: "1.0.0" },
+    logPath: "./custom/mcp-server.log", // Used unless overridden by CLI flag
+  },
+});
+
+// CLI flag overrides programmatic setting
+// my-cli --s-mcp-serve --s-mcp-log-path ./override.log
+```
+
+The CLI flag always takes precedence, allowing users to override the developer's programmatic configuration when needed.
 
 ### Automatic Console Safety
 
@@ -1078,26 +1128,37 @@ When you run `--s-build-dxt`, ArgParser performs several steps to create a self-
 
 ArgParser includes built-in `--s-*` flags for development, debugging, and configuration. They are processed before normal arguments and will cause the program to exit after their task is complete.
 
-| Flag                        | Description                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------- |
-| **MCP & DXT**               |                                                                                                |
-| `--s-mcp-serve`             | Starts the application in MCP server mode, exposing all tools.                                 |
-| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop in the specified directory.    |
-| `--s-mcp-transport <type>`  | Overrides the MCP transport (`stdio`, `sse`, `streamable-http`).                               |
-| `--s-mcp-transports <json>` | Overrides transports with a JSON array for multi-transport setups.                             |
-| `--s-mcp-port <number>`     | Sets the port for HTTP-based transports (`sse`, `streamable-http`).                            |
-| `--s-mcp-host <string>`     | Sets the host address for HTTP-based transports.                                               |
-| **Configuration**           |                                                                                                |
-| `--s-with-env <file>`       | Loads configuration from a file (`.env`, `.json`, `.yaml`, `.toml`). CLI args take precedence. |
-| `--s-save-to-env <file>`    | Saves the current arguments to a configuration file, perfect for templates.                    |
-| **Debugging**               |                                                                                                |
-| `--s-debug`                 | Prints a detailed, step-by-step log of the argument parsing process.                           |
-| `--s-debug-print`           | Exports the entire parser configuration to a JSON file for inspection.                         |
-| `--s-enable-fuzzy`          | Enables fuzzy testing mode—a dry run that parses args but skips handler execution.             |
+| Flag                        | Description                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| **MCP & DXT**               |                                                                                                     |
+| `--s-mcp-serve`             | Starts the application in MCP server mode, exposing all tools.                                      |
+| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop in the specified directory.         |
+| `--s-mcp-transport <type>`  | Overrides the MCP transport (`stdio`, `sse`, `streamable-http`).                                    |
+| `--s-mcp-transports <json>` | Overrides transports with a JSON array for multi-transport setups.                                  |
+| `--s-mcp-port <number>`     | Sets the port for HTTP-based transports (`sse`, `streamable-http`).                                 |
+| `--s-mcp-host <string>`     | Sets the host address for HTTP-based transports.                                                    |
+| `--s-mcp-log-path <path>`   | Sets the file path for MCP server logs (default: `./logs/mcp.log`). Overrides programmatic setting. |
+| **Configuration**           |                                                                                                     |
+| `--s-with-env <file>`       | Loads configuration from a file (`.env`, `.json`, `.yaml`, `.toml`). CLI args take precedence.      |
+| `--s-save-to-env <file>`    | Saves the current arguments to a configuration file, perfect for templates.                         |
+| **Debugging**               |                                                                                                     |
+| `--s-debug`                 | Prints a detailed, step-by-step log of the argument parsing process.                                |
+| `--s-debug-print`           | Exports the entire parser configuration to a JSON file for inspection.                              |
+| `--s-enable-fuzzy`          | Enables fuzzy testing mode—a dry run that parses args but skips handler execution.                  |
 
 ---
 
 ## Changelog
+
+### v2.2.1
+
+**Feat**
+
+- You can now specify logPath for the MCP output and easily disambiguate what the path is relative to (`__dirname` versus `process.cwd()` versus absolute)
+
+**Fixes and changes**
+
+- Fixes an issue where building a DXT package via `--s-build-dxt` would generate an invalid package if the entry_point was a TypeScript .ts file.
 
 ### v2.2.0
 

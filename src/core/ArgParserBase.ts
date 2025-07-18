@@ -14,6 +14,7 @@ import {
   McpResourcesManager,
 } from "../mcp/mcp-resources.js";
 import { FlagManager } from "./FlagManager";
+import { resolveLogPath } from "./log-path-utils";
 import type {
   IFlag,
   IHandlerContext,
@@ -327,7 +328,8 @@ export class ArgParserBase<THandlerReturn = any> {
     } else if (typeof flag["type"] === "function") {
       const result = (flag["type"] as Function)(value as string);
       // Handle both sync and async custom parser functions
-      value = result && typeof result.then === "function" ? await result : result;
+      value =
+        result && typeof result.then === "function" ? await result : result;
     } else if (typeof flag["type"] === "object") {
       value = new (flag["type"] as ObjectConstructor)(value);
     }
@@ -1076,26 +1078,31 @@ export class ArgParserBase<THandlerReturn = any> {
     // Handle automatic argument detection when no arguments provided
     if (processArgs === undefined) {
       // Check if we're in a Node.js environment
-      if (typeof process !== "undefined" && process.argv && Array.isArray(process.argv)) {
+      if (
+        typeof process !== "undefined" &&
+        process.argv &&
+        Array.isArray(process.argv)
+      ) {
         processArgs = process.argv.slice(2);
 
         // Display warning in CLI mode (when we have appCommandName set and not in MCP mode)
         const isCliMode = !this.#parentParser && !!this.#appCommandName;
-        const isMcpMode = options?.isMcp || (globalThis as any).console?.mcpError;
+        const isMcpMode =
+          options?.isMcp || (globalThis as any).console?.mcpError;
 
         if (isCliMode && !isMcpMode) {
           console.warn(
-            `Warning: parse() called without arguments. Auto-detected Node.js environment and using process.argv.slice(2).`
+            `Warning: parse() called without arguments. Auto-detected Node.js environment and using process.argv.slice(2).`,
           );
           console.warn(
-            `For explicit control, call parse(process.argv.slice(2)) instead.`
+            `For explicit control, call parse(process.argv.slice(2)) instead.`,
           );
         }
       } else {
         // Not in Node.js environment, throw an error
         throw new Error(
           "parse() called without arguments in non-Node.js environment. " +
-          "Please provide arguments explicitly: parse(['--flag', 'value'])"
+            "Please provide arguments explicitly: parse(['--flag', 'value'])",
         );
       }
     }
@@ -2100,6 +2107,17 @@ ${descriptionLines
     processArgs: string[],
     _mcpServeIndex: number,
   ): Promise<boolean | ParseResult> {
+    // Parse transport options from command line arguments first to get log path
+    const transportOptions = this.#_parseMcpTransportOptions(processArgs);
+
+    // Get MCP server configuration early to access programmatic logPath
+    const mcpServerConfig = this.#_getMcpServerConfiguration();
+
+    // Determine log path: CLI flag > programmatic config > default
+    const effectiveLogPath =
+      transportOptions.logPath || mcpServerConfig?.logPath || "./logs/mcp.log";
+    const resolvedLogPath = resolveLogPath(effectiveLogPath);
+
     // Setup MCP logger with console hijacking
     let mcpLogger: any;
     try {
@@ -2107,10 +2125,7 @@ ${descriptionLines
       const mcpLoggerModule = await Function(
         'return import("@alcyone-labs/simple-mcp-logger")',
       )();
-      mcpLogger = mcpLoggerModule.createMcpLogger(
-        "MCP Serve",
-        "./logs/mcp.log",
-      );
+      mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", resolvedLogPath);
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
     } catch {
@@ -2124,9 +2139,6 @@ ${descriptionLines
       mcpLogger.mcpError(
         "Starting --s-mcp-serve system flag handler - console hijacked for MCP safety",
       );
-
-      // Get MCP server configuration - prefer withMcp() config, fallback to addMcpSubCommand() config
-      const mcpServerConfig = this.#_getMcpServerConfiguration();
 
       if (!mcpServerConfig) {
         mcpLogger.mcpError(
@@ -2143,8 +2155,8 @@ ${descriptionLines
         `Found MCP server configuration: ${mcpServerConfig.serverInfo?.name || "unnamed"}`,
       );
 
-      // Parse transport options from command line arguments
-      const transportOptions = this.#_parseMcpTransportOptions(processArgs);
+      mcpLogger.mcpError(`Using log path: ${resolvedLogPath}`);
+
       mcpLogger.mcpError(
         `Transport options: ${JSON.stringify(transportOptions)}`,
       );
@@ -2152,7 +2164,10 @@ ${descriptionLines
       // Start the unified MCP server
       try {
         mcpLogger.mcpError("Starting unified MCP server with all tools");
-        await this.#_startUnifiedMcpServer(mcpServerConfig, transportOptions);
+        await this.#_startUnifiedMcpServer(mcpServerConfig, {
+          ...transportOptions,
+          logPath: resolvedLogPath,
+        });
         mcpLogger.mcpError("Successfully started unified MCP server");
       } catch (error) {
         mcpLogger.mcpError(
@@ -2226,6 +2241,7 @@ ${descriptionLines
       host?: string;
       path?: string;
       transports?: string;
+      logPath?: string;
     },
   ): Promise<void> {
     // We need to cast this to ArgParser to access MCP methods
@@ -2253,6 +2269,7 @@ ${descriptionLines
           serverInfo,
           transportConfigs,
           toolOptions,
+          transportOptions.logPath,
         );
       } catch (error: any) {
         throw new Error(
@@ -2265,6 +2282,7 @@ ${descriptionLines
         serverInfo,
         defaultTransports,
         toolOptions,
+        transportOptions.logPath,
       );
     } else if (defaultTransport) {
       // Use preset single transport configuration
@@ -2278,6 +2296,7 @@ ${descriptionLines
           sessionIdGenerator: defaultTransport.sessionIdGenerator,
         },
         toolOptions,
+        transportOptions.logPath,
       );
     } else {
       // Single transport mode from CLI flags or defaults
@@ -2297,6 +2316,7 @@ ${descriptionLines
         transportType,
         finalTransportOptions,
         toolOptions,
+        transportOptions.logPath,
       );
     }
   }
@@ -2349,6 +2369,7 @@ ${descriptionLines
     host?: string;
     path?: string;
     transports?: string;
+    logPath?: string;
   } {
     const options: {
       transportType?: string;
@@ -2356,6 +2377,7 @@ ${descriptionLines
       host?: string;
       path?: string;
       transports?: string;
+      logPath?: string;
     } = {};
 
     // Look for transport-related system flags
@@ -2391,6 +2413,12 @@ ${descriptionLines
         case "--s-mcp-transports":
           if (nextArg && !nextArg.startsWith("-")) {
             options.transports = nextArg;
+            i++; // Skip next arg since we consumed it
+          }
+          break;
+        case "--s-mcp-log-path":
+          if (nextArg && !nextArg.startsWith("-")) {
+            options.logPath = nextArg;
             i++; // Skip next arg since we consumed it
           }
           break;

@@ -1,12 +1,15 @@
-import { describe, test, expect, vi, beforeAll, afterAll } from "vitest";
-import { McpStdioClient } from "./mcp-client-utils";
-import { resolve } from "node:path";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { ChildProcess, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { spawn, ChildProcess } from "node:child_process";
+import { McpStdioClient } from "./mcp-client-utils";
 
 describe("Canny CLI Integration Tests", () => {
-  const cannyCliPath = resolve(__dirname, "../../../examples/community/canny-cli/canny-cli.js");
+  const cannyCliPath = resolve(
+    __dirname,
+    "../../../examples/community/canny-cli/canny-cli.ts",
+  );
 
   beforeAll(() => {
     // Verify the Canny CLI file exists
@@ -17,9 +20,19 @@ describe("Canny CLI Integration Tests", () => {
 
   describe("CLI Mode Tests", () => {
     test("should show help when run without arguments", async () => {
-      const process = spawn("node", [cannyCliPath, "--help"], {
-        stdio: ["pipe", "pipe", "pipe"]
-      });
+      const process = spawn(
+        "deno",
+        [
+          "run",
+          "--allow-all",
+          "--unstable-sloppy-imports",
+          cannyCliPath,
+          "--help",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
 
       let stdout = "";
       let stderr = "";
@@ -48,10 +61,22 @@ describe("Canny CLI Integration Tests", () => {
       const env = { ...globalThis.process.env };
       delete env.CANNY_API_KEY;
 
-      const process = spawn("node", [cannyCliPath, "search", "--query", "test"], {
-        stdio: ["pipe", "pipe", "pipe"],
-        env: env
-      });
+      const process = spawn(
+        "deno",
+        [
+          "run",
+          "--allow-all",
+          "--unstable-sloppy-imports",
+          cannyCliPath,
+          "search",
+          "--query",
+          "test",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+          env: env,
+        },
+      );
 
       let stdout = "";
       let stderr = "";
@@ -85,9 +110,23 @@ describe("Canny CLI Integration Tests", () => {
         return;
       }
 
-      const process = spawn("node", [cannyCliPath, "search", "--query", "API", "--limit", "2"], {
-        stdio: ["pipe", "pipe", "pipe"]
-      });
+      const process = spawn(
+        "deno",
+        [
+          "run",
+          "--allow-all",
+          "--unstable-sloppy-imports",
+          cannyCliPath,
+          "search",
+          "--query",
+          "API",
+          "--limit",
+          "3",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
 
       let stdout = "";
       let stderr = "";
@@ -127,9 +166,19 @@ describe("Canny CLI Integration Tests", () => {
       }
 
       // Test that the MCP server can start without errors
-      const process = spawn("node", [cannyCliPath, "--help"], {
-        stdio: ["pipe", "pipe", "pipe"]
-      });
+      const process = spawn(
+        "deno",
+        [
+          "run",
+          "--allow-all",
+          "--unstable-sloppy-imports",
+          cannyCliPath,
+          "--help",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
 
       let stdout = "";
       let stderr = "";
@@ -154,29 +203,39 @@ describe("Canny CLI Integration Tests", () => {
     test("should generate MCP tools with correct schema", async () => {
       // Test the MCP tool generation directly using the library
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import("../../../src/mcp/mcp-integration");
+      const { generateMcpToolsFromArgParser } = await import(
+        "../../../src/mcp/mcp-integration"
+      );
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests (CLI + MCP server)',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description:
+          "Search Canny for relevant feature requests (CLI + MCP server)",
         handler: async () => ({ success: true }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
         },
         {
-          name: 'status',
-          options: ['-s', '--status'],
-          type: 'string',
-          description: 'Filter by post status',
-          enum: ['open', 'under review', 'planned', 'in progress', 'complete', 'closed']
-        }
+          name: "status",
+          options: ["-s", "--status"],
+          type: "string",
+          description: "Filter by post status",
+          enum: [
+            "open",
+            "under review",
+            "planned",
+            "in progress",
+            "complete",
+            "closed",
+          ],
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -184,7 +243,9 @@ describe("Canny CLI Integration Tests", () => {
 
       const cannyTool = tools[0];
       expect(cannyTool.name).toBe("canny-search");
-      expect(cannyTool.description).toContain("Search Canny for relevant feature requests");
+      expect(cannyTool.description).toContain(
+        "Search Canny for relevant feature requests",
+      );
 
       // Verify schema structure (it's a Zod object)
       expect(cannyTool.inputSchema).toBeDefined();
@@ -193,14 +254,14 @@ describe("Canny CLI Integration Tests", () => {
       // Test that valid input parses correctly
       const validInput = {
         query: "test query",
-        status: "open"
+        status: "open",
       };
       expect(() => cannyTool.inputSchema.parse(validInput)).not.toThrow();
 
       // Test that invalid enum value throws
       const invalidInput = {
         query: "test query",
-        status: "invalid-status"
+        status: "invalid-status",
       };
       expect(() => cannyTool.inputSchema.parse(invalidInput)).toThrow();
     }, 5000);
@@ -208,43 +269,47 @@ describe("Canny CLI Integration Tests", () => {
     test("should execute MCP tool correctly", async () => {
       // Test the MCP tool execution directly using the library
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import("../../../src/mcp/mcp-integration");
+      const { generateMcpToolsFromArgParser } = await import(
+        "../../../src/mcp/mcp-integration"
+      );
 
       const mockHandler = vi.fn().mockResolvedValue({
         success: true,
         results: 1,
-        posts: [{
-          title: "Test Feature Request",
-          status: "open",
-          score: 10,
-          author: "Test User",
-          url: "https://test.canny.io/posts/test",
-          tags: ["test"]
-        }],
-        query: "test"
+        posts: [
+          {
+            title: "Test Feature Request",
+            status: "open",
+            score: 10,
+            author: "Test User",
+            url: "https://test.canny.io/posts/test",
+            tags: ["test"],
+          },
+        ],
+        query: "test",
       });
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description: "Search Canny for relevant feature requests",
         handler: mockHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
-        }
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       const result = await tool.executeForTesting!({
-        query: "test"
+        query: "test",
       });
 
       expect(result.success).toBe(true);
@@ -253,38 +318,47 @@ describe("Canny CLI Integration Tests", () => {
       expect(mockHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           args: expect.objectContaining({
-            query: "test"
-          })
-        })
+            query: "test",
+          }),
+        }),
       );
     }, 5000);
 
     test("should validate parameters correctly", async () => {
       // Test parameter validation using the library directly
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import("../../../src/mcp/mcp-integration");
+      const { generateMcpToolsFromArgParser } = await import(
+        "../../../src/mcp/mcp-integration"
+      );
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description: "Search Canny for relevant feature requests",
         handler: async () => ({ success: true }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
         },
         {
-          name: 'status',
-          options: ['-s', '--status'],
-          type: 'string',
-          description: 'Filter by post status',
-          enum: ['open', 'under review', 'planned', 'in progress', 'complete', 'closed']
-        }
+          name: "status",
+          options: ["-s", "--status"],
+          type: "string",
+          description: "Filter by post status",
+          enum: [
+            "open",
+            "under review",
+            "planned",
+            "in progress",
+            "complete",
+            "closed",
+          ],
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -293,44 +367,48 @@ describe("Canny CLI Integration Tests", () => {
       // Test invalid enum value
       const invalidResult = await tool.executeForTesting!({
         query: "test",
-        status: "invalid-status"
+        status: "invalid-status",
       });
 
       expect(invalidResult.success).toBe(false);
-      expect(invalidResult.message).toContain("Invalid value 'invalid-status' for flag");
+      expect(invalidResult.message).toContain(
+        "Invalid value 'invalid-status' for flag",
+      );
     }, 5000);
 
     test("should handle API errors gracefully", async () => {
       // Test error handling using the library directly
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import("../../../src/mcp/mcp-integration");
+      const { generateMcpToolsFromArgParser } = await import(
+        "../../../src/mcp/mcp-integration"
+      );
 
       const errorHandler = vi.fn().mockResolvedValue({
         success: false,
-        error: "Canny API error: Invalid API key"
+        error: "Canny API error: Invalid API key",
       });
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description: "Search Canny for relevant feature requests",
         handler: errorHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
-        }
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       const result = await tool.executeForTesting!({
-        query: "test"
+        query: "test",
       });
 
       expect(result.success).toBe(true);
@@ -342,14 +420,26 @@ describe("Canny CLI Integration Tests", () => {
   describe("Transport Configuration Tests", () => {
     test("should support multiple transport configurations", async () => {
       if (!globalThis.process.env.CANNY_API_KEY) {
-        console.warn("Skipping transport configuration test - CANNY_API_KEY not set");
+        console.warn(
+          "Skipping transport configuration test - CANNY_API_KEY not set",
+        );
         return;
       }
 
       // Test with MCP server mode
-      const mcpProcess = spawn("node", [cannyCliPath, "--s-mcp-serve"], {
-        stdio: ["pipe", "pipe", "pipe"]
-      });
+      const mcpProcess = spawn(
+        "deno",
+        [
+          "run",
+          "--allow-all",
+          "--unstable-sloppy-imports",
+          cannyCliPath,
+          "--s-mcp-serve",
+        ],
+        {
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
 
       let stderr = "";
       mcpProcess.stderr?.on("data", (data) => {
@@ -361,7 +451,7 @@ describe("Canny CLI Integration Tests", () => {
 
       // Should start without errors (though it may exit quickly in test mode)
       expect(stderr).not.toContain("Unknown command");
-      
+
       // Clean up
       mcpProcess.kill();
 
