@@ -1526,7 +1526,7 @@ if (process.argv.includes('serve')) {
         // Use TSDown build method with configuration options directly
         const buildConfig = {
           entry: [entryFileName],
-          outDir: path.resolve(process.cwd(), outputDir),
+          outDir: path.resolve(originalCwd, outputDir),
           format: ["esm"],
           target: "node22",
           noExternal: () => true,
