@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { existsSync, mkdirSync, rmSync } from "fs";
-import { ArgParser } from "../../src/index";
+import { dirname } from "path";
+import { ArgParser, resolveLogPath } from "../../src/index";
 
 describe("MCP Log Path Configuration", () => {
   const testLogDir = "./test-mcp-logs";
@@ -39,8 +40,9 @@ describe("MCP Log Path Configuration", () => {
         },
       });
 
-      // Ensure the directory exists
-      mkdirSync(testLogDir, { recursive: true });
+      // Resolve the log path and ensure the directory exists
+      const resolvedCustomLogPath = resolveLogPath(customLogPath);
+      mkdirSync(dirname(resolvedCustomLogPath), { recursive: true });
 
       // Create MCP server with custom log path
       const server = await parser.createMcpServer(
@@ -50,7 +52,7 @@ describe("MCP Log Path Configuration", () => {
       );
 
       expect(server).toBeDefined();
-      expect(existsSync(customLogPath)).toBe(true);
+      expect(existsSync(resolvedCustomLogPath)).toBe(true);
     });
 
     test("should use default log path when no custom path provided", async () => {
@@ -72,7 +74,9 @@ describe("MCP Log Path Configuration", () => {
       });
 
       expect(server).toBeDefined();
-      expect(existsSync("./logs/mcp.log")).toBe(true);
+      // With the new entry-relative resolution, default path should be resolved relative to entry point
+      const expectedLogPath = resolveLogPath("./logs/mcp.log");
+      expect(existsSync(expectedLogPath)).toBe(true);
     });
   });
 
@@ -233,8 +237,9 @@ describe("MCP Log Path Configuration", () => {
         },
       });
 
-      // Ensure the directory exists
-      mkdirSync(testLogDir, { recursive: true });
+      // Resolve the programmatic log path and ensure directory exists
+      const resolvedProgrammaticPath1 = resolveLogPath(customLogPath);
+      mkdirSync(dirname(resolvedProgrammaticPath1), { recursive: true });
 
       // Create MCP server with programmatic log path (no explicit parameter)
       const server = await parser.createMcpServer({
@@ -243,7 +248,7 @@ describe("MCP Log Path Configuration", () => {
       });
 
       expect(server).toBeDefined();
-      expect(existsSync(customLogPath)).toBe(true);
+      expect(existsSync(resolvedProgrammaticPath1)).toBe(true);
     });
 
     test("should prioritize CLI flag over programmatic logPath", async () => {
@@ -262,8 +267,9 @@ describe("MCP Log Path Configuration", () => {
         },
       });
 
-      // Ensure the directory exists
-      mkdirSync(testLogDir, { recursive: true });
+      // Resolve the log path and ensure the directory exists
+      const resolvedProgrammaticPath2 = resolveLogPath(programmaticLogPath);
+      mkdirSync(dirname(resolvedProgrammaticPath2), { recursive: true });
 
       // Create MCP server with explicit CLI log path (should override programmatic)
       const server = await parser.createMcpServer(
@@ -274,8 +280,10 @@ describe("MCP Log Path Configuration", () => {
 
       expect(server).toBeDefined();
       // CLI path should be used, not programmatic path
-      expect(existsSync(cliLogPath)).toBe(true);
-      expect(existsSync(programmaticLogPath)).toBe(false);
+      const resolvedCliPath2 = resolveLogPath(cliLogPath);
+      const resolvedProgrammaticPath3 = resolveLogPath(programmaticLogPath);
+      expect(existsSync(resolvedCliPath2)).toBe(true);
+      expect(existsSync(resolvedProgrammaticPath3)).toBe(false);
     });
 
     test("should fall back to default when no programmatic or CLI setting", async () => {
@@ -298,8 +306,9 @@ describe("MCP Log Path Configuration", () => {
       });
 
       expect(server).toBeDefined();
-      // Should use default path
-      expect(existsSync("./logs/mcp.log")).toBe(true);
+      // Should use default path resolved relative to entry point
+      const expectedLogPath = resolveLogPath("./logs/mcp.log");
+      expect(existsSync(expectedLogPath)).toBe(true);
     });
 
     test("should pass programmatic logPath to transport methods", () => {

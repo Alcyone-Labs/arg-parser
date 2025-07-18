@@ -19,10 +19,12 @@ function flexibleErrorRegex(pattern: string): RegExp {
   if (keyWords.length === 0) return new RegExp(pattern);
 
   // Create a pattern that looks for these key words in order, allowing for any characters in between
-  const flexiblePattern = keyWords.map(word => {
-    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return escaped;
-  }).join('.*?');
+  const flexiblePattern = keyWords
+    .map((word) => {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return escaped;
+    })
+    .join(".*?");
 
   return new RegExp(flexiblePattern);
 }
@@ -115,17 +117,29 @@ describe("ArgParser", () => {
     const errorParser = createParser(false);
 
     // Test case 1: Should fail when phase is chunking and batch is missing
-    const result1 = await errorParser.parse(["--phase", "chunking", "-t", "metadata"]);
-    expect(result1).toHaveProperty('success', false);
-    expect(result1).toHaveProperty('exitCode', 1);
-    expect(result1).toHaveProperty('shouldExit', true);
-    expect(result1.message).toMatch(flexibleErrorRegex("Missing mandatory flags: batch"));
+    const result1 = await errorParser.parse([
+      "--phase",
+      "chunking",
+      "-t",
+      "metadata",
+    ]);
+    expect(result1).toHaveProperty("success", false);
+    expect(result1).toHaveProperty("exitCode", 1);
+    expect(result1).toHaveProperty("shouldExit", true);
+    expect(result1.message).toMatch(
+      flexibleErrorRegex("Missing mandatory flags: batch"),
+    );
 
     // Clear mocks before next check
     mockConsoleError.mockClear();
 
     // Test case 2: Should succeed when phase is analysis (batch not required)
-    const result2 = await errorParser.parse(["--phase", "analysis", "-t", "all"]);
+    const result2 = await errorParser.parse([
+      "--phase",
+      "analysis",
+      "-t",
+      "all",
+    ]);
     expect(result2).toMatchObject({
       phase: "analysis",
       table: "all",
@@ -150,23 +164,41 @@ describe("ArgParser", () => {
 
   test("should return error result on invalid enum value", async () => {
     const errorParser = createParser(false);
-    const result = await errorParser.parse(["--phase", "invalid", "-t", "metadata"]);
+    const result = await errorParser.parse([
+      "--phase",
+      "invalid",
+      "-t",
+      "metadata",
+    ]);
 
-    expect(result).toHaveProperty('success', false);
-    expect(result).toHaveProperty('exitCode', 1);
-    expect(result).toHaveProperty('shouldExit', true);
-    expect(result.message).toMatch(flexibleErrorRegex("Invalid value invalid for flag phase"));
+    expect(result).toHaveProperty("success", false);
+    expect(result).toHaveProperty("exitCode", 1);
+    expect(result).toHaveProperty("shouldExit", true);
+    expect(result.message).toMatch(
+      flexibleErrorRegex("Invalid value invalid for flag phase"),
+    );
     expect(result.message).toMatch(flexibleErrorRegex("Allowed values"));
   });
 
   test("should apply default values", async () => {
-    const result = await parser.parse(["--phase", "analysis", "-t", "metadata"]);
+    const result = await parser.parse([
+      "--phase",
+      "analysis",
+      "-t",
+      "metadata",
+    ]);
     expect(result["verbose"]).toBe(false);
     expect(result["batch"]).toBeUndefined();
   });
 
   test("should handle flag-only parameters", async () => {
-    const result = await parser.parse(["--phase", "analysis", "-v", "-t", "metadata"]);
+    const result = await parser.parse([
+      "--phase",
+      "analysis",
+      "-v",
+      "-t",
+      "metadata",
+    ]);
     expect(result["verbose"]).toBe(true);
   });
 
@@ -174,9 +206,9 @@ describe("ArgParser", () => {
     const errorParser = createParser(false);
     const result = await errorParser.parse(["--phase", "chunking"]);
 
-    expect(result).toHaveProperty('success', false);
-    expect(result).toHaveProperty('exitCode', 1);
-    expect(result).toHaveProperty('shouldExit', true);
+    expect(result).toHaveProperty("success", false);
+    expect(result).toHaveProperty("exitCode", 1);
+    expect(result).toHaveProperty("shouldExit", true);
     expect(result.message).toMatch(
       flexibleErrorRegex("Missing mandatory flags"),
     );
@@ -244,9 +276,11 @@ describe("ArgParser", () => {
     ]);
 
     const result1 = await errorParser.parse(["--mode", "build"]);
-    expect(result1).toHaveProperty('success', false);
-    expect(result1).toHaveProperty('exitCode', 1);
-    expect(result1.message).toMatch(flexibleErrorRegex("Missing mandatory flags: output"));
+    expect(result1).toHaveProperty("success", false);
+    expect(result1).toHaveProperty("exitCode", 1);
+    expect(result1.message).toMatch(
+      flexibleErrorRegex("Missing mandatory flags: output"),
+    );
 
     // Shouldn't require output in other modes
     const result2 = await errorParser.parse(["--mode", "serve"]);
@@ -311,9 +345,11 @@ describe("ArgParser", () => {
       ]);
 
       const result = await thirdParser.parse(["--second", "value"]);
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result.message).toMatch(flexibleErrorRegex("Missing mandatory flags: third"));
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result.message).toMatch(
+        flexibleErrorRegex("Missing mandatory flags: third"),
+      );
     });
   });
 
@@ -358,12 +394,19 @@ describe("ArgParser", () => {
 
     test("should return error result on invalid table values", async () => {
       const errorParser = createParser(false);
-      const result = await errorParser.parse(["--table", "invalid", "--phase", "analysis"]);
+      const result = await errorParser.parse([
+        "--table",
+        "invalid",
+        "--phase",
+        "analysis",
+      ]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
-      expect(result.message).toMatch(flexibleErrorRegex("Invalid value invalid for flag table"));
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
+      expect(result.message).toMatch(
+        flexibleErrorRegex("Invalid value invalid for flag table"),
+      );
       expect(result.message).toMatch(flexibleErrorRegex("Allowed values"));
     });
 
@@ -371,10 +414,12 @@ describe("ArgParser", () => {
       const errorParser = createParser(false);
       const result = await errorParser.parse(["--phase", "analysis"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
-      expect(result.message).toMatch(flexibleErrorRegex("Missing mandatory flags: table"));
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
+      expect(result.message).toMatch(
+        flexibleErrorRegex("Missing mandatory flags: table"),
+      );
     });
   });
 
@@ -431,9 +476,11 @@ describe("ArgParser", () => {
 
     // Should fail when required flag is missing
     const result1 = await errorParser.parse([]);
-    expect(result1).toHaveProperty('success', false);
-    expect(result1).toHaveProperty('exitCode', 1);
-    expect(result1.message).toMatch(flexibleErrorRegex("Missing mandatory flags: force"));
+    expect(result1).toHaveProperty("success", false);
+    expect(result1).toHaveProperty("exitCode", 1);
+    expect(result1.message).toMatch(
+      flexibleErrorRegex("Missing mandatory flags: force"),
+    );
 
     // Should succeed when required flag is provided
     const result2 = await errorParser.parse(["--force"]);
@@ -655,7 +702,12 @@ describe("ArgParser", () => {
     });
 
     test("should track command chain", async () => {
-      const result = await routingParser.parse(["service", "start", "-p", "8080"]);
+      const result = await routingParser.parse([
+        "service",
+        "start",
+        "-p",
+        "8080",
+      ]);
 
       expect(result.$commandChain).toEqual(["service", "start"]);
       expect(result["port"]).toBe(8080);
@@ -848,9 +900,9 @@ describe("ArgParser", () => {
 
       const result = await errorParser.parse(["cmd", "-l", "-g"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
       expect(result.message).toMatch(flexibleErrorRegex("Unknown command g"));
       expect(handler).not.toHaveBeenCalled();
     });
@@ -898,7 +950,13 @@ describe("ArgParser", () => {
             }),
         });
 
-      const result = await parser.parse(["-r", "level1", "-f1", "level2", "-f2"]);
+      const result = await parser.parse([
+        "-r",
+        "level1",
+        "-f1",
+        "level2",
+        "-f2",
+      ]);
       expect(result).toEqual({
         root: true,
         flag1: true,
@@ -943,9 +1001,9 @@ describe("ArgParser", () => {
       await expect(optOutParser.parse(["--phase", "chunking"])).rejects.toThrow(
         flexibleErrorRegex("Missing mandatory flags"),
       );
-      await expect(optOutParser.parse(["--phase", "chunking"])).rejects.not.toThrow(
-        /phase/,
-      );
+      await expect(
+        optOutParser.parse(["--phase", "chunking"]),
+      ).rejects.not.toThrow(/phase/);
       await expect(optOutParser.parse(["--phase", "chunking"])).rejects.toThrow(
         /batch/,
       );
@@ -961,7 +1019,9 @@ describe("ArgParser", () => {
       ).rejects.toThrow(ArgParserError);
       await expect(
         optOutParser.parse(["--phase", "invalid", "-t", "metadata"]),
-      ).rejects.toThrow(flexibleErrorRegex("Invalid value invalid for flag phase"));
+      ).rejects.toThrow(
+        flexibleErrorRegex("Invalid value invalid for flag phase"),
+      );
       expect(mockConsoleError).not.toHaveBeenCalled();
     });
 
@@ -1007,11 +1067,15 @@ describe("ArgParser", () => {
         parser: new ArgParser(),
       });
 
-      await expect(optOutParser.parse(["unknown"])).rejects.toThrow(ArgParserError);
+      await expect(optOutParser.parse(["unknown"])).rejects.toThrow(
+        ArgParserError,
+      );
       try {
         await optOutParser.parse(["unknown"]);
       } catch (e: any) {
-        expect(e.message).toMatch(flexibleErrorRegex("Unknown command unknown"));
+        expect(e.message).toMatch(
+          flexibleErrorRegex("Unknown command unknown"),
+        );
         expect(e.commandChain).toEqual([]); // Error at root level
       }
       expect(mockConsoleError).not.toHaveBeenCalled();
@@ -1037,7 +1101,9 @@ describe("ArgParser", () => {
       try {
         await optOutParser.parse(["level1", "unknown2"]);
       } catch (e: any) {
-        expect(e.message).toMatch(flexibleErrorRegex("Unknown command unknown2"));
+        expect(e.message).toMatch(
+          flexibleErrorRegex("Unknown command unknown2"),
+        );
         expect(e.commandChain).toEqual(["level1"]); // Error after 'level1'
       }
       expect(mockConsoleError).not.toHaveBeenCalled();
@@ -1071,10 +1137,10 @@ describe("ArgParser", () => {
 
       const result = await simpleParser.parse([]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
 
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("Simple Tool Help");
@@ -1096,9 +1162,9 @@ describe("ArgParser", () => {
       ]);
       const result = await parser.parse(["arg"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
       expect(result.message).toMatch(flexibleErrorRegex("Unknown command arg"));
       expect(mockConsoleLog).not.toHaveBeenCalled();
     });
@@ -1111,7 +1177,7 @@ describe("ArgParser", () => {
         autoExit: false,
       });
       const result = await parser.parse([]);
-      expect(result).not.toHaveProperty('type', 'help');
+      expect(result).not.toHaveProperty("type", "help");
       expect(handler).toHaveBeenCalledOnce();
       expect(mockConsoleLog).not.toHaveBeenCalled();
     });
@@ -1128,10 +1194,10 @@ describe("ArgParser", () => {
 
       const result = await parser.parse([]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
 
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("Sub Tool Help");
@@ -1172,10 +1238,12 @@ describe("ArgParser", () => {
 
     const result = await parser.parse(["unknown"]);
 
-    expect(result).toHaveProperty('success', false);
-    expect(result).toHaveProperty('exitCode', 1);
-    expect(result).toHaveProperty('shouldExit', true);
-    expect(result.message).toMatch(flexibleErrorRegex("Unknown command unknown"));
+    expect(result).toHaveProperty("success", false);
+    expect(result).toHaveProperty("exitCode", 1);
+    expect(result).toHaveProperty("shouldExit", true);
+    expect(result.message).toMatch(
+      flexibleErrorRegex("Unknown command unknown"),
+    );
   });
 
   test("should exit on unknown nested sub-command (default handler)", async () => {
@@ -1195,10 +1263,12 @@ describe("ArgParser", () => {
 
     const result = await parser.parse(["level1", "unknown2"]);
 
-    expect(result).toHaveProperty('success', false);
-    expect(result).toHaveProperty('exitCode', 1);
-    expect(result).toHaveProperty('shouldExit', true);
-    expect(result.message).toMatch(flexibleErrorRegex("Unknown command unknown2"));
+    expect(result).toHaveProperty("success", false);
+    expect(result).toHaveProperty("exitCode", 1);
+    expect(result).toHaveProperty("shouldExit", true);
+    expect(result.message).toMatch(
+      flexibleErrorRegex("Unknown command unknown2"),
+    );
   });
 
   describe("Flag Inheritance (inheritParentFlags - Merge Strategy)", () => {
@@ -1334,9 +1404,9 @@ describe("ArgParser", () => {
 
       const result = await parentParser.parse(["child", "-g", "value"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
       expect(result.message).toMatch(flexibleErrorRegex("Unknown command g"));
     });
 
@@ -1461,12 +1531,18 @@ describe("ArgParser", () => {
         parser: childParser,
       });
 
-      const errorResult = await parentParser.parse(["child", "-o", "optionalValue"]);
+      const errorResult = await parentParser.parse([
+        "child",
+        "-o",
+        "optionalValue",
+      ]);
 
-      expect(errorResult).toHaveProperty('success', false);
-      expect(errorResult).toHaveProperty('exitCode', 1);
-      expect(errorResult).toHaveProperty('shouldExit', true);
-      expect(errorResult.message).toMatch(/Missing mandatory flags:.*parentMandatory/);
+      expect(errorResult).toHaveProperty("success", false);
+      expect(errorResult).toHaveProperty("exitCode", 1);
+      expect(errorResult).toHaveProperty("shouldExit", true);
+      expect(errorResult.message).toMatch(
+        /Missing mandatory flags:.*parentMandatory/,
+      );
 
       const successResult = await parentParser.parse([
         "child",
@@ -1539,8 +1615,6 @@ describe("ArgParser", () => {
         description: "Sub 2",
         parser: sub2Parser,
       });
-
-
     });
 
     afterEach(() => {
@@ -1550,10 +1624,10 @@ describe("ArgParser", () => {
     test("should show root help when --help is the only arg", async () => {
       const result = await rootParser.parse(["--help"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest Help");
       expect(mockConsoleLog.mock.calls[0][0]).toContain("-r");
@@ -1563,10 +1637,10 @@ describe("ArgParser", () => {
     test("should show sub1 help when sub1 --help is used", async () => {
       const result = await rootParser.parse(["sub1", "--help"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub1 Help");
       expect(mockConsoleLog.mock.calls[0][0]).toContain("--s1m");
@@ -1577,10 +1651,10 @@ describe("ArgParser", () => {
     test("should show sub2 help when sub1 sub2 --help is used", async () => {
       const result = await rootParser.parse(["sub1", "sub2", "--help"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
       expect(mockConsoleLog.mock.calls[0][0]).toContain("--s2f");
@@ -1590,21 +1664,26 @@ describe("ArgParser", () => {
     test("should show sub2 help when --help appears before sub2", async () => {
       const result = await rootParser.parse(["sub1", "--help", "sub2"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
     });
 
     test("should show sub2 help when --help appears after flags for sub2", async () => {
-      const result = await rootParser.parse(["sub1", "sub2", "--s2f", "--help"]);
+      const result = await rootParser.parse([
+        "sub1",
+        "sub2",
+        "--s2f",
+        "--help",
+      ]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
     });
@@ -1612,22 +1691,28 @@ describe("ArgParser", () => {
     test("should show sub2 help and bypass sub1 mandatory flag check", async () => {
       const result = await rootParser.parse(["sub1", "sub2", "--help"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
       expect(mockConsoleError).not.toHaveBeenCalled();
     });
 
     test("should show sub2 help even if mandatory flag for sub1 appears before sub2", async () => {
-      const result = await rootParser.parse(["sub1", "--s1m", "value", "sub2", "--help"]);
+      const result = await rootParser.parse([
+        "sub1",
+        "--s1m",
+        "value",
+        "sub2",
+        "--help",
+      ]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
       expect(mockConsoleError).not.toHaveBeenCalled();
@@ -1636,10 +1721,10 @@ describe("ArgParser", () => {
     test("should handle -h alias correctly", async () => {
       const result = await rootParser.parse(["sub1", "sub2", "-h"]);
 
-      expect(result).toHaveProperty('success', true);
-      expect(result).toHaveProperty('exitCode', 0);
-      expect(result).toHaveProperty('type', 'help');
-      expect(result).toHaveProperty('shouldExit', true);
+      expect(result).toHaveProperty("success", true);
+      expect(result).toHaveProperty("exitCode", 0);
+      expect(result).toHaveProperty("type", "help");
+      expect(result).toHaveProperty("shouldExit", true);
       expect(mockConsoleLog).toHaveBeenCalledOnce();
       expect(mockConsoleLog.mock.calls[0][0]).toContain("HelpTest sub2 Help");
     });
@@ -1650,10 +1735,12 @@ describe("ArgParser", () => {
         skipHelpHandling: true,
       });
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
-      expect(result.message).toMatch(flexibleErrorRegex("Missing mandatory flags sub1Mandatory"));
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
+      expect(result.message).toMatch(
+        flexibleErrorRegex("Missing mandatory flags sub1Mandatory"),
+      );
       expect(mockConsoleLog).not.toHaveBeenCalled();
     });
 
@@ -1663,7 +1750,9 @@ describe("ArgParser", () => {
         handleErrors: false,
       });
 
-      const result = await simpleParser.parse(["--help"], { skipHelpHandling: true });
+      const result = await simpleParser.parse(["--help"], {
+        skipHelpHandling: true,
+      });
 
       expect(result).toEqual({ help: true });
 
@@ -1676,7 +1765,9 @@ describe("ArgParser", () => {
     let mockProcessExit: any;
 
     beforeEach(() => {
-      mockConsoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockConsoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockProcessExit = vi
         .spyOn(process, "exit")
         .mockImplementation(
@@ -1726,7 +1817,11 @@ describe("ArgParser", () => {
         });
 
         // Should succeed without providing root mandatory flag
-        const result = await rootParser.parse(["child", "--child-flag", "value"]);
+        const result = await rootParser.parse([
+          "child",
+          "--child-flag",
+          "value",
+        ]);
 
         expect(result).toEqual({
           help: undefined,
@@ -1768,12 +1863,18 @@ describe("ArgParser", () => {
         });
 
         // Should fail without providing root mandatory flag
-        const result = await rootParser.parse(["child", "--child-flag", "value"]);
+        const result = await rootParser.parse([
+          "child",
+          "--child-flag",
+          "value",
+        ]);
 
-        expect(result).toHaveProperty('success', false);
-        expect(result).toHaveProperty('exitCode', 1);
-        expect(result).toHaveProperty('shouldExit', true);
-        expect(result.message).toMatch(/Missing mandatory flags.*rootMandatory/);
+        expect(result).toHaveProperty("success", false);
+        expect(result).toHaveProperty("exitCode", 1);
+        expect(result).toHaveProperty("shouldExit", true);
+        expect(result.message).toMatch(
+          /Missing mandatory flags.*rootMandatory/,
+        );
       });
     });
 
@@ -1819,12 +1920,19 @@ describe("ArgParser", () => {
         });
 
         // Should fail without providing intermediate mandatory flag
-        const result = await rootParser.parse(["intermediate", "final", "--final-flag", "value"]);
+        const result = await rootParser.parse([
+          "intermediate",
+          "final",
+          "--final-flag",
+          "value",
+        ]);
 
-        expect(result).toHaveProperty('success', false);
-        expect(result).toHaveProperty('exitCode', 1);
-        expect(result).toHaveProperty('shouldExit', true);
-        expect(result.message).toMatch(/Missing mandatory flags.*intermediateMandatory/);
+        expect(result).toHaveProperty("success", false);
+        expect(result).toHaveProperty("exitCode", 1);
+        expect(result).toHaveProperty("shouldExit", true);
+        expect(result.message).toMatch(
+          /Missing mandatory flags.*intermediateMandatory/,
+        );
       });
 
       test("should succeed when intermediate parser mandatory flags are provided", async () => {
@@ -1939,11 +2047,16 @@ describe("ArgParser", () => {
 
         // Should fail because level1 inherits from root, so rootMandatory is required
         // But level1Mandatory should also be required since level2 doesn't inherit
-        const result = await rootParser.parse(["level1", "level2", "--level2-flag", "value"]);
+        const result = await rootParser.parse([
+          "level1",
+          "level2",
+          "--level2-flag",
+          "value",
+        ]);
 
-        expect(result).toHaveProperty('success', false);
-        expect(result).toHaveProperty('exitCode', 1);
-        expect(result).toHaveProperty('shouldExit', true);
+        expect(result).toHaveProperty("success", false);
+        expect(result).toHaveProperty("exitCode", 1);
+        expect(result).toHaveProperty("shouldExit", true);
         expect(result.message).toMatch(/Missing mandatory flags/);
         // Should require both rootMandatory and level1Mandatory
         expect(result.message).toMatch(/level1Mandatory/);
@@ -1974,11 +2087,13 @@ describe("ArgParser", () => {
         });
 
         // Should fail with skipHelpHandling: true because mandatory validation still happens
-        const result = await rootParser.parse(["sub", "--help"], { skipHelpHandling: true });
+        const result = await rootParser.parse(["sub", "--help"], {
+          skipHelpHandling: true,
+        });
 
-        expect(result).toHaveProperty('success', false);
-        expect(result).toHaveProperty('exitCode', 1);
-        expect(result).toHaveProperty('shouldExit', true);
+        expect(result).toHaveProperty("success", false);
+        expect(result).toHaveProperty("exitCode", 1);
+        expect(result).toHaveProperty("shouldExit", true);
         expect(result.message).toMatch(/Missing mandatory flags.*subMandatory/);
       });
 
@@ -2024,7 +2139,13 @@ describe("ArgParser", () => {
         });
 
         // Should succeed without providing main parser's mandatory 'input' flag
-        const result = await mainParser.parse(["analyze", "--file", "test.txt", "--type", "detailed"]);
+        const result = await mainParser.parse([
+          "analyze",
+          "--file",
+          "test.txt",
+          "--type",
+          "detailed",
+        ]);
 
         expect(result).toEqual({
           help: undefined,
@@ -2067,7 +2188,11 @@ describe("ArgParser", () => {
           // Use a timeout to prevent hanging if MCP server starts
           const parsePromise = mainParser.parse(["mcp-server"]);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Test timeout - MCP server likely started")), 1000)
+            setTimeout(
+              () =>
+                reject(new Error("Test timeout - MCP server likely started")),
+              1000,
+            ),
           );
           await Promise.race([parsePromise, timeoutPromise]);
         }).not.toThrow(/parentMandatory/);
@@ -2094,7 +2219,11 @@ describe("ArgParser", () => {
           // Use a timeout to prevent hanging if MCP server starts
           const parsePromise = mainParser.parse(["mcp-server"]);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Test timeout - MCP server likely started")), 1000)
+            setTimeout(
+              () =>
+                reject(new Error("Test timeout - MCP server likely started")),
+              1000,
+            ),
           );
           await Promise.race([parsePromise, timeoutPromise]);
         }).not.toThrow();

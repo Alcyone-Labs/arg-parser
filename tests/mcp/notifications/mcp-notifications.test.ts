@@ -2,15 +2,18 @@
  * Tests for MCP Change Notifications functionality
  */
 
-import { describe, test, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
-  McpNotificationsManager,
   createDebouncedNotifier,
   createFilteredListener,
   createLoggingListener,
-  globalNotificationsManager
+  globalNotificationsManager,
+  McpNotificationsManager,
 } from "../../../src/mcp/mcp-notifications.js";
-import type { McpChangeEvent, McpChangeListener } from "../../../src/mcp/mcp-notifications.js";
+import type {
+  McpChangeEvent,
+  McpChangeListener,
+} from "../../../src/mcp/mcp-notifications.js";
 
 describe("McpNotificationsManager", () => {
   let manager: McpNotificationsManager;
@@ -19,7 +22,7 @@ describe("McpNotificationsManager", () => {
   beforeEach(() => {
     manager = new McpNotificationsManager();
     mockConnection = {
-      sendNotification: vi.fn()
+      sendNotification: vi.fn(),
     };
   });
 
@@ -60,9 +63,9 @@ describe("McpNotificationsManager", () => {
     test("should unsubscribe client from specific change types", () => {
       manager.subscribe("client1", "tools");
       manager.subscribe("client1", "resources");
-      
+
       manager.unsubscribe("client1", "tools");
-      
+
       const subscriptions = manager.getClientSubscriptions("client1");
       expect(subscriptions?.has("tools")).toBe(false);
       expect(subscriptions?.has("resources")).toBe(true);
@@ -70,7 +73,7 @@ describe("McpNotificationsManager", () => {
 
     test("should subscribe to all change types", () => {
       manager.subscribeToAll("client1");
-      
+
       const subscriptions = manager.getClientSubscriptions("client1");
       expect(subscriptions?.has("tools")).toBe(true);
       expect(subscriptions?.has("resources")).toBe(true);
@@ -80,14 +83,14 @@ describe("McpNotificationsManager", () => {
     test("should unsubscribe from all change types", () => {
       manager.subscribeToAll("client1");
       manager.unsubscribeFromAll("client1");
-      
+
       const subscriptions = manager.getClientSubscriptions("client1");
       expect(subscriptions?.size).toBe(0);
     });
 
     test("should check subscription status", () => {
       manager.subscribe("client1", "tools");
-      
+
       expect(manager.isClientSubscribed("client1", "tools")).toBe(true);
       expect(manager.isClientSubscribed("client1", "resources")).toBe(false);
       expect(manager.isClientSubscribed("non-existent", "tools")).toBe(false);
@@ -108,16 +111,16 @@ describe("McpNotificationsManager", () => {
 
       expect(mockConnection.sendNotification).toHaveBeenCalledWith(
         "notifications/tools/list_changed",
-        {}
+        {},
       );
       expect(mockConnection.sendNotification).toHaveBeenCalledTimes(1);
     });
 
     test("should not notify unsubscribed clients", () => {
       manager.subscribe("client1", "resources");
-      
+
       manager.notifyChange("tools", "added", "new-tool");
-      
+
       expect(mockConnection.sendNotification).not.toHaveBeenCalled();
     });
 
@@ -134,7 +137,7 @@ describe("McpNotificationsManager", () => {
       const errorConnection = {
         sendNotification: vi.fn().mockImplementation(() => {
           throw new Error("Connection error");
-        })
+        }),
       };
 
       manager.addClient("error-client", errorConnection);
@@ -292,7 +295,7 @@ describe("Utility Functions", () => {
       expect(notificationCount).toBe(0);
 
       // Wait for debounce
-      await new Promise(resolve => setTimeout(resolve, 60));
+      await new Promise((resolve) => setTimeout(resolve, 60));
       expect(notificationCount).toBe(3); // All notifications should fire
     });
   });
@@ -302,12 +305,24 @@ describe("Utility Functions", () => {
       let receivedEvents: McpChangeEvent[] = [];
       const filteredListener = createFilteredListener(
         ["tools", "resources"],
-        (event) => receivedEvents.push(event)
+        (event) => receivedEvents.push(event),
       );
 
-      filteredListener({ type: "tools", action: "added", timestamp: new Date() });
-      filteredListener({ type: "prompts", action: "added", timestamp: new Date() });
-      filteredListener({ type: "resources", action: "removed", timestamp: new Date() });
+      filteredListener({
+        type: "tools",
+        action: "added",
+        timestamp: new Date(),
+      });
+      filteredListener({
+        type: "prompts",
+        action: "added",
+        timestamp: new Date(),
+      });
+      filteredListener({
+        type: "resources",
+        action: "removed",
+        timestamp: new Date(),
+      });
 
       expect(receivedEvents).toHaveLength(2);
       expect(receivedEvents[0].type).toBe("tools");
@@ -317,18 +332,18 @@ describe("Utility Functions", () => {
 
   describe("createLoggingListener", () => {
     test("should create logging listener", () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       const loggingListener = createLoggingListener("[TEST]");
 
-      loggingListener({ 
-        type: "tools", 
-        action: "added", 
+      loggingListener({
+        type: "tools",
+        action: "added",
         timestamp: new Date(),
-        entityName: "test-tool"
+        entityName: "test-tool",
       });
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[TEST] tools added (test-tool)")
+        expect.stringContaining("[TEST] tools added (test-tool)"),
       );
 
       consoleSpy.mockRestore();

@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../../src";
 import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
@@ -8,7 +8,7 @@ describe("MCP Performance and Reliability Tests", () => {
       const fastHandler = vi.fn().mockResolvedValue({
         operation: "default",
         message: "Simple operation completed",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
       const parser = new ArgParser({
@@ -16,7 +16,7 @@ describe("MCP Performance and Reliability Tests", () => {
         appCommandName: "perf-server",
         description: "MCP server for performance and reliability testing",
         handler: fastHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "operation",
@@ -24,8 +24,8 @@ describe("MCP Performance and Reliability Tests", () => {
           options: ["--operation", "-o"],
           type: "string",
           enum: ["compute", "memory", "error", "default"],
-          defaultValue: "default"
-        }
+          defaultValue: "default",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -33,7 +33,7 @@ describe("MCP Performance and Reliability Tests", () => {
 
       const startTime = Date.now();
       const result = await tool.executeForTesting!({
-        operation: "default"
+        operation: "default",
       });
       const endTime = Date.now();
       const responseTime = endTime - startTime;
@@ -48,11 +48,11 @@ describe("MCP Performance and Reliability Tests", () => {
     test("should handle concurrent tool execution", async () => {
       const concurrentHandler = vi.fn().mockImplementation(async (ctx) => {
         // Simulate some work
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         return {
           operation: "concurrent",
           processed: true,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       });
 
@@ -61,15 +61,15 @@ describe("MCP Performance and Reliability Tests", () => {
         appCommandName: "concurrent-server",
         description: "Test concurrent execution",
         handler: concurrentHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "id",
           description: "Request ID",
           options: ["--id"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -78,7 +78,7 @@ describe("MCP Performance and Reliability Tests", () => {
       // Execute multiple tools concurrently
       const startTime = Date.now();
       const promises = Array.from({ length: 5 }, (_, i) =>
-        tool.executeForTesting!({ id: `request-${i}` })
+        tool.executeForTesting!({ id: `request-${i}` }),
       );
 
       const results = await Promise.all(promises);
@@ -86,7 +86,7 @@ describe("MCP Performance and Reliability Tests", () => {
       const totalTime = endTime - startTime;
 
       // All should succeed
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.success).toBe(true);
         expect(result.data.operation).toBe("concurrent");
       });
@@ -95,7 +95,6 @@ describe("MCP Performance and Reliability Tests", () => {
       expect(totalTime).toBeLessThan(1000); // Should be much less than 5 * 50ms due to concurrency
       expect(concurrentHandler).toHaveBeenCalled();
     });
-
   });
 
   describe("Error Recovery", () => {
@@ -112,15 +111,15 @@ describe("MCP Performance and Reliability Tests", () => {
         appCommandName: "error-recovery",
         description: "Test error recovery",
         handler: errorHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "attempt",
           description: "Attempt number",
           options: ["--attempt"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -139,6 +138,5 @@ describe("MCP Performance and Reliability Tests", () => {
       // Handler should have been called for both attempts
       expect(errorHandler).toHaveBeenCalled();
     });
-
   });
 });

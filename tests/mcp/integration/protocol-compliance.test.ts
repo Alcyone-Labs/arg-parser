@@ -1,10 +1,9 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../../src";
-import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 import type { IFlag } from "../../../src";
+import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
 describe("MCP Protocol Compliance Tests", () => {
-
   describe("Tool Schema Compliance", () => {
     test("should generate valid JSON schemas for tool inputs", () => {
       const flags: IFlag[] = [
@@ -13,21 +12,21 @@ describe("MCP Protocol Compliance Tests", () => {
           description: "Text input",
           options: ["--text", "-t"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "number",
           description: "Number input",
           options: ["--number", "-n"],
           type: "number",
-          defaultValue: 42
+          defaultValue: 42,
         },
         {
           name: "flag",
           description: "Boolean flag",
           options: ["--flag", "-f"],
           type: "boolean",
-          flagOnly: true
+          flagOnly: true,
         },
         {
           name: "choice",
@@ -35,8 +34,8 @@ describe("MCP Protocol Compliance Tests", () => {
           options: ["--choice", "-c"],
           type: "string",
           enum: ["option1", "option2", "option3"],
-          defaultValue: "option1"
-        }
+          defaultValue: "option1",
+        },
       ];
 
       const parser = new ArgParser({
@@ -46,8 +45,8 @@ describe("MCP Protocol Compliance Tests", () => {
         handler: async (ctx) => ({
           status: "success",
           message: "Main handler executed",
-          args: ctx.args
-        })
+          args: ctx.args,
+        }),
       }).addFlags(flags);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -55,7 +54,9 @@ describe("MCP Protocol Compliance Tests", () => {
 
       // Verify tool structure
       expect(tool.name).toBe("compliance-server");
-      expect(tool.description).toBe("MCP server for protocol compliance testing");
+      expect(tool.description).toBe(
+        "MCP server for protocol compliance testing",
+      );
       expect(tool.inputSchema).toBeDefined();
       expect(tool.execute).toBeDefined();
 
@@ -67,7 +68,7 @@ describe("MCP Protocol Compliance Tests", () => {
         text: "test text",
         number: 123,
         flag: true,
-        choice: "option2"
+        choice: "option2",
       };
       expect(() => tool.inputSchema.parse(validInput)).not.toThrow();
 
@@ -76,7 +77,7 @@ describe("MCP Protocol Compliance Tests", () => {
         text: 123, // Should be string
         number: "not-a-number", // Should be number
         flag: "not-boolean", // Should be boolean
-        choice: "invalid-choice" // Should be from enum
+        choice: "invalid-choice", // Should be from enum
       };
       expect(() => tool.inputSchema.parse(invalidInput)).toThrow();
     });
@@ -86,21 +87,21 @@ describe("MCP Protocol Compliance Tests", () => {
         appName: "Mandatory Test",
         appCommandName: "mandatory-test",
         description: "Test mandatory field validation",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       }).addFlags([
         {
           name: "required",
           description: "Required field",
           options: ["--required"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "optional",
           description: "Optional field",
           options: ["--optional"],
-          type: "string"
-        }
+          type: "string",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -121,22 +122,22 @@ describe("MCP Protocol Compliance Tests", () => {
         appName: "Array Test",
         appCommandName: "array-test",
         description: "Test array flag handling",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       }).addFlags([
         {
           name: "items",
           description: "Multiple items",
           options: ["--items"],
           type: "string",
-          allowMultiple: true
+          allowMultiple: true,
         },
         {
           name: "tags",
           description: "Tags list",
           options: ["--tags"],
           type: "string",
-          allowMultiple: true
-        }
+          allowMultiple: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -147,7 +148,7 @@ describe("MCP Protocol Compliance Tests", () => {
       // Test that schema exists and can handle the structure
       const result = tool.inputSchema.safeParse({
         items: ["item1", "item2"],
-        tags: ["tag1", "tag2", "tag3"]
+        tags: ["tag1", "tag2", "tag3"],
       });
 
       // Either it should parse successfully or we verify the schema exists
@@ -162,15 +163,15 @@ describe("MCP Protocol Compliance Tests", () => {
         appCommandName: "error-test",
         description: "Test error response format",
         handler: async () => ({ success: true }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "required",
           description: "Required parameter",
           options: ["--required"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -187,36 +188,37 @@ describe("MCP Protocol Compliance Tests", () => {
     });
 
     test("should handle handler execution errors properly", async () => {
-      const errorHandler = vi.fn().mockRejectedValue(new Error("Handler execution failed"));
+      const errorHandler = vi
+        .fn()
+        .mockRejectedValue(new Error("Handler execution failed"));
 
       const parser = new ArgParser({
         appName: "Handler Error Test",
         appCommandName: "handler-error-test",
         description: "Test handler error handling",
         handler: errorHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "input",
           description: "Input parameter",
           options: ["--input"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       const result = await tool.executeForTesting!({
-        input: "test input"
+        input: "test input",
       });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Handler execution failed");
       expect(errorHandler).toHaveBeenCalled();
     });
-
   });
 
   describe("Sub-command Tool Generation", () => {
@@ -225,27 +227,27 @@ describe("MCP Protocol Compliance Tests", () => {
         appName: "Main CLI",
         appCommandName: "main",
         description: "Main CLI application",
-        handler: async () => ({ main: true })
+        handler: async () => ({ main: true }),
       });
 
       const subParser = new ArgParser({
         appName: "Sub Command",
         description: "Sub command functionality",
-        handler: async (ctx) => ({ sub: true, data: ctx.args.data })
+        handler: async (ctx) => ({ sub: true, data: ctx.args.data }),
       }).addFlags([
         {
           name: "data",
           description: "Data to process",
           options: ["--data", "-d"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       mainParser.addSubCommand({
         name: "process",
         description: "Process data",
-        parser: subParser
+        parser: subParser,
       });
 
       const tools = generateMcpToolsFromArgParser(mainParser);
@@ -253,53 +255,55 @@ describe("MCP Protocol Compliance Tests", () => {
       expect(tools.length).toBeGreaterThan(0);
 
       // Should have tools for both main and sub-command
-      const toolNames = tools.map(t => t.name);
+      const toolNames = tools.map((t) => t.name);
       expect(toolNames).toContain("main");
 
       // Find sub-command tool (naming may vary)
-      const subTool = tools.find(t => t.name.includes("process"));
+      const subTool = tools.find((t) => t.name.includes("process"));
       expect(subTool).toBeDefined();
       expect(subTool?.inputSchema).toBeDefined();
     });
 
     test("should execute sub-command tools with proper context", async () => {
       const mainHandler = vi.fn();
-      const subHandler = vi.fn().mockResolvedValue({ processed: true, input: "test data" });
+      const subHandler = vi
+        .fn()
+        .mockResolvedValue({ processed: true, input: "test data" });
 
       const mainParser = new ArgParser({
         appName: "Context Test CLI",
         appCommandName: "context-test",
         description: "Test context handling",
-        handler: mainHandler
+        handler: mainHandler,
       });
 
       const subParser = new ArgParser({
         appName: "Sub Command",
         description: "Sub command with context",
         handler: subHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "input",
           description: "Input to process",
           options: ["--input", "-i"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       mainParser.addSubCommand({
         name: "execute",
         description: "Execute processing",
-        parser: subParser
+        parser: subParser,
       });
 
       const tools = generateMcpToolsFromArgParser(mainParser);
-      const subTool = tools.find(t => t.name.includes("execute"));
+      const subTool = tools.find((t) => t.name.includes("execute"));
       expect(subTool).toBeDefined();
 
       const result = await subTool!.executeForTesting!({
-        input: "test data"
+        input: "test data",
       });
 
       expect(result.success).toBe(true);
@@ -308,9 +312,9 @@ describe("MCP Protocol Compliance Tests", () => {
       expect(subHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           args: expect.objectContaining({
-            input: "test data"
-          })
-        })
+            input: "test data",
+          }),
+        }),
       );
     });
   });

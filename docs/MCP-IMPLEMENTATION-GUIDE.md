@@ -28,11 +28,13 @@ src/
 ### 1. Built-in MCP Server (`src/ArgParser.ts`)
 
 **Key Methods:**
+
 - `createMcpServer()` - Creates MCP server instance with auto-generated tools
 - `startMcpServer()` - Handles transport setup (stdio, SSE, HTTP)
 - `addMcpSubCommand()` - Adds "serve" subcommand with MCP functionality
 
 **Protocol Compliance:**
+
 - Uses `@modelcontextprotocol/sdk` v1.15.0 internally
 - Automatic lifecycle handling (initialize, initialized, capabilities)
 - Proper error responses for unsupported methods
@@ -41,13 +43,14 @@ src/
 ### 2. Tool Generation (`src/mcp-integration.ts`)
 
 **Process:**
+
 ```typescript
 // CLI flags automatically become MCP tool input schema
 .addFlag({
   name: "query",
-  type: "string", 
+  type: "string",
   mandatory: true
-}) 
+})
 // ↓ Becomes ↓
 {
   "query": {
@@ -58,6 +61,7 @@ src/
 ```
 
 **Handler Execution:**
+
 - Direct handler invocation (not CLI simulation)
 - Proper MCP response formatting
 - Error handling with MCP-compliant error responses
@@ -67,32 +71,36 @@ src/
 ArgParser now supports MCP resources - server-side data sources that clients can access using URI templates.
 
 **Adding Resources:**
+
 ```typescript
 const cli = ArgParser.withMcp({
   appName: "File Server",
-  handler: async (ctx) => ({ result: "success" })
+  handler: async (ctx) => ({ result: "success" }),
 })
-.addMcpResource({
-  name: "file-content",
-  uriTemplate: "file://{path}",
-  title: "File Content",
-  description: "Read file contents from the filesystem",
-  mimeType: "text/plain",
-  handler: async (uri, params) => ({
-    contents: [{
-      uri: uri.href,
-      text: await fs.readFile(params.path, 'utf8'),
-      mimeType: "text/plain"
-    }]
+  .addMcpResource({
+    name: "file-content",
+    uriTemplate: "file://{path}",
+    title: "File Content",
+    description: "Read file contents from the filesystem",
+    mimeType: "text/plain",
+    handler: async (uri, params) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: await fs.readFile(params.path, "utf8"),
+          mimeType: "text/plain",
+        },
+      ],
+    }),
   })
-})
-.addMcpSubCommand("serve", {
-  name: "file-server-mcp",
-  version: "1.0.0"
-});
+  .addMcpSubCommand("serve", {
+    name: "file-server-mcp",
+    version: "1.0.0",
+  });
 ```
 
 **Resource Features:**
+
 - URI template support with parameters (e.g., `users://{userId}/profile`)
 - Multiple content types (text, binary, JSON)
 - Automatic parameter extraction from URIs
@@ -103,49 +111,54 @@ const cli = ArgParser.withMcp({
 MCP prompts are server-side prompt templates that clients can discover and execute with custom parameters.
 
 **Adding Prompts:**
+
 ```typescript
 const cli = ArgParser.withMcp({
   appName: "AI Assistant",
-  handler: async (ctx) => ({ result: "success" })
+  handler: async (ctx) => ({ result: "success" }),
 })
-.addMcpPrompt({
-  name: "code-review",
-  title: "Code Review Assistant",
-  description: "Generate code review prompts",
-  argsSchema: z.object({
-    code: z.string().describe("The code to review"),
-    language: z.string().optional().describe("Programming language"),
-    focus: z.enum(["security", "performance", "style", "bugs"]).optional()
-  }),
-  handler: ({ code, language, focus }) => ({
-    description: `Code review for ${language || 'code'} focusing on ${focus || 'general best practices'}`,
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please review this ${language || 'code'} focusing on ${focus || 'general best practices'}:\n\n\`\`\`${language || ''}\n${code}\n\`\`\``
-      }
-    }]
+  .addMcpPrompt({
+    name: "code-review",
+    title: "Code Review Assistant",
+    description: "Generate code review prompts",
+    argsSchema: z.object({
+      code: z.string().describe("The code to review"),
+      language: z.string().optional().describe("Programming language"),
+      focus: z.enum(["security", "performance", "style", "bugs"]).optional(),
+    }),
+    handler: ({ code, language, focus }) => ({
+      description: `Code review for ${language || "code"} focusing on ${focus || "general best practices"}`,
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please review this ${language || "code"} focusing on ${focus || "general best practices"}:\n\n\`\`\`${language || ""}\n${code}\n\`\`\``,
+          },
+        },
+      ],
+    }),
   })
-})
-.addMcpSubCommand("serve", {
-  name: "ai-assistant-mcp",
-  version: "1.0.0"
-});
+  .addMcpSubCommand("serve", {
+    name: "ai-assistant-mcp",
+    version: "1.0.0",
+  });
 ```
 
 **Built-in Prompt Helpers:**
+
 ```typescript
 import {
   createCodeReviewPrompt,
+  createDocumentationPrompt,
   createSummarizationPrompt,
   createTranslationPrompt,
-  createDocumentationPrompt
 } from "@alcyone-labs/arg-parser";
 
-cli.addMcpPrompt(createCodeReviewPrompt())
-   .addMcpPrompt(createSummarizationPrompt())
-   .addMcpPrompt(createTranslationPrompt());
+cli
+  .addMcpPrompt(createCodeReviewPrompt())
+  .addMcpPrompt(createSummarizationPrompt())
+  .addMcpPrompt(createTranslationPrompt());
 ```
 
 ### 5. Change Notifications 🆕 **Beta Feature**
@@ -153,6 +166,7 @@ cli.addMcpPrompt(createCodeReviewPrompt())
 The MCP implementation includes a comprehensive change notification system for real-time updates.
 
 **Change Listeners:**
+
 ```typescript
 // Listen to all MCP entity changes
 cli.onMcpChange((event) => {
@@ -169,6 +183,7 @@ notificationsManager.addGlobalListener((event) => {
 ```
 
 **Client Subscription Management:**
+
 ```typescript
 // Clients can subscribe to specific change types
 notificationsManager.subscribe("client-id", "resources");
@@ -182,6 +197,7 @@ cli.removeMcpPrompt("old-prompt"); // Triggers notifications/prompts/list_change
 ### 6. DXT Generation (`src/DxtGenerator.ts`)
 
 **Before (Manual Implementation - BROKEN):**
+
 ```javascript
 // 346 lines of manual MCP server code
 const server = new McpServer({...});
@@ -192,10 +208,12 @@ server.registerTool(toolName, {...}, async (args) => {
 ```
 
 **After (Built-in Implementation - WORKING):**
+
 ```javascript
 // 36 lines using library's built-in functionality
-import originalCli from './original-cli.mjs';
-originalCli.parse(['serve']); // Uses library's MCP implementation
+import originalCli from "./original-cli.mjs";
+
+originalCli.parse(["serve"]); // Uses library's MCP implementation
 ```
 
 ## Complete Example: Full-Featured MCP Server
@@ -203,8 +221,12 @@ originalCli.parse(['serve']); // Uses library's MCP implementation
 Here's a comprehensive example showing all MCP features working together:
 
 ```typescript
-import { ArgParser, z } from "@alcyone-labs/arg-parser";
-import { createCodeReviewPrompt, createFileResource } from "@alcyone-labs/arg-parser";
+import {
+  ArgParser,
+  createCodeReviewPrompt,
+  createFileResource,
+  z,
+} from "@alcyone-labs/arg-parser";
 
 const cli = ArgParser.withMcp({
   appName: "Advanced MCP Server",
@@ -212,77 +234,82 @@ const cli = ArgParser.withMcp({
   description: "Full-featured MCP server with tools, resources, and prompts",
   handler: async (ctx) => ({
     message: "Advanced MCP server ready",
-    args: ctx.args
-  })
-})
-// CLI Tools (automatically become MCP tools)
-.addFlags([
-  {
-    name: "search",
-    options: ["--search", "-s"],
-    type: "string",
-    mandatory: true,
-    description: "Search query"
-  },
-  {
-    name: "limit",
-    options: ["--limit", "-l"],
-    type: "number",
-    defaultValue: 10,
-    description: "Maximum results"
-  }
-])
-// MCP Resources
-.addMcpResource({
-  name: "search-results",
-  uriTemplate: "search://{query}",
-  title: "Search Results",
-  description: "Get search results for a query",
-  handler: async (uri, { query }) => ({
-    contents: [{
-      uri: uri.href,
-      text: JSON.stringify({ query, results: ["result1", "result2"] }),
-      mimeType: "application/json"
-    }]
-  })
-})
-.addMcpResource(createFileResource("/data"))
-// MCP Prompts
-.addMcpPrompt(createCodeReviewPrompt())
-.addMcpPrompt({
-  name: "search-assistant",
-  title: "Search Assistant",
-  description: "Generate search queries",
-  argsSchema: z.object({
-    topic: z.string(),
-    style: z.enum(["academic", "casual", "technical"])
+    args: ctx.args,
   }),
-  handler: ({ topic, style }) => ({
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Generate a ${style} search query about: ${topic}`
-      }
-    }]
+})
+  // CLI Tools (automatically become MCP tools)
+  .addFlags([
+    {
+      name: "search",
+      options: ["--search", "-s"],
+      type: "string",
+      mandatory: true,
+      description: "Search query",
+    },
+    {
+      name: "limit",
+      options: ["--limit", "-l"],
+      type: "number",
+      defaultValue: 10,
+      description: "Maximum results",
+    },
+  ])
+  // MCP Resources
+  .addMcpResource({
+    name: "search-results",
+    uriTemplate: "search://{query}",
+    title: "Search Results",
+    description: "Get search results for a query",
+    handler: async (uri, { query }) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: JSON.stringify({ query, results: ["result1", "result2"] }),
+          mimeType: "application/json",
+        },
+      ],
+    }),
   })
-})
-// Change Notifications
-.onMcpChange((event) => {
-  console.log(`MCP ${event.type} ${event.action}: ${event.entityName}`);
-})
-// MCP Server
-.addMcpSubCommand("serve", {
-  name: "advanced-mcp-server",
-  version: "1.0.0",
-  description: "Advanced MCP server with full feature set"
-});
+  .addMcpResource(createFileResource("/data"))
+  // MCP Prompts
+  .addMcpPrompt(createCodeReviewPrompt())
+  .addMcpPrompt({
+    name: "search-assistant",
+    title: "Search Assistant",
+    description: "Generate search queries",
+    argsSchema: z.object({
+      topic: z.string(),
+      style: z.enum(["academic", "casual", "technical"]),
+    }),
+    handler: ({ topic, style }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Generate a ${style} search query about: ${topic}`,
+          },
+        },
+      ],
+    }),
+  })
+  // Change Notifications
+  .onMcpChange((event) => {
+    console.log(`MCP ${event.type} ${event.action}: ${event.entityName}`);
+  })
+  // MCP Server
+  .addMcpSubCommand("serve", {
+    name: "advanced-mcp-server",
+    version: "1.0.0",
+    description: "Advanced MCP server with full feature set",
+  });
 
 // Export for DXT generation
 export default cli;
 ```
 
 **Usage:**
+
 ```bash
 # Start MCP server
 node advanced-mcp.js serve
@@ -309,11 +336,13 @@ node advanced-mcp.js --s-save-DXT ./output
 **Problem:** Examples need latest library features before npm publish
 
 **Solution:** Use `LOCAL_BUILD=1` environment variable
+
 ```bash
 LOCAL_BUILD=1 node my-cli.js --s-save-DXT ./output
 ```
 
 **What it does:**
+
 - Sets `"@alcyone-labs/arg-parser": "file:../../../../"` in generated package.json
 - Uses local library build instead of npm version
 - Automatically applied during DXT generation
@@ -323,6 +352,7 @@ LOCAL_BUILD=1 node my-cli.js --s-save-DXT ./output
 **Problem:** Generated servers couldn't resolve library imports
 
 **Solution:** Autonomous builds bundle everything
+
 - Uses `tsup` to create `server/index.autonomous.cjs`
 - Bundles all dependencies into single file
 - No external dependencies at runtime
@@ -333,7 +363,7 @@ LOCAL_BUILD=1 node my-cli.js --s-save-DXT ./output
 ### Basic CLI with MCP Support
 
 ```typescript
-import { ArgParser } from '@alcyone-labs/arg-parser';
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
 const cli = ArgParser.withMcp({
   appName: "Weather CLI",
@@ -341,19 +371,19 @@ const cli = ArgParser.withMcp({
   handler: async (ctx) => {
     const weather = await getWeather(ctx.args.location);
     return { weather, location: ctx.args.location };
-  }
+  },
 })
-.addFlag({
-  name: "location",
-  options: ["--location", "-l"],
-  type: "string",
-  mandatory: true
-})
-.addMcpSubCommand("serve", {
-  name: "weather-mcp-server",
-  version: "1.0.0",
-  description: "Weather information MCP server"
-});
+  .addFlag({
+    name: "location",
+    options: ["--location", "-l"],
+    type: "string",
+    mandatory: true,
+  })
+  .addMcpSubCommand("serve", {
+    name: "weather-mcp-server",
+    version: "1.0.0",
+    description: "Weather information MCP server",
+  });
 
 // CLI usage: node weather.js --location "New York"
 // MCP usage: node weather.js serve
@@ -383,14 +413,13 @@ The new resources, prompts, and change notifications features are currently in *
 // Create a test CLI with resources
 const testCli = ArgParser.withMcp({
   appName: "Resource Test",
-  handler: async () => ({ success: true })
-})
-.addMcpResource({
+  handler: async () => ({ success: true }),
+}).addMcpResource({
   name: "test-data",
   uriTemplate: "test://{id}",
   handler: async (uri, { id }) => ({
-    contents: [{ uri: uri.href, text: `Data for ID: ${id}` }]
-  })
+    contents: [{ uri: uri.href, text: `Data for ID: ${id}` }],
+  }),
 });
 
 // Test resource management
@@ -405,19 +434,20 @@ console.log("After removal:", testCli.getMcpResources());
 // Create a test CLI with prompts
 const testCli = ArgParser.withMcp({
   appName: "Prompt Test",
-  handler: async () => ({ success: true })
-})
-.addMcpPrompt({
+  handler: async () => ({ success: true }),
+}).addMcpPrompt({
   name: "test-prompt",
   argsSchema: z.object({ text: z.string() }),
   handler: ({ text }) => ({
-    messages: [{ role: "user", content: { type: "text", text } }]
-  })
+    messages: [{ role: "user", content: { type: "text", text } }],
+  }),
 });
 
 // Test prompt execution
 const promptsManager = testCli.getMcpPromptsManager();
-const result = await promptsManager.executePrompt("test-prompt", { text: "Hello" });
+const result = await promptsManager.executePrompt("test-prompt", {
+  text: "Hello",
+});
 console.log("Prompt result:", result);
 ```
 
@@ -427,17 +457,18 @@ console.log("Prompt result:", result);
 // Set up change listener
 const testCli = ArgParser.withMcp({
   appName: "Notification Test",
-  handler: async () => ({ success: true })
-})
-.onMcpChange((event) => {
-  console.log(`Change detected: ${event.type} ${event.action} ${event.entityName}`);
+  handler: async () => ({ success: true }),
+}).onMcpChange((event) => {
+  console.log(
+    `Change detected: ${event.type} ${event.action} ${event.entityName}`,
+  );
 });
 
 // Trigger changes
 testCli.addMcpResource({
   name: "dynamic-resource",
   uriTemplate: "dynamic://test",
-  handler: async () => ({ contents: [] })
+  handler: async () => ({ contents: [] }),
 }); // Should log: "Change detected: resources added dynamic-resource"
 
 testCli.removeMcpResource("dynamic-resource");
@@ -447,11 +478,13 @@ testCli.removeMcpResource("dynamic-resource");
 ### Current Beta Limitations
 
 **⚠️ Known Issues:**
+
 - **Resource/Prompt Registration**: Currently disabled in MCP server due to SDK type compatibility issues
 - **Workaround**: Resources and prompts are stored and managed but not yet registered with the MCP server
 - **Status**: Infrastructure is complete, SDK integration pending
 
 **✅ What Works:**
+
 - Resource and prompt management APIs
 - Change notification system
 - Fluent API integration
@@ -459,6 +492,7 @@ testCli.removeMcpResource("dynamic-resource");
 - Real-world integration (Canny CLI example working)
 
 **🔄 Coming Soon:**
+
 - Full MCP SDK integration for resources and prompts
 - Client subscription management
 - Real-time change notifications to MCP clients
@@ -466,6 +500,7 @@ testCli.removeMcpResource("dynamic-resource");
 ## Testing MCP Compliance
 
 ### Protocol Testing
+
 ```bash
 # Test initialize
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}' | node server/index.autonomous.cjs serve
@@ -474,6 +509,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":
 ```
 
 ### Tool Execution Testing
+
 ```bash
 # Test tool call
 echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"weather","arguments":{"location":"NYC"}}}' | node server/index.autonomous.cjs serve
@@ -484,7 +520,9 @@ echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"weather","
 ## Common Issues & Solutions
 
 ### 1. "Method not found" vs Empty Lists for prompts/list and resources/list
+
 **Status:** ✅ IMPROVED USER EXPERIENCE
+
 - **Before**: Server returned error code -32601 "Method not found" (MCP-compliant but less user-friendly)
 - **After**: Server now declares all capabilities and returns proper empty arrays:
   - `prompts/list` → `{"result": {"prompts": []}}`
@@ -492,23 +530,30 @@ echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"weather","
 - This follows the MCP specification example you highlighted and provides better UX
 
 ### 2. Tool returns `_asyncHandlerPromise`
+
 **Status:** ✅ FIXED
+
 - Old manual implementation bug
 - New implementation returns actual handler results
 
 ### 3. Module resolution errors
+
 **Status:** ✅ FIXED
+
 - Use autonomous builds for distribution
 - Bundle all dependencies with tsup
 
 ### 4. Outdated library version
+
 **Status:** ✅ FIXED
+
 - Use `LOCAL_BUILD=1` for development
 - Ensures latest features before npm publish
 
 ## File Structure
 
 ### Generated DXT Package
+
 ```
 my-tool-mcp-dxt/
 ├── manifest.json              # DXT metadata & configuration
@@ -522,6 +567,7 @@ my-tool-mcp-dxt/
 ```
 
 ### Key Dependencies
+
 - **Development:** `@alcyone-labs/arg-parser` (local file path)
 - **Runtime (autonomous):** All bundled in `.cjs` file
 - **Build:** `tsup` for bundling, `@anthropic-ai/dxt` for packaging
@@ -529,6 +575,7 @@ my-tool-mcp-dxt/
 ## Best Practices
 
 ### Core MCP Development
+
 1. **Always use `LOCAL_BUILD=1`** during development
 2. **Test autonomous builds** - they're what users install
 3. **Don't manually implement MCP protocol** - use library's built-in functionality
@@ -536,6 +583,7 @@ my-tool-mcp-dxt/
 5. **Test with actual MCP clients** to verify compliance
 
 ### Beta Features (Resources, Prompts, Notifications) 🆕
+
 6. **Use descriptive resource URI templates** - `users://{userId}/profile` not `data://{id}`
 7. **Validate prompt arguments with Zod schemas** - ensures type safety and better error messages
 8. **Set up change listeners early** - helps with debugging and monitoring
@@ -545,6 +593,7 @@ my-tool-mcp-dxt/
 12. **Use appropriate MIME types** - helps clients understand resource content
 
 ### Resource Best Practices
+
 ```typescript
 // ✅ Good: Descriptive URI template with clear parameters
 .addMcpResource({
@@ -578,6 +627,7 @@ my-tool-mcp-dxt/
 ```
 
 ### Prompt Best Practices
+
 ```typescript
 // ✅ Good: Comprehensive schema with descriptions
 .addMcpPrompt({

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { ArgParser } from "../../src";
 import { ZodError } from "zod";
+import { ArgParser } from "../../src";
 
 describe("Flag Type Validation", () => {
   describe("Valid Type Values", () => {
@@ -9,12 +9,12 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "stringFlag",
           description: "String flag",
           options: ["--string"],
-          type: "string"
+          type: "string",
         });
       }).not.toThrow();
     });
@@ -22,40 +22,40 @@ describe("Flag Type Validation", () => {
     test("should accept valid constructor types", () => {
       expect(() => {
         new ArgParser({
-          appName: "Test CLI", 
+          appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlags([
           {
             name: "stringFlag",
             description: "String flag",
             options: ["--string"],
-            type: String
+            type: String,
           },
           {
             name: "numberFlag",
-            description: "Number flag", 
+            description: "Number flag",
             options: ["--number"],
-            type: Number
+            type: Number,
           },
           {
             name: "booleanFlag",
             description: "Boolean flag",
             options: ["--boolean"],
-            type: Boolean
+            type: Boolean,
           },
           {
             name: "arrayFlag",
             description: "Array flag",
             options: ["--array"],
-            type: Array
+            type: Array,
           },
           {
             name: "objectFlag",
             description: "Object flag",
             options: ["--object"],
-            type: Object
-          }
+            type: Object,
+          },
         ]);
       }).not.toThrow();
     });
@@ -64,13 +64,13 @@ describe("Flag Type Validation", () => {
       expect(() => {
         new ArgParser({
           appName: "Test CLI",
-          appCommandName: "test", 
-          handler: async () => ({ success: true })
+          appCommandName: "test",
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "customFlag",
           description: "Custom flag",
           options: ["--custom"],
-          type: (value: string) => parseInt(value, 10)
+          type: (value: string) => parseInt(value, 10),
         });
       }).not.toThrow();
     });
@@ -80,20 +80,20 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlags([
           {
             name: "upperString",
             description: "Upper case string",
             options: ["--upper"],
-            type: "STRING" as any
+            type: "STRING" as any,
           },
           {
-            name: "mixedBoolean", 
+            name: "mixedBoolean",
             description: "Mixed case boolean",
             options: ["--mixed"],
-            type: "Boolean" as any
-          }
+            type: "Boolean" as any,
+          },
         ]);
       }).not.toThrow();
     });
@@ -105,12 +105,12 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "invalidFlag",
           description: "Invalid flag",
           options: ["--invalid"],
-          type: "invalid-type" as any
+          type: "invalid-type" as any,
         });
       }).toThrow(ZodError);
     });
@@ -121,12 +121,12 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "dateFlag",
           description: "Date flag",
           options: ["--date"],
-          type: Date as any // Date constructor is treated as custom parser
+          type: Date as any, // Date constructor is treated as custom parser
         });
       }).not.toThrow();
     });
@@ -137,12 +137,12 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "nullFlag",
           description: "Null flag",
           options: ["--null"],
-          type: null as any
+          type: null as any,
         });
       }).toThrow(ZodError);
 
@@ -150,16 +150,16 @@ describe("Flag Type Validation", () => {
       const parser = new ArgParser({
         appName: "Test CLI",
         appCommandName: "test",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       }).addFlag({
         name: "undefinedFlag",
         description: "Undefined flag",
         options: ["--undefined"],
-        type: undefined as any
+        type: undefined as any,
       });
 
       const flags = parser.flags;
-      const undefinedFlag = flags.find(f => f.name === "undefinedFlag");
+      const undefinedFlag = flags.find((f) => f.name === "undefinedFlag");
       expect(undefinedFlag?.type).toBe(String); // Falls back to default string
     });
 
@@ -169,12 +169,12 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "primitiveFlag",
           description: "Primitive flag",
           options: ["--primitive"],
-          type: 42 as any // Number value instead of Number constructor
+          type: 42 as any, // Number value instead of Number constructor
         });
       }).toThrow(ZodError);
     });
@@ -184,19 +184,21 @@ describe("Flag Type Validation", () => {
         new ArgParser({
           appName: "Test CLI",
           appCommandName: "test",
-          handler: async () => ({ success: true })
+          handler: async () => ({ success: true }),
         }).addFlag({
           name: "invalidFlag",
           description: "Invalid flag",
           options: ["--invalid"],
-          type: "invalid-type" as any
+          type: "invalid-type" as any,
         });
         expect.fail("Should have thrown an error");
       } catch (error) {
         expect(error).toBeInstanceOf(ZodError);
         const zodError = error as ZodError;
         // The error comes from the first failed refine check in the union
-        expect(zodError.issues[0].message).toContain("Must be String constructor");
+        expect(zodError.issues[0].message).toContain(
+          "Must be String constructor",
+        );
       }
     });
   });
@@ -206,25 +208,25 @@ describe("Flag Type Validation", () => {
       const parser = new ArgParser({
         appName: "Test CLI",
         appCommandName: "test",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       }).addFlags([
         {
           name: "stringLiteral",
           description: "String literal",
           options: ["--string-literal"],
-          type: "string"
+          type: "string",
         },
         {
           name: "numberLiteral",
-          description: "Number literal", 
+          description: "Number literal",
           options: ["--number-literal"],
-          type: "number"
-        }
+          type: "number",
+        },
       ]);
 
       const flags = parser.flags;
-      const stringFlag = flags.find(f => f.name === "stringLiteral");
-      const numberFlag = flags.find(f => f.name === "numberLiteral");
+      const stringFlag = flags.find((f) => f.name === "stringLiteral");
+      const numberFlag = flags.find((f) => f.name === "numberLiteral");
 
       expect(stringFlag?.type).toBe(String);
       expect(numberFlag?.type).toBe(Number);
@@ -234,25 +236,25 @@ describe("Flag Type Validation", () => {
       const parser = new ArgParser({
         appName: "Test CLI",
         appCommandName: "test",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       }).addFlags([
         {
           name: "stringConstructor",
           description: "String constructor",
           options: ["--string-constructor"],
-          type: String
+          type: String,
         },
         {
           name: "booleanConstructor",
           description: "Boolean constructor",
           options: ["--boolean-constructor"],
-          type: Boolean
-        }
+          type: Boolean,
+        },
       ]);
 
       const flags = parser.flags;
-      const stringFlag = flags.find(f => f.name === "stringConstructor");
-      const booleanFlag = flags.find(f => f.name === "booleanConstructor");
+      const stringFlag = flags.find((f) => f.name === "stringConstructor");
+      const booleanFlag = flags.find((f) => f.name === "booleanConstructor");
 
       expect(stringFlag?.type).toBe(String);
       expect(booleanFlag?.type).toBe(Boolean);

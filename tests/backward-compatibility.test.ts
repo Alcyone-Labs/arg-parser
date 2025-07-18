@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { ArgParser } from "../src";
 
 describe("Backward Compatibility", () => {
@@ -10,7 +10,7 @@ describe("Backward Compatibility", () => {
         description: "A test CLI application",
         handler: async (ctx) => {
           return { success: true, args: ctx.args };
-        }
+        },
       });
 
       expect(parser).toBeDefined();
@@ -22,66 +22,68 @@ describe("Backward Compatibility", () => {
     test("should work with traditional addFlags() method", () => {
       const parser = new ArgParser({
         appName: "Test CLI",
-        handler: async (ctx) => ({ result: ctx.args.input })
-      })
-      .addFlags([
+        handler: async (ctx) => ({ result: ctx.args.input }),
+      }).addFlags([
         {
           name: "input",
           description: "Input file",
           options: ["--input", "-i"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "verbose",
           description: "Verbose output",
           options: ["--verbose", "-v"],
           type: "boolean",
-          flagOnly: true
-        }
+          flagOnly: true,
+        },
       ]);
 
       expect(parser.flags).toHaveLength(3); // input, verbose, help
-      expect(parser.flags.find(f => f.name === "input")).toBeDefined();
-      expect(parser.flags.find(f => f.name === "verbose")).toBeDefined();
-      expect(parser.flags.find(f => f.name === "help")).toBeDefined();
+      expect(parser.flags.find((f) => f.name === "input")).toBeDefined();
+      expect(parser.flags.find((f) => f.name === "verbose")).toBeDefined();
+      expect(parser.flags.find((f) => f.name === "help")).toBeDefined();
     });
 
     test("should work with traditional addSubCommand() method", () => {
-      const subParser = new ArgParser({
-        appName: "Sub Command",
-        handler: async (ctx) => ({ subResult: ctx.args.data })
-      }, [
+      const subParser = new ArgParser(
         {
-          name: "data",
-          description: "Data to process",
-          options: ["--data"],
-          type: "string",
-          mandatory: true
-        }
-      ]);
+          appName: "Sub Command",
+          handler: async (ctx) => ({ subResult: ctx.args.data }),
+        },
+        [
+          {
+            name: "data",
+            description: "Data to process",
+            options: ["--data"],
+            type: "string",
+            mandatory: true,
+          },
+        ],
+      );
 
       const mainParser = new ArgParser({
         appName: "Main CLI",
-        handler: async (ctx) => ({ mainResult: ctx.args.config })
+        handler: async (ctx) => ({ mainResult: ctx.args.config }),
       })
-      .addFlags([
-        {
-          name: "config",
-          description: "Config file",
-          options: ["--config"],
-          type: "string",
-          defaultValue: "config.json"
-        }
-      ])
-      .addSubCommand({
-        name: "process",
-        description: "Process data",
-        parser: subParser,
-        handler: async (ctx) => {
-          return { action: "process", data: ctx.args.data };
-        }
-      });
+        .addFlags([
+          {
+            name: "config",
+            description: "Config file",
+            options: ["--config"],
+            type: "string",
+            defaultValue: "config.json",
+          },
+        ])
+        .addSubCommand({
+          name: "process",
+          description: "Process data",
+          parser: subParser,
+          handler: async (ctx) => {
+            return { action: "process", data: ctx.args.data };
+          },
+        });
 
       expect(mainParser.getSubCommands().size).toBe(1);
       expect(mainParser.getSubCommands().has("process")).toBe(true);
@@ -90,59 +92,64 @@ describe("Backward Compatibility", () => {
 
   describe("Hierarchical Parsers", () => {
     test("should support nested subcommands", () => {
-      const deepParser = new ArgParser({
-        appName: "Deep Command",
-        handler: async (ctx) => ({ deep: true, value: ctx.args.value })
-      }, [
+      const deepParser = new ArgParser(
         {
-          name: "value",
-          description: "Value to set",
-          options: ["--value"],
-          type: "string",
-          mandatory: true
-        }
-      ]);
+          appName: "Deep Command",
+          handler: async (ctx) => ({ deep: true, value: ctx.args.value }),
+        },
+        [
+          {
+            name: "value",
+            description: "Value to set",
+            options: ["--value"],
+            type: "string",
+            mandatory: true,
+          },
+        ],
+      );
 
-      const midParser = new ArgParser({
-        appName: "Mid Command",
-        handler: async (ctx) => ({ mid: true, option: ctx.args.option })
-      }, [
+      const midParser = new ArgParser(
         {
-          name: "option",
-          description: "Option to use",
-          options: ["--option"],
-          type: "string",
-          defaultValue: "default"
-        }
-      ])
-      .addSubCommand({
+          appName: "Mid Command",
+          handler: async (ctx) => ({ mid: true, option: ctx.args.option }),
+        },
+        [
+          {
+            name: "option",
+            description: "Option to use",
+            options: ["--option"],
+            type: "string",
+            defaultValue: "default",
+          },
+        ],
+      ).addSubCommand({
         name: "deep",
         description: "Deep nested command",
-        parser: deepParser
+        parser: deepParser,
       });
 
       const rootParser = new ArgParser({
         appName: "Root CLI",
-        handler: async (ctx) => ({ root: true, global: ctx.args.global })
+        handler: async (ctx) => ({ root: true, global: ctx.args.global }),
       })
-      .addFlags([
-        {
-          name: "global",
-          description: "Global flag",
-          options: ["--global"],
-          type: "boolean",
-          flagOnly: true
-        }
-      ])
-      .addSubCommand({
-        name: "mid",
-        description: "Mid level command",
-        parser: midParser
-      });
+        .addFlags([
+          {
+            name: "global",
+            description: "Global flag",
+            options: ["--global"],
+            type: "boolean",
+            flagOnly: true,
+          },
+        ])
+        .addSubCommand({
+          name: "mid",
+          description: "Mid level command",
+          parser: midParser,
+        });
 
       expect(rootParser.getSubCommands().size).toBe(1);
       expect(rootParser.getSubCommands().has("mid")).toBe(true);
-      
+
       const midCommand = rootParser.getSubCommands().get("mid");
       expect(midCommand?.parser.getSubCommands().size).toBe(1);
       expect(midCommand?.parser.getSubCommands().has("deep")).toBe(true);
@@ -157,25 +164,24 @@ describe("Backward Compatibility", () => {
           return {
             success: true,
             message: `Hello ${ctx.args.name}!`,
-            verbose: ctx.args.verbose
+            verbose: ctx.args.verbose,
           };
-        }
-      })
-      .addFlags([
+        },
+      }).addFlags([
         {
           name: "name",
           description: "Name to greet",
           options: ["--name", "-n"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "verbose",
           description: "Verbose output",
           options: ["--verbose", "-v"],
           type: "boolean",
-          flagOnly: true
-        }
+          flagOnly: true,
+        },
       ]);
 
       // Test parsing
@@ -189,7 +195,7 @@ describe("Backward Compatibility", () => {
         expect(handlerResult).toEqual({
           success: true,
           message: "Hello World!",
-          verbose: true
+          verbose: true,
         });
       } else {
         // For traditional parsers, the result should contain the parsed args
@@ -203,44 +209,46 @@ describe("Backward Compatibility", () => {
     test("should support flag inheritance from parent parsers", () => {
       const parentParser = new ArgParser({
         appName: "Parent CLI",
-        handler: async (ctx) => ({ parent: true })
-      })
-      .addFlags([
+        handler: async (ctx) => ({ parent: true }),
+      }).addFlags([
         {
           name: "global",
           description: "Global flag",
           options: ["--global"],
           type: "string",
-          defaultValue: "default"
-        }
+          defaultValue: "default",
+        },
       ]);
 
-      const childParser = new ArgParser({
-        appName: "Child CLI",
-        inheritParentFlags: true,
-        handler: async (ctx) => ({ 
-          child: true, 
-          global: ctx.args.global,
-          local: ctx.args.local 
-        })
-      }, [
+      const childParser = new ArgParser(
         {
-          name: "local",
-          description: "Local flag",
-          options: ["--local"],
-          type: "string",
-          mandatory: true
-        }
-      ]);
+          appName: "Child CLI",
+          inheritParentFlags: true,
+          handler: async (ctx) => ({
+            child: true,
+            global: ctx.args.global,
+            local: ctx.args.local,
+          }),
+        },
+        [
+          {
+            name: "local",
+            description: "Local flag",
+            options: ["--local"],
+            type: "string",
+            mandatory: true,
+          },
+        ],
+      );
 
       parentParser.addSubCommand({
         name: "child",
         description: "Child command",
-        parser: childParser
+        parser: childParser,
       });
 
       // Child should have both global and local flags
-      expect(childParser.flags.find(f => f.name === "local")).toBeDefined();
+      expect(childParser.flags.find((f) => f.name === "local")).toBeDefined();
       // Note: Flag inheritance is handled during parsing, not at construction time
     });
   });
@@ -249,7 +257,7 @@ describe("Backward Compatibility", () => {
     test("should support all traditional methods", () => {
       const parser = new ArgParser({
         appName: "Full Featured CLI",
-        description: "A CLI with all traditional features"
+        description: "A CLI with all traditional features",
       });
 
       // Test method availability
@@ -267,22 +275,22 @@ describe("Backward Compatibility", () => {
 
     test("should work with traditional flag definitions", () => {
       const parser = new ArgParser({
-        appName: "Traditional CLI"
+        appName: "Traditional CLI",
       })
-      .addFlag({
-        name: "input",
-        description: "Input file",
-        options: ["--input", "-i"],
-        type: "string",
-        mandatory: true
-      })
-      .addFlag({
-        name: "output",
-        description: "Output file",
-        options: ["--output", "-o"],
-        type: "string",
-        defaultValue: "output.txt"
-      });
+        .addFlag({
+          name: "input",
+          description: "Input file",
+          options: ["--input", "-i"],
+          type: "string",
+          mandatory: true,
+        })
+        .addFlag({
+          name: "output",
+          description: "Output file",
+          options: ["--output", "-o"],
+          type: "string",
+          defaultValue: "output.txt",
+        });
 
       expect(parser.flags).toHaveLength(3); // input, output, help
       expect(parser.flagNames).toContain("input");
@@ -298,20 +306,19 @@ describe("Backward Compatibility", () => {
         appCommandName: "pure-cli",
         description: "A pure CLI without MCP",
         handler: async (ctx) => {
-          return { 
+          return {
             processed: true,
-            args: ctx.args
+            args: ctx.args,
           };
-        }
-      })
-      .addFlags([
+        },
+      }).addFlags([
         {
           name: "file",
           description: "File to process",
           options: ["--file", "-f"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       // MCP methods are available but not required for traditional usage
@@ -320,7 +327,7 @@ describe("Backward Compatibility", () => {
       expect(typeof (parser as any).toMcpTools).toBe("function");
       // withMcp is a static method, not instance method
       expect(typeof (parser.constructor as any).withMcp).toBe("function");
-      
+
       // Should have traditional methods
       expect(parser.addFlag).toBeDefined();
       expect(parser.addFlags).toBeDefined();

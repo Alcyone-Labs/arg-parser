@@ -80,7 +80,9 @@ describe("getJsonSchemaTypeFromFlag", () => {
 
     test("should handle non-standard function types", () => {
       const customConstructor = function CustomType() {};
-      expect(getJsonSchemaTypeFromFlag(customConstructor as any)).toBe("string");
+      expect(getJsonSchemaTypeFromFlag(customConstructor as any)).toBe(
+        "string",
+      );
     });
   });
 });

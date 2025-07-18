@@ -1,6 +1,6 @@
 /**
  * MCP Change Notifications System
- * 
+ *
  * This module provides functionality for managing MCP change notifications,
  * allowing clients to subscribe to changes in tools, resources, and prompts.
  */
@@ -8,7 +8,7 @@
 /**
  * Types of MCP entities that can change
  */
-export type McpChangeType = 'tools' | 'resources' | 'prompts';
+export type McpChangeType = "tools" | "resources" | "prompts";
 
 /**
  * Change notification event
@@ -16,7 +16,7 @@ export type McpChangeType = 'tools' | 'resources' | 'prompts';
 export interface McpChangeEvent {
   type: McpChangeType;
   timestamp: Date;
-  action: 'added' | 'removed' | 'updated';
+  action: "added" | "removed" | "updated";
   entityName?: string;
 }
 
@@ -36,7 +36,7 @@ export interface McpClientSubscription {
 
 /**
  * MCP Change Notifications Manager
- * 
+ *
  * Manages client subscriptions and change notifications for MCP entities
  */
 export class McpNotificationsManager {
@@ -52,7 +52,7 @@ export class McpNotificationsManager {
     this.clients.set(clientId, {
       clientId,
       subscriptions: new Set(),
-      connection
+      connection,
     });
   }
 
@@ -89,9 +89,9 @@ export class McpNotificationsManager {
   subscribeToAll(clientId: string): void {
     const client = this.clients.get(clientId);
     if (client) {
-      client.subscriptions.add('tools');
-      client.subscriptions.add('resources');
-      client.subscriptions.add('prompts');
+      client.subscriptions.add("tools");
+      client.subscriptions.add("resources");
+      client.subscriptions.add("prompts");
     }
   }
 
@@ -123,12 +123,16 @@ export class McpNotificationsManager {
   /**
    * Notify all subscribed clients of a change
    */
-  notifyChange(type: McpChangeType, action: 'added' | 'removed' | 'updated', entityName?: string): void {
+  notifyChange(
+    type: McpChangeType,
+    action: "added" | "removed" | "updated",
+    entityName?: string,
+  ): void {
     const event: McpChangeEvent = {
       type,
       timestamp: new Date(),
       action,
-      entityName
+      entityName,
     };
 
     // Add to history
@@ -139,7 +143,7 @@ export class McpNotificationsManager {
       try {
         listener(event);
       } catch (error) {
-        console.error('Error in global change listener:', error);
+        console.error("Error in global change listener:", error);
       }
     }
 
@@ -194,7 +198,7 @@ export class McpNotificationsManager {
     const stats: Record<McpChangeType, number> = {
       tools: 0,
       resources: 0,
-      prompts: 0
+      prompts: 0,
     };
 
     for (const client of this.clients.values()) {
@@ -209,14 +213,26 @@ export class McpNotificationsManager {
   /**
    * Send notification to a specific client
    */
-  private sendNotificationToClient(client: McpClientSubscription, type: McpChangeType): void {
+  private sendNotificationToClient(
+    client: McpClientSubscription,
+    type: McpChangeType,
+  ): void {
     try {
       // Send MCP notification using the connection
-      if (client.connection && typeof client.connection.sendNotification === 'function') {
-        client.connection.sendNotification(`notifications/${type}/list_changed`, {});
+      if (
+        client.connection &&
+        typeof client.connection.sendNotification === "function"
+      ) {
+        client.connection.sendNotification(
+          `notifications/${type}/list_changed`,
+          {},
+        );
       }
     } catch (error) {
-      console.error(`Error sending notification to client ${client.clientId}:`, error);
+      console.error(
+        `Error sending notification to client ${client.clientId}:`,
+        error,
+      );
       // Consider removing the client if connection is broken
       this.removeClient(client.clientId);
     }
@@ -227,7 +243,7 @@ export class McpNotificationsManager {
    */
   private addToHistory(event: McpChangeEvent): void {
     this.changeHistory.push(event);
-    
+
     // Trim history if it exceeds max size
     if (this.changeHistory.length > this.maxHistorySize) {
       this.changeHistory = this.changeHistory.slice(-this.maxHistorySize);
@@ -239,7 +255,7 @@ export class McpNotificationsManager {
    */
   setMaxHistorySize(size: number): void {
     this.maxHistorySize = Math.max(0, size);
-    
+
     // Trim current history if needed
     if (this.changeHistory.length > this.maxHistorySize) {
       this.changeHistory = this.changeHistory.slice(-this.maxHistorySize);
@@ -265,13 +281,28 @@ export class McpNotificationsManager {
  */
 export function createDebouncedNotifier(
   manager: McpNotificationsManager,
-  delay: number = 100
-): (type: McpChangeType, action: 'added' | 'removed' | 'updated', entityName?: string) => void {
-  const pending = new Map<string, { type: McpChangeType; action: 'added' | 'removed' | 'updated'; entityName?: string }>();
+  delay: number = 100,
+): (
+  type: McpChangeType,
+  action: "added" | "removed" | "updated",
+  entityName?: string,
+) => void {
+  const pending = new Map<
+    string,
+    {
+      type: McpChangeType;
+      action: "added" | "removed" | "updated";
+      entityName?: string;
+    }
+  >();
   let timeoutId: NodeJS.Timeout | null = null;
 
-  return (type: McpChangeType, action: 'added' | 'removed' | 'updated', entityName?: string) => {
-    const key = `${type}:${action}:${entityName || ''}`;
+  return (
+    type: McpChangeType,
+    action: "added" | "removed" | "updated",
+    entityName?: string,
+  ) => {
+    const key = `${type}:${action}:${entityName || ""}`;
     pending.set(key, { type, action, entityName });
 
     if (timeoutId) {
@@ -293,7 +324,7 @@ export function createDebouncedNotifier(
  */
 export function createFilteredListener(
   types: McpChangeType[],
-  listener: McpChangeListener
+  listener: McpChangeListener,
 ): McpChangeListener {
   return (event: McpChangeEvent) => {
     if (types.includes(event.type)) {
@@ -305,10 +336,14 @@ export function createFilteredListener(
 /**
  * Create a logging change listener for debugging
  */
-export function createLoggingListener(prefix: string = '[MCP]'): McpChangeListener {
+export function createLoggingListener(
+  prefix: string = "[MCP]",
+): McpChangeListener {
   return (event: McpChangeEvent) => {
-    const entityInfo = event.entityName ? ` (${event.entityName})` : '';
-    console.log(`${prefix} ${event.type} ${event.action}${entityInfo} at ${event.timestamp.toISOString()}`);
+    const entityInfo = event.entityName ? ` (${event.entityName})` : "";
+    console.log(
+      `${prefix} ${event.type} ${event.action}${entityInfo} at ${event.timestamp.toISOString()}`,
+    );
   };
 }
 

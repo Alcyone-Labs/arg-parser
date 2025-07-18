@@ -26,8 +26,8 @@ const parser = ArgParser.withMcp({
     serverInfo: {
       name: "simple-cli-mcp",
       version: "2.0.0",
-      description: "Simple CLI as MCP Server"
-    }
+      description: "Simple CLI as MCP Server",
+    },
   },
   handler: async (ctx) => {
     // Console output automatically safe in MCP mode!
@@ -57,11 +57,10 @@ const parser = ArgParser.withMcp({
       port: ctx.args.port,
       verbose: ctx.args.verbose,
       files: ctx.args.files || [],
-      output: ctx.args.output
+      output: ctx.args.output,
     };
   },
-})
-.addFlags([
+}).addFlags([
   // String flag with enum validation
   {
     name: "environment",

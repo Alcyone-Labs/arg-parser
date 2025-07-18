@@ -51,8 +51,8 @@ describe("ArgParser", () => {
         delete (result as any)._asyncHandlerInfo;
       }
 
-      expect(result).toHaveProperty('handlerResponse');
-      expect(result.handlerResponse).toHaveProperty('success', true);
+      expect(result).toHaveProperty("handlerResponse");
+      expect(result.handlerResponse).toHaveProperty("success", true);
     });
   });
 
@@ -153,7 +153,7 @@ describe("ArgParser", () => {
 
   describe("MCP Sub-command (Legacy)", () => {
     test("should add MCP sub-command correctly with deprecation warning", () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -177,7 +177,9 @@ describe("ArgParser", () => {
       });
 
       // Should show deprecation warning
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[DEPRECATED] addMcpSubCommand()'));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[DEPRECATED] addMcpSubCommand()"),
+      );
 
       consoleSpy.mockRestore();
     });
@@ -266,11 +268,11 @@ describe("ArgParser", () => {
             name: "test-mcp-server",
             version: "1.0.0",
             description: "Test MCP server",
-            author: { name: "Test Author" }
+            author: { name: "Test Author" },
           },
           defaultTransports: [{ type: "stdio" }],
-          toolOptions: { includeSubCommands: true }
-        }
+          toolOptions: { includeSubCommands: true },
+        },
       });
 
       expect(parser).toBeInstanceOf(ArgParser);
@@ -317,7 +319,7 @@ describe("ArgParser", () => {
       const toolConfig = {
         name: "test-tool",
         description: "A test tool",
-        handler: async (args: any) => ({ result: "test", args })
+        handler: async (args: any) => ({ result: "test", args }),
       };
 
       parser.addMcpTool(toolConfig);
@@ -341,7 +343,7 @@ describe("ArgParser", () => {
       const toolConfig = {
         name: "duplicate-tool",
         description: "First tool",
-        handler: async () => ({ result: "first" })
+        handler: async () => ({ result: "first" }),
       };
 
       parser.addMcpTool(toolConfig);
@@ -350,7 +352,7 @@ describe("ArgParser", () => {
         parser.addMcpTool({
           name: "duplicate-tool",
           description: "Second tool",
-          handler: async () => ({ result: "second" })
+          handler: async () => ({ result: "second" }),
         });
       }).toThrow("MCP tool with name 'duplicate-tool' already exists");
     });
@@ -365,12 +367,12 @@ describe("ArgParser", () => {
         .addMcpTool({
           name: "tool1",
           description: "First tool",
-          handler: async () => ({ result: "tool1" })
+          handler: async () => ({ result: "tool1" }),
         })
         .addMcpTool({
           name: "tool2",
           description: "Second tool",
-          handler: async () => ({ result: "tool2" })
+          handler: async () => ({ result: "tool2" }),
         });
 
       expect(result).toBe(parser);
@@ -381,16 +383,22 @@ describe("ArgParser", () => {
       const parser = ArgParser.withMcp({
         appName: "Info CLI",
         appCommandName: "info-cli",
-        handler: async (ctx) => ({ processed: ctx.args.input })
+        handler: async (ctx) => ({ processed: ctx.args.input }),
       })
-      .addFlags([
-        { name: "input", description: "Input data", options: ["--input"], type: "string", mandatory: true }
-      ])
-      .addMcpTool({
-        name: "manual-tool",
-        description: "Manual tool",
-        handler: async () => ({ result: "manual" })
-      });
+        .addFlags([
+          {
+            name: "input",
+            description: "Input data",
+            options: ["--input"],
+            type: "string",
+            mandatory: true,
+          },
+        ])
+        .addMcpTool({
+          name: "manual-tool",
+          description: "Manual tool",
+          handler: async () => ({ result: "manual" }),
+        });
 
       const toolInfo = parser.getMcpToolInfo();
 
@@ -404,14 +412,15 @@ describe("ArgParser", () => {
       const parser = ArgParser.withMcp({
         appName: "Route CLI",
         appCommandName: "route-cli",
-      })
-      .addMcpTool({
+      }).addMcpTool({
         name: "echo-tool",
         description: "Echo tool",
-        handler: async (args: any) => ({ echo: args.message })
+        handler: async (args: any) => ({ echo: args.message }),
       });
 
-      const result = await parser.testMcpToolRouting("echo-tool", { message: "hello" });
+      const result = await parser.testMcpToolRouting("echo-tool", {
+        message: "hello",
+      });
 
       expect(result.success).toBe(true);
       expect(result.result).toBeDefined();
@@ -434,28 +443,43 @@ describe("ArgParser", () => {
       const parser = ArgParser.withMcp({
         appName: "Combined CLI",
         appCommandName: "combined-cli",
-        handler: async (ctx) => ({ processed: ctx.args.input, verbose: ctx.args.verbose })
+        handler: async (ctx) => ({
+          processed: ctx.args.input,
+          verbose: ctx.args.verbose,
+        }),
       })
-      .addFlags([
-        { name: "input", description: "Input data", options: ["--input"], type: "string", mandatory: true },
-        { name: "verbose", description: "Enable verbose output", options: ["--verbose"], type: "boolean", flagOnly: true }
-      ])
-      .addMcpTool({
-        name: "custom-tool",
-        description: "A custom tool",
-        handler: async (args: any) => ({ custom: true, args })
-      });
+        .addFlags([
+          {
+            name: "input",
+            description: "Input data",
+            options: ["--input"],
+            type: "string",
+            mandatory: true,
+          },
+          {
+            name: "verbose",
+            description: "Enable verbose output",
+            options: ["--verbose"],
+            type: "boolean",
+            flagOnly: true,
+          },
+        ])
+        .addMcpTool({
+          name: "custom-tool",
+          description: "A custom tool",
+          handler: async (args: any) => ({ custom: true, args }),
+        });
 
       const tools = parser.toMcpTools();
 
       // Should have both CLI-generated tools and manual tools
       expect(tools.length).toBeGreaterThan(1);
 
-      const toolNames = tools.map(t => t.name);
+      const toolNames = tools.map((t) => t.name);
       expect(toolNames).toContain("custom-tool");
 
       // Should have CLI-generated tools (exact names depend on implementation)
-      const hasCliTools = toolNames.some(name => name !== "custom-tool");
+      const hasCliTools = toolNames.some((name) => name !== "custom-tool");
       expect(hasCliTools).toBe(true);
     });
 
@@ -464,20 +488,28 @@ describe("ArgParser", () => {
         appName: "Conflict CLI",
         appCommandName: "conflict-cli",
       })
-      .addFlags([
-        { name: "input", description: "Input data", options: ["--input"], type: "string", mandatory: true }
-      ])
-      .addMcpTool({
-        name: "conflict-cli", // Same as app command name
-        description: "Manual tool with conflicting name",
-        handler: async () => ({ manual: true })
-      });
+        .addFlags([
+          {
+            name: "input",
+            description: "Input data",
+            options: ["--input"],
+            type: "string",
+            mandatory: true,
+          },
+        ])
+        .addMcpTool({
+          name: "conflict-cli", // Same as app command name
+          description: "Manual tool with conflicting name",
+          handler: async () => ({ manual: true }),
+        });
 
       const tools = parser.toMcpTools();
-      const conflictTool = tools.find(t => t.name === "conflict-cli");
+      const conflictTool = tools.find((t) => t.name === "conflict-cli");
 
       expect(conflictTool).toBeDefined();
-      expect(conflictTool?.description).toBe("Manual tool with conflicting name");
+      expect(conflictTool?.description).toBe(
+        "Manual tool with conflicting name",
+      );
     });
   });
 
@@ -549,7 +581,7 @@ describe("ArgParser", () => {
         }),
       );
 
-      expect(result).toHaveProperty('handlerResponse', { preserved: true });
+      expect(result).toHaveProperty("handlerResponse", { preserved: true });
     });
   });
 
@@ -609,7 +641,7 @@ describe("ArgParser", () => {
         delete (processResult as any)._asyncHandlerInfo;
       }
 
-      expect(processResult).toHaveProperty('handlerResponse');
+      expect(processResult).toHaveProperty("handlerResponse");
 
       // Test MCP tools generation
       const tools = parser.toMcpTools();
@@ -647,7 +679,7 @@ describe("ArgParser", () => {
         error: expect.stringContaining("Handler error"),
         message: expect.stringContaining("Handler error"),
         data: expect.objectContaining({
-          error: expect.stringContaining("Handler error")
+          error: expect.stringContaining("Handler error"),
         }),
         exitCode: 1,
       });

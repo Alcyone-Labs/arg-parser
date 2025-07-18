@@ -1,10 +1,10 @@
 // Core plugin interfaces and base classes
-export { 
-  type IConfigPlugin, 
-  ConfigPlugin, 
-  JsonConfigPlugin, 
-  EnvConfigPlugin 
-} from './ConfigPlugin';
+export {
+  type IConfigPlugin,
+  ConfigPlugin,
+  JsonConfigPlugin,
+  EnvConfigPlugin,
+} from "./ConfigPlugin";
 
 // Plugin registry
 export {
@@ -12,9 +12,17 @@ export {
   globalConfigPluginRegistry,
   enableOptionalConfigPlugins,
   enableOptionalConfigPluginsAsync,
-  enableConfigPlugins
-} from './ConfigPluginRegistry';
+  enableConfigPlugins,
+} from "./ConfigPluginRegistry";
 
 // Optional plugins (these may throw if dependencies are not available)
-export { TomlConfigPlugin, createTomlPlugin, createTomlPluginAsync } from './TomlConfigPlugin';
-export { YamlConfigPlugin, createYamlPlugin, createYamlPluginAsync } from './YamlConfigPlugin';
+export {
+  TomlConfigPlugin,
+  createTomlPlugin,
+  createTomlPluginAsync,
+} from "./TomlConfigPlugin";
+export {
+  YamlConfigPlugin,
+  createYamlPlugin,
+  createYamlPluginAsync,
+} from "./YamlConfigPlugin";

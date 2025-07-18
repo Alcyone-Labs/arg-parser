@@ -1,15 +1,14 @@
 #!/usr/bin/env bun
 /**
  * Example demonstrating automatic argument detection when parse() is called without parameters
- * 
+ *
  * This example shows how ArgParser can automatically detect and use process.argv.slice(2)
  * when parse() is called without arguments in a Node.js environment.
- * 
+ *
  * Usage:
  *   bun examples/auto-argument-detection.ts --name "John" --age 30 --verbose
  *   npx tsx examples/auto-argument-detection.ts --name "Jane" --age 25
  */
-
 import { ArgParser } from "../src";
 
 const cli = ArgParser.withMcp({
@@ -22,7 +21,7 @@ const cli = ArgParser.withMcp({
       name: ctx.args.name,
       age: ctx.args.age,
       verbose: ctx.args.verbose,
-      greeting: ctx.args.greeting
+      greeting: ctx.args.greeting,
     });
 
     if (ctx.args.verbose) {
@@ -37,25 +36,24 @@ const cli = ArgParser.withMcp({
       data: {
         name: ctx.args.name,
         age: ctx.args.age,
-        verbose: ctx.args.verbose
-      }
+        verbose: ctx.args.verbose,
+      },
     };
-  }
-})
-.addFlags([
+  },
+}).addFlags([
   {
     name: "name",
     description: "Your name",
     options: ["--name", "-n"],
     type: "string",
-    mandatory: true
+    mandatory: true,
   },
   {
     name: "age",
     description: "Your age",
     options: ["--age", "-a"],
     type: "number",
-    mandatory: true
+    mandatory: true,
   },
   {
     name: "verbose",
@@ -63,7 +61,7 @@ const cli = ArgParser.withMcp({
     options: ["--verbose", "-v"],
     type: "boolean",
     flagOnly: true,
-    defaultValue: false
+    defaultValue: false,
   },
   {
     name: "greeting",
@@ -71,8 +69,8 @@ const cli = ArgParser.withMcp({
     options: ["--greeting", "-g"],
     type: "string",
     enum: ["hello", "hi", "hey"],
-    defaultValue: "hello"
-  }
+    defaultValue: "hello",
+  },
 ]);
 
 // 🚀 NEW FEATURE: Call parse() without arguments!
@@ -82,12 +80,12 @@ async function main() {
   try {
     console.log("🔄 Calling parse() without arguments...");
     console.log("   ArgParser will auto-detect process.argv.slice(2)\n");
-    
+
     // This is the new feature - parse() without arguments
     const result = await cli.parse();
-    
+
     console.log("\n✅ Parse completed successfully!");
-    
+
     if (result.success) {
       console.log("🎯 Result:", result.message);
     }
@@ -100,10 +98,16 @@ async function main() {
 // Alternative examples showing explicit argument passing (still works as before)
 async function explicitExample() {
   console.log("\n📝 Example with explicit arguments:");
-  
+
   try {
     // This still works as before - no warning will be shown
-    const result = await cli.parse(["--name", "Alice", "--age", "28", "--verbose"]);
+    const result = await cli.parse([
+      "--name",
+      "Alice",
+      "--age",
+      "28",
+      "--verbose",
+    ]);
     console.log("✅ Explicit parse result:", result.message);
   } catch (error) {
     console.error("❌ Explicit parse error:", error.message);
@@ -113,15 +117,25 @@ async function explicitExample() {
 // Show both examples
 if (import.meta.main) {
   console.log("🚀 ArgParser Auto-Detection Demo\n");
-  console.log("This example demonstrates the new automatic argument detection feature.");
-  console.log("When parse() is called without arguments, ArgParser automatically uses process.argv.slice(2).\n");
-  
+  console.log(
+    "This example demonstrates the new automatic argument detection feature.",
+  );
+  console.log(
+    "When parse() is called without arguments, ArgParser automatically uses process.argv.slice(2).\n",
+  );
+
   await main();
   await explicitExample();
-  
+
   console.log("\n💡 Tips:");
-  console.log("  • Use parse() without arguments for convenience in simple CLI scripts");
+  console.log(
+    "  • Use parse() without arguments for convenience in simple CLI scripts",
+  );
   console.log("  • Use parse(process.argv.slice(2)) for explicit control");
-  console.log("  • The warning helps you understand what's happening under the hood");
-  console.log("  • In non-Node.js environments, you must provide arguments explicitly");
+  console.log(
+    "  • The warning helps you understand what's happening under the hood",
+  );
+  console.log(
+    "  • In non-Node.js environments, you must provide arguments explicitly",
+  );
 }

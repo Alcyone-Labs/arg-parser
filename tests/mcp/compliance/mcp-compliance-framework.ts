@@ -1,19 +1,19 @@
 /**
  * MCP Compliance Testing Framework
- * 
+ *
  * This module provides utilities and validators for comprehensive MCP specification compliance testing.
  * It ensures that MCP servers strictly adhere to the official MCP protocol requirements.
  */
 
 import {
-  DEFAULT_MCP_PROTOCOL_VERSION,
-  CURRENT_MCP_PROTOCOL_VERSION,
-  MCP_PROTOCOL_VERSIONS,
   ALL_MCP_VERSIONS,
-  isValidMcpVersionFormat,
+  CURRENT_MCP_PROTOCOL_VERSION,
+  DEFAULT_MCP_PROTOCOL_VERSION,
   isAnyMcpVersion,
-  negotiateProtocolVersion
-} from '../../../src/mcp/mcp-protocol-versions';
+  isValidMcpVersionFormat,
+  MCP_PROTOCOL_VERSIONS,
+  negotiateProtocolVersion,
+} from "../../../src/mcp/mcp-protocol-versions";
 
 /**
  * MCP compliance test result
@@ -22,7 +22,7 @@ export interface McpComplianceResult {
   passed: boolean;
   message: string;
   details?: any;
-  severity: 'error' | 'warning' | 'info';
+  severity: "error" | "warning" | "info";
 }
 
 /**
@@ -50,7 +50,7 @@ export const DEFAULT_COMPLIANCE_CONFIG: McpComplianceConfig = {
   requestTimeout: 5000,
   testVersionEdgeCases: true,
   testErrorHandling: true,
-  requiredCapabilities: ['tools'],
+  requiredCapabilities: ["tools"],
 };
 
 /**
@@ -83,9 +83,13 @@ export class McpComplianceValidator {
    */
   public getSummary() {
     const total = this.results.length;
-    const passed = this.results.filter(r => r.passed).length;
-    const errors = this.results.filter(r => r.severity === 'error' && !r.passed).length;
-    const warnings = this.results.filter(r => r.severity === 'warning' && !r.passed).length;
+    const passed = this.results.filter((r) => r.passed).length;
+    const errors = this.results.filter(
+      (r) => r.severity === "error" && !r.passed,
+    ).length;
+    const warnings = this.results.filter(
+      (r) => r.severity === "warning" && !r.passed,
+    ).length;
 
     return {
       total,
@@ -114,18 +118,18 @@ export class McpComplianceValidator {
     this.clearResults();
 
     // JSON-RPC 2.0 compliance
-    if (response.jsonrpc !== '2.0') {
+    if (response.jsonrpc !== "2.0") {
       results.push({
         passed: false,
         message: 'Response must include "jsonrpc": "2.0"',
         details: { actual: response.jsonrpc },
-        severity: 'error'
+        severity: "error",
       });
     } else {
       results.push({
         passed: true,
-        message: 'JSON-RPC 2.0 field present',
-        severity: 'info'
+        message: "JSON-RPC 2.0 field present",
+        severity: "info",
       });
     }
 
@@ -133,14 +137,14 @@ export class McpComplianceValidator {
     if (response.id === undefined) {
       results.push({
         passed: false,
-        message: 'Response must include id field',
-        severity: 'error'
+        message: "Response must include id field",
+        severity: "error",
       });
     } else {
       results.push({
         passed: true,
-        message: 'Response ID field present',
-        severity: 'info'
+        message: "Response ID field present",
+        severity: "info",
       });
     }
 
@@ -148,8 +152,8 @@ export class McpComplianceValidator {
     if (!response.result) {
       results.push({
         passed: false,
-        message: 'Initialize response must include result field',
-        severity: 'error'
+        message: "Initialize response must include result field",
+        severity: "error",
       });
       return results; // Can't continue validation without result
     }
@@ -159,22 +163,22 @@ export class McpComplianceValidator {
     if (!protocolVersion) {
       results.push({
         passed: false,
-        message: 'Initialize response must include protocolVersion',
-        severity: 'error'
+        message: "Initialize response must include protocolVersion",
+        severity: "error",
       });
     } else if (!isValidMcpVersionFormat(protocolVersion)) {
       results.push({
         passed: false,
-        message: 'Protocol version must follow YYYY-MM-DD format',
+        message: "Protocol version must follow YYYY-MM-DD format",
         details: { actual: protocolVersion },
-        severity: 'error'
+        severity: "error",
       });
     } else {
       results.push({
         passed: true,
-        message: 'Protocol version format valid',
+        message: "Protocol version format valid",
         details: { version: protocolVersion },
-        severity: 'info'
+        severity: "info",
       });
     }
 
@@ -183,30 +187,30 @@ export class McpComplianceValidator {
     if (!serverInfo) {
       results.push({
         passed: false,
-        message: 'Initialize response must include serverInfo',
-        severity: 'error'
+        message: "Initialize response must include serverInfo",
+        severity: "error",
       });
     } else {
       if (!serverInfo.name) {
         results.push({
           passed: false,
-          message: 'Server info must include name',
-          severity: 'error'
+          message: "Server info must include name",
+          severity: "error",
         });
       }
       if (!serverInfo.version) {
         results.push({
           passed: false,
-          message: 'Server info must include version',
-          severity: 'error'
+          message: "Server info must include version",
+          severity: "error",
         });
       }
       if (serverInfo.name && serverInfo.version) {
         results.push({
           passed: true,
-          message: 'Server info complete',
+          message: "Server info complete",
           details: { name: serverInfo.name, version: serverInfo.version },
-          severity: 'info'
+          severity: "info",
         });
       }
     }
@@ -216,15 +220,15 @@ export class McpComplianceValidator {
     if (!capabilities) {
       results.push({
         passed: false,
-        message: 'Initialize response must include capabilities',
-        severity: 'error'
+        message: "Initialize response must include capabilities",
+        severity: "error",
       });
     } else {
       results.push({
         passed: true,
-        message: 'Capabilities field present',
+        message: "Capabilities field present",
         details: { capabilities: Object.keys(capabilities) },
-        severity: 'info'
+        severity: "info",
       });
 
       // Check required capabilities
@@ -234,13 +238,13 @@ export class McpComplianceValidator {
             results.push({
               passed: false,
               message: `Required capability '${requiredCap}' not declared`,
-              severity: 'error'
+              severity: "error",
             });
           } else {
             results.push({
               passed: true,
               message: `Required capability '${requiredCap}' declared`,
-              severity: 'info'
+              severity: "info",
             });
           }
         }
@@ -248,7 +252,7 @@ export class McpComplianceValidator {
     }
 
     // Add all results to the validator's internal tracking
-    results.forEach(result => this.addResult(result));
+    results.forEach((result) => this.addResult(result));
 
     return results;
   }
@@ -256,16 +260,19 @@ export class McpComplianceValidator {
   /**
    * Validate version negotiation behavior
    */
-  public validateVersionNegotiation(requestedVersion: string, responseVersion: string): McpComplianceResult[] {
+  public validateVersionNegotiation(
+    requestedVersion: string,
+    responseVersion: string,
+  ): McpComplianceResult[] {
     const results: McpComplianceResult[] = [];
 
     // Check if response version is valid format
     if (!isValidMcpVersionFormat(responseVersion)) {
       results.push({
         passed: false,
-        message: 'Response protocol version must follow YYYY-MM-DD format',
+        message: "Response protocol version must follow YYYY-MM-DD format",
         details: { requested: requestedVersion, response: responseVersion },
-        severity: 'error'
+        severity: "error",
       });
       return results;
     }
@@ -278,23 +285,24 @@ export class McpComplianceValidator {
       if (responseVersion === requestedVersion) {
         results.push({
           passed: true,
-          message: 'Server correctly returned same version for known MCP version request',
+          message:
+            "Server correctly returned same version for known MCP version request",
           details: { version: responseVersion },
-          severity: 'info'
+          severity: "info",
         });
       } else if (isAnyMcpVersion(responseVersion)) {
         results.push({
           passed: true,
-          message: 'Server negotiated to different but valid MCP version',
+          message: "Server negotiated to different but valid MCP version",
           details: { requested: requestedVersion, negotiated: responseVersion },
-          severity: 'info'
+          severity: "info",
         });
       } else {
         results.push({
           passed: false,
-          message: 'Server returned non-MCP version',
+          message: "Server returned non-MCP version",
           details: { requested: requestedVersion, response: responseVersion },
-          severity: 'error'
+          severity: "error",
         });
       }
     } else {
@@ -302,29 +310,30 @@ export class McpComplianceValidator {
       if (responseVersion === requestedVersion) {
         results.push({
           passed: false,
-          message: 'Server should not return unsupported/invalid version',
+          message: "Server should not return unsupported/invalid version",
           details: { requested: requestedVersion, response: responseVersion },
-          severity: 'error'
+          severity: "error",
         });
       } else if (isAnyMcpVersion(responseVersion)) {
         results.push({
           passed: true,
-          message: 'Server correctly negotiated to supported version for invalid request',
+          message:
+            "Server correctly negotiated to supported version for invalid request",
           details: { requested: requestedVersion, negotiated: responseVersion },
-          severity: 'info'
+          severity: "info",
         });
       } else {
         results.push({
           passed: false,
-          message: 'Server returned invalid version during negotiation',
+          message: "Server returned invalid version during negotiation",
           details: { requested: requestedVersion, actual: responseVersion },
-          severity: 'error'
+          severity: "error",
         });
       }
     }
 
     // Add all results to the validator's internal tracking
-    results.forEach(result => this.addResult(result));
+    results.forEach((result) => this.addResult(result));
 
     return results;
   }
@@ -336,19 +345,19 @@ export class McpComplianceValidator {
     const results: McpComplianceResult[] = [];
 
     // Basic JSON-RPC validation
-    if (response.jsonrpc !== '2.0') {
+    if (response.jsonrpc !== "2.0") {
       results.push({
         passed: false,
         message: 'Tools list response must include "jsonrpc": "2.0"',
-        severity: 'error'
+        severity: "error",
       });
     }
 
     if (!response.result) {
       results.push({
         passed: false,
-        message: 'Tools list response must include result field',
-        severity: 'error'
+        message: "Tools list response must include result field",
+        severity: "error",
       });
       return results;
     }
@@ -358,8 +367,8 @@ export class McpComplianceValidator {
     if (!Array.isArray(tools)) {
       results.push({
         passed: false,
-        message: 'Tools list result must contain tools array',
-        severity: 'error'
+        message: "Tools list result must contain tools array",
+        severity: "error",
       });
       return results;
     }
@@ -368,7 +377,7 @@ export class McpComplianceValidator {
       passed: true,
       message: `Tools list contains ${tools.length} tools`,
       details: { toolCount: tools.length },
-      severity: 'info'
+      severity: "info",
     });
 
     // Validate each tool
@@ -386,20 +395,20 @@ export class McpComplianceValidator {
           results.push({
             passed: false,
             message: `Expected tool '${expectedTool}' not found`,
-            severity: 'error'
+            severity: "error",
           });
         } else {
           results.push({
             passed: true,
             message: `Expected tool '${expectedTool}' found`,
-            severity: 'info'
+            severity: "info",
           });
         }
       }
     }
 
     // Add all results to the validator's internal tracking
-    results.forEach(result => this.addResult(result));
+    results.forEach((result) => this.addResult(result));
 
     return results;
   }
@@ -407,25 +416,28 @@ export class McpComplianceValidator {
   /**
    * Validate individual tool definition
    */
-  private validateToolDefinition(tool: any, index: number): McpComplianceResult[] {
+  private validateToolDefinition(
+    tool: any,
+    index: number,
+  ): McpComplianceResult[] {
     const results: McpComplianceResult[] = [];
     const toolId = tool.name || `tool[${index}]`;
 
     // Name validation
-    if (!tool.name || typeof tool.name !== 'string') {
+    if (!tool.name || typeof tool.name !== "string") {
       results.push({
         passed: false,
         message: `Tool ${toolId} must have a string name`,
-        severity: 'error'
+        severity: "error",
       });
     }
 
     // Description validation (optional but recommended)
-    if (tool.description && typeof tool.description !== 'string') {
+    if (tool.description && typeof tool.description !== "string") {
       results.push({
         passed: false,
         message: `Tool ${toolId} description must be a string if provided`,
-        severity: 'warning'
+        severity: "warning",
       });
     }
 
@@ -434,19 +446,19 @@ export class McpComplianceValidator {
       results.push({
         passed: false,
         message: `Tool ${toolId} must have inputSchema`,
-        severity: 'error'
+        severity: "error",
       });
-    } else if (typeof tool.inputSchema !== 'object') {
+    } else if (typeof tool.inputSchema !== "object") {
       results.push({
         passed: false,
         message: `Tool ${toolId} inputSchema must be an object`,
-        severity: 'error'
+        severity: "error",
       });
     } else {
       results.push({
         passed: true,
         message: `Tool ${toolId} has valid inputSchema`,
-        severity: 'info'
+        severity: "info",
       });
     }
 

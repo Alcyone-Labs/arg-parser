@@ -36,7 +36,10 @@ export class ConfigurationManager {
     // Convert to a safe filename format (PascalCase for .env files)
     baseName = baseName
       .split(/[\s-_]+/)
-      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(
+        (word: string) =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      )
       .join("");
 
     return `${baseName}.env`;
@@ -45,8 +48,13 @@ export class ConfigurationManager {
   /**
    * Handles the --s-save-to-env system flag at the final parser level
    */
-  public handleSaveToEnvFlag(processArgs: string[], parserChain: any[]): boolean {
-    const saveToEnvIndex = processArgs.findIndex(arg => arg === "--s-save-to-env");
+  public handleSaveToEnvFlag(
+    processArgs: string[],
+    parserChain: any[],
+  ): boolean {
+    const saveToEnvIndex = processArgs.findIndex(
+      (arg) => arg === "--s-save-to-env",
+    );
     if (saveToEnvIndex !== -1) {
       let filePath: string;
 
@@ -73,14 +81,22 @@ export class ConfigurationManager {
   /**
    * Saves current configuration to an environment file
    */
-  public saveToEnvFile(filePath: string, _processArgs: string[], parserChain: any[]): void {
+  public saveToEnvFile(
+    filePath: string,
+    _processArgs: string[],
+    parserChain: any[],
+  ): void {
     try {
       // Parse the current arguments to get the values
       const finalParser = parserChain[parserChain.length - 1];
       const parsedArgs = finalParser.getLastParseResult();
 
       if (!parsedArgs) {
-        console.log(chalk.yellow("No parsed arguments available. Run the command first to generate configuration."));
+        console.log(
+          chalk.yellow(
+            "No parsed arguments available. Run the command first to generate configuration.",
+          ),
+        );
         return;
       }
 
@@ -101,17 +117,17 @@ export class ConfigurationManager {
       } else {
         // Fallback to legacy methods for unsupported formats
         switch (ext) {
-          case '.yaml':
-          case '.yml':
+          case ".yaml":
+          case ".yml":
             content = this.generateYamlFormat(allFlags, parsedArgs);
             break;
-          case '.json':
+          case ".json":
             content = this.generateJsonFormat(allFlags, parsedArgs);
             break;
-          case '.toml':
+          case ".toml":
             content = this.generateTomlFormat(allFlags, parsedArgs);
             break;
-          case '.env':
+          case ".env":
           default:
             content = this.generateEnvFormat(allFlags, parsedArgs);
             break;
@@ -119,27 +135,38 @@ export class ConfigurationManager {
       }
 
       // Write the file
-      fs.writeFileSync(filePath, content, 'utf8');
+      fs.writeFileSync(filePath, content, "utf8");
 
       console.log(chalk.green(`✅ Configuration saved to: ${filePath}`));
-      console.log(chalk.gray(`Format: ${ext || '.env'}`));
-      console.log(chalk.gray(`Flags saved: ${Object.keys(parsedArgs.args).length}`));
+      console.log(chalk.gray(`Format: ${ext || ".env"}`));
+      console.log(
+        chalk.gray(`Flags saved: ${Object.keys(parsedArgs.args).length}`),
+      );
     } catch (error) {
-      console.error(chalk.red(`❌ Failed to save configuration: ${error instanceof Error ? error.message : String(error)}`));
-      throw new Error(`Failed to save configuration: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(
+        chalk.red(
+          `❌ Failed to save configuration: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+      throw new Error(
+        `Failed to save configuration: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * Loads configuration from an environment file
    */
-  public loadEnvFile(filePath: string, parserChain: any[]): Record<string, any> {
+  public loadEnvFile(
+    filePath: string,
+    parserChain: any[],
+  ): Record<string, any> {
     try {
       if (!fs.existsSync(filePath)) {
         throw new Error(`Configuration file not found: ${filePath}`);
       }
 
-      const content = fs.readFileSync(filePath, 'utf8');
+      const content = fs.readFileSync(filePath, "utf8");
       const ext = path.extname(filePath).toLowerCase();
 
       let rawConfig: Record<string, any>;
@@ -151,17 +178,17 @@ export class ConfigurationManager {
       } else {
         // Fallback to legacy methods for unsupported formats
         switch (ext) {
-          case '.yaml':
-          case '.yml':
+          case ".yaml":
+          case ".yml":
             rawConfig = this.parseYamlFile(content);
             break;
-          case '.json':
+          case ".json":
             rawConfig = this.parseJsonFile(content);
             break;
-          case '.toml':
+          case ".toml":
             rawConfig = this.parseTomlFile(content);
             break;
-          case '.env':
+          case ".env":
           default:
             rawConfig = this.parseEnvFile(content);
             break;
@@ -171,7 +198,11 @@ export class ConfigurationManager {
       // Convert the raw config to flag values
       return this.convertConfigToFlagValues(rawConfig, parserChain);
     } catch (error) {
-      console.warn(chalk.yellow(`Warning: Could not load config file ${filePath}: ${error instanceof Error ? error.message : String(error)}`));
+      console.warn(
+        chalk.yellow(
+          `Warning: Could not load config file ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
       return {};
     }
   }
@@ -181,19 +212,21 @@ export class ConfigurationManager {
    */
   public parseEnvFile(content: string): Record<string, any> {
     const config: Record<string, any> = {};
-    const lines = content.split('\n');
+    const lines = content.split("\n");
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const equalIndex = trimmed.indexOf('=');
+      if (trimmed && !trimmed.startsWith("#")) {
+        const equalIndex = trimmed.indexOf("=");
         if (equalIndex > 0) {
           const key = trimmed.substring(0, equalIndex).trim();
           let value = trimmed.substring(equalIndex + 1).trim();
 
           // Remove quotes if present
-          if ((value.startsWith('"') && value.endsWith('"')) || 
-              (value.startsWith("'") && value.endsWith("'"))) {
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
             value = value.slice(1, -1);
           }
 
@@ -209,15 +242,17 @@ export class ConfigurationManager {
    * Parses YAML file content (legacy method - now uses plugin system)
    */
   public parseYamlFile(content: string): Record<string, any> {
-    const plugin = globalConfigPluginRegistry.getPluginByExtension('.yaml');
+    const plugin = globalConfigPluginRegistry.getPluginByExtension(".yaml");
     if (plugin) {
       return plugin.parse(content);
     }
 
     // Fallback: Simple YAML parsing for basic key-value pairs and arrays
-    console.warn('YAML plugin not available, using simple parser. Install js-yaml and enable YAML plugin for full support.');
+    console.warn(
+      "YAML plugin not available, using simple parser. Install js-yaml and enable YAML plugin for full support.",
+    );
     const config: Record<string, any> = {};
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     let currentKey: string | null = null;
     let currentArray: string[] = [];
 
@@ -225,25 +260,27 @@ export class ConfigurationManager {
       const line = lines[i];
       const trimmed = line.trim();
 
-      if (!trimmed || trimmed.startsWith('#')) {
+      if (!trimmed || trimmed.startsWith("#")) {
         continue;
       }
 
       // Check if this is an array item
-      if (trimmed.startsWith('- ')) {
+      if (trimmed.startsWith("- ")) {
         if (currentKey) {
           const arrayValue = trimmed.substring(2).trim();
           // Remove quotes if present
-          const cleanValue = (arrayValue.startsWith('"') && arrayValue.endsWith('"')) ||
-                           (arrayValue.startsWith("'") && arrayValue.endsWith("'"))
-                           ? arrayValue.slice(1, -1) : arrayValue;
+          const cleanValue =
+            (arrayValue.startsWith('"') && arrayValue.endsWith('"')) ||
+            (arrayValue.startsWith("'") && arrayValue.endsWith("'"))
+              ? arrayValue.slice(1, -1)
+              : arrayValue;
           currentArray.push(cleanValue);
         }
         continue;
       }
 
       // Check if this is a key-value pair
-      const colonIndex = trimmed.indexOf(':');
+      const colonIndex = trimmed.indexOf(":");
       if (colonIndex > 0) {
         // If we were building an array, save it
         if (currentKey && currentArray.length > 0) {
@@ -262,8 +299,10 @@ export class ConfigurationManager {
         }
 
         // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
           value = value.slice(1, -1);
         }
 
@@ -287,7 +326,9 @@ export class ConfigurationManager {
     try {
       return JSON.parse(content) || {};
     } catch (error) {
-      throw new Error(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -295,27 +336,31 @@ export class ConfigurationManager {
    * Parses TOML file content (legacy method - now uses plugin system)
    */
   public parseTomlFile(content: string): Record<string, any> {
-    const plugin = globalConfigPluginRegistry.getPluginByExtension('.toml');
+    const plugin = globalConfigPluginRegistry.getPluginByExtension(".toml");
     if (plugin) {
       return plugin.parse(content);
     }
 
     // Fallback: Simple TOML parsing for basic key-value pairs
-    console.warn('TOML plugin not available, using simple parser. Install smol-toml and enable TOML plugin for full support.');
+    console.warn(
+      "TOML plugin not available, using simple parser. Install smol-toml and enable TOML plugin for full support.",
+    );
     const config: Record<string, any> = {};
-    const lines = content.split('\n');
+    const lines = content.split("\n");
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const equalIndex = trimmed.indexOf('=');
+      if (trimmed && !trimmed.startsWith("#")) {
+        const equalIndex = trimmed.indexOf("=");
         if (equalIndex > 0) {
           const key = trimmed.substring(0, equalIndex).trim();
           let value = trimmed.substring(equalIndex + 1).trim();
 
           // Remove quotes if present
-          if ((value.startsWith('"') && value.endsWith('"')) ||
-              (value.startsWith("'") && value.endsWith("'"))) {
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
             value = value.slice(1, -1);
           }
 
@@ -330,7 +375,10 @@ export class ConfigurationManager {
   /**
    * Converts raw configuration to flag values with proper type conversion
    */
-  public convertConfigToFlagValues(rawConfig: Record<string, any>, parserChain: any[]): Record<string, any> {
+  public convertConfigToFlagValues(
+    rawConfig: Record<string, any>,
+    parserChain: any[],
+  ): Record<string, any> {
     const flagValues: Record<string, any> = {};
 
     // Collect all flags from the parser chain
@@ -342,17 +390,23 @@ export class ConfigurationManager {
     // Convert each config value to the appropriate flag type
     for (const [key, value] of Object.entries(rawConfig)) {
       // Try exact match first, then case-insensitive match
-      let flag = allFlags.find(f => f['name'] === key);
+      let flag = allFlags.find((f) => f["name"] === key);
       if (!flag) {
-        flag = allFlags.find(f => f['name'].toLowerCase() === key.toLowerCase());
+        flag = allFlags.find(
+          (f) => f["name"].toLowerCase() === key.toLowerCase(),
+        );
       }
 
       if (flag) {
         try {
           // Use the actual flag name (not the config key) for consistency
-          flagValues[flag['name']] = this.convertValueToFlagType(value, flag);
+          flagValues[flag["name"]] = this.convertValueToFlagType(value, flag);
         } catch (error) {
-          console.warn(chalk.yellow(`Warning: Could not convert config value for flag '${key}': ${error instanceof Error ? error.message : String(error)}`));
+          console.warn(
+            chalk.yellow(
+              `Warning: Could not convert config value for flag '${key}': ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          );
         }
       }
     }
@@ -369,23 +423,23 @@ export class ConfigurationManager {
     }
 
     // Handle both string literal and String constructor function
-    const flagType = flag['type'];
-    const isStringType = flagType === 'string' || flagType === String;
-    const isNumberType = flagType === 'number' || flagType === Number;
-    const isBooleanType = flagType === 'boolean' || flagType === Boolean;
+    const flagType = flag["type"];
+    const isStringType = flagType === "string" || flagType === String;
+    const isNumberType = flagType === "number" || flagType === Number;
+    const isBooleanType = flagType === "boolean" || flagType === Boolean;
 
     if (isStringType) {
       // Handle allowMultiple flags that expect arrays
-      if (flag['allowMultiple']) {
+      if (flag["allowMultiple"]) {
         if (Array.isArray(value)) return value;
-        if (typeof value === 'string') {
+        if (typeof value === "string") {
           try {
             // Try to parse as JSON array
             const parsed = JSON.parse(value);
             if (Array.isArray(parsed)) return parsed;
           } catch (e) {
             // Try to split by comma
-            return value.split(',').map(v => v.trim());
+            return value.split(",").map((v) => v.trim());
           }
         }
         return [String(value)];
@@ -393,43 +447,62 @@ export class ConfigurationManager {
       return String(value);
     } else if (isNumberType) {
       // If it's already a number, return it as-is
-      if (typeof value === 'number') {
+      if (typeof value === "number") {
         return value;
       }
       const num = Number(value);
       if (isNaN(num)) {
-        throw new Error(`Cannot convert '${value}' to number for flag '${flag['name']}'`);
+        throw new Error(
+          `Cannot convert '${value}' to number for flag '${flag["name"]}'`,
+        );
       }
       return num;
     } else if (isBooleanType) {
-      if (typeof value === 'boolean') return value;
-      if (typeof value === 'string') {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "string") {
         const lower = value.toLowerCase();
-        if (lower === 'true' || lower === '1' || lower === 'yes' || lower === 'on') return true;
-        if (lower === 'false' || lower === '0' || lower === 'no' || lower === 'off') return false;
+        if (
+          lower === "true" ||
+          lower === "1" ||
+          lower === "yes" ||
+          lower === "on"
+        )
+          return true;
+        if (
+          lower === "false" ||
+          lower === "0" ||
+          lower === "no" ||
+          lower === "off"
+        )
+          return false;
       }
-      throw new Error(`Cannot convert '${value}' to boolean for flag '${flag['name']}'`);
-
-    } else if (flagType === 'table') {
+      throw new Error(
+        `Cannot convert '${value}' to boolean for flag '${flag["name"]}'`,
+      );
+    } else if (flagType === "table") {
       if (Array.isArray(value)) return value;
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         try {
           // Try to parse as JSON array
           const parsed = JSON.parse(value);
           if (Array.isArray(parsed)) return parsed;
         } catch (e) {
           // Try to split by comma
-          return value.split(',').map(v => v.trim());
+          return value.split(",").map((v) => v.trim());
         }
       }
-      throw new Error(`Cannot convert '${value}' to table for flag '${flag['name']}'`);
+      throw new Error(
+        `Cannot convert '${value}' to table for flag '${flag["name"]}'`,
+      );
     } else {
       // Handle custom type functions or fallback to string
-      if (typeof flagType === 'function') {
+      if (typeof flagType === "function") {
         try {
           return flagType(value);
         } catch (error) {
-          throw new Error(`Custom type conversion failed for flag '${flag['name']}': ${error instanceof Error ? error.message : String(error)}`);
+          throw new Error(
+            `Custom type conversion failed for flag '${flag["name"]}': ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
       return String(value);
@@ -439,16 +512,19 @@ export class ConfigurationManager {
   /**
    * Merges environment configuration with command line arguments
    */
-  public mergeEnvConfigWithArgs(envConfig: Record<string, any>, processArgs: string[]): string[] {
+  public mergeEnvConfigWithArgs(
+    envConfig: Record<string, any>,
+    processArgs: string[],
+  ): string[] {
     const mergedArgs = [...processArgs];
 
     // Add environment config values as flags if they're not already present
     for (const [key, value] of Object.entries(envConfig)) {
       const flagPattern = new RegExp(`^--${key}(=|$)`);
-      const hasFlag = mergedArgs.some(arg => flagPattern.test(arg));
+      const hasFlag = mergedArgs.some((arg) => flagPattern.test(arg));
 
       if (!hasFlag) {
-        if (typeof value === 'boolean') {
+        if (typeof value === "boolean") {
           if (value) {
             mergedArgs.push(`--${key}`);
           }
@@ -469,80 +545,91 @@ export class ConfigurationManager {
   /**
    * Generates environment file format
    */
-  public generateEnvFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+  public generateEnvFormat(
+    flags: ProcessedFlag[],
+    parsedArgs: TParsedArgs<any>,
+  ): string {
     const lines: string[] = [];
-    lines.push('# Environment configuration file');
+    lines.push("# Environment configuration file");
     lines.push(`# Generated on ${new Date().toISOString()}`);
-    lines.push('');
+    lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs['args'][flag['name']];
+      const value = parsedArgs["args"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag['description'] || flag['name']}`);
-        lines.push(`# Type: ${this.getTypeString(flag['type'])}`);
+        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {
-          lines.push(`${flag['name'].toUpperCase()}=${JSON.stringify(value)}`);
-        } else if (typeof value === 'string' && value.includes(' ')) {
-          lines.push(`${flag['name'].toUpperCase()}="${value}"`);
+          lines.push(`${flag["name"].toUpperCase()}=${JSON.stringify(value)}`);
+        } else if (typeof value === "string" && value.includes(" ")) {
+          lines.push(`${flag["name"].toUpperCase()}="${value}"`);
         } else {
-          lines.push(`${flag['name'].toUpperCase()}=${value}`);
+          lines.push(`${flag["name"].toUpperCase()}=${value}`);
         }
-        lines.push('');
+        lines.push("");
       }
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
    * Generates YAML file format (legacy method - now uses plugin system)
    */
-  public generateYamlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const plugin = globalConfigPluginRegistry.getPluginByExtension('.yaml');
+  public generateYamlFormat(
+    flags: ProcessedFlag[],
+    parsedArgs: TParsedArgs<any>,
+  ): string {
+    const plugin = globalConfigPluginRegistry.getPluginByExtension(".yaml");
     if (plugin) {
       return plugin.generate({}, flags, parsedArgs);
     }
 
     // Fallback: Simple YAML generation
     const lines: string[] = [];
-    lines.push('# YAML configuration file');
+    lines.push("# YAML configuration file");
     lines.push(`# Generated on ${new Date().toISOString()}`);
-    lines.push('');
+    lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs['args'][flag['name']];
+      const value = parsedArgs["args"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag['description'] || flag['name']}`);
-        lines.push(`# Type: ${this.getTypeString(flag['type'])}`);
+        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {
-          lines.push(`${flag['name']}:`);
+          lines.push(`${flag["name"]}:`);
           for (const item of value) {
-            lines.push(`  - ${typeof item === 'string' && item.includes(' ') ? `"${item}"` : item}`);
+            lines.push(
+              `  - ${typeof item === "string" && item.includes(" ") ? `"${item}"` : item}`,
+            );
           }
-        } else if (typeof value === 'string' && value.includes(' ')) {
-          lines.push(`${flag['name']}: "${value}"`);
+        } else if (typeof value === "string" && value.includes(" ")) {
+          lines.push(`${flag["name"]}: "${value}"`);
         } else {
-          lines.push(`${flag['name']}: ${value}`);
+          lines.push(`${flag["name"]}: ${value}`);
         }
-        lines.push('');
+        lines.push("");
       }
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
    * Generates JSON file format
    */
-  public generateJsonFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
+  public generateJsonFormat(
+    flags: ProcessedFlag[],
+    parsedArgs: TParsedArgs<any>,
+  ): string {
     const config: Record<string, any> = {};
 
     for (const flag of flags) {
-      const value = parsedArgs['args'][flag['name']];
+      const value = parsedArgs["args"][flag["name"]];
       if (value !== undefined) {
-        config[flag['name']] = value;
+        config[flag["name"]] = value;
       }
     }
 
@@ -552,51 +639,56 @@ export class ConfigurationManager {
   /**
    * Generates TOML file format (legacy method - now uses plugin system)
    */
-  public generateTomlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
-    const plugin = globalConfigPluginRegistry.getPluginByExtension('.toml');
+  public generateTomlFormat(
+    flags: ProcessedFlag[],
+    parsedArgs: TParsedArgs<any>,
+  ): string {
+    const plugin = globalConfigPluginRegistry.getPluginByExtension(".toml");
     if (plugin) {
       return plugin.generate({}, flags, parsedArgs);
     }
 
     // Fallback: Simple TOML generation
     const lines: string[] = [];
-    lines.push('# TOML configuration file');
+    lines.push("# TOML configuration file");
     lines.push(`# Generated on ${new Date().toISOString()}`);
-    lines.push('');
+    lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs['args'][flag['name']];
+      const value = parsedArgs["args"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag['description'] || flag['name']}`);
-        lines.push(`# Type: ${this.getTypeString(flag['type'])}`);
+        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {
-          const arrayStr = value.map(item =>
-            typeof item === 'string' ? `"${item}"` : String(item)
-          ).join(', ');
-          lines.push(`${flag['name']} = [${arrayStr}]`);
-        } else if (typeof value === 'string') {
-          lines.push(`${flag['name']} = "${value}"`);
+          const arrayStr = value
+            .map((item) =>
+              typeof item === "string" ? `"${item}"` : String(item),
+            )
+            .join(", ");
+          lines.push(`${flag["name"]} = [${arrayStr}]`);
+        } else if (typeof value === "string") {
+          lines.push(`${flag["name"]} = "${value}"`);
         } else {
-          lines.push(`${flag['name']} = ${value}`);
+          lines.push(`${flag["name"]} = ${value}`);
         }
-        lines.push('');
+        lines.push("");
       }
     }
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
    * Gets a string representation of a flag type
    */
   private getTypeString(type: any): string {
-    if (typeof type === 'string') {
+    if (typeof type === "string") {
       return type;
-    } else if (typeof type === 'function') {
-      return type.name || 'function';
+    } else if (typeof type === "function") {
+      return type.name || "function";
     } else {
-      return 'unknown';
+      return "unknown";
     }
   }
 }

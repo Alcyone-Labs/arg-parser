@@ -16,16 +16,17 @@ The integration tests are designed to:
 
 ### Test Suites
 
-| Suite | File | Description | Critical |
-|-------|------|-------------|----------|
-| **end-to-end** | `end-to-end.test.ts` | Basic MCP server functionality and tool execution | Critical |
-| **protocol-compliance** | `protocol-compliance.test.ts` | MCP protocol specification compliance | Critical |
-| **tool-execution** | `tool-execution.test.ts` | Comprehensive tool execution scenarios | Critical |
-| **multi-transport** | `multi-transport.test.ts` | Multiple transport type testing | Non-Critical |
-| **real-world-examples** | `real-world-examples.test.ts` | Practical usage examples | Non-Critical |
-| **performance** | `performance.test.ts` | Performance and reliability testing | Non-Critical |
+| Suite                   | File                          | Description                                       | Critical     |
+| ----------------------- | ----------------------------- | ------------------------------------------------- | ------------ |
+| **end-to-end**          | `end-to-end.test.ts`          | Basic MCP server functionality and tool execution | Critical     |
+| **protocol-compliance** | `protocol-compliance.test.ts` | MCP protocol specification compliance             | Critical     |
+| **tool-execution**      | `tool-execution.test.ts`      | Comprehensive tool execution scenarios            | Critical     |
+| **multi-transport**     | `multi-transport.test.ts`     | Multiple transport type testing                   | Non-Critical |
+| **real-world-examples** | `real-world-examples.test.ts` | Practical usage examples                          | Non-Critical |
+| **performance**         | `performance.test.ts`         | Performance and reliability testing               | Non-Critical |
 
 **Legend:**
+
 - Critical: Must pass for release
 - Non-Critical: Important but not blocking
 
@@ -95,6 +96,7 @@ bun tests/mcp/integration/run-integration-tests.ts --help
 ### End-to-End Tests (`end-to-end.test.ts`)
 
 Tests basic MCP server functionality:
+
 - Server initialization and shutdown
 - Tool discovery and listing
 - Basic tool execution
@@ -102,6 +104,7 @@ Tests basic MCP server functionality:
 - Protocol message validation
 
 **Key Scenarios:**
+
 - Simple CLI to MCP server conversion
 - Tool execution with various parameter types
 - Error responses for invalid inputs
@@ -110,6 +113,7 @@ Tests basic MCP server functionality:
 ### Protocol Compliance Tests (`protocol-compliance.test.ts`)
 
 Validates MCP protocol specification compliance:
+
 - JSON-RPC 2.0 message format
 - Request/response correlation
 - Tool schema validation
@@ -117,6 +121,7 @@ Validates MCP protocol specification compliance:
 - Initialization handshake
 
 **Key Validations:**
+
 - Message structure and format
 - Tool schema correctness
 - Error handling consistency
@@ -125,6 +130,7 @@ Validates MCP protocol specification compliance:
 ### Tool Execution Tests (`tool-execution.test.ts`)
 
 Comprehensive tool execution scenarios:
+
 - Various input types and validation
 - Sub-command tool execution
 - Async operation handling
@@ -132,6 +138,7 @@ Comprehensive tool execution scenarios:
 - Concurrent execution
 
 **Key Features:**
+
 - File operations (read, write, exists)
 - Mathematical computations
 - Async operations with delays
@@ -141,6 +148,7 @@ Comprehensive tool execution scenarios:
 ### Multi-Transport Tests (`multi-transport.test.ts`)
 
 Tests multiple transport mechanisms:
+
 - STDIO transport
 - SSE (Server-Sent Events) transport
 - HTTP transport
@@ -148,6 +156,7 @@ Tests multiple transport mechanisms:
 - Transport-specific configuration
 
 **Key Scenarios:**
+
 - Single transport operation
 - Multi-transport server startup
 - Transport configuration validation
@@ -157,6 +166,7 @@ Tests multiple transport mechanisms:
 ### Real-World Examples Tests (`real-world-examples.test.ts`)
 
 Tests practical MCP server implementations:
+
 - File processor server
 - Data analysis server
 - Complex operations
@@ -164,12 +174,14 @@ Tests practical MCP server implementations:
 - Error handling in production scenarios
 
 **Example Servers:**
+
 - **File Processor**: File operations, analysis, transformation, search
 - **Data Analysis**: Statistical analysis, correlation, outlier detection
 
 ### Performance Tests (`performance.test.ts`)
 
 Performance and reliability testing:
+
 - Response time measurement
 - CPU-intensive operations
 - Memory usage monitoring
@@ -177,6 +189,7 @@ Performance and reliability testing:
 - Error recovery performance
 
 **Key Metrics:**
+
 - Response times under various loads
 - Memory usage and leak detection
 - CPU utilization during computation
@@ -199,6 +212,7 @@ The `mcp-client-utils.ts` file provides:
 ### Test Data and Fixtures
 
 Test fixtures are located in `tests/mcp/fixtures/`:
+
 - Sample data files for testing
 - Test server configurations
 - Mock data for various scenarios
@@ -222,6 +236,7 @@ Add to your workflow:
 ### Test Reports
 
 The custom test runner generates detailed reports including:
+
 - Pass/fail status for each suite
 - Execution times
 - Error details for failed tests
@@ -294,6 +309,7 @@ When adding new MCP functionality:
 ## Future Enhancements
 
 Planned improvements:
+
 - Full SSE and HTTP transport client implementations
 - Load testing with multiple concurrent clients
 - Integration with external MCP clients

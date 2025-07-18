@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from "node:child_process";
+import { ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 
 export interface McpMessage {
@@ -40,11 +40,14 @@ export abstract class BaseMcpClient extends EventEmitter {
   protected timeout: number;
   protected debug: boolean;
   protected messageId: number = 1;
-  protected pendingRequests: Map<string | number, {
-    resolve: (value: any) => void;
-    reject: (error: Error) => void;
-    timeout: NodeJS.Timeout;
-  }> = new Map();
+  protected pendingRequests: Map<
+    string | number,
+    {
+      resolve: (value: any) => void;
+      reject: (error: Error) => void;
+      timeout: NodeJS.Timeout;
+    }
+  > = new Map();
 
   constructor(options: McpClientOptions = {}) {
     super();
@@ -68,7 +71,7 @@ export abstract class BaseMcpClient extends EventEmitter {
       jsonrpc: "2.0",
       id,
       method,
-      params
+      params,
     };
 
     return new Promise((resolve, reject) => {
@@ -80,7 +83,7 @@ export abstract class BaseMcpClient extends EventEmitter {
       this.pendingRequests.set(id, {
         resolve,
         reject,
-        timeout: timeoutHandle
+        timeout: timeoutHandle,
       });
 
       this.sendMessage(message);
@@ -108,14 +111,17 @@ export abstract class BaseMcpClient extends EventEmitter {
   public abstract disconnect(): Promise<void>;
 
   // MCP Protocol Methods
-  public async initialize(clientInfo: { name: string; version: string }): Promise<McpServerInfo> {
+  public async initialize(clientInfo: {
+    name: string;
+    version: string;
+  }): Promise<McpServerInfo> {
     this.log("Initializing MCP connection", clientInfo);
     const result = await this.sendRequest("initialize", {
       protocolVersion: "2024-11-05",
       capabilities: {
-        tools: {}
+        tools: {},
       },
-      clientInfo
+      clientInfo,
     });
 
     // Extract serverInfo from the result
@@ -131,7 +137,7 @@ export abstract class BaseMcpClient extends EventEmitter {
     this.log("Calling tool", { name, arguments: arguments_ });
     return this.sendRequest("tools/call", {
       name,
-      arguments: arguments_
+      arguments: arguments_,
     });
   }
 
@@ -148,7 +154,7 @@ export class McpStdioClient extends BaseMcpClient {
   constructor(
     private command: string,
     private args: string[] = [],
-    options: McpClientOptions = {}
+    options: McpClientOptions = {},
   ) {
     super(options);
   }
@@ -157,7 +163,7 @@ export class McpStdioClient extends BaseMcpClient {
     if (!this.process?.stdin) {
       throw new Error("Process not connected");
     }
-    
+
     const messageStr = JSON.stringify(message) + "\n";
     this.log("Sending message", messageStr.trim());
     this.process.stdin.write(messageStr);
@@ -166,19 +172,22 @@ export class McpStdioClient extends BaseMcpClient {
   public async connect(): Promise<void> {
     if (this.connected) return;
 
-    this.log("Starting MCP server process", { command: this.command, args: this.args });
-    
+    this.log("Starting MCP server process", {
+      command: this.command,
+      args: this.args,
+    });
+
     this.process = spawn(this.command, this.args, {
-      stdio: ["pipe", "pipe", "pipe"]
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
     let buffer = "";
-    
+
     this.process.stdout?.on("data", (data) => {
       buffer += data.toString();
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
-      
+
       for (const line of lines) {
         if (line.trim()) {
           try {
@@ -209,7 +218,7 @@ export class McpStdioClient extends BaseMcpClient {
     });
 
     // Wait for process to be ready
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     this.connected = true;
   }
 
@@ -217,7 +226,7 @@ export class McpStdioClient extends BaseMcpClient {
     if (!this.connected || !this.process) return;
 
     this.log("Disconnecting from MCP server");
-    
+
     // Clear pending requests
     for (const [id, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
@@ -227,7 +236,7 @@ export class McpStdioClient extends BaseMcpClient {
 
     // Close stdin to signal shutdown
     this.process.stdin?.end();
-    
+
     // Wait for graceful shutdown or force kill
     const exitPromise = new Promise<void>((resolve) => {
       this.process?.on("exit", () => resolve());
@@ -303,7 +312,7 @@ export class McpSseClient extends BaseMcpClient {
 
   constructor(
     private url: string,
-    options: McpClientOptions = {}
+    options: McpClientOptions = {},
   ) {
     super(options);
   }
@@ -311,7 +320,9 @@ export class McpSseClient extends BaseMcpClient {
   protected sendMessage(message: McpMessage): void {
     // SSE is typically one-way, but for testing we'll simulate request/response
     // In a real implementation, this would use WebSocket or HTTP POST
-    throw new Error("SSE client not fully implemented - requires WebSocket or HTTP transport");
+    throw new Error(
+      "SSE client not fully implemented - requires WebSocket or HTTP transport",
+    );
   }
 
   public async connect(): Promise<void> {
@@ -336,14 +347,16 @@ export class McpHttpClient extends BaseMcpClient {
 
   constructor(
     private baseUrl: string,
-    options: McpClientOptions = {}
+    options: McpClientOptions = {},
   ) {
     super(options);
   }
 
   protected sendMessage(message: McpMessage): void {
     // HTTP client would send POST request to the MCP endpoint
-    throw new Error("HTTP client not fully implemented - requires HTTP request implementation");
+    throw new Error(
+      "HTTP client not fully implemented - requires HTTP request implementation",
+    );
   }
 
   public async connect(): Promise<void> {
@@ -371,7 +384,7 @@ export class McpTestRunner {
   }> {
     const client = new McpStdioClient(config.command, config.args, {
       timeout: config.timeout || 10000,
-      debug: true
+      debug: true,
     });
 
     const errors: string[] = [];
@@ -384,7 +397,7 @@ export class McpTestRunner {
       try {
         serverInfo = await client.initialize({
           name: "test-client",
-          version: "1.0.0"
+          version: "1.0.0",
         });
         McpProtocolValidator.validateServerInfo(serverInfo);
       } catch (error: any) {
@@ -394,20 +407,19 @@ export class McpTestRunner {
       try {
         const toolsResponse = await client.listTools();
         tools = toolsResponse.tools || [];
-        tools.forEach(tool => McpProtocolValidator.validateTool(tool));
+        tools.forEach((tool) => McpProtocolValidator.validateTool(tool));
       } catch (error: any) {
         errors.push(`Tool listing failed: ${error.message}`);
       }
 
       if (config.expectedTools) {
-        const toolNames = tools.map(t => t.name);
+        const toolNames = tools.map((t) => t.name);
         for (const expectedTool of config.expectedTools) {
           if (!toolNames.includes(expectedTool)) {
             errors.push(`Expected tool '${expectedTool}' not found`);
           }
         }
       }
-
     } catch (error: any) {
       errors.push(`Connection failed: ${error.message}`);
     } finally {
@@ -418,26 +430,36 @@ export class McpTestRunner {
       serverInfo: serverInfo!,
       tools,
       success: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   public static async testMultipleTransports(
     command: string,
     args: string[],
-    transports: Array<{ type: string; port?: number; path?: string }>
+    transports: Array<{ type: string; port?: number; path?: string }>,
   ): Promise<{
     results: Array<{ transport: string; success: boolean; error?: string }>;
     overallSuccess: boolean;
   }> {
-    const results: Array<{ transport: string; success: boolean; error?: string }> = [];
+    const results: Array<{
+      transport: string;
+      success: boolean;
+      error?: string;
+    }> = [];
 
     for (const transport of transports) {
       try {
         if (transport.type === "stdio") {
-          const client = new McpStdioClient(command, args, { timeout: 10000, debug: true });
+          const client = new McpStdioClient(command, args, {
+            timeout: 10000,
+            debug: true,
+          });
           await client.connect();
-          await client.initialize({ name: "multi-transport-test", version: "1.0.0" });
+          await client.initialize({
+            name: "multi-transport-test",
+            version: "1.0.0",
+          });
           await client.disconnect();
           results.push({ transport: transport.type, success: true });
         } else {
@@ -446,21 +468,21 @@ export class McpTestRunner {
           results.push({
             transport: transport.type,
             success: true,
-            error: "Simulated - HTTP/SSE clients not fully implemented"
+            error: "Simulated - HTTP/SSE clients not fully implemented",
           });
         }
       } catch (error: any) {
         results.push({
           transport: transport.type,
           success: false,
-          error: error.message
+          error: error.message,
         });
       }
     }
 
     return {
       results,
-      overallSuccess: results.every(r => r.success)
+      overallSuccess: results.every((r) => r.success),
     };
   }
 }

@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ArgParser } from "../../src/core/ArgParser";
@@ -35,57 +35,64 @@ describe("--s-build-dxt System Flag", () => {
           description: "Test MCP server",
           author: {
             name: "Test Author",
-            email: "test@example.com"
-          }
-        }
-      }
-    })
-    .addFlags([
-      {
-        name: "input",
-        description: "Input file",
-        options: ["--input", "-i"],
-        type: "string",
-        mandatory: true,
-      },
-    ])
-    .addTool({
-      name: "process",
-      description: "Process input file",
-      flags: [
-        {
-          name: "output",
-          description: "Output file",
-          options: ["--output", "-o"],
-          type: "string",
-          mandatory: false,
+            email: "test@example.com",
+          },
         },
-      ],
-      handler: async (ctx) => ({ processed: ctx.args.input, output: ctx.args.output })
-    });
+      },
+    })
+      .addFlags([
+        {
+          name: "input",
+          description: "Input file",
+          options: ["--input", "-i"],
+          type: "string",
+          mandatory: true,
+        },
+      ])
+      .addTool({
+        name: "process",
+        description: "Process input file",
+        flags: [
+          {
+            name: "output",
+            description: "Output file",
+            options: ["--output", "-o"],
+            type: "string",
+            mandatory: false,
+          },
+        ],
+        handler: async (ctx) => ({
+          processed: ctx.args.input,
+          output: ctx.args.output,
+        }),
+      });
 
     // With autoExit: false, this should return a ParseResult
     const result = await parser.parse(["--s-build-dxt", testOutputDir]);
 
     // Verify it's a ParseResult with success
-    expect(result).toHaveProperty('success', true);
-    expect(result).toHaveProperty('exitCode', 0);
-    expect(result).toHaveProperty('shouldExit', true);
-    expect(result).toHaveProperty('type', 'success');
+    expect(result).toHaveProperty("success", true);
+    expect(result).toHaveProperty("exitCode", 0);
+    expect(result).toHaveProperty("shouldExit", true);
+    expect(result).toHaveProperty("type", "success");
     expect(fs.existsSync(testOutputDir)).toBe(true);
-    expect(fs.existsSync(path.join(testOutputDir, "test-mcp-server-dxt"))).toBe(true);
+    expect(fs.existsSync(path.join(testOutputDir, "test-mcp-server-dxt"))).toBe(
+      true,
+    );
 
     // Verify DXT folder contents
     const dxtPath = path.join(testOutputDir, "test-mcp-server-dxt");
     expect(fs.existsSync(path.join(dxtPath, "manifest.json"))).toBe(true);
     expect(fs.existsSync(path.join(dxtPath, "package.json"))).toBe(true);
     expect(fs.existsSync(path.join(dxtPath, "README.md"))).toBe(true);
-    expect(fs.existsSync(path.join(dxtPath, "build-dxt-package.sh"))).toBe(true);
+    expect(fs.existsSync(path.join(dxtPath, "build-dxt-package.sh"))).toBe(
+      true,
+    );
 
     // Verify manifest content
     const manifestPath = path.join(dxtPath, "manifest.json");
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+
     // Check DXT-compliant manifest structure
     expect(manifest.dxt_version).toBe("0.1");
     expect(manifest.name).toBe("test-mcp-server");
@@ -97,16 +104,11 @@ describe("--s-build-dxt System Flag", () => {
     expect(manifest.server.entry_point).toBe("server/index.mjs");
     expect(manifest.server.mcp_config).toBeDefined();
     expect(manifest.server.mcp_config.command).toBe("node");
-    expect(manifest.server.mcp_config.args).toEqual(["${__dirname}/server/index.mjs", "--s-mcp-serve"]);
+    expect(manifest.server.mcp_config.args).toEqual([
+      "${__dirname}/server/index.mjs",
+      "--s-mcp-serve",
+    ]);
     expect(manifest.tools).toBeInstanceOf(Array);
     expect(manifest.tools.length).toBeGreaterThan(0);
   });
-
-
-
-
-
-
-
-
 });

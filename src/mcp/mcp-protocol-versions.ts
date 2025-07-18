@@ -1,9 +1,9 @@
 /**
  * MCP Protocol Version Configuration
- * 
+ *
  * This module defines the supported MCP protocol versions and provides
  * utilities for version negotiation according to the MCP specification.
- * 
+ *
  * Version Negotiation Rules (per MCP specification):
  * 1. If server supports the requested protocol version, it MUST respond with the same version
  * 2. Otherwise, server MUST respond with another protocol version it supports
@@ -21,9 +21,9 @@
  * - Draft versions are in-progress specifications
  */
 export const MCP_PROTOCOL_VERSIONS = [
-  '2024-11-05',  // Final - Initial stable release
-  '2025-03-26',  // Final - Updated transport specifications
-  '2025-06-18',  // Current - Latest stable specification
+  "2024-11-05", // Final - Initial stable release
+  "2025-03-26", // Final - Updated transport specifications
+  "2025-06-18", // Current - Latest stable specification
 ] as const;
 
 /**
@@ -31,34 +31,37 @@ export const MCP_PROTOCOL_VERSIONS = [
  * These are not yet ready for production use
  */
 export const MCP_DRAFT_VERSIONS = [
-  'draft',       // Draft - In-progress specification
+  "draft", // Draft - In-progress specification
 ] as const;
 
 /**
  * All available protocol versions (stable + draft)
  */
-export const ALL_MCP_VERSIONS = [...MCP_PROTOCOL_VERSIONS, ...MCP_DRAFT_VERSIONS] as const;
+export const ALL_MCP_VERSIONS = [
+  ...MCP_PROTOCOL_VERSIONS,
+  ...MCP_DRAFT_VERSIONS,
+] as const;
 
 /**
  * Type for stable MCP protocol versions
  */
-export type McpProtocolVersion = typeof MCP_PROTOCOL_VERSIONS[number];
+export type McpProtocolVersion = (typeof MCP_PROTOCOL_VERSIONS)[number];
 
 /**
  * Type for draft MCP protocol versions
  */
-export type McpDraftVersion = typeof MCP_DRAFT_VERSIONS[number];
+export type McpDraftVersion = (typeof MCP_DRAFT_VERSIONS)[number];
 
 /**
  * Type for all MCP protocol versions (stable + draft)
  */
-export type McpAnyVersion = typeof ALL_MCP_VERSIONS[number];
+export type McpAnyVersion = (typeof ALL_MCP_VERSIONS)[number];
 
 /**
  * Current protocol version according to the official MCP specification
  * This is marked as "current" in versioning.mdx and should be the preferred version
  */
-export const CURRENT_MCP_PROTOCOL_VERSION: McpProtocolVersion = '2025-06-18';
+export const CURRENT_MCP_PROTOCOL_VERSION: McpProtocolVersion = "2025-06-18";
 
 /**
  * Default protocol version used by this implementation for backward compatibility
@@ -67,7 +70,7 @@ export const CURRENT_MCP_PROTOCOL_VERSION: McpProtocolVersion = '2025-06-18';
  * Note: The official MCP SDK may support newer versions automatically.
  * This constant represents our fallback/minimum version.
  */
-export const DEFAULT_MCP_PROTOCOL_VERSION: McpProtocolVersion = '2024-11-05';
+export const DEFAULT_MCP_PROTOCOL_VERSION: McpProtocolVersion = "2024-11-05";
 
 /**
  * Latest stable protocol version (highest version number from stable versions)
@@ -78,19 +81,22 @@ export const LATEST_MCP_PROTOCOL_VERSION: McpProtocolVersion =
 /**
  * Minimum supported protocol version (oldest stable version)
  */
-export const MINIMUM_MCP_PROTOCOL_VERSION: McpProtocolVersion = MCP_PROTOCOL_VERSIONS[0];
+export const MINIMUM_MCP_PROTOCOL_VERSION: McpProtocolVersion =
+  MCP_PROTOCOL_VERSIONS[0];
 
 /**
  * Validates if a protocol version string follows the MCP format (YYYY-MM-DD or 'draft')
  */
 export function isValidMcpVersionFormat(version: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(version) || version === 'draft';
+  return /^\d{4}-\d{2}-\d{2}$/.test(version) || version === "draft";
 }
 
 /**
  * Checks if a protocol version is an official stable MCP version
  */
-export function isOfficialMcpVersion(version: string): version is McpProtocolVersion {
+export function isOfficialMcpVersion(
+  version: string,
+): version is McpProtocolVersion {
   return MCP_PROTOCOL_VERSIONS.includes(version as McpProtocolVersion);
 }
 
@@ -139,7 +145,9 @@ export function isProductionReady(version: string): boolean {
  *
  * Note: The actual MCP SDK may implement its own version negotiation.
  */
-export function negotiateProtocolVersion(requestedVersion: string): McpAnyVersion {
+export function negotiateProtocolVersion(
+  requestedVersion: string,
+): McpAnyVersion {
   // Validate format first
   if (!isValidMcpVersionFormat(requestedVersion)) {
     // If format is invalid, return the current/latest stable version
@@ -180,11 +188,11 @@ export function getVersionCompatibilityInfo() {
 
     // Version status
     versionStatus: {
-      '2024-11-05': 'final',
-      '2025-03-26': 'final',
-      '2025-06-18': 'current',
-      'draft': 'draft'
-    }
+      "2024-11-05": "final",
+      "2025-03-26": "final",
+      "2025-06-18": "current",
+      draft: "draft",
+    },
   };
 }
 
@@ -202,7 +210,7 @@ export function compareVersions(v1: string, v2: string): number {
  */
 export function getHighestVersion(versions: string[]): string | null {
   if (versions.length === 0) return null;
-  
+
   return versions.reduce((highest, current) => {
     return compareVersions(current, highest) > 0 ? current : highest;
   });
@@ -223,36 +231,36 @@ export const VERSION_TEST_DATA = {
 
   // Versions that should be rejected/negotiated
   unsupportedVersions: [
-    '2020-01-01',  // Too old (before MCP existed)
-    '2023-01-01',  // Before first official release
-    '2024-01-01',  // Before first official release
-    '2030-12-31',  // Future version
-    '2026-01-01',  // Future version
+    "2020-01-01", // Too old (before MCP existed)
+    "2023-01-01", // Before first official release
+    "2024-01-01", // Before first official release
+    "2030-12-31", // Future version
+    "2026-01-01", // Future version
   ],
 
   // Malformed version strings
   malformedVersions: [
-    '',            // Empty string
-    'invalid',     // Non-date format
-    '2024',        // Incomplete date
-    '2024-13-01',  // Invalid month
-    '2024-01-32',  // Invalid day
-    'v2024-11-05', // With prefix
-    '2024.11.05',  // Wrong separator
-    '24-11-05',    // Wrong year format
-    '2024-11-5',   // Wrong day format
-    'beta',        // Invalid draft name
-    'v1.0.0',      // Semantic versioning format
+    "", // Empty string
+    "invalid", // Non-date format
+    "2024", // Incomplete date
+    "2024-13-01", // Invalid month
+    "2024-01-32", // Invalid day
+    "v2024-11-05", // With prefix
+    "2024.11.05", // Wrong separator
+    "24-11-05", // Wrong year format
+    "2024-11-5", // Wrong day format
+    "beta", // Invalid draft name
+    "v1.0.0", // Semantic versioning format
   ],
 
   // Expected negotiation results for testing
   expectedNegotiations: {
-    '2024-11-05': '2024-11-05',  // Should return same
-    '2025-03-26': '2025-03-26',  // Should return same
-    '2025-06-18': '2025-06-18',  // Should return same (current)
-    'draft': '2025-06-18',       // Should negotiate to stable
-    '2020-01-01': '2025-06-18',  // Should negotiate to current
-    '2030-12-31': '2025-06-18',  // Should negotiate to current
-    'invalid': '2025-06-18',     // Should negotiate to current
-  }
+    "2024-11-05": "2024-11-05", // Should return same
+    "2025-03-26": "2025-03-26", // Should return same
+    "2025-06-18": "2025-06-18", // Should return same (current)
+    draft: "2025-06-18", // Should negotiate to stable
+    "2020-01-01": "2025-06-18", // Should negotiate to current
+    "2030-12-31": "2025-06-18", // Should negotiate to current
+    invalid: "2025-06-18", // Should negotiate to current
+  },
 } as const;

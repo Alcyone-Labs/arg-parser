@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ArgParser, enableOptionalConfigPluginsAsync } from "../src";
@@ -95,9 +95,11 @@ count=10
       }).addFlags(flags);
 
       const result = await parser.parse([
-        "--s-with-env", envFile,
+        "--s-with-env",
+        envFile,
         "--verbose",
-        "--output", "cli-output.txt"
+        "--output",
+        "cli-output.txt",
       ]);
 
       expect(result.verbose).toBe(true); // CLI override
@@ -140,7 +142,7 @@ tags:
         verbose: false,
         output: "json-output.txt",
         count: 3,
-        tags: ["json-tag1", "json-tag2", "json-tag3"]
+        tags: ["json-tag1", "json-tag2", "json-tag3"],
       };
       fs.writeFileSync(jsonFile, JSON.stringify(jsonContent, null, 2));
 
@@ -193,10 +195,10 @@ tags = ["toml-tag1", "toml-tag2"]
 
       const result = await parser.parse(["--s-with-env", "nonexistent.env"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
-      expect(result).toHaveProperty('type', 'error');
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
+      expect(result).toHaveProperty("type", "error");
     });
 
     it("should require a file path argument", async () => {
@@ -208,10 +210,10 @@ tags = ["toml-tag1", "toml-tag2"]
 
       const result = await parser.parse(["--s-with-env"]);
 
-      expect(result).toHaveProperty('success', false);
-      expect(result).toHaveProperty('exitCode', 1);
-      expect(result).toHaveProperty('shouldExit', true);
-      expect(result).toHaveProperty('type', 'error');
+      expect(result).toHaveProperty("success", false);
+      expect(result).toHaveProperty("exitCode", 1);
+      expect(result).toHaveProperty("shouldExit", true);
+      expect(result).toHaveProperty("type", "error");
     });
   });
 });

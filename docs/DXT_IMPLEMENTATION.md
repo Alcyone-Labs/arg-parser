@@ -13,6 +13,7 @@ This document explains the complete implementation of DXT (Desktop Extension Too
 **Solution**: All generated DXT packages now use the `--s-mcp-serve` system flag for maximum compatibility.
 
 **Technical Changes**:
+
 - **`src/DxtGenerator.ts`**: Updated `generateCliArgsForDxt()` to return `["--s-mcp-serve"]`
 - **Manifest generation**: Now generates `"args": ["${__dirname}/script.js", "--s-mcp-serve"]`
 - **Universal compatibility**: Works across all ArgParser CLIs regardless of MCP subcommand names
@@ -24,6 +25,7 @@ This document explains the complete implementation of DXT (Desktop Extension Too
 **Solution**: Fixed console hijacking implementation using `@alcyone-labs/simple-mcp-logger`.
 
 **Technical Changes**:
+
 - **`src/ArgParser.ts`**: Fixed console hijacking in MCP handler: `(globalThis as any).console = logger`
 - **`src/ArgParserBase.ts`**: Applied same fix to `--s-mcp-serve` handler
 - **Zero boilerplate**: Developers can now write normal console code without MCP mode detection
@@ -33,6 +35,7 @@ This document explains the complete implementation of DXT (Desktop Extension Too
 **New Feature**: `--s-mcp-serve` system flag starts ALL MCP servers defined in a CLI with one command.
 
 **Technical Implementation**:
+
 - **Detection**: Added in `#_handleGlobalChecks()` in `ArgParserBase.ts`
 - **Handler**: `#_handleMcpServeFlag()` method with comprehensive error handling
 - **Discovery**: `#_findAllMcpSubCommands()` traverses parser tree to find all MCP servers
@@ -76,6 +79,7 @@ node my-cli.js --s-build-dxt /tmp/build # Builds to /tmp/build
 ```
 
 The system automatically detects:
+
 - **Entry Point**: `process.argv[1]` (the calling script)
 - **Output Directory**: Command line argument or `./dxt` default
 - **Working Directory**: `process.cwd()`
@@ -88,26 +92,40 @@ The system automatically detects:
 
 ```typescript
 const buildConfig = {
-  entry: [entryFileName],           // e.g., "canny-cli.js"
-  outDir: "dxt",                   // Output directory
-  format: ["esm"],                 // ES modules only
-  target: "node22",                // Node.js 22 compatibility
-  noExternal: () => true,          // Bundle everything
-  minify: false,                   // Keep readable for debugging
-  sourcemap: false,                // No source maps needed
-  clean: false,                    // Don't clean existing files
-  silent: process.env['NO_SILENCE'] !== '1',  // Silent by default
-  external: [                      // Node.js built-ins only
-    "stream", "fs", "path", "url", "util", "events", 
-    "child_process", "os", "tty", "process", "crypto", 
-    "http", "https", "net", "zlib"
+  entry: [entryFileName], // e.g., "canny-cli.js"
+  outDir: "dxt", // Output directory
+  format: ["esm"], // ES modules only
+  target: "node22", // Node.js 22 compatibility
+  noExternal: () => true, // Bundle everything
+  minify: false, // Keep readable for debugging
+  sourcemap: false, // No source maps needed
+  clean: false, // Don't clean existing files
+  silent: process.env["NO_SILENCE"] !== "1", // Silent by default
+  external: [
+    // Node.js built-ins only
+    "stream",
+    "fs",
+    "path",
+    "url",
+    "util",
+    "events",
+    "child_process",
+    "os",
+    "tty",
+    "process",
+    "crypto",
+    "http",
+    "https",
+    "net",
+    "zlib",
   ],
   platform: "node",
-  plugins: []
+  plugins: [],
 };
 ```
 
 **Key Features**:
+
 - **Autonomous Bundling**: All dependencies included (no `node_modules` needed)
 - **ES Module Output**: Modern JavaScript format
 - **Node.js Built-ins**: Only system modules are external
@@ -118,6 +136,7 @@ const buildConfig = {
 **Purpose**: Creates DXT-compliant manifest with MCP configuration
 
 The manifest is automatically generated from:
+
 - **Package.json**: Name, version, description, author, repository
 - **ArgParser Flags**: Tool schema with types, enums, defaults, required fields
 - **Environment Variables**: From flag `env` properties
@@ -185,6 +204,7 @@ The manifest is automatically generated from:
 ```
 
 **Type Mapping**:
+
 - `String` → `"string"`
 - `Number` → `"number"`
 - `Boolean` → `"boolean"`
@@ -227,6 +247,7 @@ The manifest is automatically generated from:
 ```
 
 **Why This Matters**:
+
 - Code expects: `process.env.CANNY_API_KEY`
 - User configures: `CANNY_API_KEY` in Claude Desktop
 - Runtime flow: `user_config.CANNY_API_KEY` → `env.CANNY_API_KEY` → `process.env.CANNY_API_KEY`
@@ -248,7 +269,7 @@ private async copyLogoManually(): Promise<void> {
     // From library root (development)
     path.join(process.cwd(), '..', '..', '..', 'docs', 'MCP', 'icons', 'logo_1_small.jpg'),
   ];
-  
+
   // Try each path until one works
   for (const logoPath of possibleLogoPaths) {
     if (fs.existsSync(logoPath)) {
@@ -270,7 +291,7 @@ DXT packages work with ArgParser's MCP subcommand system:
 parser.addMcpSubCommand({
   name: "serve",
   description: "Start MCP server",
-  logo: "path/to/logo.jpg"  // Optional custom logo
+  logo: "path/to/logo.jpg", // Optional custom logo
 });
 ```
 
@@ -304,6 +325,7 @@ DEBUG=1 node my-cli.js --s-build-dxt
 ```
 
 **Output**:
+
 - Full TSDown configuration
 - Logo search paths and results
 - Generated manifest preview
@@ -375,17 +397,20 @@ my-cli-1.0.0.dxt               # Final package (2.8MB compressed, 13.4MB unpacke
 ## Usage Examples
 
 ### Basic Usage
+
 ```bash
 node my-cli.js --s-build-dxt [output-dir]
 npx @anthropic-ai/dxt pack [output-dir]/
 ```
 
 ### Debug Mode
+
 ```bash
 DEBUG=1 node my-cli.js --s-build-dxt ./debug-output
 ```
 
 ### Manual Testing
+
 ```bash
 cd [output-dir]
 npx tsdown -c tsdown.config.dxt.ts
@@ -397,27 +422,35 @@ node my-cli.js serve
 ### Common Issues
 
 **1. Logo Not Found**
+
 ```bash
 ⚠ Logo not found in any expected location
 ```
+
 **Solution**: Ensure logo exists in one of the search paths or add custom logo via MCP subcommand
 
 **2. TSDown Warnings**
+
 ```bash
 [UNRESOLVED_IMPORT] Warning: Could not resolve '...'
 ```
+
 **Solution**: These are normal TSDown warnings, use `NO_SILENCE=1` to see them or ignore
 
 **3. Environment Variables Not Working**
+
 ```bash
 process.env.MY_VAR is undefined
 ```
+
 **Solution**: Check that flag has `env: "MY_VAR"` property and manifest uses original env var name
 
 **4. DXT Package Too Large**
+
 ```bash
 package size: 10MB+
 ```
+
 **Solution**: Review dependencies, consider excluding large unused modules
 
 ### Performance Considerations
@@ -457,6 +490,7 @@ private generateCliArgsForDxt(_mcpSubCommand?: any): string[] {
 ```
 
 **Manifest Generation**:
+
 ```typescript
 // Generated manifest.json now uses:
 {
@@ -479,6 +513,7 @@ globalThis.console = logger as any;
 ```
 
 **Implementation in MCP Handler**:
+
 ```typescript
 const mcpHandler = async (ctx: IHandlerContext): Promise<void> => {
   // Hijack console globally to prevent STDOUT contamination
@@ -489,6 +524,7 @@ const mcpHandler = async (ctx: IHandlerContext): Promise<void> => {
 ```
 
 **Implementation in --s-mcp-serve Handler**:
+
 ```typescript
 async #_handleMcpServeFlag(processArgs: string[], _mcpServeIndex: number): Promise<boolean | ParseResult> {
   // Setup MCP logger with console hijacking
@@ -507,17 +543,19 @@ async #_handleMcpServeFlag(processArgs: string[], _mcpServeIndex: number): Promi
 ### 3. Centralized MCP Serving Architecture
 
 **System Flag Processing Order** (`src/ArgParserBase.ts`):
+
 ```typescript
 // 1. --s-build-dxt (highest priority)
-const buildDxtIndex = processArgs.findIndex(arg => arg === "--s-build-dxt");
+const buildDxtIndex = processArgs.findIndex((arg) => arg === "--s-build-dxt");
 
 // 2. --s-mcp-serve (second priority)
-const mcpServeIndex = processArgs.findIndex(arg => arg === "--s-mcp-serve");
+const mcpServeIndex = processArgs.findIndex((arg) => arg === "--s-mcp-serve");
 
 // 3. Other system flags...
 ```
 
 **MCP Server Discovery**:
+
 ```typescript
 #_findAllMcpSubCommands(): Array<{subCommand: any; serverInfo: any; toolOptions: any}> {
   const mcpSubCommands = [];
@@ -546,6 +584,7 @@ const mcpServeIndex = processArgs.findIndex(arg => arg === "--s-mcp-serve");
 ```
 
 **Transport Configuration Parsing**:
+
 ```typescript
 #_parseMcpTransportOptions(processArgs: string[]): {
   transportType?: string;

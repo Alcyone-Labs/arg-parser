@@ -6,19 +6,19 @@ export interface IConfigPlugin {
    * File extensions this plugin supports (e.g., ['.toml', '.tml'])
    */
   readonly supportedExtensions: string[];
-  
+
   /**
    * Plugin name for identification
    */
   readonly name: string;
-  
+
   /**
    * Parse configuration file content
    * @param content File content as string
    * @returns Parsed configuration object
    */
   parse(content: string): Record<string, any>;
-  
+
   /**
    * Generate configuration file content
    * @param config Configuration object
@@ -35,10 +35,14 @@ export interface IConfigPlugin {
 export abstract class ConfigPlugin implements IConfigPlugin {
   abstract readonly supportedExtensions: string[];
   abstract readonly name: string;
-  
+
   abstract parse(content: string): Record<string, any>;
-  abstract generate(config: Record<string, any>, flags: any[], parsedArgs: any): string;
-  
+  abstract generate(
+    config: Record<string, any>,
+    flags: any[],
+    parsedArgs: any,
+  ): string;
+
   /**
    * Check if this plugin supports a given file extension
    */
@@ -51,48 +55,55 @@ export abstract class ConfigPlugin implements IConfigPlugin {
  * Built-in JSON configuration plugin (no external dependencies)
  */
 export class JsonConfigPlugin extends ConfigPlugin {
-  readonly supportedExtensions = ['.json', '.jsonc'];
-  readonly name = 'json';
-  
+  readonly supportedExtensions = [".json", ".jsonc"];
+  readonly name = "json";
+
   parse(content: string): Record<string, any> {
     try {
       const parsed = JSON.parse(content);
-      if (typeof parsed !== 'object' || parsed === null) {
-        throw new Error('JSON file must contain an object at the root level');
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("JSON file must contain an object at the root level");
       }
       // Remove metadata if present
       const { _meta, ...config } = parsed;
       return config;
     } catch (error) {
-      throw new Error(`Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to parse JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
-  
-  generate(_config: Record<string, any>, flags: any[], parsedArgs: any): string {
+
+  generate(
+    _config: Record<string, any>,
+    flags: any[],
+    parsedArgs: any,
+  ): string {
     const metadata = {
       _meta: {
         generated: new Date().toISOString(),
-        generator: 'ArgParser',
-        format: 'json'
-      }
+        generator: "ArgParser",
+        format: "json",
+      },
     };
-    
+
     const configWithValues: Record<string, any> = {};
-    
+
     for (const flag of flags) {
-      if (flag.name === 'help') continue;
-      
+      if (flag.name === "help") continue;
+
       const flagValue = parsedArgs[flag.name];
       const isSet = flagValue !== undefined && flagValue !== null;
       const isMandatory = flag.mandatory === true;
-      
+
       if (isSet) {
         configWithValues[flag.name] = flagValue;
       } else if (isMandatory) {
-        configWithValues[flag.name] = flag.defaultValue !== undefined ? flag.defaultValue : null;
+        configWithValues[flag.name] =
+          flag.defaultValue !== undefined ? flag.defaultValue : null;
       }
     }
-    
+
     const result = { ...metadata, ...configWithValues };
     return JSON.stringify(result, null, 2);
   }
@@ -102,73 +113,80 @@ export class JsonConfigPlugin extends ConfigPlugin {
  * Built-in ENV configuration plugin (no external dependencies)
  */
 export class EnvConfigPlugin extends ConfigPlugin {
-  readonly supportedExtensions = ['.env'];
-  readonly name = 'env';
-  
+  readonly supportedExtensions = [".env"];
+  readonly name = "env";
+
   parse(content: string): Record<string, any> {
     const config: Record<string, any> = {};
-    const lines = content.split('\n');
-    
+    const lines = content.split("\n");
+
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const equalIndex = trimmed.indexOf('=');
+      if (trimmed && !trimmed.startsWith("#")) {
+        const equalIndex = trimmed.indexOf("=");
         if (equalIndex > 0) {
           const key = trimmed.substring(0, equalIndex).trim();
           let value = trimmed.substring(equalIndex + 1).trim();
-          
+
           // Remove quotes if present
-          if ((value.startsWith('"') && value.endsWith('"')) || 
-              (value.startsWith("'") && value.endsWith("'"))) {
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
             value = value.slice(1, -1);
           }
-          
+
           config[key] = value;
         }
       }
     }
-    
+
     return config;
   }
-  
-  generate(_config: Record<string, any>, flags: any[], parsedArgs: any): string {
+
+  generate(
+    _config: Record<string, any>,
+    flags: any[],
+    parsedArgs: any,
+  ): string {
     const lines: string[] = [];
-    lines.push('# Environment configuration generated by ArgParser');
-    lines.push('# Format: ENV');
-    lines.push('');
-    
+    lines.push("# Environment configuration generated by ArgParser");
+    lines.push("# Format: ENV");
+    lines.push("");
+
     for (const flag of flags) {
-      if (flag.name === 'help') continue;
-      
+      if (flag.name === "help") continue;
+
       const flagValue = parsedArgs[flag.name];
       const isSet = flagValue !== undefined && flagValue !== null;
       const isMandatory = flag.mandatory === true;
-      
+
       lines.push(`# ${flag.description || flag.name}`);
       lines.push(`# Type: ${this.getTypeString(flag.type)}`);
-      
+
       if (flag.defaultValue !== undefined) {
         lines.push(`# Default: ${flag.defaultValue}`);
       }
-      
+
       if (isSet) {
         lines.push(`${flag.name.toUpperCase()}=${flagValue}`);
       } else if (isMandatory) {
-        const defaultVal = flag.defaultValue !== undefined ? flag.defaultValue : '';
+        const defaultVal =
+          flag.defaultValue !== undefined ? flag.defaultValue : "";
         lines.push(`${flag.name.toUpperCase()}=${defaultVal}`);
       } else {
         lines.push(`# ${flag.name.toUpperCase()}=`);
       }
-      
-      lines.push('');
+
+      lines.push("");
     }
-    
-    return lines.join('\n');
+
+    return lines.join("\n");
   }
-  
+
   private getTypeString(type: any): string {
-    if (typeof type === 'function') {
-      return type.name || 'custom function';
+    if (typeof type === "function") {
+      return type.name || "custom function";
     }
     return String(type).toLowerCase();
   }

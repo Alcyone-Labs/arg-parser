@@ -1,6 +1,5 @@
-import { existsSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 /**
  * Configuration object for log path with explicit relative base
@@ -26,7 +25,7 @@ export type LogPath = string | LogPathConfig;
 export function detectEntryPoint(): string | null {
   try {
     // Method 1: Check process.argv[1] (most reliable for direct execution)
-    if (process.argv[1] && existsSync(process.argv[1])) {
+    if (process.argv[1] && fs.existsSync(process.argv[1])) {
       return process.argv[1];
     }
 
@@ -57,7 +56,11 @@ export function detectEntryPoint(): string | null {
  * @returns The file path
  */
 export function getEntryPointFromImportMeta(importMetaUrl: string): string {
-  return fileURLToPath(importMetaUrl);
+  // Simple URL to path conversion for file:// URLs
+  if (importMetaUrl.startsWith("file://")) {
+    return decodeURIComponent(importMetaUrl.replace("file://", ""));
+  }
+  return importMetaUrl;
 }
 
 /**
@@ -85,20 +88,20 @@ export function resolveLogPath(
     const normalizedPath = normalizePath(logPath);
 
     // Absolute paths - return as-is
-    if (isAbsolute(normalizedPath)) {
+    if (path.isAbsolute(normalizedPath)) {
       return normalizedPath;
     }
 
     // Explicit process.cwd() relative paths
     if (normalizedPath.startsWith("cwd:")) {
       const relativePath = normalizedPath.slice(4); // Remove "cwd:" prefix
-      return resolve(process.cwd(), relativePath);
+      return path.resolve(process.cwd(), relativePath);
     }
 
     // Default behavior: relative to entry point
     const entryPoint = detectEntryPoint() || fallbackEntryPoint;
     if (entryPoint) {
-      return resolve(dirname(entryPoint), normalizedPath);
+      return path.resolve(path.dirname(entryPoint), normalizedPath);
     }
 
     // Fallback to process.cwd() if entry point detection fails
@@ -106,7 +109,7 @@ export function resolveLogPath(
       `Warning: Could not detect entry point for log path resolution. ` +
         `Using process.cwd() as fallback. Path: ${normalizedPath}`,
     );
-    return resolve(process.cwd(), normalizedPath);
+    return path.resolve(process.cwd(), normalizedPath);
   }
 
   // Handle object form
@@ -116,9 +119,9 @@ export function resolveLogPath(
   switch (relativeTo) {
     case "absolute":
       if (basePath) {
-        return resolve(basePath, normalizedPath);
+        return path.resolve(basePath, normalizedPath);
       }
-      if (isAbsolute(normalizedPath)) {
+      if (path.isAbsolute(normalizedPath)) {
         return normalizedPath;
       }
       // If no basePath provided and path is not absolute, fall back to process.cwd()
@@ -126,16 +129,16 @@ export function resolveLogPath(
         `Warning: relativeTo 'absolute' specified but no basePath provided and path is not absolute. ` +
           `Using process.cwd() as fallback. Path: ${normalizedPath}`,
       );
-      return resolve(process.cwd(), normalizedPath);
+      return path.resolve(process.cwd(), normalizedPath);
 
     case "cwd":
-      return resolve(process.cwd(), normalizedPath);
+      return path.resolve(process.cwd(), normalizedPath);
 
     case "entry":
     default:
       const entryPoint = detectEntryPoint() || fallbackEntryPoint;
       if (entryPoint) {
-        return resolve(dirname(entryPoint), normalizedPath);
+        return path.resolve(path.dirname(entryPoint), normalizedPath);
       }
 
       // Fallback to process.cwd() if entry point detection fails
@@ -143,7 +146,7 @@ export function resolveLogPath(
         `Warning: Could not detect entry point for log path resolution. ` +
           `Using process.cwd() as fallback. Path: ${normalizedPath}`,
       );
-      return resolve(process.cwd(), normalizedPath);
+      return path.resolve(process.cwd(), normalizedPath);
   }
 }
 

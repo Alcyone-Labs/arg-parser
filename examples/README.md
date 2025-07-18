@@ -7,18 +7,21 @@ This directory contains example CLI applications demonstrating various features 
 All examples work seamlessly across multiple JavaScript runtimes:
 
 ### **BunJS (Recommended)**
+
 ```bash
 bun examples/getting-started.ts --input data.txt --verbose
 bun examples/simple-cli.ts --env production --port 8080
 ```
 
 ### **Node.js**
+
 ```bash
 npx tsx examples/getting-started.ts --input data.txt --verbose
 npx tsx examples/simple-cli.ts --env production --port 8080
 ```
 
 ### **Deno**
+
 ```bash
 # Direct execution
 deno run --unstable-sloppy-imports --allow-read --allow-write --allow-env examples/getting-started.ts --input data.txt --verbose
@@ -46,14 +49,14 @@ import { ArgParser } from '@alcyone-labs/arg-parser';
 
 ## 📋 **Quick Overview**
 
-| Example | Purpose | Key Features |
-|---------|---------|--------------|
-| `getting-started.ts` | Learn the basics | Complete executable CLI, subcommands, MCP integration |
-| `simple-cli.ts` | Essential patterns | Clean flag examples, modern handler patterns |
-| `v1.1.0-showcase.ts` | Latest features | System flags, environment loading, multi-transport MCP |
-| `fzf-search-cli.ts` | Real-world usage | Production-ready tool, complex validation, error handling |
-| `with-env-example.ts` | Configuration | File loading, environment management, save/load workflow |
-| `mcp-preset-transports.ts` | MCP advanced | Preset transport configuration, multiple protocols |
+| Example                    | Purpose            | Key Features                                              |
+| -------------------------- | ------------------ | --------------------------------------------------------- |
+| `getting-started.ts`       | Learn the basics   | Complete executable CLI, subcommands, MCP integration     |
+| `simple-cli.ts`            | Essential patterns | Clean flag examples, modern handler patterns              |
+| `v1.1.0-showcase.ts`       | Latest features    | System flags, environment loading, multi-transport MCP    |
+| `fzf-search-cli.ts`        | Real-world usage   | Production-ready tool, complex validation, error handling |
+| `with-env-example.ts`      | Configuration      | File loading, environment management, save/load workflow  |
+| `mcp-preset-transports.ts` | MCP advanced       | Preset transport configuration, multiple protocols        |
 
 ## Featured Examples
 
@@ -131,7 +134,7 @@ Clean, focused example demonstrating essential flag types:
 - **Array flags** (multiple values)
 - **Modern handler patterns**
 
-```bash
+````bash
 # Run with all flags
 bun examples/simple-cli.ts --env production --port 8080 --verbose --file src/main.ts --file src/utils.ts
 
@@ -164,7 +167,7 @@ bun examples/with-env-example.ts --verbose --count 10 --s-save-to-env my-config.
 
 # Load and modify saved configuration
 bun examples/with-env-example.ts --s-with-env my-config.yaml --count 15
-```
+````
 
 ### 3. **Real-World Example** (`fzf-search-cli.ts`)
 
@@ -195,6 +198,7 @@ bun examples/fzf-search-cli.ts --help
 ## **Development Tips**
 
 ### **CLI Design Best Practices**
+
 - Use descriptive flag names and comprehensive descriptions
 - Provide sensible defaults where possible
 - Use enum validation for restricted values
@@ -202,18 +206,21 @@ bun examples/fzf-search-cli.ts --help
 - Implement proper error handling in your handlers
 
 ### **MCP Integration Tips**
+
 - Design your CLI with clear, focused commands that work well as MCP tools
 - Use meaningful return values from handlers - they become MCP tool responses
 - Consider which transport types your users need (stdio for CLI tools, HTTP for web apps)
 - Test your MCP tools with multiple transports to ensure compatibility
 
 ### **Configuration Management**
+
 - Use `--s-save-to-env` to generate configuration templates for users
 - Combine `--s-with-env` with CLI arguments for flexible deployment scenarios
 - Use `--s-debug` during development to understand complex command chains
 - Document your configuration file formats for users
 
 ### **Performance & Debugging**
+
 - Use `--s-debug-print` to inspect complex parser configurations
 - Test with various argument combinations to ensure robust parsing
 - Consider using async handlers for I/O operations when using `ArgParser` with MCP

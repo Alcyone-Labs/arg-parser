@@ -62,7 +62,9 @@ describe("Output Schema Integration", () => {
 
       // Execute tools and verify response formats
       const schemaResult = await withSchema!.execute({ input: "test-data" });
-      const noSchemaResult = await withoutSchema!.execute({ data: "test-data" });
+      const noSchemaResult = await withoutSchema!.execute({
+        data: "test-data",
+      });
 
       // Tool with schema should include structuredContent
       expect(schemaResult).toMatchObject({
@@ -122,8 +124,9 @@ describe("Output Schema Integration", () => {
 
       const tools = parser.toMcpTools();
 
-      tools.forEach(tool => {
-        if (tool.name !== "pattern-test") { // Skip main command
+      tools.forEach((tool) => {
+        if (tool.name !== "pattern-test") {
+          // Skip main command
           expect(tool.outputSchema).toBeDefined();
           expect(tool.outputSchema?._def.typeName).toBe("ZodObject");
         }
@@ -169,7 +172,9 @@ describe("Output Schema Integration", () => {
       // Version that doesn't support output schemas
       const unsupportedParser = createParser("2024-11-05");
       const unsupportedTools = unsupportedParser.toMcpTools();
-      const unsupportedTool = unsupportedTools.find((t) => t.name === "test-tool");
+      const unsupportedTool = unsupportedTools.find(
+        (t) => t.name === "test-tool",
+      );
       expect(unsupportedTool?.outputSchema).toBeUndefined();
     });
 
@@ -198,7 +203,9 @@ describe("Output Schema Integration", () => {
       // Version with output schema support
       const supportedParser = createParser("2025-06-18");
       const supportedTools = supportedParser.toMcpTools();
-      const supportedTool = supportedTools.find((t) => t.name === "format-tool");
+      const supportedTool = supportedTools.find(
+        (t) => t.name === "format-tool",
+      );
       const supportedResult = await supportedTool!.execute({});
 
       expect(supportedResult).toHaveProperty("structuredContent");
@@ -210,7 +217,9 @@ describe("Output Schema Integration", () => {
       // Version without output schema support
       const unsupportedParser = createParser("2024-11-05");
       const unsupportedTools = unsupportedParser.toMcpTools();
-      const unsupportedTool = unsupportedTools.find((t) => t.name === "format-tool");
+      const unsupportedTool = unsupportedTools.find(
+        (t) => t.name === "format-tool",
+      );
       const unsupportedResult = await unsupportedTool!.execute({});
 
       expect(unsupportedResult).not.toHaveProperty("structuredContent");
@@ -351,8 +360,12 @@ describe("Output Schema Integration", () => {
       expect(simpleTool?.outputSchema).toBeUndefined();
 
       // Test executions
-      const fileResult = await fileProcessor!.execute({ path: "/test/file.txt" });
-      const analysisResult = await dataAnalyzer!.execute({ input: "hello world test" });
+      const fileResult = await fileProcessor!.execute({
+        path: "/test/file.txt",
+      });
+      const analysisResult = await dataAnalyzer!.execute({
+        input: "hello world test",
+      });
       const simpleResult = await simpleTool!.execute({});
 
       // Verify response formats
@@ -473,11 +486,13 @@ describe("Output Schema Integration", () => {
             },
           ],
           outputSchema: {
-            matches: z.array(z.object({
-              file: z.string(),
-              line: z.number(),
-              content: z.string(),
-            })),
+            matches: z.array(
+              z.object({
+                file: z.string(),
+                line: z.number(),
+                content: z.string(),
+              }),
+            ),
             summary: z.object({
               totalMatches: z.number(),
               filesSearched: z.number(),

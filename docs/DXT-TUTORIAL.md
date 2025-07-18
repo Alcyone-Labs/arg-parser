@@ -32,52 +32,51 @@ DXT (Desktop Extension) packages are signed, validated zip archives that contain
 ### 1. Create a Unified CLI/MCP Tool
 
 ```typescript
-import { ArgParser } from '@alcyone-labs/arg-parser';
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
 const cli = ArgParser.withMcp({
-  appName: 'Weather CLI',
-  appCommandName: 'weather-search',
-  description: 'Search weather information via CLI or MCP',
+  appName: "Weather CLI",
+  appCommandName: "weather-search",
+  description: "Search weather information via CLI or MCP",
   mcp: {
     serverInfo: {
-      name: 'weather-search-mcp',
-      version: '2.0.0',
-      description: 'Weather Search MCP Server'
-    }
-  }
-})
-.addTool({
-  name: 'search',
-  description: 'Search weather information for a location',
+      name: "weather-search-mcp",
+      version: "2.0.0",
+      description: "Weather Search MCP Server",
+    },
+  },
+}).addTool({
+  name: "search",
+  description: "Search weather information for a location",
   flags: [
     {
-      name: 'query',
-      options: ['-q', '--query'],
-      type: 'string',
-      description: 'Location to search weather for',
-      mandatory: true
+      name: "query",
+      options: ["-q", "--query"],
+      type: "string",
+      description: "Location to search weather for",
+      mandatory: true,
     },
     {
-      name: 'apiKey',
-      options: ['-k', '--api-key'],
-      type: 'string',
-      description: 'Weather API key',
-      env: 'WEATHER_API_KEY'  // 🔑 Automatically creates user_config in DXT
-    }
+      name: "apiKey",
+      options: ["-k", "--api-key"],
+      type: "string",
+      description: "Weather API key",
+      env: "WEATHER_API_KEY", // 🔑 Automatically creates user_config in DXT
+    },
   ],
   handler: async (ctx) => {
     const { query, apiKey } = ctx.args;
 
     // ✅ NEW in v2.0.0: Use console.log freely - automatically safe in MCP mode!
     console.log(`🌤️ Searching weather for: ${query}`);
-    console.log('Connecting to weather API...');
+    console.log("Connecting to weather API...");
 
     // Your weather search logic here
     const results = await searchWeather(query, apiKey);
 
     if (results.length === 0) {
-      console.log('❌ No weather data found for the specified location');
-      return { success: false, message: 'No data found', location: query };
+      console.log("❌ No weather data found for the specified location");
+      return { success: false, message: "No data found", location: query };
     }
 
     console.log(`✅ Found ${results.length} weather entries`);
@@ -85,9 +84,9 @@ const cli = ArgParser.withMcp({
       success: true,
       data: results,
       location: query,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-  }
+  },
 });
 
 // Parse and execute
@@ -162,8 +161,8 @@ if (!isMcpMode) {
 
 // ✅ NEW: Write normal console code - automatically handled!
 console.log("Processing request..."); // Suppressed in MCP mode
-console.error("Debug info");          // Suppressed in MCP mode
-console.warn("Warning message");      // Suppressed in MCP mode
+console.error("Debug info"); // Suppressed in MCP mode
+console.warn("Warning message"); // Suppressed in MCP mode
 ```
 
 ### Universal DXT Compatibility
@@ -214,7 +213,8 @@ npm install @alcyone-labs/arg-parser
 Create `canny-cli.js`:
 
 ```javascript
-import { ArgParser } from '@alcyone-labs/arg-parser';
+import { ArgParser } from "@alcyone-labs/arg-parser";
+
 // Note: v1.3.0+ includes SimpleChalk - no separate chalk dependency needed!
 // You can still use chalk.red(), chalk.bold(), etc. - it's built into ArgParser
 
@@ -227,28 +227,28 @@ async function searchCannyPosts(apiKey, query, options = {}) {
       title: `Feature request matching "${query}"`,
       description: "This is a mock result",
       status: "open",
-      votes: 42
-    }
+      votes: 42,
+    },
   ];
 }
 
 const cli = ArgParser.withMcp({
-  appName: 'Canny Search CLI',
-  appCommandName: 'canny-search',
-  description: 'Search Canny for relevant feature requests (CLI + MCP server)',
+  appName: "Canny Search CLI",
+  appCommandName: "canny-search",
+  description: "Search Canny for relevant feature requests (CLI + MCP server)",
   handler: async (ctx) => {
     const { query, apiKey, limit } = ctx.args;
     const isMcpMode = ctx.isMcp;
 
     // Validate API key
     if (!apiKey) {
-      const error = 'API key is required. Set CANNY_API_KEY or use --api-key';
+      const error = "API key is required. Set CANNY_API_KEY or use --api-key";
       if (isMcpMode) {
         return {
-          content: [{ type: "text", text: JSON.stringify({ error }, null, 2) }]
+          content: [{ type: "text", text: JSON.stringify({ error }, null, 2) }],
         };
       } else {
-        console.error(chalk.red('❌ Error:'), error);
+        console.error(chalk.red("❌ Error:"), error);
         process.exit(1);
       }
     }
@@ -263,63 +263,61 @@ const cli = ArgParser.withMcp({
       success: true,
       query,
       results: posts.length,
-      posts: posts.map(post => ({
+      posts: posts.map((post) => ({
         id: post.id,
         title: post.title,
         description: post.description,
         status: post.status,
-        votes: post.votes
-      }))
+        votes: post.votes,
+      })),
     };
 
     if (isMcpMode) {
       return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }]
+        content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
       };
     } else {
       console.log(chalk.green(`Found ${posts.length} results:`));
-      posts.forEach(post => {
+      posts.forEach((post) => {
         console.log(`• ${post.title} (${post.votes} votes)`);
       });
       return results;
     }
-  }
-})
-.addFlag({
-  name: 'query',
-  options: ['-q', '--query'],
-  type: 'string',
-  description: 'Search query for feature requests',
-  mandatory: true
-})
-.addFlag({
-  name: 'apiKey',
-  options: ['-k', '--api-key'],
-  type: 'string',
-  description: 'Canny API key (optional, defaults to CANNY_API_KEY env var)',
-  env: 'CANNY_API_KEY'  // 🔑 This creates user_config automatically
-})
-.addFlag({
-  name: 'limit',
-  options: ['-l', '--limit'],
-  type: 'number',
-  description: 'Number of results to return',
-  defaultValue: 10
-})
-.addMcpSubCommand('serve', {
-  name: 'canny-search-mcp',
-  version: '1.0.0',
-  description: 'Canny Search MCP Server - Search Canny feature requests via MCP protocol',
-  author: {
-    name: "Your Name",
-    email: "your.email@example.com",
-    url: "https://github.com/yourusername"
   },
-  defaultTransports: [
-    { type: "stdio" },
-    { type: "sse", port: 3001 }
-  ]
-});
+})
+  .addFlag({
+    name: "query",
+    options: ["-q", "--query"],
+    type: "string",
+    description: "Search query for feature requests",
+    mandatory: true,
+  })
+  .addFlag({
+    name: "apiKey",
+    options: ["-k", "--api-key"],
+    type: "string",
+    description: "Canny API key (optional, defaults to CANNY_API_KEY env var)",
+    env: "CANNY_API_KEY", // 🔑 This creates user_config automatically
+  })
+  .addFlag({
+    name: "limit",
+    options: ["-l", "--limit"],
+    type: "number",
+    description: "Number of results to return",
+    defaultValue: 10,
+  })
+  .addMcpSubCommand("serve", {
+    name: "canny-search-mcp",
+    version: "1.0.0",
+    description:
+      "Canny Search MCP Server - Search Canny feature requests via MCP protocol",
+    author: {
+      name: "Your Name",
+      email: "your.email@example.com",
+      url: "https://github.com/yourusername",
+    },
+    defaultTransports: [{ type: "stdio" }, { type: "sse", port: 3001 }],
+  });
 
 // Parse and execute
 cli.parse(process.argv.slice(2));
@@ -392,25 +390,27 @@ The manifest will look like:
       }
     }
   },
-  "tools": [{
-    "name": "canny-search",
-    "description": "Search Canny for relevant feature requests (CLI + MCP server)",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "Search query for feature requests"
+  "tools": [
+    {
+      "name": "canny-search",
+      "description": "Search Canny for relevant feature requests (CLI + MCP server)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for feature requests"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Number of results to return",
+            "default": 10
+          }
         },
-        "limit": {
-          "type": "number",
-          "description": "Number of results to return",
-          "default": 10
-        }
-      },
-      "required": ["query"]
+        "required": ["query"]
+      }
     }
-  }],
+  ],
   "user_config": {
     "apiKey": {
       "type": "string",
@@ -434,6 +434,7 @@ chmod +x build-dxt.sh
 ```
 
 This will:
+
 1. Install dependencies via npm (`npm install`)
 2. Validate the DXT manifest
 3. Create a clean package structure (excluding problematic files)
@@ -441,6 +442,7 @@ This will:
 5. Sign the package for security
 
 Output:
+
 ```
 📦 Creating DXT package for canny-search-mcp...
 📦 Installing dependencies...
@@ -584,6 +586,7 @@ import { z } from 'zod';
 **Problem**: `ENAMETOOLONG` or circular symlink errors during `npm install`
 
 **Solution**: Use production build instead of LOCAL_BUILD:
+
 ```bash
 # Instead of LOCAL_BUILD=1, use:
 node my-cli.js --s-build-dxt ./output
@@ -594,6 +597,7 @@ node my-cli.js --s-build-dxt ./output
 **Problem**: `No matching version found for @alcyone-labs/arg-parser@^1.4.0`
 
 **Solution**: Use LOCAL_BUILD for development:
+
 ```bash
 LOCAL_BUILD=1 node my-cli.js --s-build-dxt ./output
 ```
@@ -603,6 +607,7 @@ LOCAL_BUILD=1 node my-cli.js --s-build-dxt ./output
 **Problem**: MCP server installs but tools don't appear
 
 **Solutions**:
+
 - Check that `input_schema` is properly formatted
 - Ensure `required` fields are specified
 - Verify the server starts with `serve` command
@@ -613,6 +618,7 @@ LOCAL_BUILD=1 node my-cli.js --s-build-dxt ./output
 **Problem**: Environment variables not being passed
 
 **Solutions**:
+
 - Ensure flag has `env` property set
 - Check `user_config` section in manifest
 - Verify CLI args include the environment variable mapping
@@ -622,6 +628,7 @@ LOCAL_BUILD=1 node my-cli.js --s-build-dxt ./output
 **Problem**: Autonomous build script fails
 
 **Solutions**:
+
 - Check Node.js version (requires Node 18+)
 - Ensure all dependencies are properly declared
 - Check for TypeScript compilation errors
@@ -648,12 +655,14 @@ unzip -l package.dxt
 ### 1. Development vs Production Workflow
 
 **Development**: Use LOCAL_BUILD for testing with local dependencies
+
 ```bash
 LOCAL_BUILD=1 node my-cli.js --s-build-dxt ./dev-output
 # DXT package ready at ./dev-output/
 ```
 
 **Production**: Use standard build for distribution
+
 ```bash
 node my-cli.js --s-build-dxt ./prod-output
 # Pack for distribution
@@ -663,6 +672,7 @@ npx @anthropic-ai/dxt pack ./prod-output
 ### 2. Package Size Optimization
 
 The new packing approach automatically excludes:
+
 - `node_modules/` (dependencies resolved at install time)
 - Build artifacts and logs
 - Git history and temporary files
@@ -675,10 +685,10 @@ This results in much smaller DXT packages (~40KB vs several MB).
 handler: async (ctx) => {
   try {
     const result = await yourApiCall(ctx.args);
-    
+
     if (ctx.isMcp) {
       return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }]
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
     } else {
       console.log(result);
@@ -686,17 +696,19 @@ handler: async (ctx) => {
     }
   } catch (error) {
     const errorResponse = { error: error.message };
-    
+
     if (ctx.isMcp) {
       return {
-        content: [{ type: "text", text: JSON.stringify(errorResponse, null, 2) }]
+        content: [
+          { type: "text", text: JSON.stringify(errorResponse, null, 2) },
+        ],
       };
     } else {
-      console.error('Error:', error.message);
+      console.error("Error:", error.message);
       process.exit(1);
     }
   }
-}
+};
 ```
 
 ### 2. Environment Variable Strategy
@@ -760,7 +772,7 @@ npx @anthropic-ai/dxt pack ./test-output
 Before distributing your DXT package:
 
 - [ ] ✅ Test CLI mode works
-- [ ] ✅ Test MCP mode works  
+- [ ] ✅ Test MCP mode works
 - [ ] ✅ DXT package generates successfully
 - [ ] ✅ Autonomous build completes
 - [ ] ✅ Package validates with `npx @anthropic-ai/dxt validate`
@@ -781,19 +793,22 @@ ArgParser v1.3.0 introduces **automatic global console replacement** for DXT pac
 #### **✅ What Works Automatically**
 
 ```typescript
-// ✅ All of these work perfectly in both CLI and MCP modes:
-console.log('Processing started...');           // → Suppressed in MCP mode
-console.info('Configuration loaded');           // → Suppressed in MCP mode
-console.warn('Using deprecated API');           // → Suppressed in MCP mode
-console.debug('Debug information');             // → Suppressed in MCP mode
-console.error('Critical error occurred');       // → Preserved (uses stderr)
-
-// ✅ Dynamic console usage also works:
-const method = 'log';
-console[method]('Dynamic logging');             // → Handled correctly
+// → Handled correctly
 
 // ✅ Console calls in imported modules work:
-import { helper } from './helper.js';
+import { helper } from "./helper.js";
+
+// ✅ All of these work perfectly in both CLI and MCP modes:
+console.log("Processing started..."); // → Suppressed in MCP mode
+console.info("Configuration loaded"); // → Suppressed in MCP mode
+console.warn("Using deprecated API"); // → Suppressed in MCP mode
+console.debug("Debug information"); // → Suppressed in MCP mode
+console.error("Critical error occurred"); // → Preserved (uses stderr)
+
+// ✅ Dynamic console usage also works:
+const method = "log";
+console[method]("Dynamic logging");
+
 helper.doSomething(); // Even if helper.js has console.log calls
 ```
 
@@ -810,9 +825,9 @@ When generating DXT packages, ArgParser automatically:
 
 ```javascript
 // Automatically injected into DXT packages:
-import { createMcpLogger } from '@alcyone-labs/arg-parser';
+import { createMcpLogger } from "@alcyone-labs/arg-parser";
 
-const mcpLogger = createMcpLogger('[CLI]');
+const mcpLogger = createMcpLogger("[CLI]");
 const originalConsole = globalThis.console;
 globalThis.console = {
   ...originalConsole,
@@ -836,10 +851,10 @@ globalThis.console = {
 
 ```typescript
 const cli = ArgParser.withMcp({
-  appName: 'My Tool',
+  appName: "My Tool",
   handler: async (ctx) => {
     // ✅ Use console.log freely - automatically handled
-    console.log('Starting processing...');
+    console.log("Starting processing...");
     console.log(`Processing ${ctx.args.input}`);
 
     const results = await processData(ctx.args.input);
@@ -852,9 +867,9 @@ const cli = ArgParser.withMcp({
     return {
       success: true,
       processed: results.length,
-      warnings: results.warnings
+      warnings: results.warnings,
     };
-  }
+  },
 });
 ```
 
@@ -863,41 +878,41 @@ const cli = ArgParser.withMcp({
 If you use external logging libraries (Winston, Pino, etc.), ensure they use console drivers for MCP compatibility:
 
 ```typescript
-import winston from 'winston';
+import winston from "winston";
 
 // ✅ GOOD: Uses console transport (will be handled by global replacement)
 const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
+      format: winston.format.simple(),
+    }),
+  ],
 });
 
 // ✅ Usage in handler
 const cli = ArgParser.withMcp({
   handler: async (ctx) => {
-    logger.info('Processing started');  // → Uses console.log internally
-    logger.warn('Deprecated API');      // → Uses console.warn internally
-    logger.error('Critical error');     // → Uses console.error internally
+    logger.info("Processing started"); // → Uses console.log internally
+    logger.warn("Deprecated API"); // → Uses console.warn internally
+    logger.error("Critical error"); // → Uses console.error internally
 
     return { success: true };
-  }
+  },
 });
 ```
 
 ```typescript
-import pino from 'pino';
+import pino from "pino";
 
 // ✅ GOOD: Configure Pino to use console
 const logger = pino({
   transport: {
-    target: 'pino-pretty',
+    target: "pino-pretty",
     options: {
       destination: 1, // stdout (will be handled by global replacement)
-      colorize: true
-    }
-  }
+      colorize: true,
+    },
+  },
 });
 ```
 
@@ -905,17 +920,18 @@ const logger = pino({
 
 ```typescript
 // ❌ BAD: Direct file/stream writing bypasses console replacement
-import fs from 'fs';
-fs.writeFileSync('/dev/stdout', 'Direct stdout write'); // Won't be handled
+import fs from "fs";
+
+fs.writeFileSync("/dev/stdout", "Direct stdout write"); // Won't be handled
 
 // ❌ BAD: Process stdout writing
-process.stdout.write('Direct process write'); // Won't be handled
+process.stdout.write("Direct process write"); // Won't be handled
 
 // ❌ BAD: Logger configured to write directly to files/streams
 const logger = winston.createLogger({
   transports: [
-    new winston.transports.File({ filename: '/dev/stdout' }) // Bypasses console
-  ]
+    new winston.transports.File({ filename: "/dev/stdout" }), // Bypasses console
+  ],
 });
 ```
 

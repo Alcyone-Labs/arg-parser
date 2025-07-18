@@ -1,19 +1,18 @@
 #!/usr/bin/env bun
 /**
  * MCP Integration Test Runner
- * 
+ *
  * This script runs all MCP integration tests and provides a comprehensive
  * report of the test results. It can be used for CI/CD or manual testing.
- * 
+ *
  * Usage:
  *   bun tests/mcp/integration/run-integration-tests.ts
  *   bun tests/mcp/integration/run-integration-tests.ts --suite end-to-end
  *   bun tests/mcp/integration/run-integration-tests.ts --verbose
  */
-
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 interface TestSuite {
   name: string;
@@ -37,50 +36,50 @@ const TEST_SUITES: TestSuite[] = [
     description: "End-to-end MCP server functionality tests",
     file: "end-to-end.test.ts",
     timeout: 60000,
-    critical: true
+    critical: true,
   },
   {
     name: "protocol-compliance",
     description: "MCP protocol compliance validation tests",
     file: "protocol-compliance.test.ts",
     timeout: 45000,
-    critical: true
+    critical: true,
   },
   {
     name: "tool-execution",
     description: "MCP tool execution integration tests",
     file: "tool-execution.test.ts",
     timeout: 60000,
-    critical: true
+    critical: true,
   },
   {
     name: "multi-transport",
     description: "Multi-transport MCP server tests",
     file: "multi-transport.test.ts",
     timeout: 45000,
-    critical: false
+    critical: false,
   },
   {
     name: "real-world-examples",
     description: "Real-world MCP usage example tests",
     file: "real-world-examples.test.ts",
     timeout: 90000,
-    critical: false
+    critical: false,
   },
   {
     name: "performance",
     description: "Performance and reliability tests",
     file: "performance.test.ts",
     timeout: 120000,
-    critical: false
+    critical: false,
   },
   {
     name: "canny-cli",
     description: "Canny CLI real-world integration tests",
     file: "canny-cli.test.ts",
     timeout: 90000,
-    critical: false
-  }
+    critical: false,
+  },
 ];
 
 class IntegrationTestRunner {
@@ -95,7 +94,7 @@ class IntegrationTestRunner {
   private parseArgs(args: string[]) {
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
-      
+
       if (arg === "--verbose" || arg === "-v") {
         this.verbose = true;
       } else if (arg === "--suite" || arg === "-s") {
@@ -121,7 +120,7 @@ Options:
   --help, -h           Show this help message
 
 Available test suites:
-${TEST_SUITES.map(suite => `  ${suite.name.padEnd(20)} ${suite.description}`).join('\n')}
+${TEST_SUITES.map((suite) => `  ${suite.name.padEnd(20)} ${suite.description}`).join("\n")}
 
 Examples:
   bun tests/mcp/integration/run-integration-tests.ts
@@ -138,14 +137,14 @@ Examples:
 
   private async runTestSuite(suite: TestSuite): Promise<TestResult> {
     const testFile = resolve(__dirname, suite.file);
-    
+
     if (!existsSync(testFile)) {
       return {
         suite: suite.name,
         passed: false,
         duration: 0,
         output: "",
-        error: `Test file not found: ${testFile}`
+        error: `Test file not found: ${testFile}`,
       };
     }
 
@@ -159,7 +158,7 @@ Examples:
     return new Promise((resolve) => {
       const child = spawn("pnpm", ["vitest", "run", testFile], {
         stdio: ["pipe", "pipe", "pipe"],
-        timeout: suite.timeout
+        timeout: suite.timeout,
       });
 
       let output = "";
@@ -190,7 +189,7 @@ Examples:
           passed: code === 0,
           duration,
           output: output + errorOutput,
-          error: code !== 0 ? `Process exited with code ${code}` : undefined
+          error: code !== 0 ? `Process exited with code ${code}` : undefined,
         };
 
         if (result.passed) {
@@ -214,7 +213,7 @@ Examples:
           passed: false,
           duration,
           output: errorOutput,
-          error: error.message
+          error: error.message,
         });
       });
     });
@@ -222,7 +221,7 @@ Examples:
 
   private generateReport() {
     const totalTests = this.results.length;
-    const passedTests = this.results.filter(r => r.passed).length;
+    const passedTests = this.results.filter((r) => r.passed).length;
     const failedTests = totalTests - passedTests;
     const totalDuration = this.results.reduce((sum, r) => sum + r.duration, 0);
 
@@ -238,42 +237,49 @@ Summary:
   Total Duration: ${(totalDuration / 1000).toFixed(2)}s
 
 Test Results:
-${this.results.map(result => {
-  const status = result.passed ? "PASS" : "FAIL";
-  const duration = `${(result.duration / 1000).toFixed(2)}s`;
-  return `  ${status} ${result.suite.padEnd(20)} ${duration.padStart(8)}`;
-}).join('\n')}
+${this.results
+  .map((result) => {
+    const status = result.passed ? "PASS" : "FAIL";
+    const duration = `${(result.duration / 1000).toFixed(2)}s`;
+    return `  ${status} ${result.suite.padEnd(20)} ${duration.padStart(8)}`;
+  })
+  .join("\n")}
 `);
 
     // Show failed test details
-    const failedResults = this.results.filter(r => !r.passed);
+    const failedResults = this.results.filter((r) => !r.passed);
     if (failedResults.length > 0) {
       console.log(`
 Failed Test Details:
 ${"-".repeat(40)}`);
-      
-      failedResults.forEach(result => {
+
+      failedResults.forEach((result) => {
         console.log(`
 FAIL ${result.suite}:
    Error: ${result.error || "Unknown error"}
    Duration: ${(result.duration / 1000).toFixed(2)}s`);
-        
+
         if (this.verbose && result.output) {
-          console.log(`   Output:\n${result.output.split('\n').map(line => `     ${line}`).join('\n')}`);
+          console.log(
+            `   Output:\n${result.output
+              .split("\n")
+              .map((line) => `     ${line}`)
+              .join("\n")}`,
+          );
         }
       });
     }
 
     // Check critical test failures
-    const criticalFailures = this.results.filter(r => 
-      !r.passed && TEST_SUITES.find(s => s.name === r.suite)?.critical
+    const criticalFailures = this.results.filter(
+      (r) => !r.passed && TEST_SUITES.find((s) => s.name === r.suite)?.critical,
     );
 
     if (criticalFailures.length > 0) {
       console.log(`
 ⚠️  CRITICAL TEST FAILURES DETECTED!
 The following critical tests failed:
-${criticalFailures.map(r => `  - ${r.suite}`).join('\n')}
+${criticalFailures.map((r) => `  - ${r.suite}`).join("\n")}
 
 These failures indicate serious issues with core MCP functionality.
 `);
@@ -289,12 +295,16 @@ These failures indicate serious issues with core MCP functionality.
 
     // Determine which suites to run
     let suitesToRun = TEST_SUITES;
-    
+
     if (this.selectedSuite) {
-      const selectedSuite = TEST_SUITES.find(s => s.name === this.selectedSuite);
+      const selectedSuite = TEST_SUITES.find(
+        (s) => s.name === this.selectedSuite,
+      );
       if (!selectedSuite) {
         console.error(`❌ Unknown test suite: ${this.selectedSuite}`);
-        console.error(`Available suites: ${TEST_SUITES.map(s => s.name).join(', ')}`);
+        console.error(
+          `Available suites: ${TEST_SUITES.map((s) => s.name).join(", ")}`,
+        );
         return false;
       }
       suitesToRun = [selectedSuite];
@@ -319,7 +329,7 @@ These failures indicate serious issues with core MCP functionality.
 // Main execution
 async function main() {
   const runner = new IntegrationTestRunner(process.argv.slice(2));
-  
+
   try {
     const success = await runner.run();
     process.exit(success ? 0 : 1);

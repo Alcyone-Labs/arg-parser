@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-
-import { ArgParser } from '../dist/index.mjs';
-import { promises as fs } from 'node:fs';
+import { promises as fs } from "node:fs";
+import { ArgParser } from "../dist/index.mjs";
 
 // Example demonstrating async custom parser functions
 const parser = new ArgParser({
@@ -12,7 +11,7 @@ const parser = new ArgParser({
     console.log("📊 Parsed results:");
     console.log(JSON.stringify(ctx.args, null, 2));
     return { success: true };
-  }
+  },
 }).addFlags([
   {
     name: "config",
@@ -21,14 +20,14 @@ const parser = new ArgParser({
     type: async (filePath) => {
       console.log(`📁 Reading config file: ${filePath}`);
       try {
-        const content = await fs.readFile(filePath, 'utf8');
+        const content = await fs.readFile(filePath, "utf8");
         const config = JSON.parse(content);
         console.log(`✅ Config loaded: ${Object.keys(config).length} keys`);
         return config;
       } catch (error) {
         throw new Error(`Failed to load config: ${error.message}`);
       }
-    }
+    },
   },
   {
     name: "user",
@@ -36,25 +35,25 @@ const parser = new ArgParser({
     options: ["--user", "-u"],
     type: async (userId) => {
       console.log(`🌐 Fetching user data for ID: ${userId}`);
-      
+
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Simulate API response
       const users = {
-        "123": { id: "123", name: "Alice Johnson", role: "admin" },
-        "456": { id: "456", name: "Bob Smith", role: "user" },
-        "789": { id: "789", name: "Carol Davis", role: "moderator" }
+        123: { id: "123", name: "Alice Johnson", role: "admin" },
+        456: { id: "456", name: "Bob Smith", role: "user" },
+        789: { id: "789", name: "Carol Davis", role: "moderator" },
       };
-      
+
       const user = users[userId];
       if (!user) {
         throw new Error(`User not found: ${userId}`);
       }
-      
+
       console.log(`✅ User found: ${user.name} (${user.role})`);
       return user;
-    }
+    },
   },
   {
     name: "delay",
@@ -63,10 +62,10 @@ const parser = new ArgParser({
     type: async (ms) => {
       const delay = parseInt(ms, 10);
       console.log(`⏱️  Adding ${delay}ms delay...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       console.log(`✅ Delay completed`);
       return delay;
-    }
+    },
   },
   {
     name: "sync",
@@ -75,8 +74,8 @@ const parser = new ArgParser({
     type: (value) => {
       console.log(`⚡ Sync processing: ${value}`);
       return value.toUpperCase();
-    }
-  }
+    },
+  },
 ]);
 
 // Create a sample config file for testing
@@ -86,12 +85,15 @@ const sampleConfig = {
   features: ["auth", "logging", "metrics"],
   database: {
     host: "localhost",
-    port: 5432
-  }
+    port: 5432,
+  },
 };
 
 try {
-  await fs.writeFile('sample-config.json', JSON.stringify(sampleConfig, null, 2));
+  await fs.writeFile(
+    "sample-config.json",
+    JSON.stringify(sampleConfig, null, 2),
+  );
   console.log("📝 Created sample-config.json for testing");
 } catch (error) {
   console.warn("⚠️  Could not create sample config file:", error.message);
@@ -118,7 +120,7 @@ Available users: 123 (Alice), 456 (Bob), 789 (Carol)
 // Parse command line arguments
 try {
   const result = await parser.parse(process.argv.slice(2));
-  
+
   if (result.success) {
     console.log("\n🎯 Final result:", result);
   }

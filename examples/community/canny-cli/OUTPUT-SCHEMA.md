@@ -65,15 +65,19 @@ outputSchema: {
 ## Benefits for Claude Desktop
 
 ### 1. **Rich Type Information**
+
 Claude Desktop will now receive detailed information about the structure of responses from Canny CLI tools, enabling better understanding and processing of the data.
 
 ### 2. **Auto-completion and Validation**
+
 The MCP client can validate responses and provide better error handling when the API returns unexpected data structures.
 
 ### 3. **Enhanced User Experience**
+
 Claude can better understand what data is available and how to present it to users in a meaningful way.
 
 ### 4. **Documentation**
+
 Each field in the response is documented with descriptions, making it easier for Claude to understand the purpose and meaning of each piece of data.
 
 ## Testing the Upgrade
@@ -85,6 +89,7 @@ node test-output-schemas.js
 ```
 
 Expected output:
+
 ```
 🔧 Testing Canny CLI Output Schemas
 
@@ -108,6 +113,7 @@ Generated 2 MCP tools:
 ## Usage in Claude Desktop
 
 1. **Start the MCP Server:**
+
    ```bash
    node canny-cli.js --s-mcp-serve
    ```

@@ -2,9 +2,9 @@ import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { ArgParser } from "../../src";
 import {
-  MCP_PROTOCOL_VERSIONS,
-  CURRENT_MCP_PROTOCOL_VERSION,
   compareVersions,
+  CURRENT_MCP_PROTOCOL_VERSION,
+  MCP_PROTOCOL_VERSIONS,
 } from "../../src/mcp/mcp-protocol-versions";
 
 describe("Output Schema Version Handling", () => {
@@ -91,7 +91,7 @@ describe("Output Schema Version Handling", () => {
         name: "schema-tool",
         description: "Tool with output schema",
         flags: [],
-        outputSchema: 'successError',
+        outputSchema: "successError",
         handler: async () => ({
           success: true,
           message: "Test completed",
@@ -243,7 +243,7 @@ describe("Output Schema Version Handling", () => {
           name: "boundary-tool",
           description: "Tool for boundary testing",
           flags: [],
-          outputSchema: 'successError',
+          outputSchema: "successError",
           handler: async () => ({ success: true, message: "boundary test" }),
         });
 
@@ -265,7 +265,7 @@ describe("Output Schema Version Handling", () => {
           name: "before-tool",
           description: "Tool for before testing",
           flags: [],
-          outputSchema: 'successError',
+          outputSchema: "successError",
           handler: async () => ({ success: true, message: "before test" }),
         });
 
@@ -287,11 +287,11 @@ describe("Output Schema Version Handling", () => {
           name: "future-tool",
           description: "Tool for future testing",
           flags: [],
-          outputSchema: 'successWithData',
+          outputSchema: "successWithData",
           handler: async () => ({
             success: true,
             data: "future test",
-            message: "From the future"
+            message: "From the future",
           }),
         });
 
@@ -315,7 +315,7 @@ describe("Output Schema Version Handling", () => {
           name: "with-schema",
           description: "Tool with schema",
           flags: [],
-          outputSchema: 'successError',
+          outputSchema: "successError",
           handler: async () => ({ success: true, message: "has schema" }),
         })
         .addTool({
@@ -350,18 +350,17 @@ describe("Output Schema Version Handling", () => {
         appName: "Downgrade Test",
         appCommandName: "downgrade-test",
         handler: async () => ({ success: true }),
-      })
-        .addTool({
-          name: "schema-tool",
-          description: "Tool with schema",
-          flags: [],
-          outputSchema: 'fileOperation',
-          handler: async () => ({
-            path: "/test/file",
-            size: 1024,
-            exists: true
-          }),
-        });
+      }).addTool({
+        name: "schema-tool",
+        description: "Tool with schema",
+        flags: [],
+        outputSchema: "fileOperation",
+        handler: async () => ({
+          path: "/test/file",
+          size: 1024,
+          exists: true,
+        }),
+      });
 
       // First, check with current version (should support)
       let tools = parser.toMcpTools();
@@ -394,7 +393,7 @@ describe("Output Schema Version Handling", () => {
           name: "error-tool",
           description: "Tool that errors",
           flags: [],
-          outputSchema: 'successError',
+          outputSchema: "successError",
           handler: async () => {
             throw new Error("Test error");
           },
@@ -410,7 +409,7 @@ describe("Output Schema Version Handling", () => {
           name: "error-tool",
           description: "Tool that errors",
           flags: [],
-          outputSchema: 'successError', // Will be ignored due to version
+          outputSchema: "successError", // Will be ignored due to version
           handler: async () => {
             throw new Error("Test error");
           },
@@ -420,7 +419,9 @@ describe("Output Schema Version Handling", () => {
       const notSupportedTools = parserNotSupported.toMcpTools();
 
       const supportedTool = supportedTools.find((t) => t.name === "error-tool");
-      const notSupportedTool = notSupportedTools.find((t) => t.name === "error-tool");
+      const notSupportedTool = notSupportedTools.find(
+        (t) => t.name === "error-tool",
+      );
 
       // Version that supports output schemas should have output schema
       expect(supportedTool?.outputSchema).toBeDefined();

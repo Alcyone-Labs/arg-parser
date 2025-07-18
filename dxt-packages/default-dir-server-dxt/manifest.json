@@ -11,10 +11,7 @@
     "entry_point": "server/index.mjs",
     "mcp_config": {
       "command": "node",
-      "args": [
-        "${__dirname}/server/index.mjs",
-        "--s-mcp-serve"
-      ],
+      "args": ["${__dirname}/server/index.mjs", "--s-mcp-serve"],
       "env": {}
     }
   },

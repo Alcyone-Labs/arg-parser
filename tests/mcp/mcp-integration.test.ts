@@ -350,12 +350,12 @@ describe("MCP Integration", () => {
         content: [
           {
             type: "text",
-            text: expect.stringContaining('"result": "success"')
-          }
+            text: expect.stringContaining('"result": "success"'),
+          },
         ],
         structuredContent: expect.objectContaining({
-          result: "success"
-        })
+          result: "success",
+        }),
       });
     });
 
@@ -389,13 +389,13 @@ describe("MCP Integration", () => {
         content: [
           {
             type: "text",
-            text: expect.stringContaining("Handler failed")
-          }
+            text: expect.stringContaining("Handler failed"),
+          },
         ],
         structuredContent: expect.objectContaining({
           success: false,
-          error: expect.stringContaining("Handler failed")
-        })
+          error: expect.stringContaining("Handler failed"),
+        }),
       });
     });
 
@@ -439,16 +439,16 @@ describe("MCP Integration", () => {
         content: [
           {
             type: "text",
-            text: expect.stringContaining("Processing failed")
-          }
+            text: expect.stringContaining("Processing failed"),
+          },
         ],
         structuredContent: expect.objectContaining({
           success: false,
           error: expect.stringContaining("Processing failed"),
           message: expect.stringContaining("Processing failed"),
           result: "",
-          files: null
-        })
+          files: null,
+        }),
       });
     });
 
@@ -484,7 +484,7 @@ describe("MCP Integration", () => {
         message: expect.stringContaining("Missing mandatory flags"),
         error: expect.stringContaining("Missing mandatory flags"),
         data: expect.objectContaining({
-          error: expect.stringContaining("Missing mandatory flags")
+          error: expect.stringContaining("Missing mandatory flags"),
         }),
         exitCode: 1,
       });
@@ -657,13 +657,13 @@ describe("MCP Integration", () => {
         content: [
           {
             type: "text",
-            text: expect.stringContaining('"success": true')
-          }
+            text: expect.stringContaining('"success": true'),
+          },
         ],
         structuredContent: expect.objectContaining({
           success: true,
-          contextReceived: true
-        })
+          contextReceived: true,
+        }),
       });
     });
 
@@ -676,7 +676,7 @@ describe("MCP Integration", () => {
           return {
             success: true,
             message: "Test response",
-            timestamp: "2024-01-01T00:00:00Z"
+            timestamp: "2024-01-01T00:00:00Z",
           };
         },
       }).addFlags([
@@ -705,18 +705,18 @@ describe("MCP Integration", () => {
       const result = await tool.execute({ query: "test" });
 
       // Verify the response has both content and structuredContent
-      expect(result).toHaveProperty('content');
-      expect(result).toHaveProperty('structuredContent');
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("structuredContent");
       expect(Array.isArray(result.content)).toBe(true);
       expect(result.content.length).toBeGreaterThan(0);
-      expect(result.content[0]).toHaveProperty('type', 'text');
-      expect(result.content[0]).toHaveProperty('text');
+      expect(result.content[0]).toHaveProperty("type", "text");
+      expect(result.content[0]).toHaveProperty("text");
 
       // Verify structured content matches the expected format
       expect(result.structuredContent).toEqual({
         success: true,
         message: "Test response",
-        timestamp: "2024-01-01T00:00:00Z"
+        timestamp: "2024-01-01T00:00:00Z",
       });
 
       // Verify the tool has an output schema

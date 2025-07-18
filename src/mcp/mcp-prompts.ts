@@ -1,6 +1,6 @@
 /**
  * MCP Prompts Management
- * 
+ *
  * This module provides functionality for managing MCP prompts - server-side prompt templates
  * that clients can discover and execute with custom parameters for dynamic text generation.
  */
@@ -42,7 +42,9 @@ export interface McpPromptResponse {
 /**
  * Prompt handler function type
  */
-export type McpPromptHandler = (args: any) => McpPromptResponse | Promise<McpPromptResponse>;
+export type McpPromptHandler = (
+  args: any,
+) => McpPromptResponse | Promise<McpPromptResponse>;
 
 /**
  * Prompt configuration for registration
@@ -65,7 +67,7 @@ export interface McpPromptEntry {
 
 /**
  * MCP Prompts Manager
- * 
+ *
  * Manages registration, storage, and execution of MCP prompts
  */
 export class McpPromptsManager {
@@ -82,7 +84,7 @@ export class McpPromptsManager {
     // Store prompt
     this.prompts.set(config.name, {
       config,
-      registeredAt: new Date()
+      registeredAt: new Date(),
     });
 
     // Notify listeners of change
@@ -104,7 +106,7 @@ export class McpPromptsManager {
    * Get all registered prompts
    */
   getPrompts(): McpPromptConfig[] {
-    return Array.from(this.prompts.values()).map(entry => entry.config);
+    return Array.from(this.prompts.values()).map((entry) => entry.config);
   }
 
   /**
@@ -136,7 +138,9 @@ export class McpPromptsManager {
       return await entry.config.handler(validatedArgs);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new Error(`Invalid arguments for prompt '${name}': ${error.message}`);
+        throw new Error(
+          `Invalid arguments for prompt '${name}': ${error.message}`,
+        );
       }
       throw error;
     }
@@ -178,16 +182,16 @@ export class McpPromptsManager {
    * Validate prompt configuration
    */
   private validatePromptConfig(config: McpPromptConfig): void {
-    if (!config.name || typeof config.name !== 'string') {
-      throw new Error('Prompt name is required and must be a string');
+    if (!config.name || typeof config.name !== "string") {
+      throw new Error("Prompt name is required and must be a string");
     }
 
     if (!config.argsSchema) {
-      throw new Error('Prompt argsSchema is required');
+      throw new Error("Prompt argsSchema is required");
     }
 
-    if (typeof config.handler !== 'function') {
-      throw new Error('Prompt handler is required and must be a function');
+    if (typeof config.handler !== "function") {
+      throw new Error("Prompt handler is required and must be a function");
     }
 
     if (this.prompts.has(config.name)) {
@@ -203,7 +207,7 @@ export class McpPromptsManager {
       try {
         listener();
       } catch (error) {
-        console.error('Error in prompt change listener:', error);
+        console.error("Error in prompt change listener:", error);
       }
     }
   }
@@ -223,18 +227,23 @@ export const createCodeReviewPrompt = (): McpPromptConfig => ({
   argsSchema: z.object({
     code: z.string().describe("The code to review"),
     language: z.string().optional().describe("Programming language"),
-    focus: z.enum(["security", "performance", "style", "bugs", "general"]).optional().describe("Review focus area")
+    focus: z
+      .enum(["security", "performance", "style", "bugs", "general"])
+      .optional()
+      .describe("Review focus area"),
   }),
   handler: ({ code, language, focus }) => ({
-    description: `Code review prompt for ${language || 'code'} focusing on ${focus || 'general best practices'}`,
-    messages: [{
-      role: "user",
-      content: {
-        type: "text",
-        text: `Please review this ${language || 'code'} focusing on ${focus || 'general best practices'}:\n\n\`\`\`${language || ''}\n${code}\n\`\`\``
-      }
-    }]
-  })
+    description: `Code review prompt for ${language || "code"} focusing on ${focus || "general best practices"}`,
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Please review this ${language || "code"} focusing on ${focus || "general best practices"}:\n\n\`\`\`${language || ""}\n${code}\n\`\`\``,
+        },
+      },
+    ],
+  }),
 });
 
 /**
@@ -246,29 +255,43 @@ export const createSummarizationPrompt = (): McpPromptConfig => ({
   description: "Generate prompts for text summarization",
   argsSchema: z.object({
     text: z.string().describe("The text to summarize"),
-    length: z.enum(["brief", "medium", "detailed"]).optional().describe("Summary length"),
-    style: z.enum(["bullet-points", "paragraph", "executive"]).optional().describe("Summary style")
+    length: z
+      .enum(["brief", "medium", "detailed"])
+      .optional()
+      .describe("Summary length"),
+    style: z
+      .enum(["bullet-points", "paragraph", "executive"])
+      .optional()
+      .describe("Summary style"),
   }),
   handler: ({ text, length, style }) => {
-    const lengthInstruction = length === "brief" ? "in 1-2 sentences" : 
-                             length === "detailed" ? "in detail with key points" : 
-                             "concisely";
-    
-    const styleInstruction = style === "bullet-points" ? "as bullet points" :
-                            style === "executive" ? "as an executive summary" :
-                            "in paragraph form";
+    const lengthInstruction =
+      length === "brief"
+        ? "in 1-2 sentences"
+        : length === "detailed"
+          ? "in detail with key points"
+          : "concisely";
+
+    const styleInstruction =
+      style === "bullet-points"
+        ? "as bullet points"
+        : style === "executive"
+          ? "as an executive summary"
+          : "in paragraph form";
 
     return {
-      description: `Summarization prompt for ${length || 'medium'} ${style || 'paragraph'} summary`,
-      messages: [{
-        role: "user",
-        content: {
-          type: "text",
-          text: `Please summarize the following text ${lengthInstruction} ${styleInstruction}:\n\n${text}`
-        }
-      }]
+      description: `Summarization prompt for ${length || "medium"} ${style || "paragraph"} summary`,
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please summarize the following text ${lengthInstruction} ${styleInstruction}:\n\n${text}`,
+          },
+        },
+      ],
     };
-  }
+  },
 });
 
 /**
@@ -281,24 +304,34 @@ export const createTranslationPrompt = (): McpPromptConfig => ({
   argsSchema: z.object({
     text: z.string().describe("The text to translate"),
     targetLanguage: z.string().describe("Target language for translation"),
-    sourceLanguage: z.string().optional().describe("Source language (auto-detect if not specified)"),
-    tone: z.enum(["formal", "casual", "professional"]).optional().describe("Translation tone")
+    sourceLanguage: z
+      .string()
+      .optional()
+      .describe("Source language (auto-detect if not specified)"),
+    tone: z
+      .enum(["formal", "casual", "professional"])
+      .optional()
+      .describe("Translation tone"),
   }),
   handler: ({ text, targetLanguage, sourceLanguage, tone }) => {
-    const sourceInstruction = sourceLanguage ? `from ${sourceLanguage}` : "(auto-detect source language)";
+    const sourceInstruction = sourceLanguage
+      ? `from ${sourceLanguage}`
+      : "(auto-detect source language)";
     const toneInstruction = tone ? ` in a ${tone} tone` : "";
 
     return {
       description: `Translation prompt ${sourceInstruction} to ${targetLanguage}${toneInstruction}`,
-      messages: [{
-        role: "user",
-        content: {
-          type: "text",
-          text: `Please translate the following text ${sourceInstruction} to ${targetLanguage}${toneInstruction}:\n\n${text}`
-        }
-      }]
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please translate the following text ${sourceInstruction} to ${targetLanguage}${toneInstruction}:\n\n${text}`,
+          },
+        },
+      ],
     };
-  }
+  },
 });
 
 /**
@@ -311,22 +344,29 @@ export const createDocumentationPrompt = (): McpPromptConfig => ({
   argsSchema: z.object({
     code: z.string().describe("The code to document"),
     language: z.string().optional().describe("Programming language"),
-    style: z.enum(["jsdoc", "sphinx", "markdown", "inline"]).optional().describe("Documentation style"),
-    includeExamples: z.boolean().optional().describe("Include usage examples")
+    style: z
+      .enum(["jsdoc", "sphinx", "markdown", "inline"])
+      .optional()
+      .describe("Documentation style"),
+    includeExamples: z.boolean().optional().describe("Include usage examples"),
   }),
   handler: ({ code, language, style, includeExamples }) => {
     const styleInstruction = style ? ` using ${style} format` : "";
-    const examplesInstruction = includeExamples ? " Include usage examples." : "";
+    const examplesInstruction = includeExamples
+      ? " Include usage examples."
+      : "";
 
     return {
-      description: `Documentation prompt for ${language || 'code'}${styleInstruction}`,
-      messages: [{
-        role: "user",
-        content: {
-          type: "text",
-          text: `Please generate documentation for this ${language || 'code'}${styleInstruction}.${examplesInstruction}\n\n\`\`\`${language || ''}\n${code}\n\`\`\``
-        }
-      }]
+      description: `Documentation prompt for ${language || "code"}${styleInstruction}`,
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please generate documentation for this ${language || "code"}${styleInstruction}.${examplesInstruction}\n\n\`\`\`${language || ""}\n${code}\n\`\`\``,
+          },
+        },
+      ],
     };
-  }
+  },
 });

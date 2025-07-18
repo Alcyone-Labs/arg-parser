@@ -4,9 +4,7 @@ import path from "node:path";
 // import { z } from "zod"; // Used in commented schema examples
 import { ArgParser } from "../src";
 import type { IFlag, IHandlerContext } from "../src";
-import type {
-  IParseExecutionResult,
-} from "../src/mcp/mcp-integration";
+import type { IParseExecutionResult } from "../src/mcp/mcp-integration";
 
 export interface IFzfSearchResult {
   files: string[];
@@ -321,8 +319,6 @@ const fzfSearchFlags: IFlag[] = [
 //   message: z.string().optional().nullable().describe("Optional message, often used for errors."),
 //   data: z.any().optional().nullable().describe("Generic data payload if handler response doesn't match a specific schema."),
 // };
-
-
 
 const mainParser = new ArgParser<IFzfSearchResult>(
   {

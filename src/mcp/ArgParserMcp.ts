@@ -7,12 +7,17 @@ import type { IFlag } from "../core/types";
  * This version doesn't load any config plugins, making it suitable for
  * autonomous builds where TOML/YAML dependencies cause bundling issues.
  */
-export class ArgParserMcp<THandlerReturn = any> extends ArgParser<THandlerReturn> {
-  constructor(params?: IArgParserParams<THandlerReturn>, initialFlags?: IFlag[]) {
+export class ArgParserMcp<
+  THandlerReturn = any,
+> extends ArgParser<THandlerReturn> {
+  constructor(
+    params?: IArgParserParams<THandlerReturn>,
+    initialFlags?: IFlag[],
+  ) {
     // Set a flag to indicate this is MCP mode (no config plugins)
     const mcpParams = {
       ...params,
-      _mcpMode: true // Internal flag to disable config functionality
+      _mcpMode: true, // Internal flag to disable config functionality
     };
     super(mcpParams as any, initialFlags);
   }
@@ -22,10 +27,11 @@ export class ArgParserMcp<THandlerReturn = any> extends ArgParser<THandlerReturn
    */
   public parse(processArgs: string[], options?: any): any {
     // Filter out config-related system flags before parsing
-    const filteredArgs = processArgs.filter(arg =>
-      !arg.startsWith('--s-with-env') &&
-      !arg.startsWith('--s-save-to-env') &&
-      !arg.startsWith('--s-load-env')
+    const filteredArgs = processArgs.filter(
+      (arg) =>
+        !arg.startsWith("--s-with-env") &&
+        !arg.startsWith("--s-save-to-env") &&
+        !arg.startsWith("--s-load-env"),
     );
 
     return super.parse(filteredArgs, options);
@@ -37,8 +43,8 @@ export class ArgParserMcp<THandlerReturn = any> extends ArgParser<THandlerReturn
  * This is the recommended way to create ArgParser instances for MCP servers
  */
 export function createMcpArgParser<THandlerReturn = any>(
-  params?: IArgParserParams<THandlerReturn>, 
-  initialFlags?: IFlag[]
+  params?: IArgParserParams<THandlerReturn>,
+  initialFlags?: IFlag[],
 ): ArgParserMcp<THandlerReturn> {
   return ArgParserMcp.withMcp(params, initialFlags);
 }

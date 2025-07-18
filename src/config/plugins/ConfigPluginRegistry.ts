@@ -1,5 +1,5 @@
-import type { IConfigPlugin } from './ConfigPlugin';
-import { JsonConfigPlugin, EnvConfigPlugin } from './ConfigPlugin';
+import type { IConfigPlugin } from "./ConfigPlugin";
+import { EnvConfigPlugin, JsonConfigPlugin } from "./ConfigPlugin";
 
 /**
  * Registry for configuration plugins
@@ -8,60 +8,60 @@ import { JsonConfigPlugin, EnvConfigPlugin } from './ConfigPlugin';
 export class ConfigPluginRegistry {
   private plugins: Map<string, IConfigPlugin> = new Map();
   private extensionMap: Map<string, IConfigPlugin> = new Map();
-  
+
   constructor() {
     // Register built-in plugins (no external dependencies)
     this.registerPlugin(new JsonConfigPlugin());
     this.registerPlugin(new EnvConfigPlugin());
   }
-  
+
   /**
    * Register a configuration plugin
    */
   public registerPlugin(plugin: IConfigPlugin): void {
     this.plugins.set(plugin.name, plugin);
-    
+
     // Map extensions to plugin
     for (const ext of plugin.supportedExtensions) {
       this.extensionMap.set(ext.toLowerCase(), plugin);
     }
   }
-  
+
   /**
    * Get plugin by name
    */
   public getPlugin(name: string): IConfigPlugin | undefined {
     return this.plugins.get(name);
   }
-  
+
   /**
    * Get plugin by file extension
    */
   public getPluginByExtension(extension: string): IConfigPlugin | undefined {
     return this.extensionMap.get(extension.toLowerCase());
   }
-  
+
   /**
    * Check if a file extension is supported
    */
   public isExtensionSupported(extension: string): boolean {
     return this.extensionMap.has(extension.toLowerCase());
   }
-  
+
   /**
    * Get all registered plugin names
    */
   public getRegisteredPlugins(): string[] {
     return Array.from(this.plugins.keys());
   }
-  
+
   /**
    * Get all supported extensions
    */
   public getSupportedExtensions(): string[] {
     return Array.from(this.extensionMap.keys());
   }
-  
+
   /**
    * Unregister a plugin
    */
@@ -70,18 +70,18 @@ export class ConfigPluginRegistry {
     if (!plugin) {
       return false;
     }
-    
+
     // Remove from plugins map
     this.plugins.delete(name);
-    
+
     // Remove extensions from extension map
     for (const ext of plugin.supportedExtensions) {
       this.extensionMap.delete(ext.toLowerCase());
     }
-    
+
     return true;
   }
-  
+
   /**
    * Clear all plugins (useful for testing)
    */
@@ -89,7 +89,7 @@ export class ConfigPluginRegistry {
     this.plugins.clear();
     this.extensionMap.clear();
   }
-  
+
   /**
    * Auto-register optional plugins if their dependencies are available
    * This method attempts to load TOML and YAML plugins without throwing errors
@@ -97,7 +97,7 @@ export class ConfigPluginRegistry {
   public autoRegisterOptionalPlugins(): void {
     // Try to register TOML plugin
     try {
-      const { createTomlPlugin } = require('./TomlConfigPlugin');
+      const { createTomlPlugin } = require("./TomlConfigPlugin");
       const tomlPlugin = createTomlPlugin();
       if (tomlPlugin) {
         this.registerPlugin(tomlPlugin);
@@ -108,7 +108,7 @@ export class ConfigPluginRegistry {
 
     // Try to register YAML plugin
     try {
-      const { createYamlPlugin } = require('./YamlConfigPlugin');
+      const { createYamlPlugin } = require("./YamlConfigPlugin");
       const yamlPlugin = createYamlPlugin();
       if (yamlPlugin) {
         this.registerPlugin(yamlPlugin);
@@ -125,7 +125,7 @@ export class ConfigPluginRegistry {
   public async autoRegisterOptionalPluginsAsync(): Promise<void> {
     // Try to register TOML plugin
     try {
-      const { createTomlPluginAsync } = await import('./TomlConfigPlugin');
+      const { createTomlPluginAsync } = await import("./TomlConfigPlugin");
       const tomlPlugin = await createTomlPluginAsync();
       if (tomlPlugin) {
         this.registerPlugin(tomlPlugin);
@@ -136,7 +136,7 @@ export class ConfigPluginRegistry {
 
     // Try to register YAML plugin
     try {
-      const { createYamlPluginAsync } = await import('./YamlConfigPlugin');
+      const { createYamlPluginAsync } = await import("./YamlConfigPlugin");
       const yamlPlugin = await createYamlPluginAsync();
       if (yamlPlugin) {
         this.registerPlugin(yamlPlugin);
@@ -175,30 +175,34 @@ export async function enableOptionalConfigPluginsAsync(): Promise<void> {
 export function enableConfigPlugins(pluginNames: string[]): void {
   for (const pluginName of pluginNames) {
     switch (pluginName.toLowerCase()) {
-      case 'toml':
+      case "toml":
         try {
-          const { createTomlPlugin } = require('./TomlConfigPlugin');
+          const { createTomlPlugin } = require("./TomlConfigPlugin");
           const tomlPlugin = createTomlPlugin();
           if (tomlPlugin) {
             globalConfigPluginRegistry.registerPlugin(tomlPlugin);
           }
         } catch (error) {
-          console.warn(`Failed to enable TOML plugin: ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(
+            `Failed to enable TOML plugin: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
         break;
-        
-      case 'yaml':
+
+      case "yaml":
         try {
-          const { createYamlPlugin } = require('./YamlConfigPlugin');
+          const { createYamlPlugin } = require("./YamlConfigPlugin");
           const yamlPlugin = createYamlPlugin();
           if (yamlPlugin) {
             globalConfigPluginRegistry.registerPlugin(yamlPlugin);
           }
         } catch (error) {
-          console.warn(`Failed to enable YAML plugin: ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(
+            `Failed to enable YAML plugin: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
         break;
-        
+
       default:
         console.warn(`Unknown config plugin: ${pluginName}`);
     }

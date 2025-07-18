@@ -1,26 +1,26 @@
 import { describe, expect, test, vi } from "vitest";
-import { ArgParser } from "../../src";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import { ArgParser } from "../../src";
 
 describe("Async Custom Parser Functions", () => {
   describe("Basic Async Parser Support", () => {
     test("should handle async custom parser functions", async () => {
       const asyncParser = async (value: string): Promise<number> => {
         // Simulate async operation
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return parseInt(value, 10) * 2;
       };
 
       const parser = new ArgParser({
         appName: "Async Test CLI",
         appCommandName: "async-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "asyncNumber",
         description: "Async number parser",
         options: ["--async-number"],
-        type: asyncParser
+        type: asyncParser,
       });
 
       const result = await parser.parse(["--async-number", "21"]);
@@ -30,53 +30,65 @@ describe("Async Custom Parser Functions", () => {
     test("should handle mixed sync and async custom parsers", async () => {
       const syncParser = (value: string): string => value.toUpperCase();
       const asyncParser = async (value: string): Promise<string> => {
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
         return value.toLowerCase();
       };
 
       const parser = new ArgParser({
         appName: "Mixed Test CLI",
         appCommandName: "mixed-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlags([
         {
           name: "syncValue",
           description: "Sync parser",
           options: ["--sync"],
-          type: syncParser
+          type: syncParser,
         },
         {
           name: "asyncValue",
           description: "Async parser",
           options: ["--async"],
-          type: asyncParser
-        }
+          type: asyncParser,
+        },
       ]);
 
-      const result = await parser.parse(["--sync", "hello", "--async", "WORLD"]);
+      const result = await parser.parse([
+        "--sync",
+        "hello",
+        "--async",
+        "WORLD",
+      ]);
       expect(result.syncValue).toBe("HELLO");
       expect(result.asyncValue).toBe("world");
     });
 
     test("should handle async parsers with allowMultiple", async () => {
       const asyncParser = async (value: string): Promise<number> => {
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
         return parseInt(value, 10) + 10;
       };
 
       const parser = new ArgParser({
         appName: "Multiple Async Test CLI",
         appCommandName: "multiple-async-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "numbers",
         description: "Multiple async numbers",
         options: ["--number"],
         type: asyncParser,
-        allowMultiple: true
+        allowMultiple: true,
       });
 
-      const result = await parser.parse(["--number", "1", "--number", "2", "--number", "3"]);
+      const result = await parser.parse([
+        "--number",
+        "1",
+        "--number",
+        "2",
+        "--number",
+        "3",
+      ]);
       expect(result.numbers).toEqual([11, 12, 13]);
     });
   });
@@ -89,19 +101,19 @@ describe("Async Custom Parser Functions", () => {
       await fs.writeFile(testFilePath, JSON.stringify(testData));
 
       const fileParser = async (filePath: string): Promise<any> => {
-        const content = await fs.readFile(filePath, 'utf8');
+        const content = await fs.readFile(filePath, "utf8");
         return JSON.parse(content);
       };
 
       const parser = new ArgParser({
         appName: "File Test CLI",
         appCommandName: "file-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "config",
         description: "Config file parser",
         options: ["--config"],
-        type: fileParser
+        type: fileParser,
       });
 
       try {
@@ -115,7 +127,7 @@ describe("Async Custom Parser Functions", () => {
 
     test("should handle file parsing errors gracefully", async () => {
       const fileParser = async (filePath: string): Promise<any> => {
-        const content = await fs.readFile(filePath, 'utf8');
+        const content = await fs.readFile(filePath, "utf8");
         return JSON.parse(content);
       };
 
@@ -123,16 +135,17 @@ describe("Async Custom Parser Functions", () => {
         appName: "File Error Test CLI",
         appCommandName: "file-error-test",
         handler: async (ctx) => ({ result: "success", args: ctx.args }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "config",
         description: "Config file parser",
         options: ["--config"],
-        type: fileParser
+        type: fileParser,
       });
 
-      await expect(parser.parse(["--config", "nonexistent-file.json"]))
-        .rejects.toThrow();
+      await expect(
+        parser.parse(["--config", "nonexistent-file.json"]),
+      ).rejects.toThrow();
     });
   });
 
@@ -141,7 +154,7 @@ describe("Async Custom Parser Functions", () => {
       // Mock fetch for testing
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ id: "123", name: "Test User" })
+        json: async () => ({ id: "123", name: "Test User" }),
       });
       global.fetch = mockFetch;
 
@@ -156,12 +169,12 @@ describe("Async Custom Parser Functions", () => {
       const parser = new ArgParser({
         appName: "API Test CLI",
         appCommandName: "api-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "user",
         description: "User ID to fetch",
         options: ["--user"],
-        type: userParser
+        type: userParser,
       });
 
       const result = await parser.parse(["--user", "123"]);
@@ -172,7 +185,7 @@ describe("Async Custom Parser Functions", () => {
     test("should handle API errors in async parsers", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: false,
-        status: 404
+        status: 404,
       });
       global.fetch = mockFetch;
 
@@ -188,28 +201,29 @@ describe("Async Custom Parser Functions", () => {
         appName: "API Error Test CLI",
         appCommandName: "api-error-test",
         handler: async (ctx) => ({ result: "success", args: ctx.args }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "user",
         description: "User ID to fetch",
         options: ["--user"],
-        type: userParser
+        type: userParser,
       });
 
-      await expect(parser.parse(["--user", "404"]))
-        .rejects.toThrow("User not found: 404");
+      await expect(parser.parse(["--user", "404"])).rejects.toThrow(
+        "User not found: 404",
+      );
     });
   });
 
   describe("Complex Async Parsers", () => {
     test("should handle async parser with validation", async () => {
       const validatedAsyncParser = async (value: string): Promise<string> => {
-        await new Promise(resolve => setTimeout(resolve, 5));
-        
+        await new Promise((resolve) => setTimeout(resolve, 5));
+
         if (value.length < 3) {
           throw new Error("Value must be at least 3 characters");
         }
-        
+
         return value.trim().toLowerCase();
       };
 
@@ -217,12 +231,12 @@ describe("Async Custom Parser Functions", () => {
         appName: "Validation Test CLI",
         appCommandName: "validation-test",
         handler: async (ctx) => ({ result: "success", args: ctx.args }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "validatedValue",
         description: "Validated async value",
         options: ["--validated"],
-        type: validatedAsyncParser
+        type: validatedAsyncParser,
       });
 
       // Valid case
@@ -230,32 +244,33 @@ describe("Async Custom Parser Functions", () => {
       expect(validResult.validatedValue).toBe("hello");
 
       // Invalid case
-      await expect(parser.parse(["--validated", "hi"]))
-        .rejects.toThrow("Value must be at least 3 characters");
+      await expect(parser.parse(["--validated", "hi"])).rejects.toThrow(
+        "Value must be at least 3 characters",
+      );
     });
 
     test("should handle async parser returning complex objects", async () => {
       const complexAsyncParser = async (input: string): Promise<any> => {
-        await new Promise(resolve => setTimeout(resolve, 10));
-        
-        const [name, age] = input.split(',');
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        const [name, age] = input.split(",");
         return {
           name: name.trim(),
           age: parseInt(age.trim(), 10),
           timestamp: new Date().toISOString(),
-          processed: true
+          processed: true,
         };
       };
 
       const parser = new ArgParser({
         appName: "Complex Test CLI",
         appCommandName: "complex-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "person",
         description: "Person data (name,age)",
         options: ["--person"],
-        type: complexAsyncParser
+        type: complexAsyncParser,
       });
 
       const result = await parser.parse(["--person", "John Doe, 30"]);
@@ -269,7 +284,7 @@ describe("Async Custom Parser Functions", () => {
   describe("Error Handling", () => {
     test("should propagate async parser errors correctly", async () => {
       const errorParser = async (value: string): Promise<any> => {
-        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise((resolve) => setTimeout(resolve, 5));
         throw new Error(`Custom async error: ${value}`);
       };
 
@@ -277,34 +292,35 @@ describe("Async Custom Parser Functions", () => {
         appName: "Error Test CLI",
         appCommandName: "error-test",
         handler: async (ctx) => ({ result: "success", args: ctx.args }),
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "errorValue",
         description: "Value that causes error",
         options: ["--error"],
-        type: errorParser
+        type: errorParser,
       });
 
-      await expect(parser.parse(["--error", "test"]))
-        .rejects.toThrow("Custom async error: test");
+      await expect(parser.parse(["--error", "test"])).rejects.toThrow(
+        "Custom async error: test",
+      );
     });
 
     test("should handle async parser timeout scenarios", async () => {
       const slowParser = async (value: string): Promise<string> => {
         // Simulate a very slow operation
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         return value.toUpperCase();
       };
 
       const parser = new ArgParser({
         appName: "Slow Test CLI",
         appCommandName: "slow-test",
-        handler: async (ctx) => ({ result: "success", args: ctx.args })
+        handler: async (ctx) => ({ result: "success", args: ctx.args }),
       }).addFlag({
         name: "slowValue",
         description: "Slow async value",
         options: ["--slow"],
-        type: slowParser
+        type: slowParser,
       });
 
       // This should still work, just take longer

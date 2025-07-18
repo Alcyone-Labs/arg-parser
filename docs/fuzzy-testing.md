@@ -50,7 +50,9 @@ const tester = new ArgParserFuzzyTester(myArgParser, {
 });
 
 const report = await tester.runFuzzyTest();
-console.log(`Success rate: ${(report.successfulTests / report.totalTests * 100).toFixed(1)}%`);
+console.log(
+  `Success rate: ${((report.successfulTests / report.totalTests) * 100).toFixed(1)}%`,
+);
 ```
 
 ### CLI Tool
@@ -90,6 +92,7 @@ bun examples/getting-started.ts --s-enable-fuzzy --input test.txt --format json
 ```
 
 The `--s-enable-fuzzy` system flag acts as a **dry-run mode**:
+
 - **Zero boilerplate**: No conditional logic needed - just `export default cli` and `cli.parse()`
 - **Automatic prevention**: System automatically prevents CLI execution during fuzzy testing
 - Disables error handling (`handleErrors = false`)
@@ -118,16 +121,16 @@ This provides excellent visibility into the fuzzy testing process and helps veri
 
 ### CLI Options
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--file` | `-f` | Path to TypeScript/JavaScript file with ArgParser | Required |
-| `--output` | `-o` | Output file for results (default: stdout) | - |
-| `--max-depth` | `-d` | Maximum depth for command path exploration | 5 |
-| `--random-tests` | `-r` | Number of random test cases per path | 10 |
-| `--verbose` | `-v` | Enable verbose output | false |
-| `--skip-errors` | | Skip error case testing | false |
-| `--format` | | Output format (json/text/markdown) | text |
-| `--performance` | `-p` | Include performance timing | true |
+| Option           | Short | Description                                       | Default  |
+| ---------------- | ----- | ------------------------------------------------- | -------- |
+| `--file`         | `-f`  | Path to TypeScript/JavaScript file with ArgParser | Required |
+| `--output`       | `-o`  | Output file for results (default: stdout)         | -        |
+| `--max-depth`    | `-d`  | Maximum depth for command path exploration        | 5        |
+| `--random-tests` | `-r`  | Number of random test cases per path              | 10       |
+| `--verbose`      | `-v`  | Enable verbose output                             | false    |
+| `--skip-errors`  |       | Skip error case testing                           | false    |
+| `--format`       |       | Output format (json/text/markdown)                | text     |
+| `--performance`  | `-p`  | Include performance timing                        | true     |
 
 ## Configuration Options
 
@@ -182,6 +185,7 @@ The fuzzy testing CLI automatically **exits with code 1 if success rate < 80%**:
 ### Key Health Indicators
 
 #### **✅ Green Flags (Healthy CLI)**
+
 - Success rate 90% or higher
 - Error types are mostly expected ones:
   - "Unknown command"
@@ -191,6 +195,7 @@ The fuzzy testing CLI automatically **exits with code 1 if success rate < 80%**:
 - Failed tests are mostly from the "error cases" category
 
 #### **🚨 Red Flags (Problems to Investigate)**
+
 - Success rate below 80% (tool exits with error code 1)
 - High counts of unexpected errors:
   - "Type conversion failed" (type handling issues)
@@ -204,12 +209,14 @@ The fuzzy testing CLI automatically **exits with code 1 if success rate < 80%**:
 The fuzzy tester generates comprehensive reports with the following information:
 
 ### Summary Statistics
+
 - Total number of tests executed
 - Success/failure counts and percentages
 - Command path coverage analysis
 - Error type distribution
 
 ### Detailed Results
+
 - Individual test results with arguments and outcomes
 - Error messages for failed tests
 - Performance timing data
@@ -254,29 +261,35 @@ FAILED TESTS:
 ### Step-by-Step Analysis
 
 #### 1. **Check Overall Success Rate**
+
 ```
 Successful: 142 (91.0%)
 ```
+
 - **90%+**: Your CLI is very robust ✅
 - **80-89%**: Good, minor issues 🟡
 - **<80%**: Needs attention, tool exits with error code 1 🔴
 
 #### 2. **Analyze Command Path Coverage**
+
 ```
 COMMAND PATHS TESTED:
   (root): 45/50 passed
   process: 38/42 passed
 ```
+
 - **Look for paths with 0 tests**: Indicates discovery issues
 - **Compare success rates across paths**: Identify problematic command paths
 - **Focus on critical paths**: Your main workflows should have high success rates
 
 #### 3. **Review Error Types**
+
 ```
 ERROR TYPES:
   Unknown command: 8
   Invalid enum value: 4
 ```
+
 - **Expected error types** (from error case testing):
   - "Unknown command"
   - "Invalid enum value"
@@ -287,12 +300,14 @@ ERROR TYPES:
   - "Handler execution failed"
 
 #### 4. **Examine Failed Tests**
+
 ```
 FAILED TESTS:
   Command: process
   Args: process --algorithm invalid
   Error: Invalid enum value for 'algorithm'
 ```
+
 - **Expected failures**: Invalid inputs being properly rejected
 - **Unexpected failures**: Valid-looking inputs that failed (investigate!)
 - **Pattern recognition**: Multiple similar failures indicate systematic issues
@@ -300,6 +315,7 @@ FAILED TESTS:
 ### Practical Interpretation Examples
 
 #### **Healthy CLI Example**
+
 ```bash
 # Command: bun src/fuzzy-test-cli.ts --file my-cli.ts
 # Output:
@@ -312,9 +328,11 @@ ERROR TYPES:
   Invalid enum value: 4   ← Expected
   Missing mandatory flag: 2 ← Expected
 ```
+
 **Interpretation**: This CLI is very robust and handles edge cases well.
 
 #### **Problematic CLI Example**
+
 ```bash
 # Command: bun src/fuzzy-test-cli.ts --file problematic-cli.ts
 # Output:
@@ -328,15 +346,18 @@ ERROR TYPES:
   Unknown command: 8          ← Expected
   Handler execution failed: 10 ← Logic errors in handlers
 ```
+
 **Interpretation**: This CLI has significant issues that need investigation.
 
 ### Performance Analysis
 
 When `--performance` is enabled, monitor:
+
 ```bash
 # Look for slow parsing times in verbose output
 Average execution time: 15ms  ← May indicate complexity issues
 ```
+
 - **<5ms**: Excellent performance
 - **5-10ms**: Good performance
 - **>10ms**: Consider optimization, especially for simple commands
@@ -374,7 +395,7 @@ Integrate fuzzy testing into your CI pipeline:
       --file src/my-cli.ts \
       --format json \
       --output fuzzy-results.json
-    
+
     # Fail if success rate is below threshold
     SUCCESS_RATE=$(cat fuzzy-results.json | jq '.successfulTests / .totalTests * 100')
     if (( $(echo "$SUCCESS_RATE < 90" | bc -l) )); then
@@ -389,11 +410,13 @@ Use fuzzy testing to monitor performance regressions:
 
 ```typescript
 const report = await tester.runFuzzyTest();
-const avgTime = report.results
-  .filter(r => r.executionTime)
-  .reduce((sum, r) => sum + r.executionTime!, 0) / report.results.length;
+const avgTime =
+  report.results
+    .filter((r) => r.executionTime)
+    .reduce((sum, r) => sum + r.executionTime!, 0) / report.results.length;
 
-if (avgTime > 10) { // 10ms threshold
+if (avgTime > 10) {
+  // 10ms threshold
   console.warn(`Performance regression detected: ${avgTime}ms average`);
 }
 ```
@@ -433,19 +456,22 @@ async function customFuzzyTest() {
     testErrorCases: true,
     verbose: true,
   });
-  
+
   const report = await tester.runFuzzyTest();
-  
+
   // Custom analysis
   const criticalPaths = ["deploy", "migrate", "backup"];
   for (const path of criticalPaths) {
-    const pathResults = report.results.filter(r => 
-      r.commandPath.includes(path)
+    const pathResults = report.results.filter((r) =>
+      r.commandPath.includes(path),
     );
-    const successRate = pathResults.filter(r => r.success).length / pathResults.length;
-    
+    const successRate =
+      pathResults.filter((r) => r.success).length / pathResults.length;
+
     if (successRate < 0.95) {
-      console.error(`Critical path '${path}' has low success rate: ${successRate * 100}%`);
+      console.error(
+        `Critical path '${path}' has low success rate: ${successRate * 100}%`,
+      );
     }
   }
 }
@@ -458,8 +484,10 @@ customFuzzyTest();
 ### Common Issues and Solutions
 
 #### **1. "No ArgParser instance found"**
+
 **Problem**: The fuzzy tester can't find your parser instance.
 **Solution**: Ensure your file exports the parser as `default`, `parser`, `cli`, `argParser`, or `mainParser`:
+
 ```typescript
 // ✅ Good - any of these work:
 export default parser;
@@ -468,8 +496,10 @@ export const cli = new ArgParser({...});
 ```
 
 #### **2. High Failure Rate (>20%)**
+
 **Problem**: Success rate below 80%, tool exits with error code 1.
 **Investigation steps**:
+
 1. Run with `--verbose` to see what's failing
 2. Check failed tests for patterns:
    ```bash
@@ -482,20 +512,26 @@ export const cli = new ArgParser({...});
    - **Flag conflicts**: Overlapping flag definitions
 
 #### **3. Command Path Coverage Issues**
+
 **Problem**: Some paths show 0 tests or very low coverage.
 **Solutions**:
+
 - **0 tests**: Check if subcommands are properly defined
 - **Low coverage**: May indicate complex flag requirements
 - **Path not found errors**: Verify subcommand structure
 
 #### **4. Performance Issues**
+
 **Problem**: Slow execution times (>10ms average).
 **Investigation**:
+
 ```bash
 # Enable performance monitoring
 bun src/fuzzy-test-cli.ts --file my-cli.ts --performance --verbose
 ```
+
 **Common causes**:
+
 - Complex validation functions
 - Heavy handler logic (should be disabled in fuzzy mode)
 - Deep command hierarchies
@@ -503,12 +539,14 @@ bun src/fuzzy-test-cli.ts --file my-cli.ts --performance --verbose
 ### Debugging Workflow
 
 #### **Step 1: Start Simple**
+
 ```bash
 # Focus on valid cases first
 bun src/fuzzy-test-cli.ts --file my-cli.ts --skip-errors --verbose
 ```
 
 #### **Step 2: Analyze Patterns**
+
 ```bash
 # Get detailed JSON output for analysis
 bun src/fuzzy-test-cli.ts --file my-cli.ts --format json --output results.json
@@ -518,12 +556,14 @@ cat results.json | jq '.results[] | select(.success == false) | .error' | sort |
 ```
 
 #### **Step 3: Focus on Critical Paths**
+
 ```bash
 # Test specific command depth
 bun src/fuzzy-test-cli.ts --file my-cli.ts --max-depth 2 --random-tests 5
 ```
 
 #### **Step 4: Performance Profiling**
+
 ```bash
 # Monitor execution times
 bun src/fuzzy-test-cli.ts --file my-cli.ts --performance --format json | jq '.results[].executionTime' | sort -n
@@ -531,15 +571,15 @@ bun src/fuzzy-test-cli.ts --file my-cli.ts --performance --format json | jq '.re
 
 ### Interpreting Specific Error Messages
 
-| Error Message | Meaning | Action |
-|---------------|---------|---------|
-| `Unknown command: 'xyz'` | Expected from error case testing | ✅ Normal |
-| `Invalid enum value for 'flag'` | Expected from error case testing | ✅ Normal |
-| `Missing mandatory flag: 'flag'` | Expected from error case testing | ✅ Normal |
-| `Type conversion failed` | Type handling issues | 🔍 Investigate flag type definitions |
-| `Validation failed` | Custom validation problems | 🔍 Check custom validation functions |
-| `Handler execution failed` | Logic errors in handlers | 🔍 Review handler implementations |
-| `Command path not found` | Path discovery bug | 🔍 Check subcommand structure |
+| Error Message                    | Meaning                          | Action                               |
+| -------------------------------- | -------------------------------- | ------------------------------------ |
+| `Unknown command: 'xyz'`         | Expected from error case testing | ✅ Normal                            |
+| `Invalid enum value for 'flag'`  | Expected from error case testing | ✅ Normal                            |
+| `Missing mandatory flag: 'flag'` | Expected from error case testing | ✅ Normal                            |
+| `Type conversion failed`         | Type handling issues             | 🔍 Investigate flag type definitions |
+| `Validation failed`              | Custom validation problems       | 🔍 Check custom validation functions |
+| `Handler execution failed`       | Logic errors in handlers         | 🔍 Review handler implementations    |
+| `Command path not found`         | Path discovery bug               | 🔍 Check subcommand structure        |
 
 ## Integration with Testing Frameworks
 
@@ -547,25 +587,27 @@ The fuzzy tester can be integrated with existing test suites:
 
 ```typescript
 // vitest example
-import { describe, it, expect } from 'vitest';
-import { ArgParserFuzzyTester } from '../src/fuzzy-tester';
-import { myParser } from '../src/my-cli';
+import { describe, expect, it } from "vitest";
+import { ArgParserFuzzyTester } from "../src/fuzzy-tester";
+import { myParser } from "../src/my-cli";
 
-describe('ArgParser Fuzzy Tests', () => {
-  it('should have high success rate', async () => {
+describe("ArgParser Fuzzy Tests", () => {
+  it("should have high success rate", async () => {
     const tester = new ArgParserFuzzyTester(myParser);
     const report = await tester.runFuzzyTest();
-    
+
     const successRate = report.successfulTests / report.totalTests;
     expect(successRate).toBeGreaterThan(0.9);
   });
-  
-  it('should handle all command paths', async () => {
+
+  it("should handle all command paths", async () => {
     const tester = new ArgParserFuzzyTester(myParser);
     const report = await tester.runFuzzyTest();
-    
+
     // Ensure all paths have some coverage
-    for (const [path, coverage] of Object.entries(report.summary.coverageByPath)) {
+    for (const [path, coverage] of Object.entries(
+      report.summary.coverageByPath,
+    )) {
       expect(coverage.total).toBeGreaterThan(0);
     }
   });
@@ -575,6 +617,7 @@ describe('ArgParser Fuzzy Tests', () => {
 ## Quick Reference
 
 ### Success Rate Guidelines
+
 - **90%+**: Excellent CLI health ✅
 - **80-89%**: Good, minor issues 🟡
 - **<80%**: Needs attention, tool exits with error code 1 🔴
@@ -582,11 +625,13 @@ describe('ArgParser Fuzzy Tests', () => {
 ### Expected vs Unexpected Errors
 
 #### **Expected Errors** (count as success)
+
 - `Unknown command`
 - `Invalid enum value`
 - `Missing mandatory flag`
 
 #### **Unexpected Errors** (investigate these)
+
 - `Type conversion failed`
 - `Validation failed`
 - `Handler execution failed`

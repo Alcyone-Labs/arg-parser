@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../../src";
 import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
@@ -15,15 +15,15 @@ describe("MCP Multi-Transport Integration Tests", () => {
         handler: async (ctx) => ({
           message: "Multi-transport server response",
           input: ctx.args.input,
-          timestamp: new Date().toISOString()
-        })
+          timestamp: new Date().toISOString(),
+        }),
       }).addFlags([
         {
           name: "input",
           description: "Input data to process",
           options: ["--input", "-i"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "mode",
@@ -31,15 +31,17 @@ describe("MCP Multi-Transport Integration Tests", () => {
           options: ["--mode", "-m"],
           type: "string",
           enum: ["fast", "thorough", "debug"],
-          defaultValue: "fast"
-        }
+          defaultValue: "fast",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
 
       expect(tools.length).toBeGreaterThan(0);
       expect(tools[0].name).toBe("multi-server");
-      expect(tools[0].description).toBe("MCP server for testing multiple transport types");
+      expect(tools[0].description).toBe(
+        "MCP server for testing multiple transport types",
+      );
     });
 
     test("should handle algorithm processing correctly", async () => {
@@ -63,7 +65,7 @@ describe("MCP Multi-Transport Integration Tests", () => {
           algorithm,
           input: data,
           output: result,
-          length: result.length
+          length: result.length,
         };
       });
 
@@ -71,14 +73,14 @@ describe("MCP Multi-Transport Integration Tests", () => {
         appName: "Multi-Transport Test Server",
         appCommandName: "multi-server",
         description: "MCP server for testing multiple transport types",
-        handler: async () => ({ success: true })
+        handler: async () => ({ success: true }),
       });
 
       const processParser = new ArgParser({
         appName: "Process Command",
         description: "Process data with specific algorithm",
         handler: processHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "algorithm",
@@ -86,31 +88,31 @@ describe("MCP Multi-Transport Integration Tests", () => {
           options: ["--algorithm", "-a"],
           type: "string",
           enum: ["reverse", "encode", "default"],
-          defaultValue: "default"
+          defaultValue: "default",
         },
         {
           name: "data",
           description: "Data to process",
           options: ["--data", "-d"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       mainParser.addSubCommand({
         name: "process",
         description: "Process data with specific algorithm",
-        parser: processParser
+        parser: processParser,
       });
 
       const tools = generateMcpToolsFromArgParser(mainParser);
-      const processTool = tools.find(t => t.name.includes("process"));
+      const processTool = tools.find((t) => t.name.includes("process"));
       expect(processTool).toBeDefined();
 
       // Test reverse algorithm
       const reverseResult = await processTool!.executeForTesting!({
         algorithm: "reverse",
-        data: "hello world"
+        data: "hello world",
       });
 
       expect(reverseResult.success).toBe(true);
@@ -120,7 +122,7 @@ describe("MCP Multi-Transport Integration Tests", () => {
       // Test encode algorithm
       const encodeResult = await processTool!.executeForTesting!({
         algorithm: "encode",
-        data: "hello"
+        data: "hello",
       });
 
       expect(encodeResult.success).toBe(true);
@@ -128,5 +130,4 @@ describe("MCP Multi-Transport Integration Tests", () => {
       expect(encodeResult.data.output).toBe("aGVsbG8="); // base64 of "hello"
     });
   });
-
 });

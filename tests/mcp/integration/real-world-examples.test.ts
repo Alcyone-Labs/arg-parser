@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../../src";
 import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
@@ -11,7 +11,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
         content: "Hello World!\nThis is a test file.\nWith multiple lines.\n",
         size: 50,
         lines: 3,
-        encoding: "utf-8"
+        encoding: "utf-8",
       });
 
       const parser = new ArgParser({
@@ -19,14 +19,14 @@ describe("Real-World MCP Examples Integration Tests", () => {
         appCommandName: "file-processor",
         description: "Advanced file processing tools for AI assistants",
         handler: fileHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "file",
           description: "Path to the file to process",
           options: ["--file", "-f"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "operation",
@@ -34,15 +34,17 @@ describe("Real-World MCP Examples Integration Tests", () => {
           options: ["--operation", "-o"],
           type: "string",
           enum: ["read", "info", "hash"],
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       expect(tool.name).toBe("file-processor");
-      expect(tool.description).toBe("Advanced file processing tools for AI assistants");
+      expect(tool.description).toBe(
+        "Advanced file processing tools for AI assistants",
+      );
       expect(tool.inputSchema).toBeDefined();
     });
 
@@ -53,7 +55,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
         content: "Hello World!\nThis is a test file.\nWith multiple lines.\n",
         size: 50,
         lines: 3,
-        encoding: "utf-8"
+        encoding: "utf-8",
       });
 
       const parser = new ArgParser({
@@ -61,14 +63,14 @@ describe("Real-World MCP Examples Integration Tests", () => {
         appCommandName: "file-processor",
         description: "Advanced file processing tools for AI assistants",
         handler: fileHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "file",
           description: "Path to the file to process",
           options: ["--file", "-f"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "operation",
@@ -76,8 +78,8 @@ describe("Real-World MCP Examples Integration Tests", () => {
           options: ["--operation", "-o"],
           type: "string",
           enum: ["read", "info", "hash"],
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -85,7 +87,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
 
       const result = await tool.executeForTesting!({
         file: "/test/file.txt",
-        operation: "read"
+        operation: "read",
       });
 
       expect(result.success).toBe(true);
@@ -97,12 +99,11 @@ describe("Real-World MCP Examples Integration Tests", () => {
         expect.objectContaining({
           args: expect.objectContaining({
             file: "/test/file.txt",
-            operation: "read"
-          })
-        })
+            operation: "read",
+          }),
+        }),
       );
     });
-
   });
 
   describe("Data Analysis Example", () => {
@@ -114,38 +115,41 @@ describe("Real-World MCP Examples Integration Tests", () => {
         statistics: {
           mean: 5.5,
           median: 5.5,
-          standardDeviation: 2.87
-        }
+          standardDeviation: 2.87,
+        },
       });
 
       const parser = new ArgParser({
         appName: "Data Analysis Server",
         appCommandName: "data-analyzer",
-        description: "Advanced data analysis and statistical computation server",
+        description:
+          "Advanced data analysis and statistical computation server",
         handler: statsHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "values",
           description: "Comma-separated numeric values or JSON array",
           options: ["--values", "-v"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "measures",
           description: "Statistical measures to compute",
           options: ["--measures", "-m"],
           type: "string",
-          defaultValue: "mean,median,standardDeviation"
-        }
+          defaultValue: "mean,median,standardDeviation",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       expect(tool.name).toBe("data-analyzer");
-      expect(tool.description).toBe("Advanced data analysis and statistical computation server");
+      expect(tool.description).toBe(
+        "Advanced data analysis and statistical computation server",
+      );
       expect(tool.inputSchema).toBeDefined();
     });
 
@@ -157,31 +161,32 @@ describe("Real-World MCP Examples Integration Tests", () => {
         statistics: {
           mean: 5.5,
           median: 5.5,
-          standardDeviation: 2.87
-        }
+          standardDeviation: 2.87,
+        },
       });
 
       const parser = new ArgParser({
         appName: "Data Analysis Server",
         appCommandName: "data-analyzer",
-        description: "Advanced data analysis and statistical computation server",
+        description:
+          "Advanced data analysis and statistical computation server",
         handler: statsHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "values",
           description: "Comma-separated numeric values or JSON array",
           options: ["--values", "-v"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "measures",
           description: "Statistical measures to compute",
           options: ["--measures", "-m"],
           type: "string",
-          defaultValue: "mean,median,standardDeviation"
-        }
+          defaultValue: "mean,median,standardDeviation",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -189,7 +194,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
 
       const result = await tool.executeForTesting!({
         values: "1,2,3,4,5,6,7,8,9,10",
-        measures: "mean,median,standardDeviation"
+        measures: "mean,median,standardDeviation",
       });
 
       expect(result.success).toBe(true);
@@ -201,12 +206,11 @@ describe("Real-World MCP Examples Integration Tests", () => {
         expect.objectContaining({
           args: expect.objectContaining({
             values: "1,2,3,4,5,6,7,8,9,10",
-            measures: "mean,median,standardDeviation"
-          })
-        })
+            measures: "mean,median,standardDeviation",
+          }),
+        }),
       );
     });
-
   });
 
   describe("Canny CLI Example (Community Contribution)", () => {
@@ -214,28 +218,29 @@ describe("Real-World MCP Examples Integration Tests", () => {
       // Mock the fetch function to avoid actual API calls in unit tests
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          posts: [
-            {
-              title: "Feature Request: Dark Mode",
-              status: "under review",
-              score: 42,
-              author: { name: "John Doe" },
-              details: "Please add dark mode support to the application",
-              url: "https://example.canny.io/posts/dark-mode",
-              tags: [{ name: "ui" }, { name: "accessibility" }]
-            },
-            {
-              title: "API Rate Limiting",
-              status: "planned",
-              score: 28,
-              author: { name: "Jane Smith" },
-              details: "Need better rate limiting for API endpoints",
-              url: "https://example.canny.io/posts/rate-limiting",
-              tags: [{ name: "api" }, { name: "performance" }]
-            }
-          ]
-        })
+        json: () =>
+          Promise.resolve({
+            posts: [
+              {
+                title: "Feature Request: Dark Mode",
+                status: "under review",
+                score: 42,
+                author: { name: "John Doe" },
+                details: "Please add dark mode support to the application",
+                url: "https://example.canny.io/posts/dark-mode",
+                tags: [{ name: "ui" }, { name: "accessibility" }],
+              },
+              {
+                title: "API Rate Limiting",
+                status: "planned",
+                score: 28,
+                author: { name: "Jane Smith" },
+                details: "Need better rate limiting for API endpoints",
+                url: "https://example.canny.io/posts/rate-limiting",
+                tags: [{ name: "api" }, { name: "performance" }],
+              },
+            ],
+          }),
       });
 
       // Note: In a real test environment, you would mock node-fetch here
@@ -248,7 +253,8 @@ describe("Real-World MCP Examples Integration Tests", () => {
         if (!args.apiKey && !globalThis.process.env.CANNY_API_KEY) {
           return {
             success: false,
-            error: 'API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.'
+            error:
+              "API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.",
           };
         }
 
@@ -264,7 +270,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
               author: "John Doe",
               details: "Please add dark mode support to the application",
               url: "https://example.canny.io/posts/dark-mode",
-              tags: ["ui", "accessibility"]
+              tags: ["ui", "accessibility"],
             },
             {
               title: "API Rate Limiting",
@@ -273,61 +279,72 @@ describe("Real-World MCP Examples Integration Tests", () => {
               author: "Jane Smith",
               details: "Need better rate limiting for API endpoints",
               url: "https://example.canny.io/posts/rate-limiting",
-              tags: ["api", "performance"]
-            }
+              tags: ["api", "performance"],
+            },
           ],
-          query: args.query
+          query: args.query,
         };
       });
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests (CLI + MCP server)',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description:
+          "Search Canny for relevant feature requests (CLI + MCP server)",
         handler: cannyHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
         },
         {
-          name: 'apiKey',
-          options: ['-k', '--api-key'],
-          type: 'string',
-          description: 'Canny API key (optional, defaults to CANNY_API_KEY env var)',
-          mandatory: false
+          name: "apiKey",
+          options: ["-k", "--api-key"],
+          type: "string",
+          description:
+            "Canny API key (optional, defaults to CANNY_API_KEY env var)",
+          mandatory: false,
         },
         {
-          name: 'limit',
-          options: ['-l', '--limit'],
-          type: 'number',
-          description: 'Number of results to return',
-          defaultValue: 10
+          name: "limit",
+          options: ["-l", "--limit"],
+          type: "number",
+          description: "Number of results to return",
+          defaultValue: 10,
         },
         {
-          name: 'board',
-          options: ['-b', '--board'],
-          type: 'string',
-          description: 'Specific board ID to search (optional)'
+          name: "board",
+          options: ["-b", "--board"],
+          type: "string",
+          description: "Specific board ID to search (optional)",
         },
         {
-          name: 'status',
-          options: ['-s', '--status'],
-          type: 'string',
-          description: 'Filter by post status',
-          enum: ['open', 'under review', 'planned', 'in progress', 'complete', 'closed']
-        }
+          name: "status",
+          options: ["-s", "--status"],
+          type: "string",
+          description: "Filter by post status",
+          enum: [
+            "open",
+            "under review",
+            "planned",
+            "in progress",
+            "complete",
+            "closed",
+          ],
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       expect(tool.name).toBe("canny-search");
-      expect(tool.description).toBe("Search Canny for relevant feature requests (CLI + MCP server)");
+      expect(tool.description).toBe(
+        "Search Canny for relevant feature requests (CLI + MCP server)",
+      );
       expect(tool.inputSchema).toBeDefined();
 
       // Verify it's a Zod object schema
@@ -339,20 +356,20 @@ describe("Real-World MCP Examples Integration Tests", () => {
         limit: 5,
         status: "open",
         board: "test-board",
-        apiKey: "test-key"
+        apiKey: "test-key",
       };
       expect(() => tool.inputSchema.parse(validInput)).not.toThrow();
 
       // Test invalid enum value
       const invalidInput = {
         query: "test query",
-        status: "invalid-status"
+        status: "invalid-status",
       };
       expect(() => tool.inputSchema.parse(invalidInput)).toThrow();
 
       // Test missing mandatory field (query)
       const missingQuery = {
-        limit: 5
+        limit: 5,
       };
       // Note: In MCP tools, mandatory fields might be optional due to help functionality
       // So we test that the schema exists and can parse valid input
@@ -366,7 +383,8 @@ describe("Real-World MCP Examples Integration Tests", () => {
         if (!args.apiKey && !globalThis.process.env.CANNY_API_KEY) {
           return {
             success: false,
-            error: 'API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.'
+            error:
+              "API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.",
           };
         }
 
@@ -382,48 +400,57 @@ describe("Real-World MCP Examples Integration Tests", () => {
               author: "John Doe",
               details: "Please add dark mode support to the application",
               url: "https://example.canny.io/posts/dark-mode",
-              tags: ["ui", "accessibility"]
-            }
+              tags: ["ui", "accessibility"],
+            },
           ],
-          query: args.query
+          query: args.query,
         };
       });
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests (CLI + MCP server)',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description:
+          "Search Canny for relevant feature requests (CLI + MCP server)",
         handler: cannyHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
         },
         {
-          name: 'apiKey',
-          options: ['-k', '--api-key'],
-          type: 'string',
-          description: 'Canny API key (optional, defaults to CANNY_API_KEY env var)',
-          mandatory: false
+          name: "apiKey",
+          options: ["-k", "--api-key"],
+          type: "string",
+          description:
+            "Canny API key (optional, defaults to CANNY_API_KEY env var)",
+          mandatory: false,
         },
         {
-          name: 'limit',
-          options: ['-l', '--limit'],
-          type: 'number',
-          description: 'Number of results to return',
-          defaultValue: 10
+          name: "limit",
+          options: ["-l", "--limit"],
+          type: "number",
+          description: "Number of results to return",
+          defaultValue: 10,
         },
         {
-          name: 'status',
-          options: ['-s', '--status'],
-          type: 'string',
-          description: 'Filter by post status',
-          enum: ['open', 'under review', 'planned', 'in progress', 'complete', 'closed']
-        }
+          name: "status",
+          options: ["-s", "--status"],
+          type: "string",
+          description: "Filter by post status",
+          enum: [
+            "open",
+            "under review",
+            "planned",
+            "in progress",
+            "complete",
+            "closed",
+          ],
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -434,7 +461,7 @@ describe("Real-World MCP Examples Integration Tests", () => {
         query: "dark mode",
         limit: 5,
         status: "under review",
-        apiKey: "test-api-key"  // Provide API key to avoid the error case
+        apiKey: "test-api-key", // Provide API key to avoid the error case
       });
 
       expect(result.success).toBe(true);
@@ -450,9 +477,9 @@ describe("Real-World MCP Examples Integration Tests", () => {
             query: "dark mode",
             limit: 5,
             status: "under review",
-            apiKey: "test-api-key"
-          })
-        })
+            apiKey: "test-api-key",
+          }),
+        }),
       );
     });
 
@@ -467,7 +494,8 @@ describe("Real-World MCP Examples Integration Tests", () => {
         if (!args.apiKey && !globalThis.process.env.CANNY_API_KEY) {
           return {
             success: false,
-            error: 'API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.'
+            error:
+              "API key is required. Set the CANNY_API_KEY environment variable or use --api-key flag.",
           };
         }
 
@@ -475,38 +503,40 @@ describe("Real-World MCP Examples Integration Tests", () => {
       });
 
       const parser = new ArgParser({
-        appName: 'Canny Search CLI',
-        appCommandName: 'canny-search',
-        description: 'Search Canny for relevant feature requests (CLI + MCP server)',
+        appName: "Canny Search CLI",
+        appCommandName: "canny-search",
+        description:
+          "Search Canny for relevant feature requests (CLI + MCP server)",
         handler: cannyHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
-          name: 'query',
-          options: ['-q', '--query'],
-          type: 'string',
-          description: 'Search query for feature requests',
-          mandatory: true
+          name: "query",
+          options: ["-q", "--query"],
+          type: "string",
+          description: "Search query for feature requests",
+          mandatory: true,
         },
         {
-          name: 'apiKey',
-          options: ['-k', '--api-key'],
-          type: 'string',
-          description: 'Canny API key (optional, defaults to CANNY_API_KEY env var)',
-          mandatory: false
-        }
+          name: "apiKey",
+          options: ["-k", "--api-key"],
+          type: "string",
+          description:
+            "Canny API key (optional, defaults to CANNY_API_KEY env var)",
+          mandatory: false,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       const result = await tool.executeForTesting!({
-        query: "test query"
+        query: "test query",
       });
 
       expect(result.success).toBe(true);
       expect(result.data.success).toBe(false);
-      expect(result.data.error).toContain('API key is required');
+      expect(result.data.error).toContain("API key is required");
 
       // Restore the original API key
       if (originalApiKey) {

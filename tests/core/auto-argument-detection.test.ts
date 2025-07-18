@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../src";
 
 describe("Automatic Argument Detection", () => {
@@ -29,17 +29,17 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       // Call parse() without arguments - should auto-detect
       const result = await parser.parse();
-      
+
       expect(result.test).toBe("value");
       expect(result.success).toBe(true);
     });
@@ -53,22 +53,24 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli", // This makes it CLI mode
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       await parser.parse();
-      
+
       // Should have displayed warning
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Warning: parse() called without arguments")
+        expect.stringContaining("Warning: parse() called without arguments"),
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("For explicit control, call parse(process.argv.slice(2)) instead")
+        expect.stringContaining(
+          "For explicit control, call parse(process.argv.slice(2)) instead",
+        ),
       );
     });
 
@@ -81,16 +83,16 @@ describe("Automatic Argument Detection", () => {
         // No appCommandName - not CLI mode
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       await parser.parse();
-      
+
       // Should not have displayed warning
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
@@ -104,17 +106,17 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli", // This would normally trigger CLI mode
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       // Call with isMcp option to simulate MCP mode
       await parser.parse(undefined, { isMcp: true });
-      
+
       // Should not have displayed warning in MCP mode
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
@@ -128,17 +130,17 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       // Call parseForCli() without arguments - should auto-detect
       const result = await parser.parseForCli();
-      
+
       expect(result.test).toBe("value");
       expect(result.success).toBe(true);
     });
@@ -152,17 +154,17 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       // Call parseAsync() without arguments - should auto-detect
       const result = await parser.parseAsync();
-      
+
       expect(result.test).toBe("value");
       expect(result.success).toBe(true);
     });
@@ -180,16 +182,16 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       await expect(parser.parse()).rejects.toThrow(
-        "parse() called without arguments in non-Node.js environment"
+        "parse() called without arguments in non-Node.js environment",
       );
 
       // Restore process
@@ -207,16 +209,16 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       await expect(parser.parse()).rejects.toThrow(
-        "parse() called without arguments in non-Node.js environment"
+        "parse() called without arguments in non-Node.js environment",
       );
 
       // Restore process.argv
@@ -234,20 +236,20 @@ describe("Automatic Argument Detection", () => {
         appCommandName: "test-cli",
         handler: async (ctx) => ({ success: true, args: ctx.args }),
         autoExit: false,
-        handleErrors: false
+        handleErrors: false,
       }).addFlag({
         name: "test",
         description: "Test flag",
         options: ["--test"],
-        type: "string"
+        type: "string",
       });
 
       // Explicitly provide different arguments
       const result = await parser.parse(["--test", "explicit"]);
-      
+
       expect(result.test).toBe("explicit");
       expect(result.success).toBe(true);
-      
+
       // Should not have displayed warning when arguments are explicitly provided
       expect(consoleWarnSpy).not.toHaveBeenCalled();
     });

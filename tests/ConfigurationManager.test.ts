@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ConfigurationManager } from "../src/config/ConfigurationManager";
@@ -26,28 +26,28 @@ describe("ConfigurationManager", () => {
           name: "input",
           description: "Input file",
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "verbose",
           description: "Verbose output",
           type: "boolean",
-          mandatory: false
+          mandatory: false,
         },
         {
           name: "count",
           description: "Number of items",
           type: "number",
-          mandatory: false
-        }
+          mandatory: false,
+        },
       ],
       getLastParseResult: () => ({
         args: {
           input: "test.txt",
           verbose: true,
-          count: 5
-        }
-      })
+          count: 5,
+        },
+      }),
     };
 
     configManager = new ConfigurationManager(mockArgParser);
@@ -92,7 +92,7 @@ COUNT=5
       expect(result).toEqual({
         INPUT: "test.txt",
         VERBOSE: "true",
-        COUNT: "5"
+        COUNT: "5",
       });
     });
 
@@ -104,7 +104,7 @@ DESCRIPTION='A test description'
       const result = configManager.parseEnvFile(content);
       expect(result).toEqual({
         INPUT: "file with spaces.txt",
-        DESCRIPTION: "A test description"
+        DESCRIPTION: "A test description",
       });
     });
 
@@ -119,7 +119,7 @@ VERBOSE=true
       const result = configManager.parseEnvFile(content);
       expect(result).toEqual({
         INPUT: "test.txt",
-        VERBOSE: "true"
+        VERBOSE: "true",
       });
     });
   });
@@ -135,13 +135,15 @@ VERBOSE=true
       expect(result).toEqual({
         input: "test.txt",
         verbose: true,
-        count: 5
+        count: 5,
       });
     });
 
     test("should throw error for invalid JSON", () => {
       const content = "{ invalid json }";
-      expect(() => configManager.parseJsonFile(content)).toThrow("Failed to parse JSON");
+      expect(() => configManager.parseJsonFile(content)).toThrow(
+        "Failed to parse JSON",
+      );
     });
   });
 
@@ -160,7 +162,9 @@ VERBOSE=true
 
     test("should throw error for invalid number", () => {
       const flag = { name: "test", type: "number" };
-      expect(() => configManager.convertValueToFlagType("not-a-number", flag)).toThrow("Cannot convert");
+      expect(() =>
+        configManager.convertValueToFlagType("not-a-number", flag),
+      ).toThrow("Cannot convert");
     });
 
     test("should convert boolean values", () => {
@@ -174,9 +178,19 @@ VERBOSE=true
 
     test("should convert table/array values", () => {
       const flag = { name: "test", type: "table" };
-      expect(configManager.convertValueToFlagType(["a", "b"], flag)).toEqual(["a", "b"]);
-      expect(configManager.convertValueToFlagType("a,b,c", flag)).toEqual(["a", "b", "c"]);
-      expect(configManager.convertValueToFlagType('["x","y"]', flag)).toEqual(["x", "y"]);
+      expect(configManager.convertValueToFlagType(["a", "b"], flag)).toEqual([
+        "a",
+        "b",
+      ]);
+      expect(configManager.convertValueToFlagType("a,b,c", flag)).toEqual([
+        "a",
+        "b",
+        "c",
+      ]);
+      expect(configManager.convertValueToFlagType('["x","y"]', flag)).toEqual([
+        "x",
+        "y",
+      ]);
     });
   });
 
@@ -184,9 +198,9 @@ VERBOSE=true
     test("should generate proper .env format", () => {
       const flags = mockArgParser.flags;
       const parsedArgs = mockArgParser.getLastParseResult();
-      
+
       const result = configManager.generateEnvFormat(flags, parsedArgs);
-      
+
       expect(result).toContain("INPUT=test.txt");
       expect(result).toContain("VERBOSE=true");
       expect(result).toContain("COUNT=5");
@@ -196,10 +210,13 @@ VERBOSE=true
 
     test("should quote values with spaces", () => {
       mockArgParser.getLastParseResult = () => ({
-        args: { input: "file with spaces.txt" }
+        args: { input: "file with spaces.txt" },
       });
-      
-      const result = configManager.generateEnvFormat([mockArgParser.flags[0]], mockArgParser.getLastParseResult());
+
+      const result = configManager.generateEnvFormat(
+        [mockArgParser.flags[0]],
+        mockArgParser.getLastParseResult(),
+      );
       expect(result).toContain('INPUT="file with spaces.txt"');
     });
   });
@@ -208,9 +225,9 @@ VERBOSE=true
     test("should generate proper YAML format", () => {
       const flags = mockArgParser.flags;
       const parsedArgs = mockArgParser.getLastParseResult();
-      
+
       const result = configManager.generateYamlFormat(flags, parsedArgs);
-      
+
       expect(result).toContain("input: test.txt");
       expect(result).toContain("verbose: true");
       expect(result).toContain("count: 5");
@@ -222,14 +239,14 @@ VERBOSE=true
     test("should generate proper JSON format", () => {
       const flags = mockArgParser.flags;
       const parsedArgs = mockArgParser.getLastParseResult();
-      
+
       const result = configManager.generateJsonFormat(flags, parsedArgs);
       const parsed = JSON.parse(result);
-      
+
       expect(parsed).toEqual({
         input: "test.txt",
         verbose: true,
-        count: 5
+        count: 5,
       });
     });
   });
@@ -238,9 +255,12 @@ VERBOSE=true
     test("should merge config with command line args", () => {
       const envConfig = { input: "config.txt", verbose: true };
       const processArgs = ["--count", "10"];
-      
-      const result = configManager.mergeEnvConfigWithArgs(envConfig, processArgs);
-      
+
+      const result = configManager.mergeEnvConfigWithArgs(
+        envConfig,
+        processArgs,
+      );
+
       expect(result).toContain("--count");
       expect(result).toContain("10");
       expect(result).toContain("--input");
@@ -251,11 +271,14 @@ VERBOSE=true
     test("should not override existing command line args", () => {
       const envConfig = { input: "config.txt" };
       const processArgs = ["--input", "cli.txt"];
-      
-      const result = configManager.mergeEnvConfigWithArgs(envConfig, processArgs);
-      
+
+      const result = configManager.mergeEnvConfigWithArgs(
+        envConfig,
+        processArgs,
+      );
+
       // Should keep the CLI version, not add the config version
-      expect(result.filter(arg => arg === "--input")).toHaveLength(1);
+      expect(result.filter((arg) => arg === "--input")).toHaveLength(1);
       expect(result).toContain("cli.txt");
       expect(result).not.toContain("config.txt");
     });

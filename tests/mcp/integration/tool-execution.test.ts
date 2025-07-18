@@ -1,7 +1,7 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { ArgParser } from "../../../src";
-import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 import type { IFlag } from "../../../src";
+import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 
 describe("MCP Tool Execution Integration Tests", () => {
   describe("Basic Tool Execution", () => {
@@ -10,7 +10,7 @@ describe("MCP Tool Execution Integration Tests", () => {
         operation: "main",
         input: "test input",
         processed: true,
-        timestamp: "2024-01-01T00:00:00.000Z"
+        timestamp: "2024-01-01T00:00:00.000Z",
       });
 
       const parser = new ArgParser({
@@ -18,29 +18,29 @@ describe("MCP Tool Execution Integration Tests", () => {
         appCommandName: "tool-server",
         description: "MCP server for testing tool execution scenarios",
         handler: mockHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "input",
           description: "Input data to process",
           options: ["--input", "-i"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "count",
           description: "Count parameter",
           options: ["--count", "-c"],
           type: "number",
-          defaultValue: 1
+          defaultValue: 1,
         },
         {
           name: "verbose",
           description: "Verbose flag",
           options: ["--verbose", "-v"],
           type: "boolean",
-          flagOnly: true
-        }
+          flagOnly: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -49,7 +49,7 @@ describe("MCP Tool Execution Integration Tests", () => {
       const result = await tool.executeForTesting!({
         input: "test input",
         count: 5,
-        verbose: true
+        verbose: true,
       });
 
       expect(result.success).toBe(true);
@@ -62,21 +62,21 @@ describe("MCP Tool Execution Integration Tests", () => {
           args: expect.objectContaining({
             input: "test input",
             count: 5,
-            verbose: true
-          })
-        })
+            verbose: true,
+          }),
+        }),
       );
     });
 
     test("should handle async operations correctly", async () => {
       const asyncHandler = vi.fn().mockImplementation(async (ctx) => {
         // Simulate async work
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         return {
           operation: "async-test",
           delay: ctx.args.delay,
           completed: true,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       });
 
@@ -85,15 +85,15 @@ describe("MCP Tool Execution Integration Tests", () => {
         appCommandName: "async-server",
         description: "Test async operations",
         handler: asyncHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "delay",
           description: "Delay in milliseconds",
           options: ["--delay", "-d"],
           type: "number",
-          defaultValue: 100
-        }
+          defaultValue: 100,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -101,7 +101,7 @@ describe("MCP Tool Execution Integration Tests", () => {
 
       const startTime = Date.now();
       const result = await tool.executeForTesting!({
-        delay: 100
+        delay: 100,
       });
       const endTime = Date.now();
 
@@ -113,9 +113,9 @@ describe("MCP Tool Execution Integration Tests", () => {
       expect(asyncHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           args: expect.objectContaining({
-            delay: 100
-          })
-        })
+            delay: 100,
+          }),
+        }),
       );
     });
 
@@ -125,8 +125,8 @@ describe("MCP Tool Execution Integration Tests", () => {
         results: ["item1", "item2", "item3"],
         metadata: {
           count: 3,
-          timestamp: "2024-01-01T00:00:00.000Z"
-        }
+          timestamp: "2024-01-01T00:00:00.000Z",
+        },
       });
 
       const parser = new ArgParser({
@@ -134,14 +134,14 @@ describe("MCP Tool Execution Integration Tests", () => {
         appCommandName: "complex-server",
         description: "Test complex data handling",
         handler: complexHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "data",
           description: "JSON data to process",
           options: ["--data", "-d"],
           type: "string",
-          mandatory: true
+          mandatory: true,
         },
         {
           name: "format",
@@ -149,8 +149,8 @@ describe("MCP Tool Execution Integration Tests", () => {
           options: ["--format", "-f"],
           type: "string",
           enum: ["json", "csv", "xml"],
-          defaultValue: "json"
-        }
+          defaultValue: "json",
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
@@ -158,7 +158,7 @@ describe("MCP Tool Execution Integration Tests", () => {
 
       const result = await tool.executeForTesting!({
         data: '{"items": ["a", "b", "c"]}',
-        format: "json"
+        format: "json",
       });
 
       expect(result.success).toBe(true);
@@ -170,44 +170,45 @@ describe("MCP Tool Execution Integration Tests", () => {
         expect.objectContaining({
           args: expect.objectContaining({
             data: '{"items": ["a", "b", "c"]}',
-            format: "json"
-          })
-        })
+            format: "json",
+          }),
+        }),
       );
     });
   });
 
   describe("Error Handling", () => {
     test("should handle execution errors gracefully", async () => {
-      const errorHandler = vi.fn().mockRejectedValue(new Error("Execution failed"));
+      const errorHandler = vi
+        .fn()
+        .mockRejectedValue(new Error("Execution failed"));
 
       const parser = new ArgParser({
         appName: "Error Test Server",
         appCommandName: "error-server",
         description: "Test error handling",
         handler: errorHandler,
-        handleErrors: false
+        handleErrors: false,
       }).addFlags([
         {
           name: "input",
           description: "Input parameter",
           options: ["--input"],
           type: "string",
-          mandatory: true
-        }
+          mandatory: true,
+        },
       ]);
 
       const tools = generateMcpToolsFromArgParser(parser);
       const tool = tools[0];
 
       const result = await tool.executeForTesting!({
-        input: "test input"
+        input: "test input",
       });
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("Execution failed");
       expect(errorHandler).toHaveBeenCalled();
     });
-
   });
 });

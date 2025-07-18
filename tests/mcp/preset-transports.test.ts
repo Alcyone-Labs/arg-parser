@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { ArgParser } from "../../src";
-import type { McpTransportConfig, McpSubCommandOptions } from "../../src";
+import type { McpSubCommandOptions, McpTransportConfig } from "../../src";
 
 describe("MCP Preset Transports Configuration", () => {
   let parser: ArgParser;
@@ -26,16 +26,16 @@ describe("MCP Preset Transports Configuration", () => {
   describe("McpTransportConfig type", () => {
     test("should accept valid transport configurations", () => {
       const stdioConfig: McpTransportConfig = { type: "stdio" };
-      const sseConfig: McpTransportConfig = { 
-        type: "sse", 
-        port: 3001, 
-        host: "localhost", 
-        path: "/mcp" 
+      const sseConfig: McpTransportConfig = {
+        type: "sse",
+        port: 3001,
+        host: "localhost",
+        path: "/mcp",
       };
-      const httpConfig: McpTransportConfig = { 
-        type: "streamable-http", 
+      const httpConfig: McpTransportConfig = {
+        type: "streamable-http",
         port: 3002,
-        sessionIdGenerator: () => "test-session"
+        sessionIdGenerator: () => "test-session",
       };
 
       expect(stdioConfig.type).toBe("stdio");
@@ -52,18 +52,22 @@ describe("MCP Preset Transports Configuration", () => {
         type: "sse",
         port: 3001,
         host: "0.0.0.0",
-        path: "/custom-mcp"
+        path: "/custom-mcp",
       };
 
       const options: McpSubCommandOptions = {
-        defaultTransport
+        defaultTransport,
       };
 
       expect(() => {
-        parser.addMcpSubCommand("serve", {
-          name: "test-mcp-server",
-          version: "1.0.0",
-        }, options);
+        parser.addMcpSubCommand(
+          "serve",
+          {
+            name: "test-mcp-server",
+            version: "1.0.0",
+          },
+          options,
+        );
       }).not.toThrow();
 
       const subCommands = parser.getSubCommands();
@@ -74,18 +78,22 @@ describe("MCP Preset Transports Configuration", () => {
       const defaultTransports: McpTransportConfig[] = [
         { type: "stdio" },
         { type: "sse", port: 3001 },
-        { type: "streamable-http", port: 3002, path: "/api/mcp" }
+        { type: "streamable-http", port: 3002, path: "/api/mcp" },
       ];
 
       const options: McpSubCommandOptions = {
-        defaultTransports
+        defaultTransports,
       };
 
       expect(() => {
-        parser.addMcpSubCommand("serve", {
-          name: "multi-transport-server",
-          version: "1.0.0",
-        }, options);
+        parser.addMcpSubCommand(
+          "serve",
+          {
+            name: "multi-transport-server",
+            version: "1.0.0",
+          },
+          options,
+        );
       }).not.toThrow();
 
       const subCommands = parser.getSubCommands();
@@ -95,36 +103,44 @@ describe("MCP Preset Transports Configuration", () => {
     test("should accept both preset transports and toolOptions", () => {
       const defaultTransport: McpTransportConfig = {
         type: "sse",
-        port: 4000
+        port: 4000,
       };
 
       const options: McpSubCommandOptions & { toolOptions?: any } = {
         defaultTransport,
         toolOptions: {
           includeSubCommands: true,
-          toolNamePrefix: "test-"
-        }
+          toolNamePrefix: "test-",
+        },
       };
 
       expect(() => {
-        parser.addMcpSubCommand("serve", {
-          name: "configured-server",
-          version: "1.0.0",
-        }, options);
+        parser.addMcpSubCommand(
+          "serve",
+          {
+            name: "configured-server",
+            version: "1.0.0",
+          },
+          options,
+        );
       }).not.toThrow();
     });
 
     test("should maintain backward compatibility with toolOptions parameter", () => {
       const toolOptions = {
         includeSubCommands: true,
-        toolNamePrefix: "legacy-"
+        toolNamePrefix: "legacy-",
       };
 
       expect(() => {
-        parser.addMcpSubCommand("serve", {
-          name: "legacy-server",
-          version: "1.0.0",
-        }, { toolOptions });
+        parser.addMcpSubCommand(
+          "serve",
+          {
+            name: "legacy-server",
+            version: "1.0.0",
+          },
+          { toolOptions },
+        );
       }).not.toThrow();
 
       const subCommands = parser.getSubCommands();
@@ -137,13 +153,17 @@ describe("MCP Preset Transports Configuration", () => {
       const defaultTransport: McpTransportConfig = {
         type: "sse",
         port: 3001,
-        host: "localhost"
+        host: "localhost",
       };
 
-      parser.addMcpSubCommand("serve", {
-        name: "test-server",
-        version: "1.0.0",
-      }, { defaultTransport });
+      parser.addMcpSubCommand(
+        "serve",
+        {
+          name: "test-server",
+          version: "1.0.0",
+        },
+        { defaultTransport },
+      );
 
       const serveCommand = parser.getSubCommands().get("serve");
       expect(serveCommand).toBeDefined();
@@ -153,13 +173,17 @@ describe("MCP Preset Transports Configuration", () => {
     test("should prioritize CLI flags over preset configuration", async () => {
       const defaultTransport: McpTransportConfig = {
         type: "sse",
-        port: 3001
+        port: 3001,
       };
 
-      parser.addMcpSubCommand("serve", {
-        name: "priority-test-server",
-        version: "1.0.0",
-      }, { defaultTransport });
+      parser.addMcpSubCommand(
+        "serve",
+        {
+          name: "priority-test-server",
+          version: "1.0.0",
+        },
+        { defaultTransport },
+      );
 
       // Transport configuration is now handled via system flags (--s-mcp-*)
       // The subcommand parser should not have transport flags
@@ -167,7 +191,9 @@ describe("MCP Preset Transports Configuration", () => {
       const transportFlags = serveCommand?.parser.flags;
 
       // Transport flags should not exist in subcommand - they're now system flags
-      const transportFlag = transportFlags?.find((f: any) => f.name === "transport");
+      const transportFlag = transportFlags?.find(
+        (f: any) => f.name === "transport",
+      );
       expect(transportFlag).toBeUndefined();
 
       // System flags are handled at the parser level, not in subcommands
@@ -181,7 +207,8 @@ describe("MCP Preset Transports Configuration", () => {
       const complexParser = ArgParser.withMcp({
         appName: "Complex CLI with Presets",
         appCommandName: "complex-preset",
-        description: "A complex CLI with sub-commands and preset MCP transports",
+        description:
+          "A complex CLI with sub-commands and preset MCP transports",
       })
         .addFlags([
           {
@@ -209,18 +236,22 @@ describe("MCP Preset Transports Configuration", () => {
             },
           ]),
         })
-        .addMcpSubCommand("serve", {
-          name: "complex-preset-server",
-          version: "1.0.0",
-        }, {
-          defaultTransports: [
-            { type: "stdio" },
-            { type: "sse", port: 3001, host: "0.0.0.0" }
-          ],
-          toolOptions: {
-            includeSubCommands: true
-          }
-        });
+        .addMcpSubCommand(
+          "serve",
+          {
+            name: "complex-preset-server",
+            version: "1.0.0",
+          },
+          {
+            defaultTransports: [
+              { type: "stdio" },
+              { type: "sse", port: 3001, host: "0.0.0.0" },
+            ],
+            toolOptions: {
+              includeSubCommands: true,
+            },
+          },
+        );
 
       expect(complexParser).toBeInstanceOf(ArgParser);
       expect(complexParser.getSubCommands().has("process")).toBe(true);

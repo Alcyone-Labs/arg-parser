@@ -20,9 +20,8 @@ import { ArgParser, OutputSchemaPatterns } from "@alcyone-labs/arg-parser";
 const parser = new ArgParser({
   appName: "My CLI",
   appCommandName: "my-cli",
-  handler: async (ctx) => ({ success: true, message: "Done" })
-})
-.addTool({
+  handler: async (ctx) => ({ success: true, message: "Done" }),
+}).addTool({
   name: "process-data",
   description: "Process input data",
   flags: [
@@ -31,16 +30,16 @@ const parser = new ArgParser({
       description: "Input to process",
       options: ["--input"],
       type: "string",
-      mandatory: true
-    }
+      mandatory: true,
+    },
   ],
   // 🎉 NEW: Output schema directly in tool definition!
-  outputSchema: 'successWithData', // Auto-completion supported!
+  outputSchema: "successWithData", // Auto-completion supported!
   handler: async (ctx) => ({
     success: true,
     data: { processed: ctx.args.input },
-    message: "Processing complete"
-  })
+    message: "Processing complete",
+  }),
 });
 
 // Method 2: Set default schema for all tools (alternative approach)
@@ -50,20 +49,20 @@ const parser2 = new ArgParser({
   handler: async (ctx) => ({
     success: true,
     data: { processed: ctx.args.input },
-    message: "Processing complete"
-  })
+    message: "Processing complete",
+  }),
 })
-.addFlags([
-  {
-    name: "input",
-    description: "Input to process",
-    options: ["--input"],
-    type: "string",
-    mandatory: true
-  }
-])
-// Set output schema using predefined pattern
-.setDefaultOutputSchema('successWithData');
+  .addFlags([
+    {
+      name: "input",
+      description: "Input to process",
+      options: ["--input"],
+      type: "string",
+      mandatory: true,
+    },
+  ])
+  // Set output schema using predefined pattern
+  .setDefaultOutputSchema("successWithData");
 ```
 
 ## Predefined Schema Patterns
@@ -71,7 +70,9 @@ const parser2 = new ArgParser({
 The library provides common response patterns out of the box:
 
 ### `successError`
+
 Basic success/error response pattern:
+
 ```typescript
 {
   success: boolean,
@@ -81,7 +82,9 @@ Basic success/error response pattern:
 ```
 
 ### `successWithData`
+
 Success response with data payload:
+
 ```typescript
 {
   success: boolean,
@@ -92,7 +95,9 @@ Success response with data payload:
 ```
 
 ### `list`
+
 Array/list response pattern:
+
 ```typescript
 {
   items: any[], // or custom item schema
@@ -102,7 +107,9 @@ Array/list response pattern:
 ```
 
 ### `fileOperation`
+
 File operation response pattern:
+
 ```typescript
 {
   path: string,
@@ -114,7 +121,9 @@ File operation response pattern:
 ```
 
 ### `processExecution`
+
 Process execution response pattern:
+
 ```typescript
 {
   exitCode: number,
@@ -132,43 +141,56 @@ Process execution response pattern:
 The cleanest and most intuitive way is to define output schemas directly in your tool configuration:
 
 ```typescript
-parser.addTool({
-  name: "file-processor",
-  description: "Process files",
-  flags: [/* ... */],
-  // 🎉 Output schema with auto-completion!
-  outputSchema: 'fileOperation', // Predefined pattern
-  handler: async (ctx) => ({ /* ... */ })
-})
-.addTool({
-  name: "data-analyzer",
-  description: "Analyze data",
-  flags: [/* ... */],
-  // Custom Zod schema
-  outputSchema: z.object({
-    results: z.array(z.any()),
-    summary: z.object({
-      total: z.number(),
-      processed: z.number()
-    })
-  }),
-  handler: async (ctx) => ({ /* ... */ })
-})
-.addTool({
-  name: "report-generator",
-  description: "Generate reports",
-  flags: [/* ... */],
-  // Schema definition object
-  outputSchema: {
-    report: z.object({
-      id: z.string(),
-      format: z.string(),
-      size: z.number()
+parser
+  .addTool({
+    name: "file-processor",
+    description: "Process files",
+    flags: [
+      /* ... */
+    ],
+    // 🎉 Output schema with auto-completion!
+    outputSchema: "fileOperation", // Predefined pattern
+    handler: async (ctx) => ({
+      /* ... */
     }),
-    downloadUrl: z.string()
-  },
-  handler: async (ctx) => ({ /* ... */ })
-});
+  })
+  .addTool({
+    name: "data-analyzer",
+    description: "Analyze data",
+    flags: [
+      /* ... */
+    ],
+    // Custom Zod schema
+    outputSchema: z.object({
+      results: z.array(z.any()),
+      summary: z.object({
+        total: z.number(),
+        processed: z.number(),
+      }),
+    }),
+    handler: async (ctx) => ({
+      /* ... */
+    }),
+  })
+  .addTool({
+    name: "report-generator",
+    description: "Generate reports",
+    flags: [
+      /* ... */
+    ],
+    // Schema definition object
+    outputSchema: {
+      report: z.object({
+        id: z.string(),
+        format: z.string(),
+        size: z.number(),
+      }),
+      downloadUrl: z.string(),
+    },
+    handler: async (ctx) => ({
+      /* ... */
+    }),
+  });
 ```
 
 ### Method 2: Setting Default Output Schema
@@ -177,21 +199,23 @@ Set a default schema for all tools generated from this parser:
 
 ```typescript
 // Using predefined pattern
-parser.setDefaultOutputSchema('successWithData');
+parser.setDefaultOutputSchema("successWithData");
 
 // Using custom Zod schema
-parser.setDefaultOutputSchema(z.object({
-  result: z.string(),
-  timestamp: z.string()
-}));
+parser.setDefaultOutputSchema(
+  z.object({
+    result: z.string(),
+    timestamp: z.string(),
+  }),
+);
 
 // Using schema definition object
 parser.setDefaultOutputSchema({
   result: z.string().describe("Operation result"),
   metadata: z.object({
     version: z.string(),
-    timestamp: z.string()
-  })
+    timestamp: z.string(),
+  }),
 });
 ```
 
@@ -201,9 +225,9 @@ Set different schemas for specific tools using method chaining:
 
 ```typescript
 parser
-  .setOutputSchema("main-command", 'successError')
-  .setOutputSchema("process-file", 'fileOperation')
-  .setOutputSchema("run-command", 'processExecution');
+  .setOutputSchema("main-command", "successError")
+  .setOutputSchema("process-file", "fileOperation")
+  .setOutputSchema("run-command", "processExecution");
 ```
 
 ### Automatic Schema Generation
@@ -215,7 +239,7 @@ Enable automatic schema generation for tools without explicit schemas:
 parser.enableAutoOutputSchema(true);
 
 // Use specific pattern
-parser.enableAutoOutputSchema('successError');
+parser.enableAutoOutputSchema("successError");
 ```
 
 ## Advanced Usage
@@ -231,12 +255,12 @@ const customSchema = z.object({
   queryResult: z.object({
     rows: z.array(z.any()),
     count: z.number(),
-    executionTime: z.number()
+    executionTime: z.number(),
   }),
   metadata: z.object({
     database: z.string(),
-    timestamp: z.string()
-  })
+    timestamp: z.string(),
+  }),
 });
 
 parser.setDefaultOutputSchema(customSchema);
@@ -250,15 +274,15 @@ Use plain objects that get converted to Zod schemas:
 parser.setDefaultOutputSchema({
   response: z.object({
     status: z.string(),
-    data: z.any()
+    data: z.any(),
   }),
   statusCode: z.number(),
   headers: z.record(z.string()),
   timing: z.object({
     total: z.number(),
     dns: z.number(),
-    connect: z.number()
-  })
+    connect: z.number(),
+  }),
 });
 ```
 
@@ -274,22 +298,24 @@ const userListSchema = OutputSchemaPatterns.list(
   z.object({
     id: z.number(),
     name: z.string(),
-    email: z.string()
-  })
+    email: z.string(),
+  }),
 );
 
 // Success with data pattern with custom data schema
 const apiResponseSchema = OutputSchemaPatterns.successWithData(
   z.object({
-    users: z.array(z.object({
-      id: z.number(),
-      name: z.string()
-    })),
+    users: z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+      }),
+    ),
     pagination: z.object({
       page: z.number(),
-      total: z.number()
-    })
-  })
+      total: z.number(),
+    }),
+  }),
 );
 ```
 
@@ -324,17 +350,17 @@ When generating MCP tools, schemas are resolved in this priority order:
 const tools = parser
   .addTool({
     name: "my-tool",
-    outputSchema: 'fileOperation', // Priority #2 - Tool-level schema
+    outputSchema: "fileOperation", // Priority #2 - Tool-level schema
     // ... other config
   })
-  .setOutputSchema("my-tool", 'successError') // Priority #3 - Would be overridden
+  .setOutputSchema("my-tool", "successError") // Priority #3 - Would be overridden
   .toMcpTools({
     // Priority #1 - Highest priority, explicit schema map
     outputSchemaMap: {
-      "my-tool": customSchema // This would override tool-level schema
+      "my-tool": customSchema, // This would override tool-level schema
     },
     // Priority #5 - Lowest priority, auto-generation
-    autoGenerateOutputSchema: 'processExecution'
+    autoGenerateOutputSchema: "processExecution",
   });
 ```
 
@@ -348,7 +374,7 @@ Create schemas from various input formats:
 import { createOutputSchema } from "@alcyone-labs/arg-parser";
 
 // From pattern name
-const schema1 = createOutputSchema('successError');
+const schema1 = createOutputSchema("successError");
 
 // From Zod schema
 const schema2 = createOutputSchema(z.object({ result: z.string() }));
@@ -356,7 +382,7 @@ const schema2 = createOutputSchema(z.object({ result: z.string() }));
 // From definition object
 const schema3 = createOutputSchema({
   result: z.string(),
-  timestamp: z.string()
+  timestamp: z.string(),
 });
 ```
 
@@ -378,15 +404,19 @@ const schema3 = createOutputSchema({
 parser.addTool({
   name: "process-file",
   description: "Process a file",
-  flags: [/* flags */],
-  outputSchema: 'fileOperation', // Auto-completion works here!
-  handler: async (ctx) => ({ /* response matching schema */ })
+  flags: [
+    /* flags */
+  ],
+  outputSchema: "fileOperation", // Auto-completion works here!
+  handler: async (ctx) => ({
+    /* response matching schema */
+  }),
 });
 
 // ❌ AVOID: Scattered schema definitions
 parser
-  .addTool({ name: "process-file", /* ... */ })
-  .setOutputSchema("process-file", 'fileOperation'); // Schema defined separately
+  .addTool({ name: "process-file" /* ... */ })
+  .setOutputSchema("process-file", "fileOperation"); // Schema defined separately
 ```
 
 ## Examples

@@ -55,7 +55,10 @@ export const zodFlagSchema = z
           // Native Object constructor
           message: "Must be Object constructor",
         }),
-        z.function().args(z.string()).returns(z.union([z.any(), z.promise(z.any())])), // Custom parser function (value: string) => any | Promise<any>
+        z
+          .function()
+          .args(z.string())
+          .returns(z.union([z.any(), z.promise(z.any())])), // Custom parser function (value: string) => any | Promise<any>
         z.string().refine(
           // String literal types
           (value) =>
@@ -286,7 +289,9 @@ export type FlagsArray = readonly ProcessedFlag[];
  * getJsonSchemaTypeFromFlag((val) => parseInt(val)) // returns "string" (fallback for custom functions)
  * ```
  */
-export function getJsonSchemaTypeFromFlag(flagType: TParsedArgsTypeFromFlagDef): "string" | "number" | "boolean" | "array" | "object" {
+export function getJsonSchemaTypeFromFlag(
+  flagType: TParsedArgsTypeFromFlagDef,
+): "string" | "number" | "boolean" | "array" | "object" {
   // Handle constructor functions
   if (typeof flagType === "function") {
     // Check if it's a built-in constructor
@@ -305,11 +310,16 @@ export function getJsonSchemaTypeFromFlag(flagType: TParsedArgsTypeFromFlagDef):
   if (typeof flagType === "string") {
     const normalizedType = flagType.toLowerCase();
     switch (normalizedType) {
-      case "string": return "string";
-      case "number": return "number";
-      case "boolean": return "boolean";
-      case "array": return "array";
-      case "object": return "object";
+      case "string":
+        return "string";
+      case "number":
+        return "number";
+      case "boolean":
+        return "boolean";
+      case "array":
+        return "array";
+      case "object":
+        return "object";
       default:
         // Unknown string type, default to string
         return "string";
@@ -328,56 +338,82 @@ export const OutputSchemaPatterns = {
    * Simple success/error response pattern
    * @example { success: true, message: "Operation completed" }
    */
-  successError: () => z.object({
-    success: z.boolean().describe("Whether the operation was successful"),
-    message: z.string().optional().describe("Optional message about the operation"),
-    error: z.string().optional().describe("Error message if operation failed"),
-  }),
+  successError: () =>
+    z.object({
+      success: z.boolean().describe("Whether the operation was successful"),
+      message: z
+        .string()
+        .optional()
+        .describe("Optional message about the operation"),
+      error: z
+        .string()
+        .optional()
+        .describe("Error message if operation failed"),
+    }),
 
   /**
    * Success response with data payload
    * @example { success: true, data: {...}, message: "Data retrieved" }
    */
-  successWithData: (dataSchema?: z.ZodTypeAny) => z.object({
-    success: z.boolean().describe("Whether the operation was successful"),
-    data: dataSchema || z.any().describe("The response data"),
-    message: z.string().optional().describe("Optional message about the operation"),
-    error: z.string().optional().describe("Error message if operation failed"),
-  }),
+  successWithData: (dataSchema?: z.ZodTypeAny) =>
+    z.object({
+      success: z.boolean().describe("Whether the operation was successful"),
+      data: dataSchema || z.any().describe("The response data"),
+      message: z
+        .string()
+        .optional()
+        .describe("Optional message about the operation"),
+      error: z
+        .string()
+        .optional()
+        .describe("Error message if operation failed"),
+    }),
 
   /**
    * List/array response pattern
    * @example { items: [...], count: 5, hasMore: false }
    */
-  list: (itemSchema?: z.ZodTypeAny) => z.object({
-    items: z.array(itemSchema || z.any()).describe("Array of items"),
-    count: z.number().optional().describe("Total number of items"),
-    hasMore: z.boolean().optional().describe("Whether there are more items available"),
-  }),
+  list: (itemSchema?: z.ZodTypeAny) =>
+    z.object({
+      items: z.array(itemSchema || z.any()).describe("Array of items"),
+      count: z.number().optional().describe("Total number of items"),
+      hasMore: z
+        .boolean()
+        .optional()
+        .describe("Whether there are more items available"),
+    }),
 
   /**
    * File operation response pattern
    * @example { path: "/path/to/file", size: 1024, created: true }
    */
-  fileOperation: () => z.object({
-    path: z.string().describe("File path"),
-    size: z.number().optional().describe("File size in bytes"),
-    created: z.boolean().optional().describe("Whether the file was created"),
-    modified: z.boolean().optional().describe("Whether the file was modified"),
-    exists: z.boolean().optional().describe("Whether the file exists"),
-  }),
+  fileOperation: () =>
+    z.object({
+      path: z.string().describe("File path"),
+      size: z.number().optional().describe("File size in bytes"),
+      created: z.boolean().optional().describe("Whether the file was created"),
+      modified: z
+        .boolean()
+        .optional()
+        .describe("Whether the file was modified"),
+      exists: z.boolean().optional().describe("Whether the file exists"),
+    }),
 
   /**
    * Process execution response pattern
    * @example { exitCode: 0, stdout: "output", stderr: "", duration: 1500 }
    */
-  processExecution: () => z.object({
-    exitCode: z.number().describe("Process exit code"),
-    stdout: z.string().optional().describe("Standard output"),
-    stderr: z.string().optional().describe("Standard error output"),
-    duration: z.number().optional().describe("Execution duration in milliseconds"),
-    command: z.string().optional().describe("The command that was executed"),
-  }),
+  processExecution: () =>
+    z.object({
+      exitCode: z.number().describe("Process exit code"),
+      stdout: z.string().optional().describe("Standard output"),
+      stderr: z.string().optional().describe("Standard error output"),
+      duration: z
+        .number()
+        .optional()
+        .describe("Execution duration in milliseconds"),
+      command: z.string().optional().describe("The command that was executed"),
+    }),
 } as const;
 
 /**
@@ -485,7 +521,7 @@ export interface ParseResult<T = any> {
   /** Whether the process should exit (for help, version, etc.) */
   shouldExit?: boolean;
   /** Type of result for better handling */
-  type?: 'success' | 'error' | 'help' | 'version' | 'debug';
+  type?: "success" | "error" | "help" | "version" | "debug";
 }
 
 /**

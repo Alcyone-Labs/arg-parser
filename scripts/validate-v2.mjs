@@ -4,25 +4,24 @@
  * Simple validation script for @alcyone-labs/arg-parser v2.0.0
  * Tests the core functionality that users actually use
  */
+import { execSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { execSync, spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import fs from 'node:fs';
-import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+const PACKAGE_NAME = "@alcyone-labs/arg-parser";
 
-const PACKAGE_NAME = '@alcyone-labs/arg-parser';
-
-console.log('🚀 Validating @alcyone-labs/arg-parser v2.0.0');
-console.log('==============================================\n');
+console.log("🚀 Validating @alcyone-labs/arg-parser v2.0.0");
+console.log("==============================================\n");
 
 // Create temporary test directory
 const tempDir = join(tmpdir(), `arg-parser-v2-validation-${randomUUID()}`);
-console.log('📁 Test directory:', tempDir);
+console.log("📁 Test directory:", tempDir);
 fs.mkdirSync(tempDir, { recursive: true });
 
-process.on('exit', () => {
+process.on("exit", () => {
   if (fs.existsSync(tempDir)) {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
@@ -30,31 +29,33 @@ process.on('exit', () => {
 
 async function runCommand(command, cwd = tempDir, options = {}) {
   return new Promise((resolve, reject) => {
-    const [cmd, ...args] = command.split(' ');
+    const [cmd, ...args] = command.split(" ");
     const child = spawn(cmd, args, {
       cwd,
-      stdio: options.silent ? 'pipe' : 'inherit',
+      stdio: options.silent ? "pipe" : "inherit",
       shell: true,
-      ...options
+      ...options,
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
     if (options.silent) {
-      child.stdout?.on('data', (data) => stdout += data.toString());
-      child.stderr?.on('data', (data) => stderr += data.toString());
+      child.stdout?.on("data", (data) => (stdout += data.toString()));
+      child.stderr?.on("data", (data) => (stderr += data.toString()));
     }
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(new Error(`Command failed with code ${code}: ${stderr || stdout}`));
+        reject(
+          new Error(`Command failed with code ${code}: ${stderr || stdout}`),
+        );
       }
     });
 
-    child.on('error', reject);
+    child.on("error", reject);
   });
 }
 
@@ -62,10 +63,10 @@ async function test(name, testFn) {
   process.stdout.write(`${name}... `);
   try {
     await testFn();
-    console.log('✅');
+    console.log("✅");
     return true;
   } catch (error) {
-    console.log('❌');
+    console.log("❌");
     console.error(`   Error: ${error.message}`);
     return false;
   }
@@ -77,19 +78,25 @@ async function main() {
 
   // Setup
   const packageJson = {
-    name: 'test-validation',
-    version: '1.0.0',
-    type: 'module'
+    name: "test-validation",
+    version: "1.0.0",
+    type: "module",
   };
-  fs.writeFileSync(join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
-  
-  console.log('📦 Installing package...');
-  await runCommand(`npm install ${PACKAGE_NAME}@latest`, tempDir, { silent: true });
+  fs.writeFileSync(
+    join(tempDir, "package.json"),
+    JSON.stringify(packageJson, null, 2),
+  );
+
+  console.log("📦 Installing package...");
+  await runCommand(`npm install ${PACKAGE_NAME}@latest`, tempDir, {
+    silent: true,
+  });
 
   // Test 1: Basic ESM import and parsing
   total++;
-  if (await test('Basic ESM import and parsing', async () => {
-    const testCode = `
+  if (
+    await test("Basic ESM import and parsing", async () => {
+      const testCode = `
 import { ArgParser } from '${PACKAGE_NAME}';
 
 async function test() {
@@ -123,21 +130,25 @@ async function test() {
 test().catch(console.error);
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-basic.mjs'), testCode);
-    const result = await runCommand('node test-basic.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success) {
-      throw new Error('Basic parsing failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-basic.mjs"), testCode);
+      const result = await runCommand("node test-basic.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (!output.success) {
+        throw new Error("Basic parsing failed");
+      }
+    })
+  ) {
     passed++;
   }
 
   // Test 2: MCP integration with ArgParser.withMcp
   total++;
-  if (await test('MCP integration with ArgParser.withMcp', async () => {
-    const testCode = `
+  if (
+    await test("MCP integration with ArgParser.withMcp", async () => {
+      const testCode = `
 import { ArgParser } from '${PACKAGE_NAME}';
 
 async function test() {
@@ -168,21 +179,25 @@ async function test() {
 test().catch(console.error);
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp.mjs'), testCode);
-    const result = await runCommand('node test-mcp.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success) {
-      throw new Error('MCP integration failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-mcp.mjs"), testCode);
+      const result = await runCommand("node test-mcp.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (!output.success) {
+        throw new Error("MCP integration failed");
+      }
+    })
+  ) {
     passed++;
   }
 
   // Test 3: CommonJS compatibility
   total++;
-  if (await test('CommonJS compatibility', async () => {
-    const testCode = `
+  if (
+    await test("CommonJS compatibility", async () => {
+      const testCode = `
 const { ArgParser } = require('${PACKAGE_NAME}');
 
 async function test() {
@@ -209,23 +224,29 @@ async function test() {
 test().catch(console.error);
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-cjs.cjs'), testCode);
-    const result = await runCommand('node test-cjs.cjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success) {
-      throw new Error('CommonJS compatibility failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-cjs.cjs"), testCode);
+      const result = await runCommand("node test-cjs.cjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (!output.success) {
+        throw new Error("CommonJS compatibility failed");
+      }
+    })
+  ) {
     passed++;
   }
 
   // Test 4: TypeScript definitions
   total++;
-  if (await test('TypeScript definitions', async () => {
-    await runCommand('npm install typescript --save-dev', tempDir, { silent: true });
-    
-    const testCode = `
+  if (
+    await test("TypeScript definitions", async () => {
+      await runCommand("npm install typescript --save-dev", tempDir, {
+        silent: true,
+      });
+
+      const testCode = `
 import { ArgParser, type IFlag } from '${PACKAGE_NAME}';
 
 const flags: IFlag[] = [
@@ -247,33 +268,39 @@ const parser = new ArgParser({
 console.log('TypeScript compilation successful');
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-types.ts'), testCode);
-    
-    const tsConfig = {
-      compilerOptions: {
-        target: "ES2020",
-        module: "ESNext",
-        moduleResolution: "node",
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        strict: true,
-        skipLibCheck: true
-      }
-    };
-    fs.writeFileSync(join(tempDir, 'tsconfig.json'), JSON.stringify(tsConfig, null, 2));
-    
-    await runCommand('npx tsc --noEmit test-types.ts', tempDir, { silent: true });
-  })) {
+      fs.writeFileSync(join(tempDir, "test-types.ts"), testCode);
+
+      const tsConfig = {
+        compilerOptions: {
+          target: "ES2020",
+          module: "ESNext",
+          moduleResolution: "node",
+          esModuleInterop: true,
+          allowSyntheticDefaultImports: true,
+          strict: true,
+          skipLibCheck: true,
+        },
+      };
+      fs.writeFileSync(
+        join(tempDir, "tsconfig.json"),
+        JSON.stringify(tsConfig, null, 2),
+      );
+
+      await runCommand("npx tsc --noEmit test-types.ts", tempDir, {
+        silent: true,
+      });
+    })
+  ) {
     passed++;
   }
 
   // Summary
-  console.log('\n📊 Validation Results');
-  console.log('====================');
+  console.log("\n📊 Validation Results");
+  console.log("====================");
   console.log(`✅ Passed: ${passed}/${total} tests`);
-  
+
   if (passed === total) {
-    console.log('\n🎉 All tests passed! Version 2.0.0 is working correctly.');
+    console.log("\n🎉 All tests passed! Version 2.0.0 is working correctly.");
     process.exit(0);
   } else {
     console.log(`\n❌ ${total - passed} test(s) failed.`);
@@ -282,6 +309,6 @@ console.log('TypeScript compilation successful');
 }
 
 main().catch((error) => {
-  console.error('\n💥 Validation failed:', error.message);
+  console.error("\n💥 Validation failed:", error.message);
   process.exit(1);
 });

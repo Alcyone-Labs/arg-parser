@@ -4,70 +4,71 @@
  * Post-publish MCP integration validation script
  * Tests MCP functionality with the published package
  */
-
-import { execSync, spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import fs from 'node:fs';
-import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { execSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Configuration
-const PACKAGE_NAME = '@alcyone-labs/arg-parser';
+const PACKAGE_NAME = "@alcyone-labs/arg-parser";
 const TEST_TIMEOUT = 60000; // 60 seconds
 
-console.log('🔌 Post-Publish MCP Validation for', PACKAGE_NAME);
-console.log('==========================================\n');
+console.log("🔌 Post-Publish MCP Validation for", PACKAGE_NAME);
+console.log("==========================================\n");
 
 // Create temporary test directory
 const tempDir = join(tmpdir(), `arg-parser-mcp-validation-${randomUUID()}`);
-console.log('📁 Creating temporary test directory:', tempDir);
+console.log("📁 Creating temporary test directory:", tempDir);
 fs.mkdirSync(tempDir, { recursive: true });
 
-process.on('exit', () => {
+process.on("exit", () => {
   // Cleanup
   if (fs.existsSync(tempDir)) {
-    console.log('\n🧹 Cleaning up temporary directory...');
+    console.log("\n🧹 Cleaning up temporary directory...");
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
 });
 
-process.on('SIGINT', () => {
-  console.log('\n⚠️  Interrupted by user');
+process.on("SIGINT", () => {
+  console.log("\n⚠️  Interrupted by user");
   process.exit(1);
 });
 
 async function runCommand(command, cwd = tempDir, options = {}) {
   return new Promise((resolve, reject) => {
-    const [cmd, ...args] = command.split(' ');
+    const [cmd, ...args] = command.split(" ");
     const child = spawn(cmd, args, {
       cwd,
-      stdio: options.silent ? 'pipe' : 'inherit',
+      stdio: options.silent ? "pipe" : "inherit",
       shell: true,
       timeout: TEST_TIMEOUT,
-      ...options
+      ...options,
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
     if (options.silent) {
-      child.stdout?.on('data', (data) => stdout += data.toString());
-      child.stderr?.on('data', (data) => stderr += data.toString());
+      child.stdout?.on("data", (data) => (stdout += data.toString()));
+      child.stderr?.on("data", (data) => (stderr += data.toString()));
     }
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(new Error(`Command failed with code ${code}: ${stderr || stdout}`));
+        reject(
+          new Error(`Command failed with code ${code}: ${stderr || stdout}`),
+        );
       }
     });
 
-    child.on('error', reject);
+    child.on("error", reject);
   });
 }
 
@@ -75,10 +76,10 @@ async function test(name, testFn) {
   process.stdout.write(`${name}... `);
   try {
     await testFn();
-    console.log('✅');
+    console.log("✅");
     return true;
   } catch (error) {
-    console.log('❌');
+    console.log("❌");
     console.error(`   Error: ${error.message}`);
     return false;
   }
@@ -89,24 +90,32 @@ async function main() {
   let totalTests = 0;
 
   // Setup: Install package and MCP SDK
-  console.log('🔧 Setting up test environment...');
-  
+  console.log("🔧 Setting up test environment...");
+
   // Create package.json
   const packageJson = {
-    name: 'test-mcp-validation',
-    version: '1.0.0',
-    type: 'module',
-    dependencies: {}
+    name: "test-mcp-validation",
+    version: "1.0.0",
+    type: "module",
+    dependencies: {},
   };
-  fs.writeFileSync(join(tempDir, 'package.json'), JSON.stringify(packageJson, null, 2));
+  fs.writeFileSync(
+    join(tempDir, "package.json"),
+    JSON.stringify(packageJson, null, 2),
+  );
 
   // Install the package and MCP SDK
-  await runCommand(`npm install ${PACKAGE_NAME}@latest @modelcontextprotocol/sdk`, tempDir, { silent: true });
+  await runCommand(
+    `npm install ${PACKAGE_NAME}@latest @modelcontextprotocol/sdk`,
+    tempDir,
+    { silent: true },
+  );
 
   // Test 1: MCP Tool Generation
   totalTests++;
-  if (await test('Testing MCP tool generation from ArgParser', async () => {
-    const testCode = `
+  if (
+    await test("Testing MCP tool generation from ArgParser", async () => {
+      const testCode = `
 import { ArgParser, generateMcpToolsFromArgParser } from '${PACKAGE_NAME}';
 
 const parser = new ArgParser({
@@ -150,21 +159,25 @@ console.log(JSON.stringify({
 }));
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp-tools.mjs'), testCode);
-    const result = await runCommand('node test-mcp-tools.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success) {
-      throw new Error('MCP tool generation failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-mcp-tools.mjs"), testCode);
+      const result = await runCommand("node test-mcp-tools.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (!output.success) {
+        throw new Error("MCP tool generation failed");
+      }
+    })
+  ) {
     passedTests++;
   }
 
   // Test 2: MCP Tool Execution
   totalTests++;
-  if (await test('Testing MCP tool execution', async () => {
-    const testCode = `
+  if (
+    await test("Testing MCP tool execution", async () => {
+      const testCode = `
 import { ArgParser, generateMcpToolsFromArgParser } from '${PACKAGE_NAME}';
 
 const parser = new ArgParser({
@@ -203,21 +216,29 @@ console.log(JSON.stringify({
 }));
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp-execution.mjs'), testCode);
-    const result = await runCommand('node test-mcp-execution.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success || !output.executionResult || !output.inputProcessed) {
-      throw new Error('MCP tool execution test failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-mcp-execution.mjs"), testCode);
+      const result = await runCommand("node test-mcp-execution.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (
+        !output.success ||
+        !output.executionResult ||
+        !output.inputProcessed
+      ) {
+        throw new Error("MCP tool execution test failed");
+      }
+    })
+  ) {
     passedTests++;
   }
 
   // Test 3: MCP Server Creation
   totalTests++;
-  if (await test('Testing MCP server creation with ArgParser.withMcp', async () => {
-    const testCode = `
+  if (
+    await test("Testing MCP server creation with ArgParser.withMcp", async () => {
+      const testCode = `
 import { ArgParser } from '${PACKAGE_NAME}';
 
 const mcpParser = ArgParser.withMcp({
@@ -252,21 +273,30 @@ console.log(JSON.stringify({
 }));
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp-server.mjs'), testCode);
-    const result = await runCommand('node test-mcp-server.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
+      fs.writeFileSync(join(tempDir, "test-mcp-server.mjs"), testCode);
+      const result = await runCommand("node test-mcp-server.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
 
-    if (!output.success || !output.hasWithMcp || !output.hasToMcpTools || !output.hasCreateMcpServer) {
-      throw new Error('MCP server creation test failed');
-    }
-  })) {
+      if (
+        !output.success ||
+        !output.hasWithMcp ||
+        !output.hasToMcpTools ||
+        !output.hasCreateMcpServer
+      ) {
+        throw new Error("MCP server creation test failed");
+      }
+    })
+  ) {
     passedTests++;
   }
 
   // Test 4: MCP System Flag Integration
   totalTests++;
-  if (await test('Testing MCP system flag integration', async () => {
-    const testCode = `
+  if (
+    await test("Testing MCP system flag integration", async () => {
+      const testCode = `
 import { ArgParser } from '${PACKAGE_NAME}';
 
 async function test() {
@@ -304,21 +334,25 @@ async function test() {
 test().catch(console.error);
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp-subcommand.mjs'), testCode);
-    const result = await runCommand('node test-mcp-subcommand.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
+      fs.writeFileSync(join(tempDir, "test-mcp-subcommand.mjs"), testCode);
+      const result = await runCommand("node test-mcp-subcommand.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
 
-    if (!output.success || !output.hasConfig) {
-      throw new Error('MCP system flag integration test failed');
-    }
-  })) {
+      if (!output.success || !output.hasConfig) {
+        throw new Error("MCP system flag integration test failed");
+      }
+    })
+  ) {
     passedTests++;
   }
 
   // Test 5: MCP Error Handling
   totalTests++;
-  if (await test('Testing MCP error handling', async () => {
-    const testCode = `
+  if (
+    await test("Testing MCP error handling", async () => {
+      const testCode = `
 import { ArgParser, generateMcpToolsFromArgParser } from '${PACKAGE_NAME}';
 
 async function test() {
@@ -376,32 +410,43 @@ async function test() {
 test().catch(console.error);
 `;
 
-    fs.writeFileSync(join(tempDir, 'test-mcp-errors.mjs'), testCode);
-    const result = await runCommand('node test-mcp-errors.mjs', tempDir, { silent: true });
-    const output = JSON.parse(result.stdout.trim());
-    
-    if (!output.success || !output.successfulExecution || !output.errorHandling) {
-      throw new Error('MCP error handling test failed');
-    }
-  })) {
+      fs.writeFileSync(join(tempDir, "test-mcp-errors.mjs"), testCode);
+      const result = await runCommand("node test-mcp-errors.mjs", tempDir, {
+        silent: true,
+      });
+      const output = JSON.parse(result.stdout.trim());
+
+      if (
+        !output.success ||
+        !output.successfulExecution ||
+        !output.errorHandling
+      ) {
+        throw new Error("MCP error handling test failed");
+      }
+    })
+  ) {
     passedTests++;
   }
 
   // Summary
-  console.log('\n📊 MCP Validation Summary');
-  console.log('=========================');
+  console.log("\n📊 MCP Validation Summary");
+  console.log("=========================");
   console.log(`✅ Passed: ${passedTests}/${totalTests} MCP tests`);
-  
+
   if (passedTests === totalTests) {
-    console.log('\n🎉 All MCP validation tests passed! MCP integration is working correctly.');
+    console.log(
+      "\n🎉 All MCP validation tests passed! MCP integration is working correctly.",
+    );
     process.exit(0);
   } else {
-    console.log(`\n❌ ${totalTests - passedTests} MCP test(s) failed. Please investigate the issues above.`);
+    console.log(
+      `\n❌ ${totalTests - passedTests} MCP test(s) failed. Please investigate the issues above.`,
+    );
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error('\n💥 MCP validation script failed:', error.message);
+  console.error("\n💥 MCP validation script failed:", error.message);
   process.exit(1);
 });

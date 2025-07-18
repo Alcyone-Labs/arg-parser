@@ -2,8 +2,13 @@
  * Tests for MCP Resources functionality
  */
 
-import { describe, test, expect, beforeEach } from "vitest";
-import { McpResourcesManager, ResourceTemplateParser, createFileResource, createJsonResource } from "../../../src/mcp/mcp-resources.js";
+import { beforeEach, describe, expect, test } from "vitest";
+import {
+  createFileResource,
+  createJsonResource,
+  McpResourcesManager,
+  ResourceTemplateParser,
+} from "../../../src/mcp/mcp-resources.js";
 import type { McpResourceConfig } from "../../../src/mcp/mcp-resources.js";
 
 describe("McpResourcesManager", () => {
@@ -20,7 +25,9 @@ describe("McpResourcesManager", () => {
         uriTemplate: "test://data",
         title: "Test Resource",
         description: "A test resource",
-        handler: async () => ({ contents: [{ uri: "test://data", text: "test data" }] })
+        handler: async () => ({
+          contents: [{ uri: "test://data", text: "test data" }],
+        }),
       };
 
       manager.addResource(config);
@@ -33,12 +40,17 @@ describe("McpResourcesManager", () => {
         name: "user-profile",
         uriTemplate: "users://{userId}/profile",
         handler: async (uri, params) => ({
-          contents: [{
-            uri: uri.href,
-            text: JSON.stringify({ userId: params.userId, name: "Test User" }),
-            mimeType: "application/json"
-          }]
-        })
+          contents: [
+            {
+              uri: uri.href,
+              text: JSON.stringify({
+                userId: params.userId,
+                name: "Test User",
+              }),
+              mimeType: "application/json",
+            },
+          ],
+        }),
       };
 
       manager.addResource(config);
@@ -49,26 +61,34 @@ describe("McpResourcesManager", () => {
       const config: McpResourceConfig = {
         name: "duplicate",
         uriTemplate: "test://duplicate",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       };
 
       manager.addResource(config);
-      expect(() => manager.addResource(config)).toThrow("Resource with name 'duplicate' already exists");
+      expect(() => manager.addResource(config)).toThrow(
+        "Resource with name 'duplicate' already exists",
+      );
     });
 
     test("should validate resource configuration", () => {
-      expect(() => manager.addResource({} as any)).toThrow("Resource name is required");
-      
-      expect(() => manager.addResource({
-        name: "test",
-        uriTemplate: "",
-        handler: async () => ({ contents: [] })
-      })).toThrow("Resource uriTemplate is required");
+      expect(() => manager.addResource({} as any)).toThrow(
+        "Resource name is required",
+      );
 
-      expect(() => manager.addResource({
-        name: "test",
-        uriTemplate: "test://data"
-      } as any)).toThrow("Resource handler is required");
+      expect(() =>
+        manager.addResource({
+          name: "test",
+          uriTemplate: "",
+          handler: async () => ({ contents: [] }),
+        }),
+      ).toThrow("Resource uriTemplate is required");
+
+      expect(() =>
+        manager.addResource({
+          name: "test",
+          uriTemplate: "test://data",
+        } as any),
+      ).toThrow("Resource handler is required");
     });
   });
 
@@ -77,23 +97,25 @@ describe("McpResourcesManager", () => {
       manager.addResource({
         name: "static-data",
         uriTemplate: "static://data",
-        handler: async () => ({ contents: [{ uri: "static://data", text: "static content" }] })
+        handler: async () => ({
+          contents: [{ uri: "static://data", text: "static content" }],
+        }),
       });
 
       manager.addResource({
         name: "user-data",
         uriTemplate: "users://{userId}",
         handler: async (uri, params) => ({
-          contents: [{ uri: uri.href, text: `User: ${params.userId}` }]
-        })
+          contents: [{ uri: uri.href, text: `User: ${params.userId}` }],
+        }),
       });
     });
 
     test("should get all resources", () => {
       const resources = manager.getResources();
       expect(resources).toHaveLength(2);
-      expect(resources.map(r => r.name)).toContain("static-data");
-      expect(resources.map(r => r.name)).toContain("user-data");
+      expect(resources.map((r) => r.name)).toContain("static-data");
+      expect(resources.map((r) => r.name)).toContain("user-data");
     });
 
     test("should get specific resource by name", () => {
@@ -125,7 +147,7 @@ describe("McpResourcesManager", () => {
       manager.addResource({
         name: "removable",
         uriTemplate: "test://removable",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       expect(manager.hasResource("removable")).toBe(true);
@@ -143,12 +165,14 @@ describe("McpResourcesManager", () => {
   describe("Change Notifications", () => {
     test("should notify listeners on resource addition", () => {
       let notified = false;
-      manager.onResourcesChange(() => { notified = true; });
+      manager.onResourcesChange(() => {
+        notified = true;
+      });
 
       manager.addResource({
         name: "new-resource",
         uriTemplate: "test://new",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       expect(notified).toBe(true);
@@ -158,11 +182,13 @@ describe("McpResourcesManager", () => {
       manager.addResource({
         name: "removable",
         uriTemplate: "test://removable",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       let notified = false;
-      manager.onResourcesChange(() => { notified = true; });
+      manager.onResourcesChange(() => {
+        notified = true;
+      });
 
       manager.removeResource("removable");
       expect(notified).toBe(true);
@@ -170,20 +196,22 @@ describe("McpResourcesManager", () => {
 
     test("should remove change listeners", () => {
       let notificationCount = 0;
-      const listener = () => { notificationCount++; };
+      const listener = () => {
+        notificationCount++;
+      };
 
       manager.onResourcesChange(listener);
       manager.addResource({
         name: "test1",
         uriTemplate: "test://1",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       manager.offResourcesChange(listener);
       manager.addResource({
         name: "test2",
         uriTemplate: "test://2",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       expect(notificationCount).toBe(1);
@@ -195,12 +223,12 @@ describe("McpResourcesManager", () => {
       manager.addResource({
         name: "test1",
         uriTemplate: "test://1",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
       manager.addResource({
         name: "test2",
         uriTemplate: "test://2",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       expect(manager.count()).toBe(2);
@@ -212,11 +240,13 @@ describe("McpResourcesManager", () => {
       manager.addResource({
         name: "test",
         uriTemplate: "test://data",
-        handler: async () => ({ contents: [] })
+        handler: async () => ({ contents: [] }),
       });
 
       let notified = false;
-      manager.onResourcesChange(() => { notified = true; });
+      manager.onResourcesChange(() => {
+        notified = true;
+      });
 
       manager.clear();
       expect(notified).toBe(true);
@@ -232,7 +262,9 @@ describe("ResourceTemplateParser", () => {
   });
 
   test("should parse complex URI template", () => {
-    const parser = new ResourceTemplateParser("users://{userId}/posts/{postId}");
+    const parser = new ResourceTemplateParser(
+      "users://{userId}/posts/{postId}",
+    );
     const params = parser.parse("users://123/posts/456");
     expect(params).toEqual({ userId: "123", postId: "456" });
   });

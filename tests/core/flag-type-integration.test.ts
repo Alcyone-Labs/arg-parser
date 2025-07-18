@@ -8,82 +8,94 @@ describe("Flag Type Integration", () => {
     const parser = new ArgParser({
       appName: "Mixed Types CLI",
       appCommandName: "mixed-types",
-      handler: async (ctx) => ({ result: "success", args: ctx.args })
+      handler: async (ctx) => ({ result: "success", args: ctx.args }),
     }).addFlags([
       {
         name: "stringLiteral",
         description: "String using literal",
         options: ["--string-literal"],
         type: "string",
-        mandatory: true
+        mandatory: true,
       },
       {
-        name: "stringConstructor", 
+        name: "stringConstructor",
         description: "String using constructor",
         options: ["--string-constructor"],
         type: String,
-        mandatory: true
+        mandatory: true,
       },
       {
         name: "numberLiteral",
         description: "Number using literal",
         options: ["--number-literal"],
         type: "number",
-        defaultValue: 42
+        defaultValue: 42,
       },
       {
         name: "numberConstructor",
-        description: "Number using constructor", 
+        description: "Number using constructor",
         options: ["--number-constructor"],
         type: Number,
-        defaultValue: 100
+        defaultValue: 100,
       },
       {
         name: "booleanLiteral",
         description: "Boolean using literal",
         options: ["--boolean-literal"],
         type: "boolean",
-        flagOnly: true
+        flagOnly: true,
       },
       {
         name: "booleanConstructor",
         description: "Boolean using constructor",
         options: ["--boolean-constructor"],
         type: Boolean,
-        flagOnly: true
+        flagOnly: true,
       },
       {
         name: "customParser",
         description: "Custom parser function",
         options: ["--custom-parser"],
         type: (value: string) => parseInt(value) * 2,
-        defaultValue: 0
-      }
+        defaultValue: 0,
+      },
     ]);
 
     // Get the processed flags
     const flags = parser.flags;
 
     // Test that getJsonSchemaTypeFromFlag works for all types
-    const stringLiteralFlag = flags.find(f => f.name === "stringLiteral")!;
-    const stringConstructorFlag = flags.find(f => f.name === "stringConstructor")!;
-    const numberLiteralFlag = flags.find(f => f.name === "numberLiteral")!;
-    const numberConstructorFlag = flags.find(f => f.name === "numberConstructor")!;
-    const booleanLiteralFlag = flags.find(f => f.name === "booleanLiteral")!;
-    const booleanConstructorFlag = flags.find(f => f.name === "booleanConstructor")!;
-    const customParserFlag = flags.find(f => f.name === "customParser")!;
+    const stringLiteralFlag = flags.find((f) => f.name === "stringLiteral")!;
+    const stringConstructorFlag = flags.find(
+      (f) => f.name === "stringConstructor",
+    )!;
+    const numberLiteralFlag = flags.find((f) => f.name === "numberLiteral")!;
+    const numberConstructorFlag = flags.find(
+      (f) => f.name === "numberConstructor",
+    )!;
+    const booleanLiteralFlag = flags.find((f) => f.name === "booleanLiteral")!;
+    const booleanConstructorFlag = flags.find(
+      (f) => f.name === "booleanConstructor",
+    )!;
+    const customParserFlag = flags.find((f) => f.name === "customParser")!;
 
     // Both string formats should return "string"
     expect(getJsonSchemaTypeFromFlag(stringLiteralFlag.type)).toBe("string");
-    expect(getJsonSchemaTypeFromFlag(stringConstructorFlag.type)).toBe("string");
+    expect(getJsonSchemaTypeFromFlag(stringConstructorFlag.type)).toBe(
+      "string",
+    );
 
     // Both number formats should return "number"
     expect(getJsonSchemaTypeFromFlag(numberLiteralFlag.type)).toBe("number");
-    expect(getJsonSchemaTypeFromFlag(numberConstructorFlag.type)).toBe("number");
+    expect(getJsonSchemaTypeFromFlag(numberConstructorFlag.type)).toBe(
+      "number",
+    );
 
     // Both boolean formats should return "boolean"
     expect(getJsonSchemaTypeFromFlag(booleanLiteralFlag.type)).toBe("boolean");
-    expect(getJsonSchemaTypeFromFlag(booleanConstructorFlag.type)).toBe("boolean");
+    expect(getJsonSchemaTypeFromFlag(booleanConstructorFlag.type)).toBe(
+      "boolean",
+    );
 
     // Custom parser should default to "string"
     expect(getJsonSchemaTypeFromFlag(customParserFlag.type)).toBe("string");
@@ -93,28 +105,28 @@ describe("Flag Type Integration", () => {
     const parser = new ArgParser({
       appName: "Schema Test CLI",
       appCommandName: "schema-test",
-      handler: async (ctx) => ({ result: "success", args: ctx.args })
+      handler: async (ctx) => ({ result: "success", args: ctx.args }),
     }).addFlags([
       {
         name: "input",
         description: "Input file",
         options: ["--input", "-i"],
         type: "string", // String literal
-        mandatory: true
+        mandatory: true,
       },
       {
         name: "count",
         description: "Count value",
         options: ["--count", "-c"],
         type: Number, // Constructor function
-        defaultValue: 1
+        defaultValue: 1,
       },
       {
         name: "verbose",
         description: "Verbose output",
         options: ["--verbose", "-v"],
         type: Boolean, // Constructor function
-        flagOnly: true
+        flagOnly: true,
       },
       {
         name: "format",
@@ -122,8 +134,8 @@ describe("Flag Type Integration", () => {
         options: ["--format", "-f"],
         type: "string", // String literal with enum
         enum: ["json", "csv", "xml"],
-        defaultValue: "json"
-      }
+        defaultValue: "json",
+      },
     ]);
 
     // Generate JSON schema using MCP integration
