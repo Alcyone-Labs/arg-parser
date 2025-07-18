@@ -1026,14 +1026,33 @@ MCP server logs can be configured through multiple methods with the following pr
 2. **Programmatic Configuration**: `mcp.logPath` in `withMcp()`
 3. **Default Path (Fallback)**: `./logs/mcp.log`
 
+#### Path Resolution Options
+
+Log paths are resolved with smart defaults for better DXT package compatibility:
+
 ```typescript
-// Programmatic configuration
+// Simple string paths (recommended)
 const parser = ArgParser.withMcp({
   appName: "My CLI",
   appCommandName: "my-cli",
   mcp: {
     serverInfo: { name: "my-server", version: "1.0.0" },
-    logPath: "./custom/mcp-server.log", // Used unless overridden by CLI flag
+    logPath: "./logs/app.log", // Relative to entry point (default)
+    // logPath: "/tmp/app.log",          // Absolute paths work too
+    // logPath: "cwd:./logs/app.log",    // Explicit process.cwd() relative
+  },
+});
+
+// Object configuration for advanced use cases
+const parser = ArgParser.withMcp({
+  // ... other config
+  mcp: {
+    // ... server info
+    logPath: {
+      path: "./logs/app.log",
+      relativeTo: "entry", // "entry" | "cwd" | "absolute"
+      basePath: "/custom/base", // Optional custom base path
+    },
   },
 });
 
@@ -1041,7 +1060,7 @@ const parser = ArgParser.withMcp({
 // my-cli --s-mcp-serve --s-mcp-log-path ./override.log
 ```
 
-The CLI flag always takes precedence, allowing users to override the developer's programmatic configuration when needed.
+The CLI flag always takes precedence, allowing users to override the developer's programmatic configuration when needed. By default, relative paths resolve relative to the application's entry point, making logs predictably located near DXT packages.
 
 ### Automatic Console Safety
 
