@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { type Options } from "tsdown";
 import chalk from "@alcyone-labs/simple-chalk";
 import type { ParseResult } from "../core/types";
 import { getJsonSchemaTypeFromFlag } from "../core/types";
@@ -67,6 +68,85 @@ export class DxtGenerator {
         );
       }
 
+      // Check for --s-with-node-modules flag
+      const withNodeModules = processArgs.includes("--s-with-node-modules");
+      if (withNodeModules) {
+        console.log(
+          chalk.yellow(
+            "🗂️  --s-with-node-modules detected: will include node_modules in bundle",
+          ),
+        );
+
+        // Validate that node_modules exists and looks properly set up
+        const nodeModulesPath = path.resolve("./node_modules");
+        if (!fs.existsSync(nodeModulesPath)) {
+          console.error(
+            chalk.red(
+              "❌ Error: node_modules directory not found. Please run the installation command first.",
+            ),
+          );
+          console.log(
+            chalk.cyan(
+              "💡 Required command: pnpm install --prod --node-linker=hoisted",
+            ),
+          );
+          return this._handleExit(
+            1,
+            "node_modules directory not found",
+            "error",
+          );
+        }
+
+        // Check if node_modules looks properly hoisted (no nested node_modules in immediate subdirs)
+        try {
+          const nodeModulesContents = fs.readdirSync(nodeModulesPath);
+          const hasNestedNodeModules = nodeModulesContents
+            .filter((item) => !item.startsWith(".") && !item.startsWith("@"))
+            .some((item) => {
+              const itemPath = path.join(nodeModulesPath, item);
+              try {
+                return (
+                  fs.statSync(itemPath).isDirectory() &&
+                  fs.existsSync(path.join(itemPath, "node_modules"))
+                );
+              } catch {
+                return false;
+              }
+            });
+
+          if (hasNestedNodeModules) {
+            console.warn(
+              chalk.yellow(
+                "⚠️  Warning: Detected nested node_modules. For best results, ensure hoisted installation:",
+              ),
+            );
+            console.log(
+              chalk.cyan(
+                "   rm -rf node_modules && pnpm install --prod --node-linker=hoisted",
+              ),
+            );
+          } else {
+            console.log(
+              chalk.green(
+                "✅ node_modules appears properly hoisted and ready for bundling",
+              ),
+            );
+          }
+        } catch (error) {
+          console.warn(
+            chalk.yellow(
+              `⚠️  Could not validate node_modules structure: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          );
+        }
+
+        console.log(
+          chalk.gray(
+            "💡 This will create a fully autonomous DXT with all native dependencies included",
+          ),
+        );
+      }
+
       // The entry point is the script that called this flag (process.argv[1])
       const entryPointFile = process.argv[1];
 
@@ -88,7 +168,7 @@ export class DxtGenerator {
       console.log(chalk.gray(`Output directory: ${outputDir}`));
 
       // Build the DXT package using TSDown
-      await this.buildDxtWithTsdown(entryPointFile, outputDir);
+      await this.buildDxtWithTsdown(entryPointFile, outputDir, withNodeModules);
 
       console.log(chalk.green(`\n✅ DXT package generation completed!`));
 
@@ -262,9 +342,6 @@ export class DxtGenerator {
       path.join(buildDir, "manifest.json"),
       JSON.stringify(manifest, null, 2),
     );
-
-    // Add original CLI source for handler execution
-    this.addOriginalCliToFolder(buildDir);
 
     // Bundle the original CLI using TSDown for autonomous execution
     const bundledCliPath = await this.bundleOriginalCliWithTsdown(serverDir);
@@ -1237,265 +1314,12 @@ For autonomous packages, follow the build instructions above.
   }
 
   /**
-   * Processes CLI source code to replace global console with MCP-compliant Logger
-   */
-  private processCliSourceForMcp(cliSource: string): string {
-    // Add global console replacement at the top of the file
-    const consoleReplacement = `import { createMcpLogger } from '@alcyone-labs/arg-parser';
-
-// Replace global console with MCP-compliant logger for DXT packages
-const mcpLogger = createMcpLogger('[CLI]');
-const originalConsole = globalThis.console;
-globalThis.console = {
-  ...originalConsole,
-  log: (...args) => mcpLogger.info(...args),
-  info: (...args) => mcpLogger.info(...args),
-  warn: (...args) => mcpLogger.warn(...args),
-  debug: (...args) => mcpLogger.debug(...args),
-  // Keep error/trace/etc as-is since they use stderr (MCP-compliant)
-  error: originalConsole.error,
-  trace: originalConsole.trace,
-  assert: originalConsole.assert,
-  clear: originalConsole.clear,
-  count: originalConsole.count,
-  countReset: originalConsole.countReset,
-  dir: originalConsole.dir,
-  dirxml: originalConsole.dirxml,
-  group: originalConsole.group,
-  groupCollapsed: originalConsole.groupCollapsed,
-  groupEnd: originalConsole.groupEnd,
-  table: originalConsole.table,
-  time: originalConsole.time,
-  timeEnd: originalConsole.timeEnd,
-  timeLog: originalConsole.timeLog,
-  timeStamp: originalConsole.timeStamp,
-};
-
-`;
-
-    // Add the console replacement at the beginning of the file
-    // Find the last import statement to insert after it
-    const lines = cliSource.split("\n");
-    let lastImportIndex = -1;
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith("import ") && line.includes("from")) {
-        lastImportIndex = i;
-      } else if (
-        line &&
-        !line.startsWith("//") &&
-        !line.startsWith("/*") &&
-        lastImportIndex >= 0
-      ) {
-        // Found first non-import, non-comment line after imports
-        break;
-      }
-    }
-
-    if (lastImportIndex >= 0) {
-      // Insert after the last import
-      lines.splice(
-        lastImportIndex + 1,
-        0,
-        "",
-        ...consoleReplacement.trim().split("\n"),
-      );
-      return lines.join("\n");
-    } else {
-      // No imports found, add at the beginning
-      return consoleReplacement + cliSource;
-    }
-  }
-
-  /**
-   * Adds the original CLI source to the build folder for handler execution
-   */
-  private addOriginalCliToFolder(buildDir: string): void {
-    try {
-      // Try to find the original CLI file
-      // This is a heuristic approach - we look for common CLI file patterns
-      const appCommandName = this.argParserInstance.getAppCommandName();
-      const appName = this.argParserInstance.getAppName();
-
-      const possibleCliFiles = [
-        // Current working directory common patterns
-        path.join(process.cwd(), "index.js"),
-        path.join(process.cwd(), "index.mjs"),
-        path.join(process.cwd(), "cli.js"),
-        path.join(process.cwd(), "cli.mjs"),
-        path.join(process.cwd(), "main.js"),
-        path.join(process.cwd(), "main.mjs"),
-        // Look for files with the app command name
-        path.join(process.cwd(), `${appCommandName}.js`),
-        path.join(process.cwd(), `${appCommandName}.mjs`),
-        // Look for files with the app command name (sanitized)
-        path.join(
-          process.cwd(),
-          `${appCommandName.replace(/[^a-zA-Z0-9-]/g, "-")}.js`,
-        ),
-        path.join(
-          process.cwd(),
-          `${appCommandName.replace(/[^a-zA-Z0-9-]/g, "-")}.mjs`,
-        ),
-        // Look for files with app name patterns
-        path.join(
-          process.cwd(),
-          `${appName.toLowerCase().replace(/\s+/g, "-")}-cli.js`,
-        ),
-        path.join(
-          process.cwd(),
-          `${appName.toLowerCase().replace(/\s+/g, "-")}-cli.mjs`,
-        ),
-        // Look for files with first word of app name + cli
-        path.join(
-          process.cwd(),
-          `${appName.split(" ")[0].toLowerCase()}-cli.js`,
-        ),
-        path.join(
-          process.cwd(),
-          `${appName.split(" ")[0].toLowerCase()}-cli.mjs`,
-        ),
-      ];
-
-      let cliSourcePath = null;
-      for (const filePath of possibleCliFiles) {
-        if (fs.existsSync(filePath)) {
-          cliSourcePath = filePath;
-          break;
-        }
-      }
-
-      if (cliSourcePath) {
-        let cliSource = fs.readFileSync(cliSourcePath, "utf8");
-
-        // Fix import paths to use the installed package instead of relative paths
-        cliSource = cliSource.replace(
-          /import\s*{\s*([^}]+)\s*}\s*from\s*['"][^'"]*\/dist\/index\.mjs['"];?/g,
-          "import { $1 } from '@alcyone-labs/arg-parser';",
-        );
-
-        // Also handle default imports
-        cliSource = cliSource.replace(
-          /import\s+(\w+)\s+from\s*['"][^'"]*\/dist\/index\.mjs['"];?/g,
-          "import $1 from '@alcyone-labs/arg-parser';",
-        );
-
-        // Replace console calls with MCP-compliant Logger calls
-        cliSource = this.processCliSourceForMcp(cliSource);
-
-        // Modify the CLI source to export the parser instance
-        // Find the parser instance (usually assigned to 'cli' or similar variable)
-        const parserVariableMatch = cliSource.match(
-          /const\s+(\w+)\s*=\s*ArgParser\.withMcp\(/,
-        );
-        if (parserVariableMatch) {
-          const parserVariable = parserVariableMatch[1];
-
-          // Simple approach: just add the export at the end
-          // The original CLI execution logic will remain intact
-          cliSource += `
-
-// Export the parser instance for MCP server use
-export default ${parserVariable};
-
-// Add debugging for main execution
-console.error('[MCP-DEBUG] CLI source loaded, checking execution context...');
-console.error('[MCP-DEBUG] import.meta.url:', import.meta.url);
-console.error('[MCP-DEBUG] process.argv[1]:', process.argv[1]);
-
-// Ensure MCP server processes don't exit prematurely
-console.error('[MCP-DEBUG] Process argv:', process.argv);
-console.error('[MCP-DEBUG] Checking for serve command...');
-
-if (process.argv.includes('serve')) {
-  console.error('[MCP-DEBUG] Detected serve command, setting up MCP server lifecycle...');
-
-  // Override the original parse method to handle async MCP server
-  const originalParse = ${parserVariable}.parse;
-  ${parserVariable}.parse = async function(args) {
-    console.error('[MCP-DEBUG] Starting parse with args:', args);
-
-    try {
-      const result = originalParse.call(this, args);
-      console.error('[MCP-DEBUG] Parse result:', typeof result, result?.constructor?.name);
-
-      // If result is a Promise (MCP server), await it and keep process alive
-      if (result && typeof result.then === 'function') {
-        console.error('[MCP-DEBUG] Detected Promise result, awaiting...');
-        const mcpResult = await result;
-        console.error('[MCP-DEBUG] MCP server started, keeping process alive...');
-
-        // Keep the process alive indefinitely for MCP server
-        const keepAlive = setInterval(() => {
-          // Do nothing, just keep the event loop alive
-        }, 30000);
-
-        // Handle graceful shutdown
-        process.on('SIGINT', () => {
-          console.error('[MCP-INFO] Received SIGINT, shutting down gracefully...');
-          clearInterval(keepAlive);
-          process.exit(0);
-        });
-
-        process.on('SIGTERM', () => {
-          console.error('[MCP-INFO] Received SIGTERM, shutting down gracefully...');
-          clearInterval(keepAlive);
-          process.exit(0);
-        });
-
-        return mcpResult;
-      } else {
-        console.error('[MCP-DEBUG] Non-Promise result, returning normally');
-        return result;
-      }
-    } catch (error) {
-      console.error('[MCP-ERROR] Error in parse:', error);
-      throw error;
-    }
-  };
-}
-`;
-        } else {
-          console.warn(
-            "⚠ Could not find ArgParser instance in CLI source, MCP server may not work properly",
-          );
-        }
-
-        // Create server directory if it doesn't exist
-        const serverDir = path.join(buildDir, "server");
-        if (!fs.existsSync(serverDir)) {
-          fs.mkdirSync(serverDir, { recursive: true });
-        }
-
-        // Write the fixed CLI source to the build folder
-        fs.writeFileSync(path.join(serverDir, "original-cli.mjs"), cliSource);
-        console.log(
-          `✓ Added original CLI source to build folder: ${path.basename(cliSourcePath)}`,
-        );
-      } else {
-        console.warn(
-          "⚠ Original CLI source not found, handlers may not work properly",
-        );
-        console.warn(
-          "  Searched for:",
-          possibleCliFiles.map((f) => path.basename(f)).join(", "),
-        );
-      }
-    } catch (error) {
-      console.warn(
-        "⚠ Failed to add original CLI source:",
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-
-  /**
    * Builds a complete DXT package using TSDown CLI for autonomous execution
    */
   private async buildDxtWithTsdown(
     entryPointFile: string,
     outputDir: string = "./dxt",
+    withNodeModules: boolean = false,
   ): Promise<void> {
     try {
       console.log(chalk.cyan("🔧 Building DXT package with TSDown..."));
@@ -1524,66 +1348,22 @@ if (process.argv.includes('serve')) {
         console.log(chalk.gray(`Building with TSDown: ${entryFileName}`));
 
         // Use TSDown build method with configuration options directly
-        const buildConfig = {
+        const buildConfig: Options = {
           entry: [entryFileName],
           outDir: path.resolve(originalCwd, outputDir),
-          format: ["esm"],
-          target: "node22",
-          noExternal: () => true,
+          format: ["es"],
+          target: "node24",
+          define: {
+            // Define any compile-time constants
+            "process.env.NODE_ENV": '"production"',
+          },
           minify: false,
           sourcemap: false,
-          clean: false,
+          clean: true,
           silent: process.env["NO_SILENCE"] !== "1",
-          copy: [
-            // Copy logo from assets - try multiple possible locations
-            ...(() => {
-              const possibleLogoPaths = [
-                // From built library assets
-                path.join(
-                  path.dirname(new URL(import.meta.url).pathname),
-                  "..",
-                  "assets",
-                  "logo_1_small.jpg",
-                ),
-                // From node_modules
-                path.join(
-                  process.cwd(),
-                  "node_modules",
-                  "@alcyone-labs",
-                  "arg-parser",
-                  "dist",
-                  "assets",
-                  "logo_1_small.jpg",
-                ),
-                // From package root dist/assets (for local build)
-                path.join(process.cwd(), "dist", "assets", "logo_1_small.jpg"),
-                // From library root (development)
-                path.join(
-                  process.cwd(),
-                  "..",
-                  "..",
-                  "..",
-                  "docs",
-                  "MCP",
-                  "icons",
-                  "logo_1_small.jpg",
-                ),
-              ];
-
-              for (const logoPath of possibleLogoPaths) {
-                if (fs.existsSync(logoPath)) {
-                  console.log(chalk.gray(`Found logo at: ${logoPath}`));
-                  return [{ from: logoPath, to: "logo.jpg" }];
-                }
-              }
-              console.log(
-                chalk.yellow("⚠ Logo not found in any expected location"),
-              );
-              return []; // No logo found
-            })(),
-          ],
           external: [
             // Node.js built-ins only - everything else should be bundled for true autonomy
+            /^node:.*$/,
             "stream",
             "fs",
             "path",
@@ -1600,6 +1380,52 @@ if (process.argv.includes('serve')) {
             "net",
             "zlib",
           ],
+          noExternal: withNodeModules ? () => false : () => true,
+          copy: async (
+            options,
+          ): Promise<Array<string | { from: string; to: string }>> => {
+            const outputPaths: Array<string | { from: string; to: string }> = [
+              "package.json",
+            ];
+
+            // Only include node_modules if --s-with-node-modules flag is set
+            if (withNodeModules) {
+              console.log(
+                chalk.gray(
+                  "📦 Including node_modules in bundle (may take longer)...",
+                ),
+              );
+              outputPaths.push("node_modules");
+            }
+
+            const possibleLogoPaths = [
+              // From node_modules
+              path.join(
+                process.cwd(),
+                "node_modules",
+                "@alcyone-labs",
+                "arg-parser",
+                "dist",
+                "assets",
+                "logo_1_small.jpg",
+              ),
+              // From package root dist/assets (for local build)
+              path.join(process.cwd(), "dist", "assets", "logo_1_small.jpg"),
+            ];
+
+            for (const logoPath of possibleLogoPaths) {
+              if (fs.existsSync(logoPath)) {
+                console.log(chalk.gray(`Found logo at: ${logoPath}`));
+                outputPaths.push({
+                  from: logoPath,
+                  to: path.join(options.outDir, "logo.jpg"),
+                });
+                break;
+              }
+            }
+
+            return outputPaths;
+          },
           platform: "node" as const,
           plugins: [],
         };
@@ -1644,7 +1470,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         );
 
         // Manual logo copy since TSDown's copy option doesn't work programmatically
-        await this.copyLogoManually(outputDir);
+        // await this.copyLogoManually(outputDir);
 
         // Copy manifest and logo to the output directory
         await this.setupDxtPackageFiles(
@@ -2245,70 +2071,6 @@ export default defineConfig({
     );
 
     console.log(chalk.gray("✅ DXT package files set up"));
-  }
-
-  /**
-   * Manually copy logo since TSDown's copy option doesn't work programmatically
-   */
-  private async copyLogoManually(outputDir: string = "./dxt"): Promise<void> {
-    const dxtDir = path.resolve(process.cwd(), outputDir);
-    if (!fs.existsSync(dxtDir)) {
-      console.warn(
-        chalk.yellow(
-          `⚠ Output directory (${outputDir}) not found, skipping logo copy`,
-        ),
-      );
-      return;
-    }
-
-    const possibleLogoPaths = [
-      // From built library assets
-      path.join(
-        path.dirname(new URL(import.meta.url).pathname),
-        "..",
-        "assets",
-        "logo_1_small.jpg",
-      ),
-      // From node_modules
-      path.join(
-        process.cwd(),
-        "node_modules",
-        "@alcyone-labs",
-        "arg-parser",
-        "dist",
-        "assets",
-        "logo_1_small.jpg",
-      ),
-      // From package root dist/assets (for local build)
-      path.join(process.cwd(), "dist", "assets", "logo_1_small.jpg"),
-      // From library root (development)
-      path.join(
-        process.cwd(),
-        "..",
-        "..",
-        "..",
-        "docs",
-        "MCP",
-        "icons",
-        "logo_1_small.jpg",
-      ),
-    ];
-
-    for (const logoPath of possibleLogoPaths) {
-      if (fs.existsSync(logoPath)) {
-        try {
-          fs.copyFileSync(logoPath, path.join(dxtDir, "logo.jpg"));
-          console.log(chalk.gray(`✅ Logo copied from: ${logoPath}`));
-          return;
-        } catch (error) {
-          console.warn(
-            chalk.yellow(`⚠ Failed to copy logo from ${logoPath}: ${error}`),
-          );
-        }
-      }
-    }
-
-    console.warn(chalk.yellow("⚠ Logo not found in any expected location"));
   }
 
   /**

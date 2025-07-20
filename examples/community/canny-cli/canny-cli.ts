@@ -1,35 +1,10 @@
 #!/usr/bin/env bun
 
 // This CLI was provided, with permission, in an earlier form by Lucas Jans - https://x.com/lucasjans
-import chalk from "chalk";
 import { z } from "zod";
+import chalk from "@alcyone-labs/simple-chalk";
 import { ArgParser } from "../../../src/index";
-
-// Canny API helper function
-async function searchCanny(apiKey, query, limit = 10) {
-  const url = "https://canny.io/api/v1/posts/list";
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      apiKey: apiKey,
-      search: query,
-      limit: limit,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Canny API error: ${response.status} ${response.statusText}`,
-    );
-  }
-
-  const data = await response.json();
-  return data;
-}
+import { searchCannyBoards, searchCannyPosts } from "./canny-apis";
 
 // Create MCP-enabled ArgParser with unified tools
 const cli = ArgParser.withMcp({
@@ -140,7 +115,7 @@ const cli = ArgParser.withMcp({
       console.log(chalk.gray("━".repeat(50)));
 
       try {
-        const results = await searchCanny(apiKey, args.query, args.limit);
+        const results = await searchCannyPosts(apiKey, args.query, args.limit);
 
         if (results.posts && results.posts.length > 0) {
           console.log(
@@ -239,56 +214,7 @@ const cli = ArgParser.withMcp({
       console.log(chalk.bold.cyan("📋 Fetching Canny boards..."));
       console.log(chalk.gray("━".repeat(50)));
 
-      try {
-        const url = "https://canny.io/api/v1/boards/list";
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            apiKey: apiKey,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Canny API error: ${response.status} ${response.statusText}`,
-          );
-        }
-
-        const data = await response.json();
-
-        if (data.boards && data.boards.length > 0) {
-          console.log(
-            chalk.green(`\n✅ Found ${data.boards.length} boards:\n`),
-          );
-
-          data.boards.forEach((board, index) => {
-            console.log(chalk.bold.white(`${index + 1}. ${board.name}`));
-            console.log(
-              chalk.gray(`   ID: ${board.id} | Posts: ${board.postCount || 0}`),
-            );
-            if (board.description) {
-              console.log(chalk.gray(`   ${board.description}`));
-            }
-            console.log();
-          });
-        } else {
-          console.log(chalk.yellow("No boards found."));
-        }
-
-        // Return structured data for both CLI and MCP modes
-        return {
-          success: true,
-          boards: data.boards || [],
-          total: data.boards ? data.boards.length : 0,
-          timestamp: new Date().toISOString(),
-        };
-      } catch (error) {
-        console.error(chalk.red(`❌ Error: ${error.message}`));
-        throw error;
-      }
+      return await searchCannyBoards(apiKey);
     },
   });
 
