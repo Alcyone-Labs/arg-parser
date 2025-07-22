@@ -1,9 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 // This CLI was provided, with permission, in an earlier form by Lucas Jans - https://x.com/lucasjans
 import { z } from "zod";
+import { ArgParser } from "@alcyone-labs/arg-parser";
 import chalk from "@alcyone-labs/simple-chalk";
-import { ArgParser } from "../../../src/index";
 import { searchCannyBoards, searchCannyPosts } from "./canny-apis";
 
 // Create MCP-enabled ArgParser with unified tools

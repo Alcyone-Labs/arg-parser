@@ -10,6 +10,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - [How to Run It](#how-to-run-it)
   - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
 - [Parsing Command-Line Arguments](#parsing-command-line-arguments)
+  - [Automatic Argument Detection](#automatic-argument-detection)
   - [Cannonical Usage Pattern](#cannonical-usage-pattern)
   - [Top-level await](#top-level-await)
   - [Promise-based parsing](#promise-based-parsing)
@@ -36,13 +37,20 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
   - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
   - [MCP Transports](#mcp-transports)
+  - [MCP Log Path Configuration](#mcp-log-path-configuration)
   - [Automatic Console Safety](#automatic-console-safety)
   - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
   - [Logo Configuration](#logo-configuration)
     - [Supported Logo Sources](#supported-logo-sources)
   - [How DXT Generation Works](#how-dxt-generation-works)
+  - [DXT Bundling Strategies](#dxt-bundling-strategies)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.3.0](#v230)
+  - [v2.2.1](#v221)
+  - [v2.2.0](#v220)
+  - [v2.1.1](#v211)
+  - [v2.1.0](#v210)
   - [v2.0.0](#v200)
   - [v1.3.0](#v130)
   - [v1.2.0](#v120)
@@ -57,7 +65,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - **Automatic MCP Integration**: Transform any CLI into a compliant MCP server with a single command (`--s-mcp-serve`).
 - **Console Safe**: `console.log` and other methods
   are automatically handled in MCP mode to prevent protocol contamination, requiring no changes to your code.
-- **DXT Package Generation**: Generate complete, ready-to-install Claude Desktop Extension (`.dxt`) packages with the `--s-build-dxt` command.
+- **DXT Package Generation**: Generate complete, ready-to-install Claude Desktop Extension (`.dxt`) packages with the `--s-build-dxt` command and `--s-with-node-modules` for platform-dependent builds.
 - **Hierarchical Sub-commands**: Create complex, nested sub-command structures (e.g., `git commit`, `docker container ls`) with flag inheritance.
 - **Configuration Management**: Easily load (`--s-with-env`) and save (`--s-save-to-env`) configurations from/to `.env`, `.json`, `.yaml`, and `.toml` files.
 - **Automatic Help & Error Handling**: Context-aware help text and user-friendly error messages are generated automatically.
@@ -162,6 +170,18 @@ mycli --s-mcp-serve
 
 # 3. Generate a DXT package for Claude Desktop (2-steps)
 mycli --s-build-dxt ./my-dxt-package
+
+# If you use ML models or packages that include binaries such as Sqlite3 or sharp, etc...
+# You need to bundle the node_modules folder with your DXT package
+# In order to do this, you need to use the following flag:
+# First hard-install all the packages
+rm -rf node_moduels
+pnpm install --prod --node-linker=hoisted
+# Then bundle with node_modules
+mycli --s-build-dxt ./my-dxt-package --s-with-node-modules
+# then packages the dxt
+npx @anthropic-ai/dxt pack ./my-dxt-package
+# then upload the dxt bundle to Claude Desktop from the settings > extensions > advanced screen
 ```
 
 Read more on generating the DXT package here: [Generating DXT Packages](#generating-dxt-packages---s-build-dxt)
@@ -1082,12 +1102,26 @@ my-cli-app --s-build-dxt ./my-dxt-package
 # A default logo will be applied if you don't provide one.
 
 # 2. (Optional) Pack the folder into a .dxt file for distribution
+# (you can install the unpacked folder) directly in Claude Desktop > Settings > Extensions > Advanced
 npx @anthropic-ai/dxt pack ./my-dxt-package
 
-# 3. (Optional) Sign the DXT package
+# 3. (Optional) Sign the DXT package - this has not been well tested yet
 npx @anthropic-ai/dxt sign ./my-dxt-package.dxt
 
 # Then drag & drop the .dxt file into Claude Desktop to install it, in the Settings > Extensions screen.
+
+# **IMPORTANT**:
+# If you use ML models or packages that include binaries such as Sqlite3 or sharp, etc...
+# You need to bundle the node_modules folder with your DXT package
+# In order to do this, you need to use the following flag:
+# First hard-install all the packages
+rm -rf node_moduels
+pnpm install --prod --linker hoisted
+# Then bundle with node_modules
+mycli --s-build-dxt ./my-dxt-package --s-with-node-modules
+# then build the dxt bundle
+npx @anthropic-ai/dxt pack ./my-dxt-package
+# then upload the dxt bundle to Claude Desktop from the settings > extensions > advanced
 ```
 
 ### Logo Configuration
@@ -1138,8 +1172,88 @@ When you run `--s-build-dxt`, ArgParser performs several steps to create a self-
 2.  **Manifest Generation**: It creates a `manifest.json` file.
     - Tool flags are converted into a JSON Schema for the `input_schema`.
     - Flags with an `env` property (e.g., `{ name: 'apiKey', env: 'API_KEY' }`) are automatically added to the `user_config` section, prompting the user for the value upon installation and making it available as an environment variable to your tool.
-3.  **Autonomous Build**: It bundles your CLI's source code and its dependencies into a single entry point (e.g., `server.js`) that can run without `node_modules`. This ensures the DXT is portable and reliable.
+3.  **Autonomous Build**: It bundles your CLI's source code and its dependencies into a single entry point (e.g., `server.js`) that can run without `node_modules`. This ensures the DXT is portable and reliable. If you have properly setup your node_modules (via `pnpm install --prod --node-linker=hoisted`) and pass `--s-with-node-nodules` to the bundling process, the resulting DXT will include all necessary dependencies, this is useful for projects that require native dependencies or have complex dependency trees.
 4.  **Packaging**: It assembles all necessary files (manifest, server bundle, logo, etc.) into the specified output directory, ready to be used by Claude Desktop or packed with `npx @anthropic-ai/dxt`.
+
+### DXT Bundling Strategies
+
+ArgParser offers two approaches for handling dependencies in DXT packages, depending on your project's needs.
+
+#### Standard Approach (Recommended for Most Projects)
+
+```bash
+# For pure JavaScript/TypeScript projects
+your-cli --s-build-dxt
+```
+
+- **Best for**: Pure JS/TS projects without native dependencies
+- **Bundle size**: Small (5-10MB typical)
+- **Build time**: Fast
+- **Dependencies**: Bundled automatically by TSDown
+
+#### Native Dependencies Approach
+
+```bash
+# For projects with native binaries (ONNX, Sharp, SQLite, etc.)
+rm -rf node_modules
+pnpm install --prod --node-linker=hoisted
+your-cli --s-build-dxt --s-with-node-modules
+```
+
+- **Best for**: Projects using ONNX Runtime, Sharp, Canvas, SQLite, or other packages with `.node` binaries
+- **Bundle size**: Larger (50-200MB typical)
+- **Build time**: Longer (copies entire node_modules)
+- **Dependencies**: Complete autonomy - no installation needed by Claude
+
+**When to use `--s-with-node-modules`:**
+
+- ✅ Your project uses machine learning packages (ONNX Runtime, TensorFlow bindings)
+- ✅ You need image processing (Sharp, Canvas)
+- ✅ You use database packages with native binaries (better-sqlite3, sqlite3)
+- ✅ You want guaranteed compatibility without runtime installation
+- ✅ Bundle size is acceptable for your use case
+
+**Required preparation steps:**
+
+1. `rm -rf node_modules` - Clean slate for proper structure
+2. `pnpm install --prod --node-linker=hoisted` - Creates flat, symlink-free structure
+3. Add `--s-with-node-modules` flag to your build command
+
+The system automatically validates your setup and provides guidance if issues are detected.
+
+### Typical Errors
+
+**Failed to run in Claude Desktop**:
+
+Claude Desktop is pretty finicky (as of Claude 0.12.28), and the built-in Node.js does not work with extensions built with `--s-with-node-modules` and installed via ArgParser (and I have no idea why because there's no debug info).
+To resolve this, simply go to `Claude Desktop > Settings > Extensions > Advanced Settings` and turn **OFF** `Use Built-in Node.js for MCP`.
+
+Note that there are _many_ reasons for extensions not to work, if it does not work with Built-in or System Node.js, then something in your app is wrong. Feel free to join Alcyone Labs' discord for support: [Alcyone Labs' Discord](https://discord.gg/rRHhpz5nS5)
+
+**Failed to attach to MCP when downloading external assets**
+
+Sometimes, the MCP client needs to install external files, for example an ML model from HuggingFace or some task that takes more than 10 seconds to run. While it's working, Claude Desktop will display a `Cannot attach to MCP`, simply ignore it, Claude Desktop runs a ping every X seconds, and when it is running a long-running task, the ping will fail, but the task itself will still finish correctly.
+
+**Failed to generate DXT package**:
+
+If you encounter the following error running a command such as:
+
+```bash
+rm -rf node_modules
+pnpm install --prod --node-linker=hoisted
+bun src/index.ts --s-build-dxt ./dxt --s-with-node-modules
+
+-- Error generating DXT package: TSDown DXT build failed: EEXIST: file already exists, mkdir
+```
+
+Then run:
+
+```bash
+rm -rf ./dxt
+bun src/index.ts --s-build-dxt ./dxt --s-with-node-modules
+```
+
+And it should work. TSDown is tasked to clean the outputDir first, but it won't if some files have been manually changed.
 
 ---
 
@@ -1147,27 +1261,39 @@ When you run `--s-build-dxt`, ArgParser performs several steps to create a self-
 
 ArgParser includes built-in `--s-*` flags for development, debugging, and configuration. They are processed before normal arguments and will cause the program to exit after their task is complete.
 
-| Flag                        | Description                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------- |
-| **MCP & DXT**               |                                                                                                     |
-| `--s-mcp-serve`             | Starts the application in MCP server mode, exposing all tools.                                      |
-| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop in the specified directory.         |
-| `--s-mcp-transport <type>`  | Overrides the MCP transport (`stdio`, `sse`, `streamable-http`).                                    |
-| `--s-mcp-transports <json>` | Overrides transports with a JSON array for multi-transport setups.                                  |
-| `--s-mcp-port <number>`     | Sets the port for HTTP-based transports (`sse`, `streamable-http`).                                 |
-| `--s-mcp-host <string>`     | Sets the host address for HTTP-based transports.                                                    |
-| `--s-mcp-log-path <path>`   | Sets the file path for MCP server logs (default: `./logs/mcp.log`). Overrides programmatic setting. |
-| **Configuration**           |                                                                                                     |
-| `--s-with-env <file>`       | Loads configuration from a file (`.env`, `.json`, `.yaml`, `.toml`). CLI args take precedence.      |
-| `--s-save-to-env <file>`    | Saves the current arguments to a configuration file, perfect for templates.                         |
-| **Debugging**               |                                                                                                     |
-| `--s-debug`                 | Prints a detailed, step-by-step log of the argument parsing process.                                |
-| `--s-debug-print`           | Exports the entire parser configuration to a JSON file for inspection.                              |
-| `--s-enable-fuzzy`          | Enables fuzzy testing mode—a dry run that parses args but skips handler execution.                  |
+| Flag                        | Description                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **MCP & DXT**               |                                                                                                                |
+| `--s-mcp-serve`             | Starts the application in MCP server mode, exposing all tools.                                                 |
+| `--s-build-dxt [dir]`       | Generates a complete, autonomous DXT package for Claude Desktop in the specified directory.                    |
+| `--s-with-node-modules`     | Use with `--s-build-dxt`. Includes complete node_modules in DXT package for projects with native dependencies. |
+| `--s-mcp-transport <type>`  | Overrides the MCP transport (`stdio`, `sse`, `streamable-http`).                                               |
+| `--s-mcp-transports <json>` | Overrides transports with a JSON array for multi-transport setups.                                             |
+| `--s-mcp-port <number>`     | Sets the port for HTTP-based transports (`sse`, `streamable-http`).                                            |
+| `--s-mcp-host <string>`     | Sets the host address for HTTP-based transports.                                                               |
+| `--s-mcp-log-path <path>`   | Sets the file path for MCP server logs (default: `./logs/mcp.log`). Overrides programmatic setting.            |
+| **Configuration**           |                                                                                                                |
+| `--s-with-env <file>`       | Loads configuration from a file (`.env`, `.json`, `.yaml`, `.toml`). CLI args take precedence.                 |
+| `--s-save-to-env <file>`    | Saves the current arguments to a configuration file, perfect for templates.                                    |
+| **Debugging**               |                                                                                                                |
+| `--s-debug`                 | Prints a detailed, step-by-step log of the argument parsing process.                                           |
+| `--s-debug-print`           | Exports the entire parser configuration to a JSON file for inspection.                                         |
+| `--s-enable-fuzzy`          | Enables fuzzy testing mode—a dry run that parses args but skips handler execution.                             |
 
 ---
 
 ## Changelog
+
+### v2.3.0
+
+The DXT bundling is working pretty well now, and we have had a lot of success building, bundling and running various extensions. If you see issues, feel free to open an Issue on GitHub with details, or ask about it on [Alcyone Labs' Discord](https://discord.gg/rRHhpz5nS5)
+
+Make sure to clearly identify if you need to include the node_modules or not. In doubt, include them using `--s-with-node-modules`
+
+**Feat**
+
+- **New `--s-with-node-modules` flag**: Create fully autonomous DXT packages that include complete native dependencies. Perfect for projects using ONNX Runtime, Sharp, SQLite, or other packages with `.node` binaries. Use `rm -rf ./node_modules && pnpm install --prod --node-linker=hoisted` followed by `my-cli --s-build-dxt ./dxt --s-with-node-modules` to create self-contained packages that work without Claude needing to install dependencies.
+  Note that when bundling with node_modules, it's likely that the built-in Node.js will not work with that extension, so go to `Claude Desktop > Settings > Extensions > Advanced Settings` and turn **OFF** `Use Built-in Node.js for MCP`.
 
 ### v2.2.1
 

@@ -1,0 +1,35 @@
+{
+  "name": "onnx-pii-detector",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server for PII detection using ONNX models via Transformers.js - demonstrates --s-with-node-modules bundling",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "build": "tsc --build",
+    "build:dxt": "bun src/index.ts --s-build-dxt --s-with-node-modules",
+    "test": "bun src/index.ts listPII --text 'Test with John Doe at john@example.com'",
+    "serve:mcp": "bun src/index.ts --s-mcp-serve",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@alcyone-labs/arg-parser": "file:../../..",
+    "@huggingface/transformers": "^3.6.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "MCP",
+    "ONNX",
+    "PII",
+    "transformers",
+    "entity-recognition",
+    "privacy"
+  ],
+  "author": "Alcyone Labs",
+  "license": "MIT"
+}

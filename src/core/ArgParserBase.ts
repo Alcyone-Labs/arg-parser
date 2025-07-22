@@ -2122,9 +2122,7 @@ ${descriptionLines
     let mcpLogger: any;
     try {
       // Try to import simple-mcp-logger if available
-      const mcpLoggerModule = await Function(
-        'return import("@alcyone-labs/simple-mcp-logger")',
-      )();
+      const mcpLoggerModule = await import("@alcyone-labs/simple-mcp-logger");
       mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", resolvedLogPath);
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
@@ -2260,7 +2258,7 @@ ${descriptionLines
     const { serverInfo, toolOptions, defaultTransports, defaultTransport } =
       mcpServerConfig;
 
-    // Determine which transport configuration to use
+    // Determine which transport configuration to use - CLI flags take precedence over programmatic defaults
     if (transportOptions.transports) {
       // Multiple transports specified via CLI
       try {
@@ -2276,6 +2274,25 @@ ${descriptionLines
           `Error parsing transports configuration: ${error.message}. Expected JSON format: '[{"type":"stdio"},{"type":"sse","port":3001}]'`,
         );
       }
+    } else if (transportOptions.transportType) {
+      // Single transport specified via CLI flags - takes precedence over programmatic defaults
+      const transportType = transportOptions.transportType as
+        | "stdio"
+        | "sse"
+        | "streamable-http";
+      const finalTransportOptions = {
+        port: transportOptions.port,
+        host: transportOptions.host || "localhost",
+        path: transportOptions.path || "/mcp",
+      };
+
+      await mcpParser.startMcpServerWithTransport(
+        serverInfo,
+        transportType,
+        finalTransportOptions,
+        toolOptions,
+        transportOptions.logPath,
+      );
     } else if (defaultTransports && defaultTransports.length > 0) {
       // Use preset multiple transports configuration
       await mcpParser.startMcpServerWithMultipleTransports(
@@ -2299,22 +2316,11 @@ ${descriptionLines
         transportOptions.logPath,
       );
     } else {
-      // Single transport mode from CLI flags or defaults
-      const transportType =
-        (transportOptions.transportType as
-          | "stdio"
-          | "sse"
-          | "streamable-http") || "stdio";
-      const finalTransportOptions = {
-        port: transportOptions.port,
-        host: transportOptions.host || "localhost",
-        path: transportOptions.path || "/mcp",
-      };
-
+      // Default fallback to stdio when no transport configuration is provided
       await mcpParser.startMcpServerWithTransport(
         serverInfo,
-        transportType,
-        finalTransportOptions,
+        "stdio",
+        {},
         toolOptions,
         transportOptions.logPath,
       );

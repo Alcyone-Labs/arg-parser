@@ -31,7 +31,6 @@ tests/
 temp-dxt-build/
 
 # TSDown config files (not needed in final package)
-tsdown.dxt.config.ts
 .dxtignore.template
 
 # Source files (replaced by bundled output)
