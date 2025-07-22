@@ -822,56 +822,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     }
 
     // Extract environment variables and user config from the ArgParser instance
-    const envVars: Record<string, string> = {};
-    const userConfig: Record<string, any> = {};
-
-    // Get all flags from the main ArgParser to find environment variables
-    const mainFlags = this.argParserInstance.flags;
-    for (const flag of mainFlags) {
-      const envVar = (flag as any).env || (flag as any).envVar;
-      if (envVar) {
-        // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
-        envVars[envVar] = `\${user_config.${envVar}}`;
-
-        // Add to user_config - use the original env var name to maintain compatibility
-        userConfig[envVar] = {
-          type: "string",
-          title: envVar
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (l: string) => l.toUpperCase()),
-          description: flag.description || `${envVar} environment variable`,
-          required: true, // Always require env vars in user_config for better UX
-          sensitive: true, // Assume env vars are sensitive
-        };
-      }
-    }
-
-    // Also check unified tools for environment variables
-    if (typeof (this.argParserInstance as any).getTools === "function") {
-      const tools = (this.argParserInstance as any).getTools();
-      for (const [, toolConfig] of tools) {
-        const toolFlags = (toolConfig as any).flags || [];
-        for (const flag of toolFlags) {
-          const envVar = (flag as any).env || (flag as any).envVar;
-          if (envVar && !envVars[envVar]) {
-            // Only add if not already present
-            // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
-            envVars[envVar] = `\${user_config.${envVar}}`;
-
-            // Add to user_config - use the original env var name to maintain compatibility
-            userConfig[envVar] = {
-              type: "string",
-              title: envVar
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (l: string) => l.toUpperCase()),
-              description: flag.description || `${envVar} environment variable`,
-              required: true, // Always require env vars in user_config for better UX
-              sensitive: true, // Assume env vars are sensitive
-            };
-          }
-        }
-      }
-    }
+    const { envVars, userConfig } = this.generateEnvAndUserConfig();
 
     // Get server info from withMcp() configuration or fallback to package.json
     const serverInfo = this.extractMcpServerInfo();
@@ -1062,5 +1013,67 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       `Could not find package.json within ${maxAttempts} directories up from ${entryPointFile}. ` +
         `Please ensure your entry point is within a project that has a package.json file.`,
     );
+  }
+
+  /**
+   * Generate environment variables and user configuration from ArgParser flags
+   * @returns Object containing envVars and userConfig
+   */
+  public generateEnvAndUserConfig(): {
+    envVars: Record<string, string>;
+    userConfig: Record<string, any>;
+  } {
+    const envVars: Record<string, string> = {};
+    const userConfig: Record<string, any> = {};
+
+    // Get all flags from the main ArgParser to find environment variables
+    const mainFlags = this.argParserInstance.flags;
+    for (const flag of mainFlags) {
+      const envVar = (flag as any).env || (flag as any).envVar;
+      if (envVar) {
+        // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
+        envVars[envVar] = `\${user_config.${envVar}}`;
+
+        // Add to user_config - use the original env var name to maintain compatibility
+        userConfig[envVar] = {
+          type: "string",
+          title: envVar
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase()),
+          description: flag.description || `${envVar} environment variable`,
+          required: true, // Always require env vars in user_config for better UX
+          sensitive: true, // Assume env vars are sensitive
+        };
+      }
+    }
+
+    // Also check unified tools for environment variables
+    if (typeof (this.argParserInstance as any).getTools === "function") {
+      const tools = (this.argParserInstance as any).getTools();
+      for (const [, toolConfig] of tools) {
+        const toolFlags = (toolConfig as any).flags || [];
+        for (const flag of toolFlags) {
+          const envVar = (flag as any).env || (flag as any).envVar;
+          if (envVar && !envVars[envVar]) {
+            // Only add if not already present
+            // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
+            envVars[envVar] = `\${user_config.${envVar}}`;
+
+            // Add to user_config - use the original env var name to maintain compatibility
+            userConfig[envVar] = {
+              type: "string",
+              title: envVar
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (l: string) => l.toUpperCase()),
+              description: flag.description || `${envVar} environment variable`,
+              required: true, // Always require env vars in user_config for better UX
+              sensitive: true, // Assume env vars are sensitive
+            };
+          }
+        }
+      }
+    }
+
+    return { envVars, userConfig };
   }
 }
