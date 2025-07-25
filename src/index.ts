@@ -13,6 +13,9 @@ export {
   type ArgParserWithMcpOptions,
   type McpToolConfig,
   type ToolConfig,
+  type DxtCopyEntry,
+  type DxtCopyOptions,
+  type DxtOptions,
 } from "./core/ArgParser";
 
 // Log path configuration exports
@@ -27,6 +30,10 @@ export {
   type LogPath,
   type LogPathConfig,
 } from "./core/log-path-utils";
+
+// Debug utility exports
+export { debug } from "./utils/debug-utils";
+
 export { ArgParserMcp, createMcpArgParser } from "./mcp/ArgParserMcp";
 
 export {

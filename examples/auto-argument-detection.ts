@@ -90,7 +90,10 @@ async function main() {
       console.log("🎯 Result:", result.message);
     }
   } catch (error) {
-    console.error("❌ Error:", error.message);
+    console.error(
+      "❌ Error:",
+      error instanceof Error ? error.message : String(error),
+    );
     process.exit(1);
   }
 }
@@ -110,12 +113,19 @@ async function explicitExample() {
     ]);
     console.log("✅ Explicit parse result:", result.message);
   } catch (error) {
-    console.error("❌ Explicit parse error:", error.message);
+    console.error(
+      "❌ Explicit parse error:",
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 
 // Show both examples
-if (import.meta.main) {
+// Check if this is the main module (Node.js/Bun compatible)
+if (
+  require.main === module ||
+  (typeof process !== "undefined" && process.argv[1] === __filename)
+) {
   console.log("🚀 ArgParser Auto-Detection Demo\n");
   console.log(
     "This example demonstrates the new automatic argument detection feature.",

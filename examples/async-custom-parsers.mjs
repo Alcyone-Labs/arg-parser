@@ -25,7 +25,7 @@ const parser = new ArgParser({
         console.log(`✅ Config loaded: ${Object.keys(config).length} keys`);
         return config;
       } catch (error) {
-        throw new Error(`Failed to load config: ${error.message}`);
+        throw new Error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
   },
@@ -96,7 +96,7 @@ try {
   );
   console.log("📝 Created sample-config.json for testing");
 } catch (error) {
-  console.warn("⚠️  Could not create sample config file:", error.message);
+  console.warn("⚠️  Could not create sample config file:", (error as Error).message);
 }
 
 console.log(`
@@ -104,7 +104,7 @@ console.log(`
 
 This example demonstrates async custom parser functions that can:
 • Read and parse configuration files
-• Make API calls to fetch data  
+• Make API calls to fetch data
 • Add artificial delays
 • Mix with synchronous parsers
 
@@ -125,6 +125,6 @@ try {
     console.log("\n🎯 Final result:", result);
   }
 } catch (error) {
-  console.error("❌ Error:", error.message);
+  console.error("❌ Error:", error instanceof Error ? error.message : String(error));
   process.exit(1);
 }

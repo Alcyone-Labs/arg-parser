@@ -2,14 +2,14 @@ import { z } from "zod";
 import { ArgParser } from "@alcyone-labs/arg-parser";
 
 const cli = ArgParser.withMcp({
-  appName: "Protocol Compliance Server",
-  appCommandName: "compliance-server",
-  description: "MCP server for protocol compliance testing",
+  appName: "Legacy Compliance Server",
+  appCommandName: "legacy-compliance-server",
+  description: "MCP server for protocol compliance testing using legacy patterns",
   mcp: {
     serverInfo: {
-      name: "compliance-test-server",
+      name: "legacy-compliance-test-server",
       version: "1.0.0",
-      description: "Protocol compliance test server",
+      description: "Legacy protocol compliance test server",
     },
   },
   handler: async (ctx) => {
@@ -112,56 +112,38 @@ const cli = ArgParser.withMcp({
       },
     ]),
   })
-  .addTool({
+  .addMcpTool({
     name: "echo",
     description: "Echo back the input text",
-    flags: [
-      {
-        name: "text",
-        description: "Text to echo back",
-        options: ["--text"],
-        type: "string",
-        mandatory: true,
-      },
-    ],
+    inputSchema: z.object({
+      text: z.string().describe("Text to echo back"),
+    }),
     outputSchema: z.object({
       echoed: z.string().describe("The echoed text"),
       timestamp: z.string().describe("When the echo was performed"),
     }),
-    handler: async (ctx) => {
+    handler: async (args) => {
       return {
-        echoed: ctx.args.text,
+        echoed: args.text,
         timestamp: new Date().toISOString(),
       };
     },
   })
-  .addTool({
+  .addMcpTool({
     name: "add",
     description: "Add two numbers together",
-    flags: [
-      {
-        name: "a",
-        description: "First number",
-        options: ["--a"],
-        type: "number",
-        mandatory: true,
-      },
-      {
-        name: "b",
-        description: "Second number",
-        options: ["--b"],
-        type: "number",
-        mandatory: true,
-      },
-    ],
+    inputSchema: z.object({
+      a: z.number().describe("First number"),
+      b: z.number().describe("Second number"),
+    }),
     outputSchema: z.object({
       result: z.number().describe("Sum of the two numbers"),
       operation: z.string().describe("Description of the operation"),
     }),
-    handler: async (ctx) => {
+    handler: async (args) => {
       return {
-        result: ctx.args.a + ctx.args.b,
-        operation: `${ctx.args.a} + ${ctx.args.b} = ${ctx.args.a + ctx.args.b}`,
+        result: args.a + args.b,
+        operation: `${args.a} + ${args.b} = ${args.a + args.b}`,
       };
     },
   });

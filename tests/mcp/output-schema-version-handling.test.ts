@@ -43,7 +43,7 @@ describe("Output Schema Version Handling", () => {
 
       // Tool should have output schema included
       expect(tool?.outputSchema).toBeDefined();
-      expect(tool?.outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tool?.outputSchema?._def.type).toBe("object");
     });
 
     test("should NOT support output schemas for versions before 2025-06-18", () => {

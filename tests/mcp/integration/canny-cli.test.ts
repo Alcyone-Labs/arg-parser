@@ -249,7 +249,7 @@ describe("Canny CLI Integration Tests", () => {
 
       // Verify schema structure (it's a Zod object)
       expect(cannyTool.inputSchema).toBeDefined();
-      expect(cannyTool.inputSchema._def.typeName).toBe("ZodObject");
+      expect(cannyTool.inputSchema._def.type).toBe("object");
 
       // Test that valid input parses correctly
       const validInput = {

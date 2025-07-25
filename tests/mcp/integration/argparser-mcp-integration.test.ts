@@ -111,6 +111,61 @@ describe("ArgParser MCP Integration", () => {
       expect(prompts[0].title).toBe("Test Prompt");
     });
 
+    test("should register prompts with MCP server using Zod compatibility layer", async () => {
+      // Create a new parser with MCP configuration for this test
+      const mcpParser = ArgParser.withMcp({
+        appName: "Test MCP App with Prompts",
+        appCommandName: "test-mcp-prompts",
+        description: "Test application with MCP prompts support",
+        handler: async (ctx) => ({ success: true, args: ctx.args }),
+        mcp: {
+          serverInfo: {
+            name: "test-mcp-prompts-server",
+            version: "1.0.0",
+            description: "Test MCP server for prompts compatibility testing",
+          },
+        },
+      });
+
+      const testPromptConfig: McpPromptConfig = {
+        name: "zod-compat-prompt",
+        title: "Zod Compatibility Test Prompt",
+        description: "Test prompt for Zod v4 compatibility with MCP SDK",
+        argsSchema: z.object({
+          message: z.string().describe("Message to process"),
+          format: z.enum(["json", "text", "markdown"]).optional().describe("Output format"),
+          metadata: z.object({
+            author: z.string(),
+            timestamp: z.number().optional(),
+          }).optional().describe("Optional metadata"),
+        }),
+        handler: async ({ message, format, metadata }) => ({
+          description: `Processing message in ${format || "text"} format`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: `Process this message: ${message}${metadata ? ` (by ${metadata.author})` : ""}`,
+              },
+            },
+          ],
+        }),
+      };
+
+      mcpParser.addMcpPrompt(testPromptConfig);
+
+      // Create MCP server to test prompt registration
+      const server = await mcpParser.createMcpServer();
+      expect(server).toBeDefined();
+
+      // Verify prompt was registered successfully
+      const prompts = mcpParser.getMcpPrompts();
+      expect(prompts).toHaveLength(1);
+      expect(prompts[0].name).toBe("zod-compat-prompt");
+      expect(prompts[0].title).toBe("Zod Compatibility Test Prompt");
+    });
+
     test("should remove MCP prompts", () => {
       parser.addMcpPrompt({
         name: "removable-prompt",

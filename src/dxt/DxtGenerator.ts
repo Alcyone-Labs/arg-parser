@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { createPathsMatcher, getTsconfig } from "get-tsconfig";
 import { type Options } from "tsdown";
 import chalk from "@alcyone-labs/simple-chalk";
 import type { ParseResult } from "../core/types";
@@ -531,7 +532,7 @@ export class DxtGenerator {
       // Run TSDown build from the project root directory
       const originalCwd = process.cwd();
       try {
-        process.chdir(projectRoot);
+        // process.chdir(projectRoot);
 
         // Dynamic import TSDown to handle optional dependency
         const { build } = await import("tsdown");
@@ -543,6 +544,11 @@ export class DxtGenerator {
           ),
         );
 
+        // Extract MCP config for use in copy function
+        const mcpConfig = (
+          this.argParserInstance as any
+        ).getMcpServerConfig?.();
+
         const buildConfig: Options = {
           entry: [relativeEntryPath],
           outDir: path.resolve(originalCwd, outputDir),
@@ -550,19 +556,81 @@ export class DxtGenerator {
           target: "node22",
           define: {
             // Define any compile-time constants
-            NODE_ENV: '"production"',
+            NODE_ENV: "production",
           },
+          dts: true,
           minify: false,
           sourcemap: false,
           // Remove all output folders and artefacts
           clean: [outputDir, "./.dxtignore", `${outputDir}.dxt`],
           silent: process.env["NO_SILENCE"] !== "1",
-          external: (_, importer) =>
-            withNodeModules ? importer?.includes("node_modules") : false,
-          noExternal: (_, importer) =>
-            withNodeModules
-              ? importer?.includes("node_modules") === false
-              : true,
+          // external: (
+          //   id: string,
+          //   importer: string | undefined,
+          //   isResolved: boolean,
+          // ) => {
+          //   // Try to resolve TypeScript paths first
+          //   if (importer && !isResolved) {
+          //     const resolvedPath = this.resolveTsPath(id, importer);
+          //     if (resolvedPath) {
+          //       // Path was resolved, treat as internal
+          //       return false;
+          //     }
+          //   }
+
+          //   const external = this.isNodeBuiltin(id)
+          //     ? true
+          //     : // Importer is the entrypoint file if undefined
+          //       !importer
+          //       ? false
+          //       : withNodeModules
+          //         ? isResolved
+          //           ? importer?.includes("node_modules")
+          //           : importer?.includes("node_modules") || !id?.startsWith(".")
+          //         : false;
+
+          //   if (Boolean(process.env["DEBUG"]))
+          //     console.log(
+          //       `[${chalk.yellow("external")}]    ==> `,
+          //       external,
+          //       " | For => (",
+          //       chalk.green(id),
+          //       ") <== ==> [",
+          //       chalk.grey(importer ?? ""),
+          //       " - ",
+          //       isResolved,
+          //       "]",
+          //     );
+          //   return external;
+          // },
+          external: (id, importer) => {
+            const external = this.shouldModuleBeExternal(
+              id,
+              importer,
+              withNodeModules,
+            );
+
+            if (Boolean(process.env["DEBUG"]))
+              console.log(
+                `[${chalk.blue("External")}] ${chalk.yellow(external ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+              );
+
+            return external;
+          },
+          noExternal: (id, importer) => {
+            const external = this.shouldModuleBeExternal(
+              id,
+              importer,
+              withNodeModules,
+            );
+
+            if (Boolean(process.env["DEBUG"]))
+              console.log(
+                `[${chalk.yellow("noExternal")}] ${chalk.yellow(external === false ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+              );
+
+            return external === false;
+          },
           copy: async (
             options,
           ): Promise<Array<string | { from: string; to: string }>> => {
@@ -589,6 +657,53 @@ export class DxtGenerator {
                   from: logoPath,
                   to: path.join(options.outDir, logoFilename),
                 });
+              }
+            }
+
+            // Add user-specified include files from DXT configuration
+            if (mcpConfig?.dxt?.include) {
+              console.log(
+                chalk.gray(
+                  "📁 Including additional files from DXT configuration...",
+                ),
+              );
+
+              for (const includeItem of mcpConfig.dxt.include) {
+                if (typeof includeItem === "string") {
+                  // Simple string path - copy to same relative location
+                  const sourcePath = path.resolve(projectRoot, includeItem);
+                  if (fs.existsSync(sourcePath)) {
+                    console.log(chalk.gray(`  • ${includeItem}`));
+                    outputPaths.push(includeItem);
+                  } else {
+                    console.warn(
+                      chalk.yellow(
+                        `  ⚠ File not found: ${includeItem} (resolved to ${sourcePath})`,
+                      ),
+                    );
+                  }
+                } else {
+                  // Object with from/to mapping
+                  const sourcePath = path.resolve(
+                    projectRoot,
+                    includeItem.from,
+                  );
+                  if (fs.existsSync(sourcePath)) {
+                    console.log(
+                      chalk.gray(`  • ${includeItem.from} → ${includeItem.to}`),
+                    );
+                    outputPaths.push({
+                      from: sourcePath,
+                      to: path.join(options.outDir, includeItem.to),
+                    });
+                  } else {
+                    console.warn(
+                      chalk.yellow(
+                        `  ⚠ File not found: ${includeItem.from} (resolved to ${sourcePath})`,
+                      ),
+                    );
+                  }
+                }
               }
             }
 
@@ -637,38 +752,6 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           entryFileName,
         );
 
-        // // Preserve directory structure by moving the bundled file to match original structure
-        // let finalOutputFilename: string | undefined;
-        // if (detectedOutputFile && relativeEntryPath.includes("/")) {
-        //   const outputPath = path.resolve(originalCwd, outputDir);
-        //   const detectedFilePath = path.join(outputPath, detectedOutputFile);
-
-        //   // Calculate the target path with preserved directory structure
-        //   const targetRelativePath = relativeEntryPath.replace(/\.ts$/, ".js");
-        //   const targetFilePath = path.join(outputPath, targetRelativePath);
-
-        //   // Create target directory if it doesn't exist
-        //   const targetDir = path.dirname(targetFilePath);
-        //   if (!fs.existsSync(targetDir)) {
-        //     fs.mkdirSync(targetDir, { recursive: true });
-        //   }
-
-        //   // Move the file to preserve directory structure
-        //   if (fs.existsSync(detectedFilePath)) {
-        //     fs.renameSync(detectedFilePath, targetFilePath);
-        //     finalOutputFilename = targetRelativePath;
-        //     console.log(
-        //       chalk.gray(
-        //         `📁 Preserved directory structure: ${finalOutputFilename}`,
-        //       ),
-        //     );
-        //   } else {
-        //     finalOutputFilename = detectedOutputFile ?? undefined;
-        //   }
-        // } else {
-        //   finalOutputFilename = detectedOutputFile ?? undefined;
-        // }
-
         // Copy manifest and logo to the output directory
         await this.setupDxtPackageFiles(
           entryPointFile,
@@ -696,7 +779,179 @@ export default ${JSON.stringify(buildConfig, null, 2)};
   }
 
   /**
-   * Gets the path to the .dxtignore template file in assets
+   * Checks if a module ID is a Node.js built-in
+   */
+  public isNodeBuiltin(id: string): boolean {
+    const nodeBuiltins = [
+      "stream",
+      "fs",
+      "path",
+      "url",
+      "util",
+      "events",
+      "child_process",
+      "os",
+      "tty",
+      "process",
+      "crypto",
+      "http",
+      "https",
+      "net",
+      "zlib",
+      "fs/promises",
+      "timers",
+      "timers/promises",
+      "perf_hooks",
+      "async_hooks",
+      "inspector",
+      "v8",
+      "vm",
+      "assert",
+      "constants",
+      "module",
+      "repl",
+      "string_decoder",
+      "punycode",
+      "domain",
+      "querystring",
+      "readline",
+      "worker_threads",
+      "cluster",
+      "dgram",
+      "dns",
+      "buffer",
+    ];
+
+    return nodeBuiltins.includes(id) || id.startsWith("node:");
+  }
+
+  /**
+   * Determines if a module should be treated as external based on bundling configuration.
+   * This logic is shared between external and noExternal configurations.
+   *
+   * @param id - The module identifier (e.g., 'lodash', '@types/node', './utils')
+   * @param importer - The file path that is importing this module (undefined for entry points)
+   * @param withNodeModules - Whether to include node_modules in the bundle
+   * @returns true if the module should be external (not bundled), false if it should be bundled
+   *
+   * Logic flow:
+   * 1. Node built-ins (fs, path, etc.) are always external
+   * 2. If no importer (entry point), always bundle
+   * 3. If withNodeModules is false, bundle everything except Node built-ins
+   * 4. If withNodeModules is true:
+   *    - If importer is from node_modules, make external
+   *    - If module resolves to a project file (via TS paths or regular paths), bundle it
+   *    - Otherwise, make external (likely npm package)
+   *
+   * @example
+   * // Node built-in - always external
+   * shouldModuleBeExternal('fs', './src/main.ts', true) // returns true
+   *
+   * // Project file via TS paths or regular paths - bundle it
+   * shouldModuleBeExternal('@/utils', './src/main.ts', true) // returns false
+   *
+   * // NPM package - external when withNodeModules=true
+   * shouldModuleBeExternal('lodash', './src/main.ts', true) // returns true
+   */
+  private shouldModuleBeExternal(
+    id: string,
+    importer: string | undefined,
+    withNodeModules: boolean,
+  ): boolean {
+    if (this.isNodeBuiltin(id)) {
+      // Node built-ins are always external
+      return true;
+    }
+
+    if (importer) {
+      if (withNodeModules) {
+        if (importer.includes("node_modules")) {
+          return true;
+        } else {
+          const resolvedPath = this.resolveModulePath(id, importer);
+          // If the path was resolved (via TS paths or regular file resolution)
+          // We consider it to be a project file, so we bundle it
+          if (resolvedPath) {
+            return false;
+          } else {
+            return true;
+          }
+        }
+      } else {
+        // We bundle everything
+        return false;
+      }
+    } else {
+      // If no importer, it's the entrypoint
+      return false;
+    }
+  }
+
+  /**
+   * Checks if a package ID exists in the local node_modules folder.
+   * Only checks the folder or parent folder that contains the nearest package.json file.
+   * Returns false if no package.json file is found after 3 parent directory traversals.
+   *
+   * Alternative approach using require.resolve():
+   * ```ts
+   * public isNodeModulesPackageWithResolve(packageId: string): boolean {
+   *   try {
+   *     require.resolve(packageId);
+   *     return true;
+   *   } catch {
+   *     return false;
+   *   }
+   * }
+   * ```
+   *
+   * Filesystem approach is preferred for bundler context because:
+   * - Faster (no module resolution overhead)
+   * - No side effects during build
+   * - Predictable behavior in build vs runtime contexts
+   */
+  public isNodeModulesPackage(packageId: string): boolean {
+    try {
+      const currentDir = process.cwd();
+      let searchDir = currentDir;
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        const packageJsonPath = path.join(searchDir, "package.json");
+        if (fs.existsSync(packageJsonPath)) {
+          const nodeModulesPath = path.join(searchDir, "node_modules");
+          if (!fs.existsSync(nodeModulesPath)) {
+            return false;
+          }
+
+          const packagePath = path.join(nodeModulesPath, packageId);
+          if (fs.existsSync(packagePath)) {
+            const packagePackageJsonPath = path.join(
+              packagePath,
+              "package.json",
+            );
+            return fs.existsSync(packagePackageJsonPath);
+          }
+
+          return false;
+        }
+
+        const parentDir = path.dirname(searchDir);
+        if (parentDir === searchDir) {
+          break;
+        }
+        searchDir = parentDir;
+        attempts++;
+      }
+
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get the path to the .dxtignore template file
    */
   private getDxtIgnoreTemplatePath(): string {
     // Try multiple locations for the .dxtignore template
@@ -1026,8 +1281,30 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     const envVars: Record<string, string> = {};
     const userConfig: Record<string, any> = {};
 
+    // Helper function to determine if a flag should be required in user_config
+    const shouldBeRequired = (flag: any): boolean => {
+      // If the flag has mandatory property, respect it
+      if (typeof flag.mandatory === 'boolean') {
+        return flag.mandatory;
+      }
+      // If the flag has a mandatory function, we can't evaluate it here, so default to false
+      if (typeof flag.mandatory === 'function') {
+        return false;
+      }
+      // Default to false for top-level flags (non-sensitive, non-mandatory by default)
+      return false;
+    };
+
+    // Helper function to determine if a flag should be sensitive
+    const shouldBeSensitive = (flag: any): boolean => {
+      // If a flag is tied to an ENV, it should be sensitive
+      const envVar = (flag as any).env || (flag as any).envVar;
+      return !!envVar;
+    };
+
     // Get all flags from the main ArgParser to find environment variables
     const mainFlags = this.argParserInstance.flags;
+
     for (const flag of mainFlags) {
       const envVar = (flag as any).env || (flag as any).envVar;
       if (envVar) {
@@ -1041,8 +1318,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
             .replace(/_/g, " ")
             .replace(/\b\w/g, (l: string) => l.toUpperCase()),
           description: flag.description || `${envVar} environment variable`,
-          required: true, // Always require env vars in user_config for better UX
-          sensitive: true, // Assume env vars are sensitive
+          required: shouldBeRequired(flag), // Respect the flag's mandatory setting
+          sensitive: shouldBeSensitive(flag), // Set to sensitive if tied to ENV
         };
       }
     }
@@ -1066,8 +1343,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (l: string) => l.toUpperCase()),
               description: flag.description || `${envVar} environment variable`,
-              required: true, // Always require env vars in user_config for better UX
-              sensitive: true, // Assume env vars are sensitive
+              required: shouldBeRequired(flag), // Respect the flag's mandatory setting
+              sensitive: shouldBeSensitive(flag), // Set to sensitive if tied to ENV
             };
           }
         }
@@ -1075,5 +1352,217 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     }
 
     return { envVars, userConfig };
+  }
+
+  private resolveModulePath(id: string, importer: string): string | null {
+    try {
+      if (Boolean(process.env["DEBUG"])) {
+        console.log(
+          `  <${chalk.gray("module-resolve")}> Resolving '${chalk.green(id)}' from '${chalk.gray(importer)}'`,
+        );
+      }
+
+      // Get tsconfig for the importing file
+      const tsconfig = getTsconfig(importer);
+      if (!tsconfig?.config.compilerOptions?.paths) {
+        if (Boolean(process.env["DEBUG"])) {
+          console.log(
+            `  <${chalk.gray("ts-paths")}> No tsconfig or paths found for '${importer}'`,
+          );
+        }
+        // Fall through to regular file resolution
+      } else {
+        if (Boolean(process.env["DEBUG"])) {
+          console.log(
+            `  <${chalk.gray("ts-paths")}> Found tsconfig at '${path.relative(process.cwd(), tsconfig.path)}' with paths:`,
+            Object.keys(tsconfig.config.compilerOptions.paths),
+          );
+        }
+
+        // Create paths matcher
+        const pathsMatcher = createPathsMatcher(tsconfig);
+        if (!pathsMatcher) {
+          if (Boolean(process.env["DEBUG"])) {
+            console.log(
+              `  <${chalk.gray("ts-paths")}> Failed to create paths matcher`,
+            );
+          }
+          // Fall through to regular file resolution
+        } else {
+          const possiblePaths = pathsMatcher(id);
+
+          if (Boolean(process.env["DEBUG"])) {
+            console.log(
+              `  <${chalk.grey("ts-paths")}> Possible paths for '${id}':`,
+              possiblePaths,
+            );
+          }
+
+          // Try to resolve each possible path
+          for (const possiblePath of possiblePaths) {
+            const resolvedPath = path.resolve(
+              path.dirname(tsconfig.path),
+              possiblePath,
+            );
+
+            if (Boolean(process.env["DEBUG"])) {
+              console.log(
+                `  <${chalk.grey("ts-paths")}> Trying resolved path: '${resolvedPath}'`,
+              );
+            }
+
+            // Try common extensions
+            const extensions = [".ts", ".js", ".tsx", ".jsx", ".mjs", ".cjs"];
+
+            // Check if it's a file (with or without extension)
+            // 1. Try the resolved path as-is
+            if (
+              fs.existsSync(resolvedPath) &&
+              fs.statSync(resolvedPath).isFile()
+            ) {
+              if (Boolean(process.env["DEBUG"])) {
+                console.log(
+                  `  <${chalk.grey("ts-paths")}> ✓ Resolved '${id}' to '${resolvedPath}'`,
+                );
+              }
+              return resolvedPath;
+            }
+
+            // 2. If it has a .js extension, try replacing with TypeScript extensions
+            if (resolvedPath.endsWith(".js")) {
+              const basePath = resolvedPath.slice(0, -3); // Remove .js
+              for (const ext of [".ts", ".tsx"]) {
+                const testPath = basePath + ext;
+                if (fs.existsSync(testPath) && fs.statSync(testPath).isFile()) {
+                  if (Boolean(process.env["DEBUG"])) {
+                    console.log(
+                      `  <${chalk.grey("ts-paths")}> ✓ Resolved '${id}' to '${testPath}' (replaced .js)`,
+                    );
+                  }
+                  return testPath;
+                }
+              }
+            }
+
+            // 3. Try adding extensions to the path (in case no extension)
+            for (const ext of extensions) {
+              const testPath = resolvedPath + ext;
+              if (fs.existsSync(testPath) && fs.statSync(testPath).isFile()) {
+                if (Boolean(process.env["DEBUG"])) {
+                  console.log(
+                    `  <${chalk.grey("ts-paths")}> ✓ Resolved '${id}' to '${testPath}' (added extension)`,
+                  );
+                }
+                return testPath;
+              }
+            }
+
+            // Check if it's a directory with index file
+            if (
+              fs.existsSync(resolvedPath) &&
+              fs.statSync(resolvedPath).isDirectory()
+            ) {
+              for (const ext of extensions) {
+                const indexPath = path.join(resolvedPath, `index${ext}`);
+                if (fs.existsSync(indexPath)) {
+                  if (Boolean(process.env["DEBUG"])) {
+                    console.log(
+                      `  <${chalk.grey("ts-paths")}> ✓ Resolved '${id}' to '${indexPath}' (index)`,
+                    );
+                  }
+                  return indexPath;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // TypeScript path resolution failed, try regular file resolution
+      if (Boolean(process.env["DEBUG"])) {
+        console.log(
+          `  <${chalk.gray("file-resolve")}> Trying regular file resolution for '${id}'`,
+        );
+      }
+
+      // Try to resolve as a regular file path relative to the importer
+      let testPath: string;
+      if (path.isAbsolute(id)) {
+        testPath = id;
+      } else {
+        testPath = path.resolve(path.dirname(importer), id);
+      }
+
+      const extensions = [".ts", ".js", ".tsx", ".jsx", ".mjs", ".cjs"];
+
+      // Check if it's a file (with or without extension)
+      // 1. Try the path as-is
+      if (fs.existsSync(testPath) && fs.statSync(testPath).isFile()) {
+        if (Boolean(process.env["DEBUG"])) {
+          console.log(
+            `  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${testPath}'`,
+          );
+        }
+        return testPath;
+      }
+
+      // 2. If it has a .js extension, try replacing with TypeScript extensions
+      if (testPath.endsWith(".js")) {
+        const basePath = testPath.slice(0, -3); // Remove .js
+        for (const ext of [".ts", ".tsx"]) {
+          const tsPath = basePath + ext;
+          if (fs.existsSync(tsPath) && fs.statSync(tsPath).isFile()) {
+            if (Boolean(process.env["DEBUG"])) {
+              console.log(
+                `  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${tsPath}' (replaced .js)`,
+              );
+            }
+            return tsPath;
+          }
+        }
+      }
+
+      // 3. Try adding extensions to the path (in case no extension)
+      for (const ext of extensions) {
+        const extPath = testPath + ext;
+        if (fs.existsSync(extPath) && fs.statSync(extPath).isFile()) {
+          if (Boolean(process.env["DEBUG"])) {
+            console.log(
+              `  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${extPath}' (added extension)`,
+            );
+          }
+          return extPath;
+        }
+      }
+
+      // Check if it's a directory with index file
+      if (fs.existsSync(testPath) && fs.statSync(testPath).isDirectory()) {
+        for (const ext of extensions) {
+          const indexPath = path.join(testPath, `index${ext}`);
+          if (fs.existsSync(indexPath)) {
+            if (Boolean(process.env["DEBUG"])) {
+              console.log(
+                `  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${indexPath}' (index)`,
+              );
+            }
+            return indexPath;
+          }
+        }
+      }
+
+      if (Boolean(process.env["DEBUG"])) {
+        console.log(
+          `  <${chalk.gray("module-resolve")}> ✗ Could not resolve '${id}'`,
+        );
+      }
+    } catch (error) {
+      console.warn(
+        chalk.yellow(
+          `Warning: Failed to resolve module path '${id}': ${error}`,
+        ),
+      );
+    }
+
+    return null;
   }
 }

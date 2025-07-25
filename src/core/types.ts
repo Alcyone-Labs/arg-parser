@@ -27,6 +27,7 @@ export const zodFlagSchema = z
       ),
     description: z
       .union([z.string(), z.array(z.string())])
+      .optional()
       .describe("Textual description for help messages."),
     options: z
       .array(z.string().min(1))
@@ -55,10 +56,10 @@ export const zodFlagSchema = z
           // Native Object constructor
           message: "Must be Object constructor",
         }),
-        z
-          .function()
-          .args(z.string())
-          .returns(z.union([z.any(), z.promise(z.any())])), // Custom parser function (value: string) => any | Promise<any>
+        z.custom<(value: string) => any | Promise<any>>(
+          (val) => typeof val === "function",
+          "Must be a custom parser function",
+        ), // Custom parser function (value: string) => any | Promise<any>
         z.string().refine(
           // String literal types
           (value) =>
@@ -76,7 +77,13 @@ export const zodFlagSchema = z
         "Expected data type (constructor or string literal) or a custom parser function. Defaults to 'string'.",
       ),
     mandatory: z
-      .union([z.boolean(), z.function().args(z.any()).returns(z.boolean())]) // `z.any()` for parsedArgs flexibility
+      .union([
+        z.boolean(),
+        z.custom<(value?: any, parsedArgs?: any) => boolean>(
+          (val) => typeof val === "function",
+          "Must be a boolean or function",
+        ),
+      ]) // `z.any()` for parsedArgs flexibility
       .optional()
       .describe(
         "Makes the flag mandatory, can be a boolean or a function conditional on other args.",
@@ -88,16 +95,12 @@ export const zodFlagSchema = z
         "If true, the flag's presence is noted (true/false), and any subsequent value is not consumed by this flag.",
       ),
     validate: z // User-provided validation function
-      .function()
-      .args(z.any().optional(), z.any().optional()) // value, parsedArgs?
-      .returns(
-        z.union([
-          z.boolean(),
-          z.string(),
-          z.void(),
-          z.promise(z.union([z.boolean(), z.string(), z.void()])),
-        ]),
-      )
+      .custom<
+        (
+          value?: any,
+          parsedArgs?: any,
+        ) => boolean | string | void | Promise<boolean | string | void>
+      >((val) => typeof val === "function", "Must be a validation function")
       .optional()
       .describe(
         "Custom validation function for the flag's value (receives value, parsedArgs).",
@@ -106,8 +109,14 @@ export const zodFlagSchema = z
       .array(z.any())
       .optional()
       .describe("Array of allowed values for the flag."),
+    env: z // Environment variables for DXT packages
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .describe(
+        "Environment variables that should be set from this flag's value in DXT packages.",
+      ),
   })
-  .passthrough() // Allow unrecognized properties, they won't be validated or processed beyond alias handling.
+  // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
     // Alias handling for 'default' and 'required'
     const newObj: { [key: string]: any } = { ...obj };
@@ -191,6 +200,7 @@ export type ProcessedFlag = Omit<
   ) => boolean | string | void | Promise<boolean | string | void>;
   enum?: any[]; // Enum values, type-checked by user or ArgParser
   mandatory?: boolean | ((parsedArgs: TParsedArgs<ProcessedFlag[]>) => boolean);
+  env?: string | string[]; // Environment variables for DXT packages
 };
 
 /**

@@ -33,18 +33,18 @@ const parser = ArgParser.withMcp({
     // Console output automatically safe in MCP mode!
     console.log("🚀 Simple CLI Example");
     console.log("===================");
-    console.log(`Environment: ${ctx.args.environment}`);
-    console.log(`Port: ${ctx.args.port}`);
-    console.log(`Verbose: ${ctx.args.verbose ? "enabled" : "disabled"}`);
-    console.log(`Output: ${ctx.args.output}`);
+    console.log(`Environment: ${ctx.args["environment"]}`);
+    console.log(`Port: ${ctx.args["port"]}`);
+    console.log(`Verbose: ${ctx.args["verbose"] ? "enabled" : "disabled"}`);
+    console.log(`Output: ${ctx.args["output"]}`);
 
-    if (ctx.args.files && ctx.args.files.length > 0) {
-      console.log(`Files to process: ${ctx.args.files.join(", ")}`);
+    if (ctx.args["files"] && ctx.args["files"].length > 0) {
+      console.log(`Files to process: ${ctx.args["files"].join(", ")}`);
     } else {
       console.log("No files specified");
     }
 
-    if (ctx.args.verbose) {
+    if (ctx.args["verbose"]) {
       console.log("\n🔍 Verbose mode enabled - showing detailed information");
       console.log("All parsed arguments:", JSON.stringify(ctx.args, null, 2));
     }
@@ -53,11 +53,11 @@ const parser = ArgParser.withMcp({
 
     return {
       success: true,
-      environment: ctx.args.environment,
-      port: ctx.args.port,
-      verbose: ctx.args.verbose,
-      files: ctx.args.files || [],
-      output: ctx.args.output,
+      environment: ctx.args["environment"],
+      port: ctx.args["port"],
+      verbose: ctx.args["verbose"],
+      files: ctx.args["files"] || [],
+      output: ctx.args["output"],
     };
   },
 }).addFlags([
@@ -113,12 +113,15 @@ async function main() {
   try {
     await parser.parse(process.argv.slice(2));
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error(
+      "Error:",
+      error instanceof Error ? error.message : String(error),
+    );
     process.exit(1);
   }
 }
 
 // Only run if this file is executed directly
-if (import.meta.main) {
+if (process.argv[1] === new URL(import.meta.url).pathname) {
   main();
 }

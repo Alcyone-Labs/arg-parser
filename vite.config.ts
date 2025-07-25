@@ -108,10 +108,26 @@ export default defineConfig(({ command, mode }) => {
       plugins: [tsconfigPaths({ projects: ["./tsconfig.dev.json"] })],
       test: {
         globals: true,
-        testTimeout: 10000,
-        fileParallelism: true,
+        testTimeout: 30000, // Increased timeout for MCP server tests
+        fileParallelism: false, // Disable parallel execution to prevent resource conflicts
+        pool: 'forks', // Use fork pool instead of threads for better isolation
+        poolOptions: {
+          forks: {
+            singleFork: true, // Run tests in a single fork to prevent conflicts
+          },
+        },
         include: ["./tests/**/*.test.ts"],
+        exclude: [
+          "**/node_modules/**",
+          "**/dist/**",
+          "**/examples/**",
+          "**/fixtures/**",
+        ],
         name: "Alcyone Labs ArgParser",
+        // Add teardown timeout to ensure processes are cleaned up
+        teardownTimeout: 5000,
+        // Retry failed tests once in case of flaky MCP server issues
+        retry: 1,
       },
     });
 

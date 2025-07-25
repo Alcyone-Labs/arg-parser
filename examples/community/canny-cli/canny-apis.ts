@@ -50,10 +50,12 @@ export async function searchCannyBoards(apiKey: string) {
 
     const data = await response.json();
 
-    if (data.boards && data.boards.length > 0) {
-      console.log(chalk.green(`\n✅ Found ${data.boards.length} boards:\n`));
+    if ((data as any).boards && (data as any).boards.length > 0) {
+      console.log(
+        chalk.green(`\n✅ Found ${(data as any).boards.length} boards:\n`),
+      );
 
-      data.boards.forEach((board, index) => {
+      (data as any).boards.forEach((board: any, index: number) => {
         console.log(chalk.bold.white(`${index + 1}. ${board.name}`));
         console.log(
           chalk.gray(`   ID: ${board.id} | Posts: ${board.postCount || 0}`),
@@ -70,12 +72,16 @@ export async function searchCannyBoards(apiKey: string) {
     // Return structured data for both CLI and MCP modes
     return {
       success: true,
-      boards: data.boards || [],
-      total: data.boards ? data.boards.length : 0,
+      boards: (data as any).boards || [],
+      total: (data as any).boards ? (data as any).boards.length : 0,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error(chalk.red(`❌ Error: ${error.message}`));
+    console.error(
+      chalk.red(
+        `❌ Error: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    );
     throw error;
   }
 }

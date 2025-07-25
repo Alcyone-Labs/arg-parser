@@ -13,6 +13,7 @@ import {
   McpResourceConfig,
   McpResourcesManager,
 } from "../mcp/mcp-resources.js";
+import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
 import type {
@@ -650,14 +651,18 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     // Handle --s-mcp-serve system flag to start all MCP servers
+    debug.log("Checking for --s-mcp-serve flag in args:", processArgs);
     const mcpServeIndex = processArgs.findIndex(
       (arg) => arg === "--s-mcp-serve",
     );
+    debug.log("mcpServeIndex:", mcpServeIndex);
     if (mcpServeIndex !== -1) {
+      debug.log("Found --s-mcp-serve flag, calling handler");
       const mcpServeResult = await this.#_handleMcpServeFlag(
         processArgs,
         mcpServeIndex,
       );
+      debug.log("MCP serve handler returned:", typeof mcpServeResult);
       if (mcpServeResult !== false) {
         return mcpServeResult === true ? true : mcpServeResult;
       }
@@ -1075,6 +1080,7 @@ export class ArgParserBase<THandlerReturn = any> {
     processArgs?: string[],
     options?: IParseOptions,
   ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
+    debug.log("ArgParserBase.parse() called with args:", processArgs);
     // Handle automatic argument detection when no arguments provided
     if (processArgs === undefined) {
       // Check if we're in a Node.js environment
@@ -1636,6 +1642,15 @@ ${descriptionLines
     return this.#flagManager.hasFlag(name);
   }
 
+  /**
+   * Get flag definition by name
+   * @param name Flag name
+   * @returns Flag definition or undefined if not found
+   */
+  public getFlagDefinition(name: string): ProcessedFlag | undefined {
+    return this.#flagManager.getFlag(name);
+  }
+
   public getCommandChain(): string[] {
     const chain = [];
     let currentParser: ArgParserBase | undefined = this;
@@ -2107,31 +2122,42 @@ ${descriptionLines
     processArgs: string[],
     _mcpServeIndex: number,
   ): Promise<boolean | ParseResult> {
+    debug.log("#_handleMcpServeFlag started");
     // Parse transport options from command line arguments first to get log path
     const transportOptions = this.#_parseMcpTransportOptions(processArgs);
+    debug.log("Transport options parsed:", JSON.stringify(transportOptions));
 
     // Get MCP server configuration early to access programmatic logPath
     const mcpServerConfig = this.#_getMcpServerConfiguration();
+    debug.log("Got MCP server config:", JSON.stringify(mcpServerConfig));
 
     // Determine log path: CLI flag > programmatic config > default
     const effectiveLogPath =
       transportOptions.logPath || mcpServerConfig?.logPath || "./logs/mcp.log";
+    debug.log("Effective log path:", effectiveLogPath);
     const resolvedLogPath = resolveLogPath(effectiveLogPath);
+    debug.log("Resolved log path:", resolvedLogPath);
 
     // Setup MCP logger with console hijacking
     let mcpLogger: any;
+    debug.log("About to import simple-mcp-logger");
     try {
       // Try to import simple-mcp-logger if available
       const mcpLoggerModule = await import("@alcyone-labs/simple-mcp-logger");
+      debug.log("Successfully imported simple-mcp-logger");
       mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", resolvedLogPath);
+      debug.log("Created MCP logger, about to hijack console");
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
+      debug.log("Console hijacked successfully");
     } catch {
+      debug.log("Failed to import simple-mcp-logger, using fallback");
       // Fallback if simple-mcp-logger is not available
       mcpLogger = {
         mcpError: (message: string) => console.error(`[MCP Serve] ${message}`),
       };
     }
+    debug.log("MCP logger setup complete, starting MCP serve handler");
 
     try {
       mcpLogger.mcpError(
@@ -2161,11 +2187,13 @@ ${descriptionLines
 
       // Start the unified MCP server
       try {
+        debug.log("About to call #_startUnifiedMcpServer");
         mcpLogger.mcpError("Starting unified MCP server with all tools");
         await this.#_startUnifiedMcpServer(mcpServerConfig, {
           ...transportOptions,
           logPath: resolvedLogPath,
         });
+        debug.log("#_startUnifiedMcpServer completed");
         mcpLogger.mcpError("Successfully started unified MCP server");
       } catch (error) {
         mcpLogger.mcpError(

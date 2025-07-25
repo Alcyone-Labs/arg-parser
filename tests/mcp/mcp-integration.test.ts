@@ -93,7 +93,7 @@ describe("MCP Integration", () => {
       const schema = tool.inputSchema;
 
       // Check that it's a proper Zod object schema
-      expect(schema._def.typeName).toBe("ZodObject");
+      expect(schema._def.type).toBe("object");
 
       // Parse with valid input should work
       const validInput = {
@@ -163,7 +163,7 @@ describe("MCP Integration", () => {
 
       const tool = tools[0];
       expect(tool.outputSchema).toBeDefined();
-      expect(tool.outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tool.outputSchema?._def.type).toBe("object");
     });
 
     test("should generate tools for sub-commands", () => {
@@ -442,13 +442,13 @@ describe("MCP Integration", () => {
             text: expect.stringContaining("Processing failed"),
           },
         ],
-        structuredContent: expect.objectContaining({
+        structuredContent: {
           success: false,
-          error: expect.stringContaining("Processing failed"),
-          message: expect.stringContaining("Processing failed"),
+          error: "Cmd error: handler_error - Processing failed",
+          message: "Cmd error: handler_error - Processing failed",
           result: "",
           files: null,
-        }),
+        },
       });
     });
 
@@ -609,7 +609,7 @@ describe("MCP Integration", () => {
         description: expect.any(String),
         inputSchema: expect.objectContaining({
           _def: expect.objectContaining({
-            typeName: "ZodObject",
+            type: "object",
           }),
         }),
         execute: expect.any(Function),

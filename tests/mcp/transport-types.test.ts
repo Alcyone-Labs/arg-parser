@@ -167,7 +167,7 @@ describe("MCP Transport Types", () => {
         description: "A test CLI for MCP transport functionality",
         inputSchema: expect.objectContaining({
           _def: expect.objectContaining({
-            typeName: "ZodObject",
+            type: "object",
           }),
         }),
         execute: expect.any(Function),

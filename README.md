@@ -1,6 +1,6 @@
 # ArgParser - Type-Safe Command Line Argument Parser
 
-A modern, type-safe command line argument parser with built-in MCP (Model Context Protocol) integration and automatic Claude Desktop Extension (DXT) generation.
+A modern, type-safe command line argument parser with built-in MCP (Model Context Protocol) integration, real-time MCP Resources, and automatic Claude Desktop Extension (DXT) generation.
 
 ## Table of Contents
 
@@ -43,6 +43,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
   - [MCP Transports](#mcp-transports)
   - [MCP Log Path Configuration](#mcp-log-path-configuration)
+  - [MCP Resources - Real-Time Data Feeds](#mcp-resources---real-time-data-feeds) ⭐
   - [Automatic Console Safety](#automatic-console-safety)
   - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
   - [Logo Configuration](#logo-configuration)
@@ -71,6 +72,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - **Unified Tool Architecture**: Define tools once with `addTool()` and they automatically function as both CLI subcommands and MCP tools.
 - **Type-safe flag definitions** with full TypeScript support and autocompletion.
 - **Automatic MCP Integration**: Transform any CLI into a compliant MCP server with a single command (`--s-mcp-serve`).
+- **MCP Resources with Real-Time Feeds** ⭐: Create subscription-based data feeds with URI templates for live notifications to AI assistants.
 - **Console Safe**: `console.log` and other methods
   are automatically handled in MCP mode to prevent protocol contamination, requiring no changes to your code.
 - **DXT Package Generation**: Generate complete, ready-to-install Claude Desktop Extension (`.dxt`) packages with the `--s-build-dxt` command and `--s-with-node-modules` for platform-dependent builds.
@@ -1090,6 +1092,136 @@ const parser = ArgParser.withMcp({
 
 The CLI flag always takes precedence, allowing users to override the developer's programmatic configuration when needed. By default, relative paths resolve relative to the application's entry point, making logs predictably located near DXT packages.
 
+### MCP Resources - Real-Time Data Feeds
+
+MCP Resources enable your CLI tools to provide **real-time, subscription-based data feeds** to AI assistants. Unlike tools (which are called once), resources can be subscribed to and provide live updates when data changes.
+
+**Key Benefits:**
+- **Real-time notifications**: AI assistants get notified when your data changes
+- **Flexible URI templates**: Support dynamic parameters like `data://alerts/aged/gte:{threshold}`
+- **Standard MCP pattern**: Full subscription lifecycle support
+- **Zero CLI impact**: Resources only work in MCP mode, CLI usage unchanged
+
+#### Basic Resource Setup
+
+```typescript
+const parser = ArgParser.withMcp({
+  appName: "Data Monitor",
+  appCommandName: "data-monitor",
+  mcp: {
+    serverInfo: { name: "data-monitor", version: "1.0.0" }
+  }
+})
+.addMcpResource({
+  name: "recent-data",
+  uriTemplate: "data://recent",
+  title: "Recent Data",
+  description: "Get the most recent data entries",
+  mimeType: "application/json",
+  handler: async (uri) => {
+    const recentData = await getRecentData();
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify(recentData, null, 2),
+        mimeType: "application/json"
+      }]
+    };
+  }
+});
+```
+
+#### URI Templates with Dynamic Parameters
+
+Create flexible resources that accept parameters:
+
+```typescript
+.addMcpResource({
+  name: "aged-data-alert",
+  uriTemplate: "data://alerts/aged/gte:{threshold}",
+  title: "Aged Data Alert",
+  description: "Monitor data that has aged past a threshold (in milliseconds)",
+  handler: async (uri, { threshold }) => {
+    const thresholdMs = parseInt(threshold);
+    const agedData = await getDataOlderThan(new Date(Date.now() - thresholdMs));
+
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify({
+          threshold_ms: thresholdMs,
+          query_time: new Date().toISOString(),
+          aged_data: agedData,
+          count: agedData.length
+        }, null, 2),
+        mimeType: "application/json"
+      }]
+    };
+  }
+});
+```
+
+#### MCP Subscription Lifecycle
+
+Resources support the full MCP subscription pattern:
+
+1. **Client subscribes**: `resources/subscribe` → `"data://alerts/aged/gte:10000"`
+2. **Server monitors**: Your application detects data changes
+3. **Server notifies**: `notifications/resources/updated` sent to subscribed clients
+4. **Client reads fresh data**: `resources/read` → `"data://alerts/aged/gte:10000"`
+5. **Client unsubscribes**: `resources/unsubscribe` when done
+
+#### Usage Examples
+
+**AI Assistant Integration:**
+```typescript
+// AI assistant can subscribe to real-time data
+await client.request('resources/subscribe', {
+  uri: 'data://alerts/aged/gte:60000' // 1 minute threshold
+});
+
+// Handle notifications
+client.on('notifications/resources/updated', async (notification) => {
+  const response = await client.request('resources/read', {
+    uri: notification.uri
+  });
+  console.log('Fresh data:', JSON.parse(response.contents[0].text));
+});
+```
+
+**Command Line Testing:**
+```bash
+# Start MCP server
+data-monitor --s-mcp-serve
+
+# Test resource (in another terminal)
+echo '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"data://alerts/aged/gte:10000"}}' | data-monitor --s-mcp-serve
+```
+
+#### Design Patterns
+
+**Static Resources**: Use simple URIs for data that changes content but not structure
+```typescript
+uriTemplate: "logs://recent"        // Always available, content updates
+uriTemplate: "status://system"      // System status, updates in real-time
+```
+
+**Parameterized Resources**: Use URI templates for flexible filtering
+```typescript
+uriTemplate: "data://type/{type}"           // Filter by type
+uriTemplate: "alerts/{severity}/gte:{age}"  // Multiple parameters
+uriTemplate: "search/{query}/limit:{count}" // Search with limits
+```
+
+**Time-Based Resources**: Perfect for monitoring and alerting
+```typescript
+uriTemplate: "events/since:{timestamp}"     // Events since timestamp
+uriTemplate: "metrics/aged/gte:{threshold}" // Metrics past threshold
+uriTemplate: "logs/errors/last:{duration}"  // Recent errors
+```
+
+> **💡 Pro Tip**: Resources are perfect for monitoring, alerting, and real-time data feeds. They complement tools (one-time actions) by providing continuous data streams that AI assistants can subscribe to.
+
 ### Automatic Console Safety
 
 A major challenge in MCP is preventing `console.log` from corrupting the JSON-RPC communication over `STDOUT`. ArgParser solves this automatically.
@@ -1171,6 +1303,59 @@ logo: "/absolute/path/to/logo.jpg"; // Absolute path
 logo: "https://example.com/logo.png"; // Downloaded automatically
 logo: "https://cdn.example.com/icon.svg";
 ```
+
+### Including Additional Files in DXT Packages
+
+You can include additional files and directories in your DXT package using the `dxt.include` configuration. This is useful for bundling database migrations, configuration files, assets, or any other files your MCP server needs at runtime.
+
+```typescript
+const cli = ArgParser.withMcp({
+  appName: "My CLI",
+  appCommandName: "mycli",
+  mcp: {
+    serverInfo: {
+      name: "my-mcp-server",
+      version: "1.0.0",
+      description: "My CLI as an MCP server",
+    },
+    dxt: {
+      include: [
+        "migrations",                                    // Copy entire migrations folder
+        "config/production.json",                       // Copy specific file
+        { from: "assets/logo.png", to: "logo.png" },    // Copy and rename file
+        { from: "scripts", to: "bin" },                 // Copy folder with new name
+      ],
+    },
+  },
+});
+```
+
+#### Include Options
+
+**Simple string paths** - Copy files/directories to the same relative location:
+```typescript
+include: [
+  "migrations",           // Copies ./migrations/ to dxt/migrations/
+  "config/default.json",  // Copies ./config/default.json to dxt/config/default.json
+]
+```
+
+**Object mapping** - Copy with custom destination paths:
+```typescript
+include: [
+  { from: "config/prod.json", to: "config.json" },     // Rename during copy
+  { from: "database/schema", to: "db/schema" },        // Copy to different path
+]
+```
+
+**Path Resolution**: All paths in the `from` field are resolved relative to your project root (where `package.json` and `tsconfig.json` are located).
+
+**Example Use Cases**:
+- Database migration files for initialization
+- Configuration templates or defaults
+- Static assets like images or documents
+- Scripts or utilities needed at runtime
+- Documentation or help files
 
 ### How DXT Generation Works
 

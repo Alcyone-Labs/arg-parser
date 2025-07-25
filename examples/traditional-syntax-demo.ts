@@ -20,15 +20,15 @@ const cli = new ArgParser({
     "Demonstrates that traditional ArgParser syntax still works in v2.0.0",
   handler: async (ctx) => {
     console.log("🔄 Processing with traditional ArgParser syntax");
-    console.log(`   File: ${ctx.args.file}`);
-    console.log(`   Format: ${ctx.args.format}`);
-    console.log(`   Verbose: ${ctx.args.verbose ? "enabled" : "disabled"}`);
+    console.log(`   File: ${ctx.args["file"]}`);
+    console.log(`   Format: ${ctx.args["format"]}`);
+    console.log(`   Verbose: ${ctx.args["verbose"] ? "enabled" : "disabled"}`);
 
     return {
       success: true,
-      file: ctx.args.file,
-      format: ctx.args.format,
-      verbose: ctx.args.verbose,
+      file: ctx.args["file"],
+      format: ctx.args["format"],
+      verbose: ctx.args["verbose"],
     };
   },
 })
@@ -63,15 +63,17 @@ const cli = new ArgParser({
     description: "Process data with specific options",
     handler: async (ctx) => {
       console.log("🔧 Processing data with subcommand");
-      console.log(`   Input: ${ctx.args.input}`);
-      console.log(`   Output: ${ctx.args.output}`);
-      console.log(`   Compress: ${ctx.args.compress ? "enabled" : "disabled"}`);
+      console.log(`   Input: ${ctx.args["input"]}`);
+      console.log(`   Output: ${ctx.args["output"]}`);
+      console.log(
+        `   Compress: ${ctx.args["compress"] ? "enabled" : "disabled"}`,
+      );
 
       return {
         action: "process",
-        input: ctx.args.input,
-        output: ctx.args.output,
-        compressed: ctx.args.compress,
+        input: ctx.args["input"],
+        output: ctx.args["output"],
+        compressed: ctx.args["compress"],
       };
     },
     parser: new ArgParser({}, [
@@ -107,13 +109,13 @@ const cli = new ArgParser({
         appName: "Data Analyzer",
         handler: async (ctx) => {
           console.log("📊 Analyzing data");
-          console.log(`   Target: ${ctx.args.target}`);
-          console.log(`   Type: ${ctx.args.type}`);
+          console.log(`   Target: ${ctx.args["target"]}`);
+          console.log(`   Type: ${ctx.args["type"]}`);
 
           return {
             action: "analyze",
-            target: ctx.args.target,
-            type: ctx.args.type,
+            target: ctx.args["target"],
+            type: ctx.args["type"],
             timestamp: new Date().toISOString(),
           };
         },
@@ -140,11 +142,11 @@ const cli = new ArgParser({
       description: "Generate analysis report",
       handler: async (ctx) => {
         console.log("📋 Generating report");
-        console.log(`   Format: ${ctx.args.reportFormat}`);
+        console.log(`   Format: ${ctx.args["reportFormat"]}`);
 
         return {
           action: "report",
-          format: ctx.args.reportFormat,
+          format: ctx.args["reportFormat"],
         };
       },
       parser: new ArgParser({}, [
@@ -188,6 +190,6 @@ async function main() {
 export { cli };
 
 // Run if this file is executed directly
-if (import.meta.main) {
+if (process.argv[1] === new URL(import.meta.url).pathname) {
   main();
 }

@@ -36,6 +36,11 @@
     "type": "git",
     "url": "git@github.com:Alcyone-Labs/arg-parser.git"
   },
+  "pnpm": {
+    "overrides": {
+      "zod": "^4.0.5"
+    }
+  },
   "keywords": [
     "CLI",
     "Arg Parser",
@@ -91,23 +96,24 @@
   "dependencies": {
     "@alcyone-labs/simple-chalk": "^1.0.1",
     "@alcyone-labs/simple-mcp-logger": "^1.1.0",
+    "@modelcontextprotocol/sdk": "github:Alcyone-Labs/mcp-typescript-sdk#dist",
+    "get-tsconfig": "^4.8.1",
     "magic-regexp": "^0.10.0",
-    "zod": "^3.25.76"
+    "zod": "^4.0.5"
   },
   "optionalDependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.1",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
     "smol-toml": "^1.4.1",
-    "tsdown": "^0.12.9"
+    "tsdown": "^0.13.0"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.5.1",
     "@types/adm-zip": "^0.5.7",
     "@types/express": "^5.0.3",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.16.3",
+    "@types/node": "^22.16.5",
     "cross-env": "^7.0.3",
     "madge": "^8.0.0",
     "prettier": "^3.6.2",

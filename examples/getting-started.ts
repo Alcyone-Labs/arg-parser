@@ -83,13 +83,15 @@ const cli = ArgParser.withMcp({
     handler: async (ctx) => {
       // Console output is automatically safe in MCP mode!
       console.log("🔄 Processing file with configuration:");
-      console.log(`   Input: ${ctx.args.input}`);
-      console.log(`   Output: ${ctx.args.output || "stdout"}`);
-      console.log(`   Format: ${ctx.args.format}`);
-      console.log(`   Verbose: ${ctx.args.verbose ? "enabled" : "disabled"}`);
+      console.log(`   Input: ${ctx.args["input"]}`);
+      console.log(`   Output: ${ctx.args["output"] || "stdout"}`);
+      console.log(`   Format: ${ctx.args["format"]}`);
+      console.log(
+        `   Verbose: ${ctx.args["verbose"] ? "enabled" : "disabled"}`,
+      );
 
-      if (ctx.args.tags && ctx.args.tags.length > 0) {
-        console.log(`   Tags: ${ctx.args.tags.join(", ")}`);
+      if (ctx.args["tags"] && ctx.args["tags"].length > 0) {
+        console.log(`   Tags: ${ctx.args["tags"].join(", ")}`);
       }
 
       // Simulate file processing
@@ -97,10 +99,10 @@ const cli = ArgParser.withMcp({
 
       return {
         success: true,
-        processed: ctx.args.input,
-        output: ctx.args.output || "stdout",
-        format: ctx.args.format,
-        tags: ctx.args.tags || [],
+        processed: ctx.args["input"],
+        output: ctx.args["output"] || "stdout",
+        format: ctx.args["format"],
+        tags: ctx.args["tags"] || [],
       };
     },
   })
@@ -134,18 +136,20 @@ const cli = ArgParser.withMcp({
     handler: async (ctx) => {
       // Console output automatically redirected in MCP mode
       console.log("🔄 Converting file...");
-      console.log(`   Input: ${ctx.args.input}`);
-      console.log(`   Format: ${ctx.args.format}`);
-      console.log(`   Compress: ${ctx.args.compress ? "enabled" : "disabled"}`);
+      console.log(`   Input: ${ctx.args["input"]}`);
+      console.log(`   Format: ${ctx.args["format"]}`);
+      console.log(
+        `   Compress: ${ctx.args["compress"] ? "enabled" : "disabled"}`,
+      );
 
       // Simulate conversion
       console.log("✅ File converted successfully!");
 
       return {
         action: "convert",
-        input: ctx.args.input,
-        format: ctx.args.format,
-        compressed: ctx.args.compress,
+        input: ctx.args["input"],
+        format: ctx.args["format"],
+        compressed: ctx.args["compress"],
       };
     },
   })
@@ -172,8 +176,8 @@ const cli = ArgParser.withMcp({
     handler: async (ctx) => {
       // Console output automatically safe in MCP mode
       console.log("📊 Analyzing file...");
-      console.log(`   File: ${ctx.args.file}`);
-      console.log(`   Type: ${ctx.args.type}`);
+      console.log(`   File: ${ctx.args["file"]}`);
+      console.log(`   Type: ${ctx.args["type"]}`);
 
       // Simulate analysis
       const stats = {
@@ -189,8 +193,8 @@ const cli = ArgParser.withMcp({
 
       return {
         action: "analyze",
-        file: ctx.args.file,
-        type: ctx.args.type,
+        file: ctx.args["file"],
+        type: ctx.args["type"],
         stats,
       };
     },
@@ -205,12 +209,16 @@ async function main() {
   try {
     await cli.parse(process.argv.slice(2));
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error("Error:", (error as Error).message);
     process.exit(1);
   }
 }
 
 // Only run if this file is executed directly
-if (import.meta.main) {
+// Check if this is the main module (Node.js/Bun compatible)
+if (
+  require.main === module ||
+  (typeof process !== "undefined" && process.argv[1] === __filename)
+) {
   main();
 }

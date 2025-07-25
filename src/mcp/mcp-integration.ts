@@ -142,7 +142,7 @@ export function convertFlagsToJsonSchema(
 export function convertFlagsToZodSchema(
   flags: readonly (IFlag | ProcessedFlag)[],
 ): ZodTypeAny {
-  const zodProperties: ZodRawShape = {};
+  const zodProperties: Record<string, ZodTypeAny> = {};
 
   for (const flag of flags) {
     // Skip help flag and system flags
@@ -491,7 +491,7 @@ export function generateMcpToolsFromArgParser(
 
     if (currentParserHandler) {
       const flags = currentParserFlags as ProcessedFlag[];
-      const zodProperties: ZodRawShape = {};
+      const zodProperties: Record<string, ZodTypeAny> = {};
       const hasHelpFlag = flags.some((flag) => flag["name"] === "help");
 
       for (const flag of flags) {
@@ -780,61 +780,86 @@ export function generateMcpToolsFromArgParser(
                 };
 
                 // Try to extract schema requirements and provide default values
-                if (
-                  outputSchema &&
-                  typeof outputSchema === "object" &&
-                  outputSchema !== null &&
-                  outputSchema._def
-                ) {
-                  const zodSchema = outputSchema as any;
-                  if (process.env["MCP_DEBUG"]) {
-                    console.error(
-                      `[MCP Debug] Output schema type:`,
-                      zodSchema._def.typeName,
-                    );
-                  }
-                  if (zodSchema._def.typeName === "ZodObject") {
-                    const shapeGetter = zodSchema._def.shape;
-                    const shape =
-                      typeof shapeGetter === "function"
-                        ? shapeGetter()
-                        : shapeGetter;
-
+                try {
+                  if (
+                    outputSchema &&
+                    typeof outputSchema === "object" &&
+                    outputSchema !== null &&
+                    outputSchema._def
+                  ) {
+                    const zodSchema = outputSchema as any;
                     if (process.env["MCP_DEBUG"]) {
                       console.error(
-                        `[MCP Debug] Schema shape keys:`,
-                        Object.keys(shape),
+                        `[MCP Debug] Output schema type:`,
+                        zodSchema._def?.typeName || zodSchema._def?.type,
                       );
                     }
+                    if (
+                      zodSchema._def?.typeName === "ZodObject" ||
+                      zodSchema._def?.type === "object"
+                    ) {
+                      const shapeGetter = zodSchema._def?.shape;
+                      if (shapeGetter) {
+                        const shape =
+                          typeof shapeGetter === "function"
+                            ? shapeGetter()
+                            : shapeGetter;
 
-                    // Provide default values for required fields
-                    Object.keys(shape).forEach((key) => {
-                      if (!(key in structuredError)) {
-                        const fieldSchema = shape[key];
-                        if (fieldSchema && fieldSchema._def) {
-                          switch (fieldSchema._def.typeName) {
-                            case "ZodString":
-                              structuredError[key] = "";
-                              break;
-                            case "ZodNumber":
-                              structuredError[key] = 0;
-                              break;
-                            case "ZodBoolean":
-                              structuredError[key] = false;
-                              break;
-                            case "ZodArray":
-                              structuredError[key] = [];
-                              break;
-                            case "ZodObject":
-                              structuredError[key] = {};
-                              break;
-                            default:
-                              structuredError[key] = null;
+                        if (shape && typeof shape === "object") {
+                          if (process.env["MCP_DEBUG"]) {
+                            console.error(
+                              `[MCP Debug] Schema shape keys:`,
+                              Object.keys(shape),
+                            );
                           }
+
+                          // Provide default values for required fields
+                          Object.keys(shape).forEach((key) => {
+                            if (!(key in structuredError)) {
+                              const fieldSchema = shape[key];
+                              if (fieldSchema && fieldSchema._def) {
+                                switch (
+                                  fieldSchema._def.typeName ||
+                                  fieldSchema._def.type
+                                ) {
+                                  case "ZodString":
+                                  case "string":
+                                    structuredError[key] = "";
+                                    break;
+                                  case "ZodNumber":
+                                  case "number":
+                                    structuredError[key] = 0;
+                                    break;
+                                  case "ZodBoolean":
+                                  case "boolean":
+                                    structuredError[key] = false;
+                                    break;
+                                  case "ZodArray":
+                                  case "array":
+                                    structuredError[key] = [];
+                                    break;
+                                  case "ZodObject":
+                                  case "object":
+                                    structuredError[key] = {};
+                                    break;
+                                  default:
+                                    structuredError[key] = null;
+                                }
+                              }
+                            }
+                          });
                         }
                       }
-                    });
+                    }
                   }
+                } catch (schemaError) {
+                  if (process.env["MCP_DEBUG"]) {
+                    console.error(
+                      `[MCP Debug] Error processing output schema for structured error:`,
+                      schemaError,
+                    );
+                  }
+                  // Continue with basic structured error if schema processing fails
                 }
 
                 if (process.env["MCP_DEBUG"]) {
@@ -1130,7 +1155,7 @@ export function generateMcpToolsFromArgParser(
                 outputSchema._def
               ) {
                 const zodSchema = outputSchema as any;
-                if (zodSchema._def.typeName === "ZodObject") {
+                if (zodSchema._def.type === "object") {
                   const shapeGetter = zodSchema._def.shape;
                   const shape =
                     typeof shapeGetter === "function"
@@ -1142,20 +1167,20 @@ export function generateMcpToolsFromArgParser(
                     if (!(key in structuredError)) {
                       const fieldSchema = shape[key];
                       if (fieldSchema && fieldSchema._def) {
-                        switch (fieldSchema._def.typeName) {
-                          case "ZodString":
+                        switch (fieldSchema._def.type) {
+                          case "string":
                             structuredError[key] = "";
                             break;
-                          case "ZodNumber":
+                          case "number":
                             structuredError[key] = 0;
                             break;
-                          case "ZodBoolean":
+                          case "boolean":
                             structuredError[key] = false;
                             break;
-                          case "ZodArray":
+                          case "array":
                             structuredError[key] = [];
                             break;
-                          case "ZodObject":
+                          case "object":
                             structuredError[key] = {};
                             break;
                           default:

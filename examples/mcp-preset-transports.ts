@@ -56,13 +56,13 @@ const cli = ArgParser.withMcp({
     ],
     handler: async (ctx) => {
       // Console output automatically safe in MCP mode!
-      console.log("🚀 Processing input:", ctx.args.input);
-      console.log("📝 Verbose mode:", ctx.args.verbose ? "ON" : "OFF");
+      console.log("🚀 Processing input:", ctx.args["input"]);
+      console.log("📝 Verbose mode:", ctx.args["verbose"] ? "ON" : "OFF");
 
       return {
         message: "Input processed successfully",
-        input: ctx.args.input,
-        verbose: ctx.args.verbose,
+        input: ctx.args["input"],
+        verbose: ctx.args["verbose"],
         timestamp: new Date().toISOString(),
       };
     },
@@ -87,7 +87,7 @@ const cli = ArgParser.withMcp({
       },
     ],
     handler: async (ctx) => {
-      const input = ctx.args.input;
+      const input = ctx.args["input"];
       const analysis = {
         length: input.length,
         words: input.split(/\s+/).length,
@@ -102,7 +102,7 @@ const cli = ArgParser.withMcp({
       console.log(`   Words: ${analysis.words}`);
       console.log(`   Non-space characters: ${analysis.characters}`);
 
-      if (ctx.args.detailed) {
+      if (ctx.args["detailed"]) {
         console.log(`   Uppercase letters: ${analysis.uppercase}`);
         console.log(`   Lowercase letters: ${analysis.lowercase}`);
       }
@@ -110,7 +110,7 @@ const cli = ArgParser.withMcp({
       return {
         success: true,
         analysis,
-        detailed: ctx.args.detailed,
+        detailed: ctx.args["detailed"],
         timestamp: new Date().toISOString(),
       };
     },

@@ -61,7 +61,7 @@ describe("MCP Protocol Compliance Tests", () => {
       expect(tool.execute).toBeDefined();
 
       // Verify input schema is a valid Zod object
-      expect(tool.inputSchema._def.typeName).toBe("ZodObject");
+      expect(tool.inputSchema._def.type).toBe("object");
 
       // Test valid input
       const validInput = {

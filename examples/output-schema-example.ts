@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
   ArgParser,
   createOutputSchema,
-  OutputSchemaConfig,
   OutputSchemaPatterns,
 } from "../src/index";
 
@@ -14,11 +13,11 @@ const fileProcessorCli = new ArgParser({
   handler: async (ctx) => ({
     success: true,
     data: {
-      processedFiles: [ctx.args.input],
+      processedFiles: [ctx.args["input"]],
       totalSize: 1024,
       timestamp: new Date().toISOString(),
     },
-    message: `Successfully processed ${ctx.args.input}`,
+    message: `Successfully processed ${ctx.args["input"]}`,
   }),
 }).addFlags([
   {
@@ -43,7 +42,7 @@ const fileProcessorCli = new ArgParser({
 const databaseCli = new ArgParser({
   appName: "Database CLI",
   appCommandName: "db-cli",
-  handler: async (ctx) => ({
+  handler: async (_ctx) => ({
     queryResult: {
       rows: [{ id: 1, name: "test" }],
       count: 1,
@@ -82,7 +81,10 @@ const customDatabaseSchema = z.object({
 const multiToolCli = new ArgParser({
   appName: "Multi-Tool CLI",
   appCommandName: "multi-tool",
-  handler: async (ctx) => ({ success: true, message: "Main command executed" }),
+  handler: async (_ctx) => ({
+    success: true,
+    message: "Main command executed",
+  }),
 })
   .addFlags([
     {
@@ -109,7 +111,7 @@ const multiToolCli = new ArgParser({
     // 🎉 NEW: Output schema directly in tool definition!
     outputSchema: "fileOperation",
     handler: async (ctx) => ({
-      path: ctx.args.file,
+      path: ctx.args["file"],
       size: 2048,
       created: false,
       modified: true,
@@ -132,10 +134,10 @@ const multiToolCli = new ArgParser({
     outputSchema: "processExecution",
     handler: async (ctx) => ({
       exitCode: 0,
-      stdout: `Output from: ${ctx.args.command}`,
+      stdout: `Output from: ${ctx.args["command"]}`,
       stderr: "",
       duration: 1500,
-      command: ctx.args.command,
+      command: ctx.args["command"],
     }),
   });
 
@@ -143,7 +145,7 @@ const multiToolCli = new ArgParser({
 const apiCli = new ArgParser({
   appName: "API CLI",
   appCommandName: "api-cli",
-  handler: async (ctx) => ({
+  handler: async (_ctx) => ({
     response: { status: "ok", data: [] },
     statusCode: 200,
     headers: { "content-type": "application/json" },
@@ -167,7 +169,7 @@ const apiSchemaDefinition = {
     data: z.any().describe("Response data"),
   }),
   statusCode: z.number().describe("HTTP status code"),
-  headers: z.record(z.string()).describe("Response headers"),
+  headers: z.record(z.string(), z.string()).describe("Response headers"),
   timing: z.object({
     total: z.number().describe("Total request time in ms"),
     dns: z.number().describe("DNS lookup time in ms"),
@@ -180,7 +182,7 @@ const apiSchemaDefinition = {
 const advancedCli = new ArgParser({
   appName: "Advanced CLI",
   appCommandName: "advanced",
-  handler: async (ctx) => ({ success: true }),
+  handler: async (_ctx) => ({ success: true }),
 })
   .addTool({
     name: "analyze-data",
@@ -215,7 +217,7 @@ const advancedCli = new ArgParser({
         version: z.string().describe("Analyzer version"),
       }),
     }),
-    handler: async (ctx) => ({
+    handler: async (_ctx) => ({
       analysis: {
         totalRecords: 1000,
         validRecords: 950,
@@ -259,9 +261,9 @@ const advancedCli = new ArgParser({
     handler: async (ctx) => ({
       report: {
         id: "rpt_" + Math.random().toString(36).substr(2, 9),
-        format: ctx.args.format,
+        format: ctx.args["format"],
         size: 2048576,
-        pages: ctx.args.format === "pdf" ? 15 : undefined,
+        pages: ctx.args["format"] === "pdf" ? 15 : undefined,
       },
       downloadUrl: `https://example.com/reports/download/${Math.random().toString(36).substr(2, 9)}`,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
@@ -284,7 +286,7 @@ async function demonstrateOutputSchemas() {
     console.log(`   Description: ${tool.description}`);
     console.log(`   Has Output Schema: ${tool.outputSchema ? "✅" : "❌"}`);
     if (tool.outputSchema) {
-      console.log(`   Schema Type: ${tool.outputSchema._def.typeName}`);
+      console.log(`   Schema Type: ${tool.outputSchema._def.type}`);
     }
   });
 
@@ -346,7 +348,7 @@ async function demonstrateOutputSchemas() {
       })
       .optional(),
   });
-  console.log(`   Custom schema created: ${customSchema._def.typeName}`);
+  console.log(`   Custom schema created: ${customSchema._def.type}`);
 
   console.log("\n🎉 RECOMMENDED API PATTERNS:");
   console.log(

@@ -128,7 +128,7 @@ describe("Output Schema Integration", () => {
         if (tool.name !== "pattern-test") {
           // Skip main command
           expect(tool.outputSchema).toBeDefined();
-          expect(tool.outputSchema?._def.typeName).toBe("ZodObject");
+          expect(tool.outputSchema?._def.type).toBe("object");
         }
       });
 

@@ -3,6 +3,9 @@ import { existsSync, mkdirSync, rmSync } from "fs";
 import { dirname } from "path";
 import { ArgParser, resolveLogPath } from "../../src/index";
 
+// Track created servers for cleanup
+const createdServers: any[] = [];
+
 describe("MCP Log Path Configuration", () => {
   const testLogDir = "./test-mcp-logs";
   const customLogPath = `${testLogDir}/custom-mcp.log`;
@@ -17,7 +20,25 @@ describe("MCP Log Path Configuration", () => {
     }
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Clean up MCP servers first
+    for (const server of createdServers) {
+      try {
+        // Try to close the server if it has a close method
+        if (server && typeof server.close === 'function') {
+          await server.close();
+        }
+        // If it has a lifecycle manager, trigger shutdown
+        if (server && server._lifecycleManager) {
+          await server._lifecycleManager.handleShutdown('server_shutdown');
+        }
+      } catch (error) {
+        // Ignore cleanup errors in tests
+        console.warn('Error cleaning up MCP server:', error);
+      }
+    }
+    createdServers.length = 0; // Clear the array
+
     // Clean up test files
     if (existsSync(testLogDir)) {
       rmSync(testLogDir, { recursive: true, force: true });

@@ -50,6 +50,7 @@ export class FlagManager {
       validate: parsedFromZod["validate"],
       enum: parsedFromZod["enum"],
       mandatory: parsedFromZod["mandatory"],
+      env: parsedFromZod["env"],
     };
   }
 

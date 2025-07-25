@@ -54,16 +54,16 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "API KEY",
       description: "API key for service",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for top-level flags
+      sensitive: true, // Sensitive because tied to ENV
     });
 
     expect(userConfig.AUTH_TOKEN).toEqual({
       type: "string",
       title: "AUTH TOKEN",
       description: "Authentication token",
-      required: true,
-      sensitive: true,
+      required: true, // Mandatory because flag has mandatory: true
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
@@ -116,16 +116,16 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "SECRET KEY",
       description: "Secret key for processing",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory in the flag definition
+      sensitive: true, // Sensitive because tied to ENV
     });
 
     expect(userConfig.DB_PASSWORD).toEqual({
       type: "string",
       title: "DB PASSWORD",
       description: "Database password",
-      required: true,
-      sensitive: true,
+      required: true, // Mandatory in the flag definition
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
@@ -201,8 +201,8 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "SHARED VAR",
       description: "Shared variable from main",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for top-level flags
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
@@ -272,8 +272,8 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "NO DESC VAR",
       description: "Flag with description",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for top-level flags
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
@@ -315,8 +315,8 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "MY APP API KEY V2 PRODUCTION",
       description: "Variable with complex name",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for top-level flags
+      sensitive: true, // Sensitive because tied to ENV
     });
 
     // Verify simple name formatting
@@ -324,12 +324,12 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "TOKEN",
       description: "Single word env var",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for top-level flags
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
-  test("should always mark environment variables as required and sensitive", () => {
+  test("should respect flag mandatory setting and mark env vars as sensitive", () => {
     const parser = ArgParser.withMcp({
       appName: "Required Test CLI",
       appCommandName: "required-test",
@@ -364,10 +364,11 @@ describe("DXT Environment Variable Generation", () => {
     dxtGenerator = new DxtGenerator(parser);
     const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
 
-    // Both should be required and sensitive in user_config regardless of CLI mandatory status
-    expect(userConfig.OPTIONAL_ENV).toHaveProperty("required", true);
+    // Optional flag should not be required in user_config but should be sensitive (tied to ENV)
+    expect(userConfig.OPTIONAL_ENV).toHaveProperty("required", false);
     expect(userConfig.OPTIONAL_ENV).toHaveProperty("sensitive", true);
 
+    // Mandatory flag should be required in user_config and sensitive (tied to ENV)
     expect(userConfig.MANDATORY_ENV).toHaveProperty("required", true);
     expect(userConfig.MANDATORY_ENV).toHaveProperty("sensitive", true);
   });
@@ -433,12 +434,12 @@ describe("DXT Environment Variable Generation", () => {
     expect(userConfig.USER_PASSWORD).toHaveProperty("sensitive", true);
     expect(userConfig.CONFIG_URL).toHaveProperty("sensitive", true);
 
-    // Verify all are also required
-    expect(userConfig.API_KEY).toHaveProperty("required", true);
-    expect(userConfig.AUTH_TOKEN).toHaveProperty("required", true);
-    expect(userConfig.SECRET_VALUE).toHaveProperty("required", true);
-    expect(userConfig.USER_PASSWORD).toHaveProperty("required", true);
-    expect(userConfig.CONFIG_URL).toHaveProperty("required", true);
+    // Verify all are not required by default (top-level flags default to non-mandatory)
+    expect(userConfig.API_KEY).toHaveProperty("required", false);
+    expect(userConfig.AUTH_TOKEN).toHaveProperty("required", false);
+    expect(userConfig.SECRET_VALUE).toHaveProperty("required", false);
+    expect(userConfig.USER_PASSWORD).toHaveProperty("required", false);
+    expect(userConfig.CONFIG_URL).toHaveProperty("required", false);
   });
 
   test("should handle tools with no flags", () => {
@@ -528,8 +529,8 @@ describe("DXT Environment Variable Generation", () => {
       type: "string",
       title: "SHARED API KEY",
       description: "API key for tool1",
-      required: true,
-      sensitive: true,
+      required: false, // Not mandatory by default for tool flags
+      sensitive: true, // Sensitive because tied to ENV
     });
   });
 
@@ -616,5 +617,121 @@ describe("DXT Environment Variable Generation", () => {
     expect(Object.keys(userConfig)).toHaveLength(0);
     expect(envVars).toEqual({});
     expect(userConfig).toEqual({});
+  });
+
+  test("should demonstrate new behavior: respect mandatory flags and mark env vars as sensitive", () => {
+    const parser = ArgParser.withMcp({
+      appName: "New Behavior Demo CLI",
+      appCommandName: "demo-cli",
+      description: "CLI to demonstrate new DXT behavior",
+      handler: async (ctx) => ({ result: "success" }),
+      mcp: {
+        serverInfo: {
+          name: "demo-server",
+          version: "1.0.0",
+          description: "Demo server",
+        },
+      },
+    })
+      .addFlags([
+        {
+          name: "optionalEnvFlag",
+          description: "Optional flag with env var",
+          options: ["--optional-env"],
+          type: "string",
+          mandatory: false, // Not mandatory
+          env: "OPTIONAL_ENV_VAR",
+        },
+        {
+          name: "mandatoryEnvFlag",
+          description: "Mandatory flag with env var",
+          options: ["--mandatory-env"],
+          type: "string",
+          mandatory: true, // Mandatory
+          env: "MANDATORY_ENV_VAR",
+        },
+        {
+          name: "noEnvFlag",
+          description: "Flag without env var",
+          options: ["--no-env"],
+          type: "string",
+          mandatory: true, // Mandatory but no env var
+        },
+      ])
+      .addTool({
+        name: "demo-tool",
+        description: "Demo tool",
+        flags: [
+          {
+            name: "toolOptionalEnv",
+            description: "Tool optional flag with env",
+            options: ["--tool-optional"],
+            type: "string",
+            mandatory: false,
+            env: "TOOL_OPTIONAL_ENV",
+          },
+          {
+            name: "toolMandatoryEnv",
+            description: "Tool mandatory flag with env",
+            options: ["--tool-mandatory"],
+            type: "string",
+            mandatory: true,
+            env: "TOOL_MANDATORY_ENV",
+          },
+        ],
+        handler: async (ctx) => ({ result: "tool-success" }),
+      });
+
+    dxtGenerator = new DxtGenerator(parser);
+    const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
+
+    // Should have 4 env vars (only flags with env property)
+    expect(Object.keys(envVars)).toHaveLength(4);
+    expect(envVars).toHaveProperty("OPTIONAL_ENV_VAR", "${user_config.OPTIONAL_ENV_VAR}");
+    expect(envVars).toHaveProperty("MANDATORY_ENV_VAR", "${user_config.MANDATORY_ENV_VAR}");
+    expect(envVars).toHaveProperty("TOOL_OPTIONAL_ENV", "${user_config.TOOL_OPTIONAL_ENV}");
+    expect(envVars).toHaveProperty("TOOL_MANDATORY_ENV", "${user_config.TOOL_MANDATORY_ENV}");
+
+    // Should have 4 user config entries (only flags with env property)
+    expect(Object.keys(userConfig)).toHaveLength(4);
+
+    // Top-level optional flag with env: not required, but sensitive
+    expect(userConfig.OPTIONAL_ENV_VAR).toEqual({
+      type: "string",
+      title: "OPTIONAL ENV VAR",
+      description: "Optional flag with env var",
+      required: false, // Respects flag's mandatory: false
+      sensitive: true, // Sensitive because tied to ENV
+    });
+
+    // Top-level mandatory flag with env: required and sensitive
+    expect(userConfig.MANDATORY_ENV_VAR).toEqual({
+      type: "string",
+      title: "MANDATORY ENV VAR",
+      description: "Mandatory flag with env var",
+      required: true, // Respects flag's mandatory: true
+      sensitive: true, // Sensitive because tied to ENV
+    });
+
+    // Tool optional flag with env: not required, but sensitive
+    expect(userConfig.TOOL_OPTIONAL_ENV).toEqual({
+      type: "string",
+      title: "TOOL OPTIONAL ENV",
+      description: "Tool optional flag with env",
+      required: false, // Respects flag's mandatory: false
+      sensitive: true, // Sensitive because tied to ENV
+    });
+
+    // Tool mandatory flag with env: required and sensitive
+    expect(userConfig.TOOL_MANDATORY_ENV).toEqual({
+      type: "string",
+      title: "TOOL MANDATORY ENV",
+      description: "Tool mandatory flag with env",
+      required: true, // Respects flag's mandatory: true
+      sensitive: true, // Sensitive because tied to ENV
+    });
+
+    // Flag without env var should not appear in user config
+    expect(userConfig).not.toHaveProperty("NO_ENV_FLAG");
   });
 });

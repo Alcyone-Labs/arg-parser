@@ -91,7 +91,7 @@ const cli = ArgParser.withMcp({
       timestamp: z
         .string()
         .describe("When the search was performed (ISO 8601)"),
-    }),
+    }) as any,
     handler: async (ctx) => {
       const args = ctx.args;
 
@@ -103,7 +103,7 @@ const cli = ArgParser.withMcp({
       }
 
       // Get API key from args or environment variable
-      const apiKey = args.apiKey || process.env.CANNY_API_KEY;
+      const apiKey = args["apiKey"] || process.env["CANNY_API_KEY"];
 
       if (!apiKey) {
         throw new Error(
@@ -111,18 +111,26 @@ const cli = ArgParser.withMcp({
         );
       }
 
-      console.log(chalk.bold.cyan(`🔍 Searching Canny for: "${args.query}"`));
+      console.log(
+        chalk.bold.cyan(`🔍 Searching Canny for: "${args["query"]}"`),
+      );
       console.log(chalk.gray("━".repeat(50)));
 
       try {
-        const results = await searchCannyPosts(apiKey, args.query, args.limit);
+        const results = await searchCannyPosts(
+          apiKey,
+          args["query"],
+          args["limit"],
+        );
 
-        if (results.posts && results.posts.length > 0) {
+        if ((results as any).posts && (results as any).posts.length > 0) {
           console.log(
-            chalk.green(`\n✅ Found ${results.posts.length} results:\n`),
+            chalk.green(
+              `\n✅ Found ${(results as any).posts.length} results:\n`,
+            ),
           );
 
-          results.posts.forEach((post, index) => {
+          (results as any).posts.forEach((post: any, index: number) => {
             console.log(chalk.bold.white(`${index + 1}. ${post.title}`));
             console.log(
               chalk.gray(
@@ -146,16 +154,16 @@ const cli = ArgParser.withMcp({
         // Return structured data for both CLI and MCP modes
         const response = {
           success: true,
-          query: args.query,
-          results: results.posts || [],
-          total: results.posts ? results.posts.length : 0,
+          query: args["query"],
+          results: (results as any).posts || [],
+          total: (results as any).posts ? (results as any).posts.length : 0,
           timestamp: new Date().toISOString(),
         };
 
         return response;
       } catch (error) {
         // Always show error output - ArgParser handles MCP mode automatically
-        console.error(chalk.red(`❌ Error: ${error.message}`));
+        console.error(chalk.red(`❌ Error: ${(error as Error).message}`));
         throw error;
       }
     },
@@ -173,7 +181,7 @@ const cli = ArgParser.withMcp({
       },
     ],
     // 🎉 NEW: Output schema for boards listing
-    outputSchema: {
+    outputSchema: z.object({
       success: z
         .boolean()
         .describe("Whether the boards listing was successful"),
@@ -198,12 +206,12 @@ const cli = ArgParser.withMcp({
         .describe("Array of available Canny boards"),
       total: z.number().describe("Total number of boards returned"),
       timestamp: z.string().describe("When the boards were fetched (ISO 8601)"),
-    },
+    }) as any,
     handler: async (ctx) => {
       const args = ctx.args;
 
       // Get API key from args or environment variable
-      const apiKey = args.apiKey || process.env.CANNY_API_KEY;
+      const apiKey = args["apiKey"] || process.env["CANNY_API_KEY"];
 
       if (!apiKey) {
         throw new Error(
@@ -247,11 +255,11 @@ async function main() {
     // Check for handler errors in the parse result
     if (result && typeof result === "object" && result.$error) {
       const error = result.$error;
-      console.error("Error:", error.message);
+      console.error("Error:", (error as Error).message);
       process.exit(1);
     }
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error("Error:", (error as Error).message);
     process.exit(1);
   }
 }

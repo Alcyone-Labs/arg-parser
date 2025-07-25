@@ -14,13 +14,13 @@ describe("Output Schema Support", () => {
 
     test("should generate valid Zod schemas from patterns", () => {
       const successErrorSchema = OutputSchemaPatterns.successError();
-      expect(successErrorSchema._def.typeName).toBe("ZodObject");
+      expect(successErrorSchema._def.type).toBe("object");
 
       const successWithDataSchema = OutputSchemaPatterns.successWithData();
-      expect(successWithDataSchema._def.typeName).toBe("ZodObject");
+      expect(successWithDataSchema._def.type).toBe("object");
 
       const listSchema = OutputSchemaPatterns.list();
-      expect(listSchema._def.typeName).toBe("ZodObject");
+      expect(listSchema._def.type).toBe("object");
     });
 
     test("should accept custom schemas for data patterns", () => {
@@ -31,17 +31,17 @@ describe("Output Schema Support", () => {
 
       const successWithDataSchema =
         OutputSchemaPatterns.successWithData(customDataSchema);
-      expect(successWithDataSchema._def.typeName).toBe("ZodObject");
+      expect(successWithDataSchema._def.type).toBe("object");
 
       const listSchema = OutputSchemaPatterns.list(customDataSchema);
-      expect(listSchema._def.typeName).toBe("ZodObject");
+      expect(listSchema._def.type).toBe("object");
     });
   });
 
   describe("createOutputSchema", () => {
     test("should create schema from pattern name", () => {
       const schema = createOutputSchema("successError");
-      expect(schema._def.typeName).toBe("ZodObject");
+      expect(schema._def.type).toBe("object");
     });
 
     test("should pass through Zod schema directly", () => {
@@ -55,12 +55,12 @@ describe("Output Schema Support", () => {
         result: z.string().describe("The result"),
         timestamp: z.string().describe("When completed"),
       });
-      expect(schema._def.typeName).toBe("ZodObject");
+      expect(schema._def.type).toBe("object");
     });
 
     test("should fallback to successError for invalid input", () => {
       const schema = createOutputSchema("invalid" as any);
-      expect(schema._def.typeName).toBe("ZodObject");
+      expect(schema._def.type).toBe("object");
     });
   });
 
@@ -85,7 +85,7 @@ describe("Output Schema Support", () => {
       const tools = parser.toMcpTools();
       expect(tools).toHaveLength(1);
       expect(tools[0].outputSchema).toBeDefined();
-      expect(tools[0].outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tools[0].outputSchema?._def.type).toBe("object");
     });
 
     test("should set specific tool output schema", () => {
@@ -116,7 +116,7 @@ describe("Output Schema Support", () => {
       const tools = parser.toMcpTools();
       expect(tools).toHaveLength(1);
       expect(tools[0].outputSchema).toBeDefined();
-      expect(tools[0].outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tools[0].outputSchema?._def.type).toBe("object");
     });
 
     test("should enable automatic output schema generation", () => {
@@ -139,7 +139,7 @@ describe("Output Schema Support", () => {
       const tools = parser.toMcpTools();
       expect(tools).toHaveLength(1);
       expect(tools[0].outputSchema).toBeDefined();
-      expect(tools[0].outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tools[0].outputSchema?._def.type).toBe("object");
     });
 
     test("should prioritize explicit schema over default and auto-generated", () => {
@@ -244,7 +244,7 @@ describe("Output Schema Support", () => {
       const processFileTool = tools.find((t) => t.name === "process-file");
       expect(processFileTool).toBeDefined();
       expect(processFileTool?.outputSchema).toBeDefined();
-      expect(processFileTool?.outputSchema?._def.typeName).toBe("ZodObject");
+      expect(processFileTool?.outputSchema?._def.type).toBe("object");
     });
 
     test("should support output schema directly in addTool", () => {
@@ -305,11 +305,11 @@ describe("Output Schema Support", () => {
 
       const fileTool = tools.find((t) => t.name === "file-tool");
       expect(fileTool?.outputSchema).toBeDefined();
-      expect(fileTool?.outputSchema?._def.typeName).toBe("ZodObject");
+      expect(fileTool?.outputSchema?._def.type).toBe("object");
 
       const customTool = tools.find((t) => t.name === "custom-tool");
       expect(customTool?.outputSchema).toBeDefined();
-      expect(customTool?.outputSchema?._def.typeName).toBe("ZodObject");
+      expect(customTool?.outputSchema?._def.type).toBe("object");
     });
   });
 
@@ -339,7 +339,7 @@ describe("Output Schema Support", () => {
 
       expect(tools).toHaveLength(1);
       expect(tools[0].outputSchema).toBeDefined();
-      expect(tools[0].outputSchema?._def.typeName).toBe("ZodObject");
+      expect(tools[0].outputSchema?._def.type).toBe("object");
     });
 
     test("should merge instance and option schemas correctly", () => {

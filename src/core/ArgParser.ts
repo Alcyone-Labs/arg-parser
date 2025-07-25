@@ -1,3 +1,4 @@
+import { z, type ZodTypeAny } from "zod";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 import {
   convertFlagsToZodSchema,
@@ -9,10 +10,16 @@ import type {
   GenerateMcpToolsOptions,
   IMcpToolStructure,
 } from "../mcp/mcp-integration";
+import type { McpLifecycleEvents } from "../mcp/mcp-lifecycle";
 import {
   compareVersions,
   CURRENT_MCP_PROTOCOL_VERSION,
 } from "../mcp/mcp-protocol-versions";
+import {
+  debugSchemaStructure,
+  validateMcpSchemaCompatibility,
+} from "../mcp/zod-compatibility";
+import { debug } from "../utils/debug-utils";
 import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
 import { resolveLogPath, type LogPath } from "./log-path-utils";
 import type {
@@ -81,6 +88,47 @@ export type DxtServerInfo = {
 };
 
 /**
+ * Copy entry for DXT package bundling, compatible with TSDown's copy options
+ */
+export type DxtCopyEntry = {
+  from: string;
+  to: string;
+};
+
+/**
+ * Copy options for DXT package bundling, compatible with TSDown's copy options
+ * @example
+ * ```ts
+ * [
+ *   'migrations',
+ *   { from: 'migrations', to: 'migrations' },
+ *   { from: 'config/default.json', to: 'config/default.json' }
+ * ]
+ * ```
+ */
+export type DxtCopyOptions = Array<string | DxtCopyEntry>;
+
+/**
+ * DXT-specific configuration options
+ */
+export type DxtOptions = {
+  /**
+   * Additional files and directories to include in the DXT package.
+   * Paths are relative to the project root (where package.json/tsconfig.json are located).
+   *
+   * @example
+   * ```ts
+   * include: [
+   *   'migrations',                                    // Copy entire migrations folder
+   *   { from: 'config/prod.json', to: 'config.json' }, // Copy and rename file
+   *   'assets/logo.png'                               // Copy specific file
+   * ]
+   * ```
+   */
+  include?: DxtCopyOptions;
+};
+
+/**
  * MCP server configuration options for withMcp() method
  * This centralizes MCP server metadata that was previously scattered across addMcpSubCommand calls
  */
@@ -103,6 +151,13 @@ export type McpServerOptions = {
    * - Config object: { path: "./logs/app.log", relativeTo: "entry" | "cwd" | "absolute" }
    */
   logPath?: LogPath;
+  /**
+   * Lifecycle event handlers for MCP server operations
+   * These provide hooks for initialization, cleanup, and other lifecycle events
+   */
+  lifecycle?: McpLifecycleEvents;
+  /** DXT package configuration options */
+  dxt?: DxtOptions;
 };
 
 /**
@@ -708,7 +763,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       name: toolConfig.name,
       description:
         toolConfig.description || `Executes the ${toolConfig.name} tool.`,
-      inputSchema: toolConfig.inputSchema || { type: "object", properties: {} },
+      inputSchema: toolConfig.inputSchema || z.object({}),
       outputSchema: toolConfig.outputSchema,
       execute: async (args: any) => {
         try {
@@ -821,10 +876,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       );
 
       // Dynamic import to avoid circular dependencies and support ES modules
-      const { McpServer } = await import(
+      const { McpServer, ResourceTemplate } = await import(
         "@modelcontextprotocol/sdk/server/mcp.js"
       );
-      logger.mcpError("Successfully imported McpServer from SDK");
+      logger.mcpError(
+        "Successfully imported McpServer and ResourceTemplate from SDK",
+      );
 
       const server = new McpServer({
         id: effectiveServerInfo.name,
@@ -834,6 +891,59 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       });
 
       logger.mcpError("Successfully created McpServer instance");
+
+      // Set up lifecycle manager if lifecycle events are configured
+      if (this._mcpServerConfig?.lifecycle) {
+        const { McpLifecycleManager } = await import("../mcp/mcp-lifecycle");
+
+        const lifecycleManager = new McpLifecycleManager(
+          this._mcpServerConfig.lifecycle,
+          logger,
+          effectiveServerInfo,
+          this,
+        );
+
+        // Wrap the server's connect method to trigger lifecycle events
+        const originalConnect = server.connect.bind(server);
+        server.connect = async (transport: any) => {
+          logger.mcpError("MCP server connecting with lifecycle events...");
+
+          // Call the original connect method
+          const result = await originalConnect(transport);
+
+          // Trigger onInitialize event immediately after connection
+          // This simulates the initialize request since we can't intercept it directly
+          try {
+            await lifecycleManager.handleInitialize(
+              { name: "mcp-client", version: "1.0.0" }, // Default client info
+              "2024-11-05", // Default protocol version
+              {}, // Default capabilities
+            );
+
+            // Trigger onInitialized event after a short delay
+            setTimeout(async () => {
+              try {
+                await lifecycleManager.handleInitialized();
+              } catch (error) {
+                logger.mcpError(
+                  `Lifecycle onInitialized error: ${error instanceof Error ? error.message : String(error)}`,
+                );
+              }
+            }, 100);
+          } catch (error) {
+            logger.mcpError(
+              `Lifecycle onInitialize error: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+
+          return result;
+        };
+
+        // Store lifecycle manager for shutdown handling
+        (server as any)._lifecycleManager = lifecycleManager;
+
+        logger.mcpError("Successfully set up MCP lifecycle manager");
+      }
 
       // Note: We now register actual resources and prompts below, so no need for internal handlers
       logger.mcpError(
@@ -861,42 +971,132 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       uniqueTools.forEach((tool) => {
         logger.mcpError(`Registering tool: ${tool.name}`);
 
-        // Convert Zod object schema to the format MCP SDK expects: { key: zodSchema, ... }
-        let inputSchema: any;
+        // MCP SDK expects Zod v3 compatible schemas
+        let zodSchema: ZodTypeAny;
 
-        if (tool.inputSchema === null || tool.inputSchema === undefined) {
-          // Empty object for tools with no input parameters
-          inputSchema = {};
-        } else if (
-          tool.inputSchema &&
-          typeof tool.inputSchema === "object" &&
-          tool.inputSchema !== null &&
-          tool.inputSchema._def
-        ) {
-          // For Zod object schemas, extract the shape directly as the MCP SDK expects
-          const zodObjectSchema = tool.inputSchema as any;
-          if (zodObjectSchema._def.typeName === "ZodObject") {
-            // In newer versions of Zod, _def.shape is a function that needs to be called
-            const shapeGetter = zodObjectSchema._def.shape;
-            const shape =
-              typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;
+        // Find the tool configuration to get the flags
+        const toolFromUnified = Array.from(this._tools.values()).find(
+          (t) => t.name === tool.name,
+        );
+        const toolFromLegacy = Array.from(this._mcpTools.values()).find(
+          (t) => t.name === tool.name,
+        );
 
-            // Use the shape directly - this matches the working minimal MCP server format
-            inputSchema = shape;
-          } else {
-            // Not a Zod object, use as-is
-            inputSchema = tool.inputSchema;
-          }
+        if (toolFromUnified && toolFromUnified.flags) {
+          // Convert flags to Zod schema for unified tools
+          zodSchema = convertFlagsToZodSchema(toolFromUnified.flags);
+        } else if (toolFromLegacy && toolFromLegacy.inputSchema) {
+          // For legacy tools, use the existing Zod schema directly
+          zodSchema = toolFromLegacy.inputSchema;
         } else {
-          // Use as-is if it's not a Zod object
-          inputSchema = tool.inputSchema || {};
+          // Fallback for tools with no input parameters - create empty Zod object
+          zodSchema = z.object({});
+        }
+
+        // Convert Zod schema to JSON Schema for MCP SDK
+        let mcpCompatibleSchema;
+        try {
+          if (process.env["MCP_DEBUG"]) {
+            console.error(`[MCP Debug] Preparing schema for tool ${tool.name}`);
+            console.error(`[MCP Debug] Input zodSchema:`, zodSchema);
+          }
+
+          // Use the original Zod v4 schema directly (MCP SDK now supports v4)
+          mcpCompatibleSchema = zodSchema;
+
+          if (process.env["MCP_DEBUG"]) {
+            console.error(
+              `[MCP Debug] Successfully prepared schema for tool ${tool.name}`,
+            );
+          }
+        } catch (schemaError) {
+          console.error(
+            `[MCP Debug] Error preparing schema for tool ${tool.name}:`,
+            schemaError,
+          );
+          throw schemaError;
+        }
+
+        // Add detailed debug logging for the prepared schema
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] Prepared mcpCompatibleSchema for tool ${tool.name}:`,
+            JSON.stringify(mcpCompatibleSchema, null, 2),
+          );
+          console.error(
+            `[MCP Debug] Schema properties:`,
+            Object.keys(mcpCompatibleSchema || {}),
+          );
+          console.error(`[MCP Debug] Schema def:`, (mcpCompatibleSchema as any)?.def);
+          console.error(`[MCP Debug] Schema shape:`, (mcpCompatibleSchema as any)?.shape);
+          console.error(
+            `[MCP Debug] Schema parse function:`,
+            typeof mcpCompatibleSchema?.parse,
+          );
+        }
+
+        // Add debug logging before schema preparation
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] About to prepare schema for tool ${tool.name}`,
+          );
+          console.error(`[MCP Debug] zodSchema type:`, typeof zodSchema);
+          console.error(`[MCP Debug] zodSchema:`, zodSchema);
+          console.error(
+            `[MCP Debug] zodSchema constructor:`,
+            zodSchema?.constructor?.name,
+          );
+        }
+
+        // Debug schema structure if MCP_DEBUG is enabled
+        debugSchemaStructure(mcpCompatibleSchema, `Tool ${tool.name} schema`);
+
+        // Validate compatibility
+        if (!validateMcpSchemaCompatibility(mcpCompatibleSchema)) {
+          logger.mcpError(
+            `Warning: Schema for tool ${tool.name} may not be fully compatible with MCP SDK`,
+          );
         }
 
         const toolConfig: any = {
           title: tool.name, // MCP SDK requires title field
           description: tool.description || "No description provided.",
-          inputSchema: inputSchema, // Use Zod shape directly for MCP SDK compatibility
+          inputSchema: mcpCompatibleSchema, // Use Zod v3 compatible schema for MCP SDK
         };
+
+        // Debug the final toolConfig being passed to registerTool
+        if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] Final toolConfig for ${tool.name}:`,
+            JSON.stringify(toolConfig, null, 2),
+          );
+          console.error(
+            `[MCP Debug] toolConfig.inputSchema type:`,
+            typeof toolConfig.inputSchema,
+          );
+          console.error(
+            `[MCP Debug] toolConfig.inputSchema constructor:`,
+            toolConfig.inputSchema?.constructor?.name,
+          );
+          console.error(
+            `[MCP Debug] toolConfig.inputSchema._def:`,
+            toolConfig.inputSchema?._def,
+          );
+          console.error(
+            `[MCP Debug] toolConfig.inputSchema.shape:`,
+            toolConfig.inputSchema?.shape,
+          );
+          console.error(
+            `[MCP Debug] toolConfig.inputSchema._zod:`,
+            toolConfig.inputSchema?._zod,
+          );
+          console.error(`[MCP Debug] Schema keys:`, Object.keys(mcpCompatibleSchema || {}));
+          console.error(`[MCP Debug] About to call server.registerTool with:`, {
+            name: tool.name,
+            description: tool.description,
+            inputSchema: mcpCompatibleSchema,
+          });
+        }
 
         // TODO: Include output schema in MCP tool registration for MCP 2025-06-18+ clients
         // Currently commented out as MCP SDK v1.15.1 doesn't support outputSchema in registerTool
@@ -979,49 +1179,221 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
       logger.mcpError("Successfully registered all tools with MCP server");
 
-      // TODO: Register resources (temporarily disabled due to MCP SDK type compatibility issues)
+      // Register MCP resources
       const resources = this.getMcpResources();
-      logger.mcpError(
-        `Found ${resources.length} MCP resources (registration temporarily disabled)`,
-      );
+      logger.mcpError(`Registering ${resources.length} MCP resources`);
 
-      // Note: Resource registration will be implemented in a future update once MCP SDK types are resolved
-      if (resources.length > 0) {
-        logger.mcpError(
-          "Resource registration is temporarily disabled due to MCP SDK type compatibility",
-        );
-        logger.mcpError(
-          "Resources are stored and will be available once SDK integration is completed",
-        );
-      }
+      resources.forEach((resource) => {
+        try {
+          const resourceConfig = {
+            title: resource.title || resource.name,
+            description: resource.description || `Resource: ${resource.name}`,
+            mimeType: resource.mimeType || "application/json",
+          };
 
-      logger.mcpError(
-        "Resource registration step completed (temporarily disabled)",
-      );
+          // Handle different URI template types
+          if (resource.uriTemplate.includes("{")) {
+            // URI template with parameters
+            const resourceTemplate = new ResourceTemplate(
+              resource.uriTemplate,
+              { list: undefined },
+            );
+            const templateHandler = async (uri: any, params: any = {}) => {
+              try {
+                const result = await resource.handler(
+                  new URL(uri.href || uri),
+                  params,
+                );
+                // Convert our format to MCP SDK format
+                return {
+                  contents: result.contents.map((content) => {
+                    const mcpContent: any = {
+                      uri: content.uri,
+                    };
+                    if (content.text !== undefined) {
+                      mcpContent.text = content.text;
+                    }
+                    if (content.blob !== undefined) {
+                      mcpContent.blob = content.blob;
+                    }
+                    if (content.mimeType !== undefined) {
+                      mcpContent.mimeType = content.mimeType;
+                    }
+                    return mcpContent;
+                  }),
+                };
+              } catch (error) {
+                logger.mcpError(
+                  `Resource template handler error for ${resource.name}: ${error instanceof Error ? error.message : String(error)}`,
+                );
+                throw error;
+              }
+            };
+            server.registerResource(
+              resource.name,
+              resourceTemplate,
+              resourceConfig,
+              templateHandler,
+            );
+          } else {
+            // Simple URI string
+            const resourceHandler = async (uri: any) => {
+              try {
+                const result = await resource.handler(
+                  new URL(uri.href || uri),
+                  {},
+                );
+                // Convert our format to MCP SDK format
+                return {
+                  contents: result.contents.map((content) => {
+                    const mcpContent: any = {
+                      uri: content.uri,
+                    };
+                    if (content.text !== undefined) {
+                      mcpContent.text = content.text;
+                    }
+                    if (content.blob !== undefined) {
+                      mcpContent.blob = content.blob;
+                    }
+                    if (content.mimeType !== undefined) {
+                      mcpContent.mimeType = content.mimeType;
+                    }
+                    return mcpContent;
+                  }),
+                };
+              } catch (error) {
+                logger.mcpError(
+                  `Resource handler error for ${resource.name}: ${error instanceof Error ? error.message : String(error)}`,
+                );
+                throw error;
+              }
+            };
+            server.registerResource(
+              resource.name,
+              resource.uriTemplate,
+              resourceConfig,
+              resourceHandler,
+            );
+          }
 
-      // TODO: Register prompts (temporarily disabled due to MCP SDK type compatibility issues)
+          logger.mcpError(`Successfully registered resource: ${resource.name}`);
+        } catch (error) {
+          logger.mcpError(
+            `Failed to register resource ${resource.name}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      });
+
+      logger.mcpError("Successfully registered all resources with MCP server");
+
+      // Register MCP prompts
       const prompts = this.getMcpPrompts();
-      logger.mcpError(
-        `Found ${prompts.length} MCP prompts (registration temporarily disabled)`,
-      );
+      logger.mcpError(`Registering ${prompts.length} MCP prompts`);
 
-      // Note: Prompt registration will be implemented in a future update once MCP SDK types are resolved
-      if (prompts.length > 0) {
-        logger.mcpError(
-          "Prompt registration is temporarily disabled due to MCP SDK type compatibility",
-        );
-        logger.mcpError(
-          "Prompts are stored and will be available once SDK integration is completed",
-        );
-      }
+      prompts.forEach((prompt) => {
+        try {
+          // Convert Zod v4 schema to MCP SDK compatible format (Zod v3 style)
+          let mcpCompatibleSchema;
+          try {
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Debug] Preparing schema for prompt ${prompt.name}`,
+              );
+              console.error(`[MCP Debug] Input argsSchema:`, prompt.argsSchema);
+            }
+            mcpCompatibleSchema = prompt.argsSchema;
+            if (process.env["MCP_DEBUG"]) {
+              console.error(
+                `[MCP Debug] Successfully prepared schema for prompt ${prompt.name}`,
+              );
+            }
+          } catch (schemaError) {
+            console.error(
+              `[MCP Debug] Error preparing schema for prompt ${prompt.name}:`,
+              schemaError,
+            );
+            throw schemaError;
+          }
 
-      logger.mcpError(
-        "Prompt registration step completed (temporarily disabled)",
-      );
+          // Validate the converted schema
+          if (!validateMcpSchemaCompatibility(mcpCompatibleSchema)) {
+            throw new Error(
+              `Schema validation failed for prompt ${prompt.name}`,
+            );
+          }
+
+          if (process.env["MCP_DEBUG"]) {
+            debugSchemaStructure(mcpCompatibleSchema, `prompt ${prompt.name}`);
+          }
+
+          const promptConfig: any = {
+            title: prompt.title || prompt.name, // MCP SDK requires title field
+            description: prompt.description || "No description provided.",
+            argsSchema: mcpCompatibleSchema, // Use Zod v3 compatible schema for MCP SDK
+          };
+
+          // Create prompt handler that wraps the original handler
+          const promptHandler = async (args: any) => {
+            try {
+              // Validate arguments using the original Zod v4 schema
+              const validatedArgs = prompt.argsSchema.parse(args);
+
+              // Call the original handler with validated arguments
+              const result = await prompt.handler(validatedArgs);
+
+              if (process.env["MCP_DEBUG"]) {
+                console.error(
+                  `[MCP Debug] Prompt '${prompt.name}' executed successfully`,
+                );
+              }
+
+              return result;
+            } catch (error) {
+              if (process.env["MCP_DEBUG"]) {
+                console.error(
+                  `[MCP Debug] Prompt '${prompt.name}' execution error:`,
+                  error,
+                );
+              }
+              throw error;
+            }
+          };
+
+          server.registerPrompt(prompt.name, promptConfig, promptHandler as any);
+
+          logger.mcpError(`Successfully registered prompt: ${prompt.name}`);
+        } catch (error) {
+          logger.mcpError(
+            `Failed to register prompt ${prompt.name}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      });
+
+      logger.mcpError("Successfully registered all prompts with MCP server");
 
       // Set up change notifications
       this.setupMcpChangeNotifications(server);
       logger.mcpError("Successfully set up MCP change notifications");
+
+      // Add shutdown handler for lifecycle cleanup
+      if ((server as any)._lifecycleManager) {
+        const originalClose = server.close?.bind(server);
+        server.close = async () => {
+          logger.mcpError("MCP server shutdown initiated");
+          try {
+            await (server as any)._lifecycleManager.handleShutdown(
+              "server_shutdown",
+            );
+          } catch (error) {
+            logger.mcpError(
+              `Error during lifecycle shutdown: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
+          if (originalClose) {
+            await originalClose();
+          }
+        };
+      }
 
       return server;
     } catch (error) {
@@ -1290,12 +1662,15 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
   }
 
   public async parse(processArgs?: string[], options?: any): Promise<any> {
+    debug.log("ArgParser.parse() called with args:", processArgs);
     // Call the base class parse method directly to avoid any override issues
+    debug.log("About to call ArgParserBase.prototype.parse.call()");
     let result = await ArgParserBase.prototype.parse.call(
       this,
       processArgs,
       options,
     );
+    debug.log("ArgParserBase.prototype.parse.call() returned:", typeof result);
 
     // If fuzzy mode prevented execution, return the result as-is
     const anyResult = result as any;
