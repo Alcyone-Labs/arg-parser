@@ -95,11 +95,11 @@
   },
   "dependencies": {
     "@alcyone-labs/simple-chalk": "^1.0.1",
-    "@alcyone-labs/simple-mcp-logger": "^1.1.0",
+    "@alcyone-labs/simple-mcp-logger": "^1.2.1",
     "@modelcontextprotocol/sdk": "github:Alcyone-Labs/mcp-typescript-sdk#dist",
-    "get-tsconfig": "^4.8.1",
+    "get-tsconfig": "^4.10.1",
     "magic-regexp": "^0.10.0",
-    "zod": "^4.0.5"
+    "zod": "^4.0.10"
   },
   "optionalDependencies": {
     "dotenv": "^16.6.1",

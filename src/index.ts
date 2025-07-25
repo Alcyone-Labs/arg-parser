@@ -18,6 +18,9 @@ export {
   type DxtOptions,
 } from "./core/ArgParser";
 
+// Re-export McpLoggerOptions directly from the library for user convenience
+export type { McpLoggerOptions } from "@alcyone-labs/simple-mcp-logger";
+
 // Log path configuration exports
 export {
   resolveLogPath,

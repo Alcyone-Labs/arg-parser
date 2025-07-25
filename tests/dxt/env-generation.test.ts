@@ -734,4 +734,66 @@ describe("DXT Environment Variable Generation", () => {
     // Flag without env var should not appear in user config
     expect(userConfig).not.toHaveProperty("NO_ENV_FLAG");
   });
+
+  test("should match MemoryServer CLI behavior: non-mandatory flags with env should be optional but sensitive", () => {
+    // This test mimics the exact flag configuration from the MemoryServer CLI
+    const parser = ArgParser.withMcp({
+      appName: "MCP Memory Server",
+      appCommandName: "mcp-memory",
+      description: "MCP Memory Server with semantic search capabilities",
+      handler: async (ctx) => ({ result: "success" }),
+      mcp: {
+        serverInfo: {
+          name: "mcp-memory",
+          version: "1.0.0",
+        },
+      },
+    })
+      .addFlag({
+        name: "database_url",
+        description: "The database URL to connect to",
+        options: ["--db-url"],
+        env: "DATABASE_URL",
+        type: "string",
+        // No mandatory property - defaults to false (like MemoryServer)
+      })
+      .addFlag({
+        name: "memory_threshold_seconds",
+        description: "Time threshold in seconds after which memories trigger notifications",
+        options: ["--memory-threshold"],
+        env: "MEMORY_THRESHOLD_SECONDS",
+        type: "number",
+        defaultValue: 10,
+        // No mandatory property - defaults to false (like MemoryServer)
+      });
+
+    dxtGenerator = new DxtGenerator(parser);
+    const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
+
+    // Should have 2 env vars
+    expect(Object.keys(envVars)).toHaveLength(2);
+    expect(envVars).toHaveProperty("DATABASE_URL", "${user_config.DATABASE_URL}");
+    expect(envVars).toHaveProperty("MEMORY_THRESHOLD_SECONDS", "${user_config.MEMORY_THRESHOLD_SECONDS}");
+
+    // Should have 2 user config entries
+    expect(Object.keys(userConfig)).toHaveLength(2);
+
+    // DATABASE_URL: not mandatory (no mandatory property), but sensitive (has env)
+    expect(userConfig.DATABASE_URL).toEqual({
+      type: "string",
+      title: "DATABASE URL",
+      description: "The database URL to connect to",
+      required: false, // Not mandatory by default
+      sensitive: true, // Sensitive because tied to ENV
+    });
+
+    // MEMORY_THRESHOLD_SECONDS: not mandatory (no mandatory property), but sensitive (has env)
+    expect(userConfig.MEMORY_THRESHOLD_SECONDS).toEqual({
+      type: "string",
+      title: "MEMORY THRESHOLD SECONDS",
+      description: "Time threshold in seconds after which memories trigger notifications",
+      required: false, // Not mandatory by default
+      sensitive: true, // Sensitive because tied to ENV
+    });
+  });
 });

@@ -991,13 +991,19 @@ my-cli-app --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3001
 # Configure custom log file path for MCP server logs
 my-cli-app --s-mcp-serve --s-mcp-log-path ./custom-logs/mcp-server.log
 
-# Or configure log path programmatically in withMcp()
+# Or configure logging programmatically in withMcp()
 const cli = ArgParser.withMcp({
   appName: 'My CLI App',
   appCommandName: 'my-cli-app',
   mcp: {
     serverInfo: { name: 'my-server', version: '1.0.0' },
-    logPath: './my-logs/mcp-server.log'  // Programmatic log path
+    // NEW: Improved logging with level control
+    log: {
+      level: 'info',        // Captures info, warn, error
+      logToFile: './my-logs/mcp-server.log',
+      prefix: 'MyApp'
+    }
+    // LEGACY: logPath: './my-logs/mcp-server.log'  // Still works
   }
 });
 ```
@@ -1019,20 +1025,30 @@ my-tool --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3000 --s-mcp-host 0.0.0
 # Custom log path via CLI flag (logs to specified file instead of ./logs/mcp.log)
 my-tool --s-mcp-serve --s-mcp-log-path /var/log/my-mcp-server.log
 
-# Custom log path via programmatic configuration
+# Improved logging via programmatic configuration
 const parser = ArgParser.withMcp({
   mcp: {
     serverInfo: { name: 'my-tool', version: '1.0.0' },
-    logPath: '/var/log/my-mcp-server.log'
+    log: {
+      level: 'debug',       // Capture all log levels
+      logToFile: '/var/log/my-mcp-server.log',
+      prefix: 'MyTool'
+    }
+    // LEGACY: logPath: '/var/log/my-mcp-server.log'  // Still works
   }
 });
 
-# Multiple transports and custom log path (configured via --s-mcp-serve system flag)
+# Multiple transports and improved logging (configured via --s-mcp-serve system flag)
 const cli = ArgParser.withMcp({
   appName: 'multi-tool',
   appCommandName: 'multi-tool',
   mcp: {
-    logPath: './logs/multi-tool-mcp.log',  // Custom log path
+    // NEW: improved logging configuration
+    log: {
+      level: 'info',
+      logToFile: './logs/multi-tool-mcp.log',
+      prefix: 'MultiTool'
+    },
     serverInfo: {
       name: 'multi-tool-mcp',
       version: '1.0.0'
@@ -1048,13 +1064,91 @@ const cli = ArgParser.withMcp({
 });
 ```
 
-### MCP Log Path Configuration
+### MCP Logging Configuration
 
-MCP server logs can be configured through multiple methods with the following priority order:
+MCP server logging can be configured with McpLoggerOptions options using `@alcyone-labs/simple-mcp-logger`. You can control log levels, output destinations, and more.
+
+#### Enhanced Logging (Recommended)
+
+Use the new `log` property for comprehensive logging control:
+
+```typescript
+const parser = ArgParser.withMcp({
+  appName: "My MCP Server",
+  appCommandName: "my-mcp-server",
+  mcp: {
+    serverInfo: { name: "my-server", version: "1.0.0" },
+    log: {
+      level: "debug", // Captures debug, info, warn, error
+      logToFile: "./logs/comprehensive.log",
+      prefix: "MyServer",
+      mcpMode: true, // MCP compliant (default)
+    },
+  },
+});
+```
+
+**Available log levels**: `"debug"` | `"info"` | `"warn"` | `"error"` | `"silent"`
+
+**Type Safety**: The `McpLoggerOptions` type is provided for full TypeScript support and matches the interface from `@alcyone-labs/simple-mcp-logger`.
+
+#### Simple Logging Configuration
+
+For basic use cases, you can use a simple string path:
+
+```typescript
+const parser = ArgParser.withMcp({
+  mcp: {
+    serverInfo: { name: "my-server", version: "1.0.0" },
+    log: "./logs/simple.log", // Simple string path
+  },
+});
+```
+
+#### Configuration Priority
+
+Logging configuration follows this priority order:
 
 1. **CLI Flag (Highest Priority)**: `--s-mcp-log-path <path>`
-2. **Programmatic Configuration**: `mcp.logPath` in `withMcp()`
-3. **Default Path (Fallback)**: `./logs/mcp.log`
+2. **Merging**: When both `mcp.log` and `mcp.logPath` are present:
+   - `mcp.log` provides logger options (level, prefix, mcpMode)
+   - `mcp.logPath` provides flexible path resolution (relativeTo, basePath)
+   - Path resolution: `mcp.logPath` > `mcp.log.logToFile`
+3. **Log Config Only**: `mcp.log` object or string in `withMcp()`
+4. **Legacy Log Path Only**: `mcp.logPath` in `withMcp()`
+5. **Default Path (Fallback)**: `./logs/mcp.log`
+
+#### Configuration Merging
+
+When both `log` and `logPath` are specified:
+
+```typescript
+const parser = ArgParser.withMcp({
+  mcp: {
+    serverInfo: { name: "my-server", version: "1.0.0" },
+    // log provides logger options (level, prefix, mcpMode)
+    log: {
+      level: "debug",
+      prefix: "MyServer",
+      mcpMode: true,
+      // logToFile can be omitted when using logPath
+    },
+    // logPath provides flexible path resolution
+    logPath: {
+      path: "./logs/app.log",
+      relativeTo: "entry", // "entry" | "cwd" | "absolute"
+      basePath: "/custom/base", // Optional custom base path
+    },
+  },
+});
+```
+
+**Merging behavior:**
+
+- `log` provides logger configuration (level, prefix, mcpMode)
+- `logPath` provides flexible path resolution with `relativeTo` options
+- If both specify a file path, `logPath` takes precedence for path resolution
+- This preserves the powerful `LogPath` features while using `McpLoggerOptions` for logger settings
 
 #### Path Resolution Options
 
@@ -1073,7 +1167,7 @@ const parser = ArgParser.withMcp({
   },
 });
 
-// Object configuration for advanced use cases
+// Object configuration for more granular use cases
 const parser = ArgParser.withMcp({
   // ... other config
   mcp: {
@@ -1097,6 +1191,7 @@ The CLI flag always takes precedence, allowing users to override the developer's
 MCP Resources enable your CLI tools to provide **real-time, subscription-based data feeds** to AI assistants. Unlike tools (which are called once), resources can be subscribed to and provide live updates when data changes.
 
 **Key Benefits:**
+
 - **Real-time notifications**: AI assistants get notified when your data changes
 - **Flexible URI templates**: Support dynamic parameters like `data://alerts/aged/gte:{threshold}`
 - **Standard MCP pattern**: Full subscription lifecycle support
@@ -1109,10 +1204,9 @@ const parser = ArgParser.withMcp({
   appName: "Data Monitor",
   appCommandName: "data-monitor",
   mcp: {
-    serverInfo: { name: "data-monitor", version: "1.0.0" }
-  }
-})
-.addMcpResource({
+    serverInfo: { name: "data-monitor", version: "1.0.0" },
+  },
+}).addMcpResource({
   name: "recent-data",
   uriTemplate: "data://recent",
   title: "Recent Data",
@@ -1121,13 +1215,15 @@ const parser = ArgParser.withMcp({
   handler: async (uri) => {
     const recentData = await getRecentData();
     return {
-      contents: [{
-        uri: uri.href,
-        text: JSON.stringify(recentData, null, 2),
-        mimeType: "application/json"
-      }]
+      contents: [
+        {
+          uri: uri.href,
+          text: JSON.stringify(recentData, null, 2),
+          mimeType: "application/json",
+        },
+      ],
     };
-  }
+  },
 });
 ```
 
@@ -1174,22 +1270,24 @@ Resources support the full MCP subscription pattern:
 #### Usage Examples
 
 **AI Assistant Integration:**
+
 ```typescript
 // AI assistant can subscribe to real-time data
-await client.request('resources/subscribe', {
-  uri: 'data://alerts/aged/gte:60000' // 1 minute threshold
+await client.request("resources/subscribe", {
+  uri: "data://alerts/aged/gte:60000", // 1 minute threshold
 });
 
 // Handle notifications
-client.on('notifications/resources/updated', async (notification) => {
-  const response = await client.request('resources/read', {
-    uri: notification.uri
+client.on("notifications/resources/updated", async (notification) => {
+  const response = await client.request("resources/read", {
+    uri: notification.uri,
   });
-  console.log('Fresh data:', JSON.parse(response.contents[0].text));
+  console.log("Fresh data:", JSON.parse(response.contents[0].text));
 });
 ```
 
 **Command Line Testing:**
+
 ```bash
 # Start MCP server
 data-monitor --s-mcp-serve
@@ -1201,23 +1299,26 @@ echo '{"jsonrpc":"2.0","id":1,"method":"resources/read","params":{"uri":"data://
 #### Design Patterns
 
 **Static Resources**: Use simple URIs for data that changes content but not structure
+
 ```typescript
-uriTemplate: "logs://recent"        // Always available, content updates
-uriTemplate: "status://system"      // System status, updates in real-time
+uriTemplate: "logs://recent"; // Always available, content updates
+uriTemplate: "status://system"; // System status, updates in real-time
 ```
 
 **Parameterized Resources**: Use URI templates for flexible filtering
+
 ```typescript
-uriTemplate: "data://type/{type}"           // Filter by type
-uriTemplate: "alerts/{severity}/gte:{age}"  // Multiple parameters
-uriTemplate: "search/{query}/limit:{count}" // Search with limits
+uriTemplate: "data://type/{type}"; // Filter by type
+uriTemplate: "alerts/{severity}/gte:{age}"; // Multiple parameters
+uriTemplate: "search/{query}/limit:{count}"; // Search with limits
 ```
 
 **Time-Based Resources**: Perfect for monitoring and alerting
+
 ```typescript
-uriTemplate: "events/since:{timestamp}"     // Events since timestamp
-uriTemplate: "metrics/aged/gte:{threshold}" // Metrics past threshold
-uriTemplate: "logs/errors/last:{duration}"  // Recent errors
+uriTemplate: "events/since:{timestamp}"; // Events since timestamp
+uriTemplate: "metrics/aged/gte:{threshold}"; // Metrics past threshold
+uriTemplate: "logs/errors/last:{duration}"; // Recent errors
 ```
 
 > **💡 Pro Tip**: Resources are perfect for monitoring, alerting, and real-time data feeds. They complement tools (one-time actions) by providing continuous data streams that AI assistants can subscribe to.
@@ -1320,10 +1421,10 @@ const cli = ArgParser.withMcp({
     },
     dxt: {
       include: [
-        "migrations",                                    // Copy entire migrations folder
-        "config/production.json",                       // Copy specific file
-        { from: "assets/logo.png", to: "logo.png" },    // Copy and rename file
-        { from: "scripts", to: "bin" },                 // Copy folder with new name
+        "migrations", // Copy entire migrations folder
+        "config/production.json", // Copy specific file
+        { from: "assets/logo.png", to: "logo.png" }, // Copy and rename file
+        { from: "scripts", to: "bin" }, // Copy folder with new name
       ],
     },
   },
@@ -1333,24 +1434,27 @@ const cli = ArgParser.withMcp({
 #### Include Options
 
 **Simple string paths** - Copy files/directories to the same relative location:
+
 ```typescript
 include: [
-  "migrations",           // Copies ./migrations/ to dxt/migrations/
-  "config/default.json",  // Copies ./config/default.json to dxt/config/default.json
-]
+  "migrations", // Copies ./migrations/ to dxt/migrations/
+  "config/default.json", // Copies ./config/default.json to dxt/config/default.json
+];
 ```
 
 **Object mapping** - Copy with custom destination paths:
+
 ```typescript
 include: [
-  { from: "config/prod.json", to: "config.json" },     // Rename during copy
-  { from: "database/schema", to: "db/schema" },        // Copy to different path
-]
+  { from: "config/prod.json", to: "config.json" }, // Rename during copy
+  { from: "database/schema", to: "db/schema" }, // Copy to different path
+];
 ```
 
 **Path Resolution**: All paths in the `from` field are resolved relative to your project root (where `package.json` and `tsconfig.json` are located).
 
 **Example Use Cases**:
+
 - Database migration files for initialization
 - Configuration templates or defaults
 - Static assets like images or documents

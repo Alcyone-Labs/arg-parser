@@ -1,5 +1,8 @@
 import { z, type ZodTypeAny } from "zod";
-import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+import {
+  createMcpLogger,
+  type McpLoggerOptions,
+} from "@alcyone-labs/simple-mcp-logger";
 import {
   convertFlagsToZodSchema,
   createMcpErrorResponse,
@@ -144,6 +147,8 @@ export type McpServerOptions = {
   /**
    * Custom log file path for MCP server logs (default: "./logs/mcp.log" relative to entry point)
    *
+   * @deprecated Use 'log' property instead for more comprehensive logging configuration
+   *
    * Can be:
    * - Simple string: "./logs/app.log" (relative to entry point)
    * - Absolute path: "/tmp/app.log"
@@ -151,6 +156,19 @@ export type McpServerOptions = {
    * - Config object: { path: "./logs/app.log", relativeTo: "entry" | "cwd" | "absolute" }
    */
   logPath?: LogPath;
+  /**
+   * MCP logger configuration options
+   *
+   * Can be:
+   * - Simple string: "./logs/app.log" (equivalent to logPath for backward compatibility)
+   * - Full options object: { level: "debug", logToFile: "./logs/app.log", prefix: "MyServer" }
+   *
+   * When both 'log' and 'logPath' are specified, they are merged intelligently:
+   * - 'log' provides logger options (level, prefix, mcpMode)
+   * - 'logPath' provides flexible path resolution (relativeTo, basePath)
+   * - If 'log' has logToFile, 'logPath' still takes precedence for path resolution
+   */
+  log?: string | McpLoggerOptions;
   /**
    * Lifecycle event handlers for MCP server operations
    * These provide hooks for initialization, cleanup, and other lifecycle events
@@ -257,6 +275,80 @@ export class ArgParser<
    */
   public getMcpServerConfig(): McpServerOptions | undefined {
     return this._mcpServerConfig;
+  }
+
+  /**
+   * Resolve logger configuration from various sources with proper priority
+   * @param logPathOverride Optional log path override parameter
+   * @returns Logger configuration object for createMcpLogger
+   */
+  #_resolveLoggerConfig(logPathOverride?: LogPath): McpLoggerOptions | string {
+    const mcpConfig = this._mcpServerConfig;
+
+    // Priority 1: Parameter override (for backward compatibility)
+    if (logPathOverride) {
+      const resolvedPath = resolveLogPath(logPathOverride);
+      return {
+        prefix: "MCP Server Creation",
+        logToFile: resolvedPath,
+        level: "error", // Default level for backward compatibility
+        mcpMode: true,
+      };
+    }
+
+    // Enhanced logic: Merge 'log' configuration with 'logPath' for flexible path resolution
+    const hasLogConfig = mcpConfig?.log;
+    const hasLogPath = mcpConfig?.logPath;
+
+    if (hasLogConfig || hasLogPath) {
+      // Start with base configuration
+      let config: McpLoggerOptions = {
+        prefix: "MCP Server Creation",
+        level: "error", // Default level for backward compatibility
+        mcpMode: true,
+      };
+
+      // Apply log configuration if present
+      if (hasLogConfig && mcpConfig.log) {
+        if (typeof mcpConfig.log === "string") {
+          // Simple string path - use it as logToFile
+          config.logToFile = resolveLogPath(mcpConfig.log);
+        } else {
+          // Full options object - merge with defaults
+          config = {
+            ...config,
+            ...mcpConfig.log,
+            // Resolve logToFile path if provided in log config
+            ...(mcpConfig.log.logToFile && {
+              logToFile: resolveLogPath(mcpConfig.log.logToFile),
+            }),
+          };
+        }
+      }
+
+      // Apply logPath configuration if present and no logToFile was set by log config
+      if (hasLogPath && mcpConfig.logPath && !config.logToFile) {
+        config.logToFile = resolveLogPath(mcpConfig.logPath);
+      }
+
+      // If logPath is present but log config also specified a logToFile,
+      // use logPath for more flexible path resolution (this preserves the nice LogPath features)
+      if (hasLogPath && mcpConfig.logPath && hasLogConfig && mcpConfig.log && typeof mcpConfig.log === "object" && mcpConfig.log.logToFile) {
+        // Use logPath for path resolution, but keep the logToFile from log config as fallback
+        config.logToFile = resolveLogPath(mcpConfig.logPath);
+      }
+
+      return config;
+    }
+
+    // Priority 4: Default fallback
+    const defaultPath = resolveLogPath("./logs/mcp.log");
+    return {
+      prefix: "MCP Server Creation",
+      logToFile: defaultPath,
+      level: "error", // Default level for backward compatibility
+      mcpMode: true,
+    };
   }
 
   /**
@@ -848,6 +940,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    * Create an MCP server with tools generated from this ArgParser
    * @param serverInfo Server configuration
    * @param toolOptions Optional MCP tool generation options
+   * @param logPath Optional log path (deprecated, use log config in withMcp instead)
    * @returns Configured MCP server instance
    */
   public async createMcpServer(
@@ -855,10 +948,18 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
     toolOptions?: GenerateMcpToolsOptions,
     logPath?: LogPath,
   ): Promise<any> {
-    const resolvedLogPath = resolveLogPath(
-      logPath || this._mcpServerConfig?.logPath || "./logs/mcp.log",
-    );
-    const logger = createMcpLogger("MCP Server Creation", resolvedLogPath);
+    // Resolve logger configuration with priority: parameter > log config > logPath config > default
+    const loggerConfig = this.#_resolveLoggerConfig(logPath);
+
+    // Use the appropriate createMcpLogger API based on configuration type
+    // Note: Current version only supports legacy API (prefix, logToFile)
+    const logger =
+      typeof loggerConfig === "string"
+        ? createMcpLogger("MCP Server Creation", loggerConfig)
+        : createMcpLogger(
+            loggerConfig.prefix || "MCP Server Creation",
+            loggerConfig.logToFile,
+          );
 
     try {
       // Use provided serverInfo or fall back to internal MCP configuration
@@ -1027,8 +1128,14 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             `[MCP Debug] Schema properties:`,
             Object.keys(mcpCompatibleSchema || {}),
           );
-          console.error(`[MCP Debug] Schema def:`, (mcpCompatibleSchema as any)?.def);
-          console.error(`[MCP Debug] Schema shape:`, (mcpCompatibleSchema as any)?.shape);
+          console.error(
+            `[MCP Debug] Schema def:`,
+            (mcpCompatibleSchema as any)?.def,
+          );
+          console.error(
+            `[MCP Debug] Schema shape:`,
+            (mcpCompatibleSchema as any)?.shape,
+          );
           console.error(
             `[MCP Debug] Schema parse function:`,
             typeof mcpCompatibleSchema?.parse,
@@ -1090,7 +1197,10 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             `[MCP Debug] toolConfig.inputSchema._zod:`,
             toolConfig.inputSchema?._zod,
           );
-          console.error(`[MCP Debug] Schema keys:`, Object.keys(mcpCompatibleSchema || {}));
+          console.error(
+            `[MCP Debug] Schema keys:`,
+            Object.keys(mcpCompatibleSchema || {}),
+          );
           console.error(`[MCP Debug] About to call server.registerTool with:`, {
             name: tool.name,
             description: tool.description,
@@ -1359,7 +1469,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             }
           };
 
-          server.registerPrompt(prompt.name, promptConfig, promptHandler as any);
+          server.registerPrompt(
+            prompt.name,
+            promptConfig,
+            promptHandler as any,
+          );
 
           logger.mcpError(`Successfully registered prompt: ${prompt.name}`);
         } catch (error) {

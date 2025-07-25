@@ -1284,11 +1284,11 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     // Helper function to determine if a flag should be required in user_config
     const shouldBeRequired = (flag: any): boolean => {
       // If the flag has mandatory property, respect it
-      if (typeof flag.mandatory === 'boolean') {
+      if (typeof flag.mandatory === "boolean") {
         return flag.mandatory;
       }
       // If the flag has a mandatory function, we can't evaluate it here, so default to false
-      if (typeof flag.mandatory === 'function') {
+      if (typeof flag.mandatory === "function") {
         return false;
       }
       // Default to false for top-level flags (non-sensitive, non-mandatory by default)

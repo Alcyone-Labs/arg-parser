@@ -2145,7 +2145,20 @@ ${descriptionLines
       // Try to import simple-mcp-logger if available
       const mcpLoggerModule = await import("@alcyone-labs/simple-mcp-logger");
       debug.log("Successfully imported simple-mcp-logger");
-      mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", resolvedLogPath);
+
+      // Resolve logger configuration from MCP server config
+      const loggerConfig = this.#_resolveLoggerConfigForServe(mcpServerConfig, resolvedLogPath);
+
+      if (typeof loggerConfig === "string") {
+        mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", loggerConfig);
+      } else {
+        // Use legacy API for now - future versions will support options-based API
+        mcpLogger = mcpLoggerModule.createMcpLogger(
+          loggerConfig.prefix || "MCP Serve",
+          loggerConfig.logToFile
+        );
+      }
+
       debug.log("Created MCP logger, about to hijack console");
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
@@ -2225,6 +2238,42 @@ ${descriptionLines
         "error",
       );
     }
+  }
+
+  /**
+   * Resolve logger configuration for MCP serve with proper priority
+   * @param mcpServerConfig MCP server configuration
+   * @param resolvedLogPath Resolved log path from CLI flags
+   * @returns Logger configuration object or string path
+   */
+  #_resolveLoggerConfigForServe(mcpServerConfig: any, resolvedLogPath: string): any {
+    // Priority 1: CLI flag override (already resolved in resolvedLogPath)
+    // Priority 2: New 'log' configuration from withMcp
+    if (mcpServerConfig?.log) {
+      if (typeof mcpServerConfig.log === "string") {
+        // Simple string path - use resolved path
+        return {
+          prefix: "MCP Serve",
+          logToFile: resolvedLogPath,
+          level: "error", // Default level for backward compatibility
+          mcpMode: true,
+        };
+      } else {
+        // Full options object - merge with resolved path
+        return {
+          prefix: "MCP Serve",
+          level: "error", // Default level for backward compatibility
+          mcpMode: true,
+          ...mcpServerConfig.log,
+          // Use CLI-resolved path if available, otherwise use config path
+          logToFile: resolvedLogPath,
+        };
+      }
+    }
+
+    // Priority 3: Legacy 'logPath' configuration or CLI flag
+    // (resolvedLogPath already handles this priority)
+    return resolvedLogPath;
   }
 
   /**
