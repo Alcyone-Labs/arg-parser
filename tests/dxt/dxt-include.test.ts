@@ -9,9 +9,11 @@ describe("DXT Include Functionality", () => {
   let originalCwd: string;
 
   beforeEach(() => {
-    originalCwd = process.cwd();
-    tempDir = fs.mkdtempSync(path.join(process.cwd(), "test-dxt-include-"));
-    process.chdir(tempDir);
+    originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
+    tempDir = fs.mkdtempSync(path.join(originalCwd, "test-dxt-include-"));
+    if (typeof process !== 'undefined') {
+      process.chdir(tempDir);
+    }
 
     // Create test files and directories
     fs.mkdirSync("migrations", { recursive: true });
@@ -27,7 +29,9 @@ describe("DXT Include Functionality", () => {
   });
 
   afterEach(() => {
-    process.chdir(originalCwd);
+    if (typeof process !== 'undefined') {
+      process.chdir(originalCwd);
+    }
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }

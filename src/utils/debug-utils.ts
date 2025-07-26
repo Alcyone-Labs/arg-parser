@@ -9,7 +9,13 @@
  * Check if debug mode is enabled
  */
 const isDebugEnabled = (): boolean => {
-  return Boolean(process.env["DEBUG"]);
+  try {
+    // Safe access to process.env that works in all JavaScript environments
+    return Boolean(typeof process !== 'undefined' && process.env && process.env["DEBUG"]);
+  } catch {
+    // Fallback for environments where process is not available
+    return false;
+  }
 };
 
 /**

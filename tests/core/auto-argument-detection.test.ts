@@ -4,17 +4,35 @@ import { ArgParser } from "../../src";
 describe("Automatic Argument Detection", () => {
   let originalProcessArgv: string[];
   let consoleWarnSpy: any;
+  let originalProcess: any;
 
   beforeEach(() => {
-    // Store original process.argv
-    originalProcessArgv = process.argv;
+    // Store original process and process.argv
+    originalProcess = globalThis.process;
+    if (typeof process !== 'undefined') {
+      originalProcessArgv = process.argv;
+    } else {
+      // Mock process if it doesn't exist
+      globalThis.process = {
+        argv: ["node", "script.js"],
+        env: {},
+        stderr: { write: vi.fn() },
+        cwd: vi.fn(() => "/test"),
+        chdir: vi.fn()
+      };
+      originalProcessArgv = globalThis.process.argv;
+    }
     // Mock console.warn to capture warnings
     consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
-    // Restore original process.argv
-    process.argv = originalProcessArgv;
+    // Restore original process.argv and process
+    if (originalProcess) {
+      globalThis.process = originalProcess;
+    } else if (typeof process !== 'undefined') {
+      process.argv = originalProcessArgv;
+    }
     // Restore console.warn
     consoleWarnSpy.mockRestore();
   });
@@ -22,7 +40,7 @@ describe("Automatic Argument Detection", () => {
   describe("Node.js Environment", () => {
     test("should auto-detect arguments from process.argv when no arguments provided", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -46,7 +64,7 @@ describe("Automatic Argument Detection", () => {
 
     test("should display warning in CLI mode when auto-detecting arguments", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -76,7 +94,7 @@ describe("Automatic Argument Detection", () => {
 
     test("should not display warning when not in CLI mode", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -99,7 +117,7 @@ describe("Automatic Argument Detection", () => {
 
     test("should not display warning in MCP mode", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -123,7 +141,7 @@ describe("Automatic Argument Detection", () => {
 
     test("should work with parseForCli method", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -147,7 +165,7 @@ describe("Automatic Argument Detection", () => {
 
     test("should work with deprecated parseAsync method", async () => {
       // Mock process.argv with test arguments
-      process.argv = ["node", "script.js", "--test", "value"];
+      globalThis.process.argv = ["node", "script.js", "--test", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -200,9 +218,9 @@ describe("Automatic Argument Detection", () => {
 
     test("should throw error when process.argv is not available", async () => {
       // Mock Node.js environment but without process.argv
-      const originalArgv = process.argv;
+      const originalArgv = globalThis.process.argv;
       // @ts-ignore
-      delete process.argv;
+      delete globalThis.process.argv;
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -222,14 +240,14 @@ describe("Automatic Argument Detection", () => {
       );
 
       // Restore process.argv
-      process.argv = originalArgv;
+      globalThis.process.argv = originalArgv;
     });
   });
 
   describe("Explicit Arguments Still Work", () => {
     test("should use provided arguments when explicitly passed", async () => {
       // Mock process.argv with different arguments
-      process.argv = ["node", "script.js", "--wrong", "value"];
+      globalThis.process.argv = ["node", "script.js", "--wrong", "value"];
 
       const parser = new ArgParser({
         appName: "Test CLI",

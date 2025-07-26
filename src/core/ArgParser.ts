@@ -503,9 +503,22 @@ export class ArgParser<
    */
   public addMcpTool(toolConfig: McpToolConfig): this {
     // Use stderr to avoid STDOUT contamination in MCP mode
-    process.stderr.write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+    try {
+      if (typeof process !== 'undefined' && process.stderr) {
+        process.stderr.write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
 Please use addTool() instead for a unified CLI/MCP experience.
 Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md\n`);
+      } else {
+        console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+Please use addTool() instead for a unified CLI/MCP experience.
+Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
+      }
+    } catch {
+      // Fallback for environments where process is not available
+      console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+Please use addTool() instead for a unified CLI/MCP experience.
+Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
+    }
 
     // Sanitize the tool name for MCP compatibility
     const sanitizedName = sanitizeMcpToolName(toolConfig.name);

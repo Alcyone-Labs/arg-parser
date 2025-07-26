@@ -322,21 +322,29 @@ describe("Unified Tool Architecture", () => {
 
       // Add legacy MCP tool (should show deprecation warning)
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
       parser.addMcpTool({
         name: "legacy-tool",
         handler: async (args) => ({ type: "legacy", args }),
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[DEPRECATED] addMcpTool() is deprecated"),
+      // Check for deprecation warning in either console.warn or process.stderr.write
+      const hasConsoleWarning = consoleSpy.mock.calls.some(call =>
+        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated")
       );
+      const hasStderrWarning = stderrSpy.mock.calls.some(call =>
+        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated")
+      );
+
+      expect(hasConsoleWarning || hasStderrWarning).toBe(true);
 
       const mcpTools = parser.toMcpTools();
       expect(mcpTools.find((t) => t.name === "unified-tool")).toBeDefined();
       expect(mcpTools.find((t) => t.name === "legacy-tool")).toBeDefined();
 
       consoleSpy.mockRestore();
+      stderrSpy.mockRestore();
     });
 
     test("should prioritize unified tools over legacy tools", () => {

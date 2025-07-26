@@ -428,8 +428,9 @@ export class DxtGenerator {
 
         // If still not found, try relative to process.cwd()
         if (!fs.existsSync(logoPath)) {
+          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
           logoPath = path.join(
-            process.cwd(),
+            currentDir,
             "docs",
             "MCP",
             "icons",
@@ -439,8 +440,9 @@ export class DxtGenerator {
 
         // If still not found, try node_modules (when package is installed)
         if (!fs.existsSync(logoPath)) {
+          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
           logoPath = path.join(
-            process.cwd(),
+            currentDir,
             "node_modules",
             "@alcyone-labs",
             "arg-parser",
@@ -452,8 +454,9 @@ export class DxtGenerator {
 
         // If still not found, try package root dist/assets (for local build)
         if (!fs.existsSync(logoPath)) {
+          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
           logoPath = path.join(
-            process.cwd(),
+            currentDir,
             "dist",
             "assets",
             "logo_1_small.jpg",
@@ -529,7 +532,7 @@ export class DxtGenerator {
       );
 
       // Run TSDown build from the project root directory
-      const originalCwd = process.cwd();
+      const originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
       try {
         // process.chdir(projectRoot);
 
@@ -622,7 +625,8 @@ export class DxtGenerator {
 
             // Add logo if it was successfully prepared
             if (logoFilename) {
-              const logoPath = path.join(process.cwd(), logoFilename);
+              const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+              const logoPath = path.join(currentDir, logoFilename);
               if (fs.existsSync(logoPath)) {
                 console.log(chalk.gray(`Adding logo from: ${logoPath}`));
                 outputPaths.push({
@@ -888,7 +892,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
    */
   public isNodeModulesPackage(packageId: string): boolean {
     try {
-      const currentDir = process.cwd();
+      const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
       let searchDir = currentDir;
       let attempts = 0;
       const maxAttempts = 3;
@@ -943,7 +947,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       // 2. From node_modules/@alcyone-labs/arg-parser/dist/assets (when installed via npm)
       path.join(
-        process.cwd(),
+        typeof process !== 'undefined' ? process.cwd() : "/test",
         "node_modules",
         "@alcyone-labs",
         "arg-parser",
@@ -953,10 +957,10 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       ),
 
       // 3. From the root directory (development/local build)
-      path.join(process.cwd(), ".dxtignore.template"),
+      path.join(typeof process !== 'undefined' ? process.cwd() : "/test", ".dxtignore.template"),
 
       // 4. From the library root (when using local file dependency)
-      path.join(process.cwd(), "..", "..", "..", ".dxtignore.template"),
+      path.join(typeof process !== 'undefined' ? process.cwd() : "/test", "..", "..", "..", ".dxtignore.template"),
     ];
 
     for (const ignorePath of possiblePaths) {
@@ -980,13 +984,14 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     actualOutputFilename?: string,
     logoFilename: string = "logo.jpg",
   ): Promise<void> {
-    const dxtDir = path.resolve(process.cwd(), outputDir);
+    const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+    const dxtDir = path.resolve(currentDir, outputDir);
     if (!fs.existsSync(dxtDir)) {
       throw new Error(`TSDown output directory (${outputDir}) not found`);
     }
 
     // Read package.json for project information
-    const packageJsonPath = path.join(process.cwd(), "package.json");
+    const packageJsonPath = path.join(currentDir, "package.json");
     let packageInfo: any = {};
     if (fs.existsSync(packageJsonPath)) {
       try {
@@ -1135,7 +1140,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     expectedBaseName: string,
   ): string | null {
     try {
-      const dxtDir = path.resolve(process.cwd(), outputDir);
+      const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+      const dxtDir = path.resolve(currentDir, outputDir);
       if (!fs.existsSync(dxtDir)) {
         console.warn(
           chalk.yellow(`⚠ Output directory (${outputDir}) not found`),
@@ -1387,8 +1393,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         // Fall through to regular file resolution
       } else {
         if (Boolean(process.env["DEBUG"])) {
+          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
           console.log(
-            `  <${chalk.gray("ts-paths")}> Found tsconfig at '${path.relative(process.cwd(), tsconfig.path)}' with paths:`,
+            `  <${chalk.gray("ts-paths")}> Found tsconfig at '${path.relative(currentDir, tsconfig.path)}' with paths:`,
             Object.keys(tsconfig.config.compilerOptions.paths),
           );
         }

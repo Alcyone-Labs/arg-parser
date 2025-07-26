@@ -261,7 +261,7 @@ export const createFileResource = (
   description: "Read file contents from the filesystem",
   mimeType: "text/plain",
   handler: async (uri, { path }) => {
-    const fs = await import("fs/promises");
+    const fs = await import("node:fs/promises");
     const fullPath = basePath ? `${basePath}/${path}` : path;
 
     try {
