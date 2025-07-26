@@ -39,6 +39,9 @@ export { debug } from "./utils/debug-utils";
 
 export { ArgParserMcp, createMcpArgParser } from "./mcp/ArgParserMcp";
 
+// MCP utility functions
+export { sanitizeMcpToolName, isValidMcpToolName } from "./mcp/mcp-utils";
+
 export {
   zodFlagSchema,
   type IFlagCore,

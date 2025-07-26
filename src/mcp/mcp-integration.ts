@@ -13,6 +13,7 @@ import {
   createOutputSchema,
   getJsonSchemaTypeFromFlag,
 } from "../core/types.js";
+import { sanitizeMcpToolName } from "./mcp-utils";
 
 // Assuming these types are correctly exported from src/index.ts
 
@@ -475,8 +476,8 @@ export function generateMcpToolsFromArgParser(
         toolName = effectiveCommandName || "cmd";
       }
 
-      // Clean up the tool name
-      toolName = toolName.replace(/[^a-zA-Z0-9_-]/g, "_");
+      // Clean up the tool name for MCP compatibility
+      toolName = sanitizeMcpToolName(toolName);
     }
     if (!toolName)
       toolName = currentParser === rootParser && appName ? appName : "cmd";
@@ -692,12 +693,35 @@ export function generateMcpToolsFromArgParser(
                       JSON.stringify(mcpInputArgs, null, 2),
                     );
                   }
+                  const getFlag = (name: string): any => {
+                    if (mcpInputArgs && mcpInputArgs[name] !== undefined) {
+                      return mcpInputArgs[name];
+                    }
+
+                    if (rootParser) {
+                      const flagDef = rootParser.getFlagDefinition(name);
+                      if (flagDef) {
+                        const envVar = flagDef["env"];
+                        if (envVar) {
+                          const envKey = Array.isArray(envVar) ? envVar[0] : envVar;
+                          if (envKey && process.env[envKey]) {
+                            return process.env[envKey];
+                          }
+                        }
+                        return flagDef["defaultValue"];
+                      }
+                    }
+
+                    return undefined;
+                  };
+
                   const handlerContext: IHandlerContext<any, any> = {
                     args: mcpInputArgs,
                     commandChain: [toolName],
                     parser: rootParser,
                     parentArgs: undefined,
                     isMcp: true,
+                    getFlag,
                   };
 
                   const handlerResult =
@@ -1003,12 +1027,35 @@ export function generateMcpToolsFromArgParser(
                 const cleanArgs = { ...mcpInputArgs };
                 delete cleanArgs["help"]; // Remove help flag
 
+                const getFlag = (name: string): any => {
+                  if (cleanArgs && cleanArgs[name] !== undefined) {
+                    return cleanArgs[name];
+                  }
+
+                  if (finalParser) {
+                    const flagDef = finalParser.getFlagDefinition(name);
+                    if (flagDef) {
+                      const envVar = flagDef["env"];
+                      if (envVar) {
+                        const envKey = Array.isArray(envVar) ? envVar[0] : envVar;
+                        if (envKey && process.env[envKey]) {
+                          return process.env[envKey];
+                        }
+                      }
+                      return flagDef["defaultValue"];
+                    }
+                  }
+
+                  return undefined;
+                };
+
                 const handlerContext: IHandlerContext<any, any> = {
                   args: cleanArgs,
                   commandChain: chain,
                   parser: finalParser,
                   parentArgs: resolvedParentArgs,
                   isMcp: true,
+                  getFlag,
                 };
                 try {
                   handlerResponse = await handlerToCall(handlerContext);

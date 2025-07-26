@@ -278,6 +278,11 @@ export type IHandlerContext<
   // rootParser?: ArgParserInstance;
   /** Indicates if the handler is being called from MCP mode (true) or CLI mode (false). */
   isMcp?: boolean;
+  /**
+   * Get a flag value with proper resolution priority (CLI flag > ENV > default).
+   * Only available in MCP mode when isMcp is true.
+   */
+  getFlag?: (name: string) => any;
 };
 
 /**

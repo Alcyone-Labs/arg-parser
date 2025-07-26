@@ -2165,7 +2165,6 @@ ${descriptionLines
       debug.log("Console hijacked successfully");
     } catch {
       debug.log("Failed to import simple-mcp-logger, using fallback");
-      // Fallback if simple-mcp-logger is not available
       mcpLogger = {
         mcpError: (message: string) => console.error(`[MCP Serve] ${message}`),
       };

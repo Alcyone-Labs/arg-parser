@@ -32,6 +32,7 @@ import type {
   ParseResult,
 } from "./types";
 import { createOutputSchema } from "./types";
+import { sanitizeMcpToolName } from "../mcp/mcp-utils";
 
 /**
  * Configuration for a single MCP transport
@@ -199,7 +200,11 @@ export type ArgParserWithMcpOptions<THandlerReturn = any> =
  * @deprecated Use ToolConfig and addTool() instead. Will be removed in v2.0.
  */
 export type McpToolConfig = {
-  /** Tool name (must be unique within the server) */
+  /**
+   * Tool name (must be unique within the server)
+   * Note: For MCP compatibility, names will be automatically sanitized to match ^[a-zA-Z0-9_-]{1,64}$
+   * Invalid characters will be replaced with underscores
+   */
   name: string;
   /** Tool description */
   description?: string;
@@ -215,7 +220,11 @@ export type McpToolConfig = {
  * Configuration for a unified tool that works in both CLI and MCP modes
  */
 export type ToolConfig = {
-  /** Tool name (CLI subcommand name & MCP tool name) */
+  /**
+   * Tool name (CLI subcommand name & MCP tool name)
+   * Note: For MCP compatibility, names will be automatically sanitized to match ^[a-zA-Z0-9_-]{1,64}$
+   * Invalid characters will be replaced with underscores
+   */
   name: string;
   /** Tool description */
   description?: string;
@@ -415,10 +424,6 @@ export class ArgParser<
    * @returns This ArgParser instance for chaining
    */
   public addTool(toolConfig: ToolConfig): this {
-    if (this._tools.has(toolConfig.name)) {
-      throw new Error(`Tool with name '${toolConfig.name}' already exists`);
-    }
-
     // Validate tool configuration
     if (!toolConfig.name || typeof toolConfig.name !== "string") {
       throw new Error("Tool name is required and must be a string");
@@ -428,14 +433,38 @@ export class ArgParser<
       throw new Error("Tool handler is required and must be a function");
     }
 
+    // Sanitize the tool name for MCP compatibility
+    const sanitizedName = sanitizeMcpToolName(toolConfig.name);
+
+    // Suppress sanitization warnings in MCP mode to avoid STDOUT contamination
+    if (sanitizedName !== toolConfig.name) {
+      // Only warn in non-MCP contexts
+      const isMcpMode = (globalThis as any).console?.mcpError;
+      if (!isMcpMode) {
+        console.warn(
+          `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
+        );
+      }
+    }
+
+    if (this._tools.has(sanitizedName)) {
+      throw new Error(`Tool with name '${sanitizedName}' already exists`);
+    }
+
     if (!Array.isArray(toolConfig.flags)) {
       throw new Error("Tool flags must be an array");
     }
 
-    // Store the tool configuration
-    this._tools.set(toolConfig.name, toolConfig);
+    // Create a new tool config with the sanitized name
+    const sanitizedToolConfig: ToolConfig = {
+      ...toolConfig,
+      name: sanitizedName,
+    };
 
-    // Register the tool as a CLI subcommand
+    // Store the tool configuration with sanitized name
+    this._tools.set(sanitizedName, sanitizedToolConfig);
+
+    // Register the tool as a CLI subcommand (using original name for CLI)
     this.#registerToolAsSubCommand(toolConfig);
 
     return this;
@@ -473,15 +502,36 @@ export class ArgParser<
    * @returns This ArgParser instance for chaining
    */
   public addMcpTool(toolConfig: McpToolConfig): this {
-    console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+    // Use stderr to avoid STDOUT contamination in MCP mode
+    process.stderr.write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
 Please use addTool() instead for a unified CLI/MCP experience.
-Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
+Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md\n`);
 
-    if (this._mcpTools.has(toolConfig.name)) {
-      throw new Error(`MCP tool with name '${toolConfig.name}' already exists`);
+    // Sanitize the tool name for MCP compatibility
+    const sanitizedName = sanitizeMcpToolName(toolConfig.name);
+
+    // Suppress sanitization warnings in MCP mode to avoid STDOUT contamination
+    if (sanitizedName !== toolConfig.name) {
+      // Only warn in non-MCP contexts
+      const isMcpMode = (globalThis as any).console?.mcpError;
+      if (!isMcpMode) {
+        console.warn(
+          `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
+        );
+      }
     }
 
-    this._mcpTools.set(toolConfig.name, toolConfig);
+    if (this._mcpTools.has(sanitizedName)) {
+      throw new Error(`MCP tool with name '${sanitizedName}' already exists`);
+    }
+
+    // Create a new tool config with the sanitized name
+    const sanitizedToolConfig: McpToolConfig = {
+      ...toolConfig,
+      name: sanitizedName,
+    };
+
+    this._mcpTools.set(sanitizedName, sanitizedToolConfig);
     return this;
   }
 
@@ -994,7 +1044,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       logger.mcpError("Successfully created McpServer instance");
 
       // Set up lifecycle manager if lifecycle events are configured
-      if (this._mcpServerConfig?.lifecycle) {
+      // Skip lifecycle setup during MCP server creation to prevent infinite recursion
+      const isInMcpServeMode = process.argv.includes('--s-mcp-serve');
+      if (this._mcpServerConfig?.lifecycle && !isInMcpServeMode) {
         const { McpLifecycleManager } = await import("../mcp/mcp-lifecycle");
 
         const lifecycleManager = new McpLifecycleManager(
@@ -1003,6 +1055,28 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           effectiveServerInfo,
           this,
         );
+
+        // Parse the current process arguments to provide to lifecycle manager
+        try {
+          // Parse arguments without executing handlers to get flag values
+          // Filter out system flags that could cause infinite recursion during server creation
+          const filteredArgs = process.argv.slice(2).filter(arg =>
+            !arg.startsWith('--s-mcp-') && arg !== '--s-mcp-serve'
+          );
+          const parsedResult = await this.parse(filteredArgs, {
+            skipHandlerExecution: true,
+            isMcp: true
+          });
+
+          // Extract the parsed arguments from the result
+          const parsedArgs = (parsedResult as any)?.args || parsedResult || {};
+          lifecycleManager.setParsedArgs(parsedArgs);
+
+          logger.mcpError(`Lifecycle manager initialized with parsed args: ${Object.keys(parsedArgs).join(', ')}`);
+        } catch (parseError) {
+          logger.mcpError(`Warning: Could not parse arguments for lifecycle manager: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+          // Continue without parsed args - will fall back to environment variables
+        }
 
         // Wrap the server's connect method to trigger lifecycle events
         const originalConnect = server.connect.bind(server);

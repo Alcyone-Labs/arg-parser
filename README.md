@@ -7,6 +7,82 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - [Features Overview](#features-overview)
 - [Installation](#installation)
 - [Quick Start: The Unified `addTool` API](#quick-start-the-unified-addtool-api)
+  - [MCP Tool Name Constraints](#mcp-tool-name-constraints)
+- [How to Run It](#how-to-run-it)
+  - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
+- [Parsing Command-Line Arguments](#parsing-command-line-arguments)
+  - [Automatic Argument Detection](#automatic-argument-detection)
+  - [Cannonical Usage Pattern](#cannonical-usage-pattern)
+  - [Top-level await](#top-level-await)
+  - [Promise-based parsing](#promise-based-parsing)
+- [Migrating from v1.x to the v2.0 `addTool` API](#migrating-from-v1x-to-the-v20-addtool-api)
+  - [Before v2.0: Separate Definitions](#before-v20-separate-definitions)
+  - [After v2.0: The Unified `addTool()` Method](#after-v20-the-unified-addtool-method)
+- [Core Concepts](#core-concepts)
+  - [Defining Flags](#defining-flags)
+  - [Type Handling and Validation](#type-handling-and-validation)
+    - [Supported Type Formats](#supported-type-formats)
+    - [Runtime Type Validation](#runtime-type-validation)
+    - [Automatic Type Processing](#automatic-type-processing)
+    - [Async Custom Parser Support](#async-custom-parser-support)
+    - [Type Conversion Examples](#type-conversion-examples)
+  - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
+    - [MCP Exposure Control](#mcp-exposure-control)
+  - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
+- [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
+  - [Output Schema Support](#output-schema-support)
+    - [Basic Usage](#basic-usage)
+    - [Predefined Schema Patterns](#predefined-schema-patterns)
+    - [Custom Zod Schemas](#custom-zod-schemas)
+    - [MCP Version Compatibility](#mcp-version-compatibility)
+    - [Automatic Error Handling](#automatic-error-handling)
+  - [Writing Effective MCP Tool Descriptions](#writing-effective-mcp-tool-descriptions)
+    - [Best Practices for Tool Descriptions](#best-practices-for-tool-descriptions)
+    - [Complete Example: Well-Documented Tool](#complete-example-well-documented-tool)
+    - [Parameter Description Guidelines](#parameter-description-guidelines)
+    - [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
+  - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
+  - [MCP Transports](#mcp-transports)
+  - [MCP Logging Configuration](#mcp-logging-configuration)
+    - [Enhanced Logging (Recommended)](#enhanced-logging-recommended)
+    - [Simple Logging Configuration](#simple-logging-configuration)
+    - [Configuration Priority](#configuration-priority)
+    - [Configuration Merging](#configuration-merging)
+    - [Path Resolution Options](#path-resolution-options)
+  - [MCP Resources - Real-Time Data Feeds](#mcp-resources---real-time-data-feeds)
+    - [Basic Resource Setup](#basic-resource-setup)
+    - [URI Templates with Dynamic Parameters](#uri-templates-with-dynamic-parameters)
+    - [MCP Subscription Lifecycle](#mcp-subscription-lifecycle)
+    - [Usage Examples](#usage-examples)
+    - [Design Patterns](#design-patterns)
+  - [Automatic Console Safety](#automatic-console-safety)
+  - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
+  - [Logo Configuration](#logo-configuration)
+    - [Supported Logo Sources](#supported-logo-sources)
+  - [Including Additional Files in DXT Packages](#including-additional-files-in-dxt-packages)
+    - [Include Options](#include-options)
+  - [How DXT Generation Works](#how-dxt-generation-works)
+  - [DXT Bundling Strategies](#dxt-bundling-strategies)
+    - [Standard Approach (Recommended for Most Projects)](#standard-approach-recommended-for-most-projects)
+    - [Native Dependencies Approach](#native-dependencies-approach)
+  - [Typical Errors](#typical-errors)
+- [System Flags & Configuration](#system-flags--configuration)
+- [Changelog](#changelog)
+  - [v2.3.0](#v230)
+  - [v2.2.1](#v221)
+  - [v2.2.0](#v220)
+  - [v2.1.1](#v211)
+  - [v2.1.0](#v210)
+  - [v2.0.0](#v200)
+  - [v1.3.0](#v130)
+  - [v1.2.0](#v120)
+  - [v1.1.0](#v110)
+- [Backlog](#backlog)
+  - [(known) Bugs / DX improvement points](#known-bugs--dx-improvement-points)
+
+- [Features Overview](#features-overview)
+- [Installation](#installation)
+- [Quick Start: The Unified `addTool` API](#quick-start-the-unified-addtool-api)
 - [How to Run It](#how-to-run-it)
   - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
 - [Parsing Command-Line Arguments](#parsing-command-line-arguments)
@@ -167,6 +243,35 @@ main();
 export default cli;
 ```
 
+### MCP Tool Name Constraints
+
+When using `.addTool()` or `.addMcpTool()`, tool names are automatically sanitized for MCP compatibility. MCP tool names must follow the pattern `^[a-zA-Z0-9_-]{1,64}$` (only alphanumeric characters, underscores, and hyphens, with a maximum length of 64 characters).
+
+```typescript
+// These names will be automatically sanitized:
+cli.addTool({
+  name: "test.tool", // → "test_tool"
+  // ... rest of config
+});
+
+cli.addTool({
+  name: "my@tool", // → "my_tool"
+  // ... rest of config
+});
+
+cli.addTool({
+  name: "tool with spaces", // → "tool_with_spaces"
+  // ... rest of config
+});
+
+cli.addTool({
+  name: "very-long-tool-name-that-exceeds-the-64-character-limit-for-mcp", // → truncated to 64 chars
+  // ... rest of config
+});
+```
+
+The library will warn you when tool names are sanitized, but your tools will continue to work normally. For CLI usage, the original name is preserved as the subcommand name.
+
 ## How to Run It
 
 ```bash
@@ -298,7 +403,7 @@ const cli = ArgParser.withMcp({
   handler: async (ctx) => ({ success: true, data: ctx.args }),
 });
 
-// NEW: Call parse() without arguments
+// You can call parse() without arguments
 // Automatically detects Node.js environment and uses process.argv.slice(2)
 async function main() {
   try {
@@ -1664,11 +1769,11 @@ Make sure to clearly identify if you need to include the node_modules or not. In
 - [x] Make it possible to pass a `--s-save-to-env /path/to/file` parameter that saves all the parameters to a file (works with Bash-style .env, JSON, YAML, TOML)
 - [x] Make it possible to pass a `--s-with-env /path/to/file` parameter that loads all the parameters from a file (works with Bash-style .env, JSON, YAML, TOML)
 - [x] Add support for async type function to enable more flexibility
+- [x] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
 - [ ] Add System flags to args.systemArgs
 - [ ] Improve flag options collision prevention
 - [ ] Add support for locales / translations
 - [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
-- [ ] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
 
 ### (known) Bugs / DX improvement points
 
