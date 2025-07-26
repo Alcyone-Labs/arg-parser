@@ -504,7 +504,6 @@ export class DxtGenerator {
       const projectRoot = this.findProjectRoot(entryPointFile);
       const absoluteEntryPath = path.resolve(entryPointFile);
       const relativeEntryPath = path.relative(projectRoot, absoluteEntryPath);
-      const entryFileName = path.basename(entryPointFile);
 
       console.log(chalk.gray(`Entry point: ${entryPointFile}`));
       console.log(chalk.gray(`Project root: ${projectRoot}`));
@@ -549,9 +548,15 @@ export class DxtGenerator {
           this.argParserInstance as any
         ).getMcpServerConfig?.();
 
+        // Preserve directory structure by including the entry directory in outDir
+        const entryDir = path.dirname(relativeEntryPath);
+        const preservedOutDir = entryDir !== "." && entryDir !== ""
+          ? path.resolve(originalCwd, outputDir, entryDir)
+          : path.resolve(originalCwd, outputDir);
+
         const buildConfig: Options = {
           entry: [relativeEntryPath],
-          outDir: path.resolve(originalCwd, outputDir),
+          outDir: preservedOutDir,
           format: ["es"],
           target: "node22",
           define: {
@@ -564,45 +569,7 @@ export class DxtGenerator {
           // Remove all output folders and artefacts
           clean: [outputDir, "./.dxtignore", `${outputDir}.dxt`],
           silent: process.env["NO_SILENCE"] !== "1",
-          // external: (
-          //   id: string,
-          //   importer: string | undefined,
-          //   isResolved: boolean,
-          // ) => {
-          //   // Try to resolve TypeScript paths first
-          //   if (importer && !isResolved) {
-          //     const resolvedPath = this.resolveTsPath(id, importer);
-          //     if (resolvedPath) {
-          //       // Path was resolved, treat as internal
-          //       return false;
-          //     }
-          //   }
-
-          //   const external = this.isNodeBuiltin(id)
-          //     ? true
-          //     : // Importer is the entrypoint file if undefined
-          //       !importer
-          //       ? false
-          //       : withNodeModules
-          //         ? isResolved
-          //           ? importer?.includes("node_modules")
-          //           : importer?.includes("node_modules") || !id?.startsWith(".")
-          //         : false;
-
-          //   if (Boolean(process.env["DEBUG"]))
-          //     console.log(
-          //       `[${chalk.yellow("external")}]    ==> `,
-          //       external,
-          //       " | For => (",
-          //       chalk.green(id),
-          //       ") <== ==> [",
-          //       chalk.grey(importer ?? ""),
-          //       " - ",
-          //       isResolved,
-          //       "]",
-          //     );
-          //   return external;
-          // },
+          unbundle: true,
           external: (id, importer) => {
             const external = this.shouldModuleBeExternal(
               id,
@@ -648,6 +615,11 @@ export class DxtGenerator {
               outputPaths.push("node_modules");
             }
 
+            // Calculate the DXT package root (parent of outDir when preserving structure)
+            const dxtPackageRoot = entryDir !== "." && entryDir !== ""
+              ? path.dirname(options.outDir)
+              : options.outDir;
+
             // Add logo if it was successfully prepared
             if (logoFilename) {
               const logoPath = path.join(process.cwd(), logoFilename);
@@ -655,7 +627,7 @@ export class DxtGenerator {
                 console.log(chalk.gray(`Adding logo from: ${logoPath}`));
                 outputPaths.push({
                   from: logoPath,
-                  to: path.join(options.outDir, logoFilename),
+                  to: path.join(dxtPackageRoot, logoFilename),
                 });
               }
             }
@@ -670,11 +642,14 @@ export class DxtGenerator {
 
               for (const includeItem of mcpConfig.dxt.include) {
                 if (typeof includeItem === "string") {
-                  // Simple string path - copy to same relative location
+                  // Simple string path - copy to same relative location in DXT package root
                   const sourcePath = path.resolve(projectRoot, includeItem);
                   if (fs.existsSync(sourcePath)) {
                     console.log(chalk.gray(`  • ${includeItem}`));
-                    outputPaths.push(includeItem);
+                    outputPaths.push({
+                      from: sourcePath,
+                      to: path.join(dxtPackageRoot, includeItem),
+                    });
                   } else {
                     console.warn(
                       chalk.yellow(
@@ -683,7 +658,7 @@ export class DxtGenerator {
                     );
                   }
                 } else {
-                  // Object with from/to mapping
+                  // Object with from/to mapping - copy to specified location in DXT package root
                   const sourcePath = path.resolve(
                     projectRoot,
                     includeItem.from,
@@ -694,7 +669,7 @@ export class DxtGenerator {
                     );
                     outputPaths.push({
                       from: sourcePath,
-                      to: path.join(options.outDir, includeItem.to),
+                      to: path.join(dxtPackageRoot, includeItem.to),
                     });
                   } else {
                     console.warn(
@@ -749,7 +724,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         // Determine the actual output filename from TSDown
         const detectedOutputFile = this.detectTsdownOutputFile(
           outputDir,
-          entryFileName,
+          relativeEntryPath.replace(/\.ts$/, ".js"),
         );
 
         // Copy manifest and logo to the output directory
@@ -777,6 +752,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       );
     }
   }
+
+
 
   /**
    * Checks if a module ID is a Node.js built-in
@@ -1166,21 +1143,58 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         return null;
       }
 
-      // List all .js and .mjs files in the output directory
-      const files = fs
-        .readdirSync(dxtDir)
-        .filter(
-          (file) =>
-            (file.endsWith(".js") || file.endsWith(".mjs")) &&
-            !file.includes("chunk-") &&
-            !file.includes("dist-") &&
-            !file.startsWith("."),
-        );
+      // List all .js and .mjs files in the output directory (including subdirectories)
+      const files: string[] = [];
 
-      // First, try to find exact match based on the base name
+      function findJsFiles(dir: string, relativePath: string = ""): void {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          const relativeFilePath = path.join(relativePath, entry.name);
+
+          if (entry.isDirectory()) {
+            // Skip node_modules and other non-source directories
+            if (entry.name === "node_modules" || entry.name.startsWith(".")) {
+              continue;
+            }
+            // Recursively search subdirectories
+            findJsFiles(fullPath, relativeFilePath);
+          } else if (
+            (entry.name.endsWith(".js") || entry.name.endsWith(".mjs")) &&
+            !entry.name.includes("chunk-") &&
+            !entry.name.includes("dist-") &&
+            !entry.name.startsWith(".")
+          ) {
+            files.push(relativeFilePath);
+          }
+        }
+      }
+
+      findJsFiles(dxtDir);
+
+      // First, try to find exact match based on the expected filename
+      // expectedBaseName might be "src/cli.js" so we need to handle the full path
+      const expectedJsFile = expectedBaseName.endsWith(".js")
+        ? expectedBaseName
+        : expectedBaseName.replace(/\.ts$/, ".js");
+      const expectedMjsFile = expectedBaseName.endsWith(".mjs")
+        ? expectedBaseName
+        : expectedBaseName.replace(/\.ts$/, ".mjs");
+
+      // Look for exact matches first (including directory structure)
+      if (files.includes(expectedJsFile)) {
+        console.log(chalk.gray(`✓ Detected TSDown output: ${expectedJsFile}`));
+        return expectedJsFile;
+      }
+
+      if (files.includes(expectedMjsFile)) {
+        console.log(chalk.gray(`✓ Detected TSDown output: ${expectedMjsFile}`));
+        return expectedMjsFile;
+      }
+
+      // Fallback: try to match just the basename for backward compatibility
       const baseNameWithoutExt = path.parse(expectedBaseName).name;
-
-      // Look for exact matches first
       for (const ext of [".js", ".mjs"]) {
         const exactMatch = `${baseNameWithoutExt}${ext}`;
         if (files.includes(exactMatch)) {

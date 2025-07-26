@@ -68,6 +68,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.4.0](#v240)
   - [v2.3.0](#v230)
   - [v2.2.1](#v221)
   - [v2.2.0](#v220)
@@ -1685,6 +1686,22 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.4.0
+
+**Feat**
+
+- MCP client now supports initialization during the client 'initialize' call, which allows to do certain things such as establishing database connection or even running migrations
+- MCP client now sanitizes the method names to ensure spec-compliants MCP behavior, names that collision will be logged
+- There were some use-cases where the DXT bundling failed, this new release addresses all of them, namely:
+  1. Output structure will match that of the input so relative files (for example DB migrations) will work
+  2.
+- DXT bundling now supports including resources via options: `{dxt: {include: ['TSDown blob-like paths']}`
+- Logger was improved to support log level via `options:{ log: {} }` so you can set it to level: 'debug' and the MCP log will contain 100% of the console output, logPath setting was not impacted
+
+**Fixes and Changes**
+
+- Zod has been upgraded to V4 and no issue was identified (but @modelcontextprotocol/sdk had to be upgraded to V4 as well, which was more challenging).
 
 ### v2.3.0
 
