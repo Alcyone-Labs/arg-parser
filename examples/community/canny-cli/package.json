@@ -13,7 +13,7 @@
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
     "@alcyone-labs/arg-parser": "file:../../../",
-    "@modelcontextprotocol/sdk": "github:Alcyone-Labs/mcp-typescript-sdk",
+    "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
     "chalk": "^5.4.1",
     "zod": "^4.0.5"
   }

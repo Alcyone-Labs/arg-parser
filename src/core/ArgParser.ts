@@ -1041,7 +1041,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
       // Dynamic import to avoid circular dependencies and support ES modules
       const { McpServer, ResourceTemplate } = await import(
-        "@modelcontextprotocol/sdk/server/mcp.js"
+        "@alcyone-labs/modelcontextprotocol-sdk/server/mcp.js"
       );
       logger.mcpError(
         "Successfully imported McpServer and ResourceTemplate from SDK",
@@ -1751,7 +1751,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         case "stdio": {
           logger.mcpError("Importing StdioServerTransport from SDK");
           const { StdioServerTransport } = await import(
-            "@modelcontextprotocol/sdk/server/stdio.js"
+            "@alcyone-labs/modelcontextprotocol-sdk/server/stdio.js"
           );
           logger.mcpError("Creating StdioServerTransport instance");
           const transport = new StdioServerTransport();
@@ -1763,7 +1763,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
         case "sse": {
           const { SSEServerTransport } = await import(
-            "@modelcontextprotocol/sdk/server/sse.js"
+            "@alcyone-labs/modelcontextprotocol-sdk/server/sse.js"
           );
           const express = (await import("express")).default;
 
@@ -1791,7 +1791,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
         case "streamable-http": {
           const { StreamableHTTPServerTransport } = await import(
-            "@modelcontextprotocol/sdk/server/streamableHttp.js"
+            "@alcyone-labs/modelcontextprotocol-sdk/server/streamableHttp.js"
           );
           const express = (await import("express")).default;
 

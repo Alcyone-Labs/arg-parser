@@ -1,7 +1,7 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.4.0",
-  "description": "A robust, type-safe command line argument parser with plugin architecture, dependency injection, Claude Desktop compliant MCP integration, autonomous DXT builds, automatic CLI to MCP support.",
+  "version": "2.4.1",
+  "description": "A robust, type-safe CLI builder with out-of-the-box support for creating MCPs and bundling Claude Desktop's DXT packages",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -65,9 +65,12 @@
     "build:assets": "mkdir -p dist/assets && cp docs/MCP/icons/logo_1_small.jpg dist/assets/ && cp .dxtignore.template dist/assets/",
     "build:watch": "tsc --watch",
     "build:examples": "tsc --project tsconfig.examples.json",
-    "prepublishOnly": "pnpm build && pnpm test:run",
+    "prepublishOnly": "pnpm build && pnpm test:fast",
     "test:watch": "vitest",
     "test:run": "vitest run",
+    "test:fast": "vitest run --exclude=\"**/integration/**\"",
+    "test:integration": "vitest run --testTimeout=30000 --fileParallelism=false --poolOptions.forks.singleFork=true tests/mcp/integration/",
+    "test:all": "pnpm test:fast && pnpm test:integration",
     "test:ui": "vitest --ui",
     "test:mcp": "bun tests/mcp/integration/run-integration-tests.ts",
     "test:mcp:verbose": "bun tests/mcp/integration/run-integration-tests.ts --verbose",
@@ -94,9 +97,9 @@
     "dxt:verify": "npx @anthropic-ai/dxt verify"
   },
   "dependencies": {
+    "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
     "@alcyone-labs/simple-chalk": "^1.0.1",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
-    "@modelcontextprotocol/sdk": "github:Alcyone-Labs/mcp-typescript-sdk#dist",
     "get-tsconfig": "^4.10.1",
     "magic-regexp": "^0.10.0",
     "zod": "^4.0.10"

@@ -11,6 +11,9 @@ importers:
       '@alcyone-labs/arg-parser':
         specifier: file:../../../
         version: file:../../..
+      '@alcyone-labs/modelcontextprotocol-sdk':
+        specifier: ^1.16.0
+        version: 1.16.0
       chalk:
         specifier: ^5.4.1
         version: 5.4.1
@@ -24,12 +27,16 @@ packages:
     resolution: {directory: ../../.., type: directory}
     engines: {node: '>=18.0.0'}
 
+  '@alcyone-labs/modelcontextprotocol-sdk@1.16.0':
+    resolution: {integrity: sha512-6YHdBjqY4whY6qZhjRiCs7ZeB0z1g47RHXOQJ5ByIeKyOV+MbXWgRs3Sv01MZjwTJqN8tYkA7fwZY1tTD7lFww==}
+    engines: {node: '>=18'}
+
   '@alcyone-labs/simple-chalk@1.0.1':
     resolution: {integrity: sha512-X17ZrsYd/oK5Rq0vbMv+Bv2+auHXdYxbyF7+qkhSPXPaFxzmS6tZrDB9chfufpvVsTWD+ZIzdyiV7uDV8TTDuQ==}
     engines: {node: '>=14.0.0'}
 
-  '@alcyone-labs/simple-mcp-logger@1.1.0':
-    resolution: {integrity: sha512-ty1F/+815Bo8PPA8csH2vGNApiqfZhhcOKWyZztmTJiszB40wtPz2bedQ4CorLZvU/1fSbwqAjEy4pBOHC8pJg==}
+  '@alcyone-labs/simple-mcp-logger@1.2.1':
+    resolution: {integrity: sha512-jjZ9vcjmDEkJJ9aj7PBi/7P/Xg6KpJZ9M9bvNM61w2Cyj0q69DZ19V6y8nvrWqLvikWQ5eeTsSoZ65Y46ljSWg==}
     peerDependencies:
       pino: ^8.0.0 || ^9.0.0
       winston: ^3.0.0
@@ -84,11 +91,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.29':
     resolution: {integrity: sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ==}
-
-  '@modelcontextprotocol/sdk@https://codeload.github.com/Alcyone-Labs/mcp-typescript-sdk/tar.gz/ce40daadf48c261fd0348d0f608b99a2bad6835f':
-    resolution: {tarball: https://codeload.github.com/Alcyone-Labs/mcp-typescript-sdk/tar.gz/ce40daadf48c261fd0348d0f608b99a2bad6835f}
-    version: 1.16.0
-    engines: {node: '>=18'}
 
   '@napi-rs/wasm-runtime@1.0.1':
     resolution: {integrity: sha512-KVlQ/jgywZpixGCKMNwxStmmbYEMyokZpCf2YuIChhfJA2uqfAKNEM8INz7zzTo55iEXfBhIIs3VqYyqzDLj8g==}
@@ -712,6 +714,9 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
+  zod@4.0.14:
+    resolution: {integrity: sha512-nGFJTnJN6cM2v9kXL+SOBq3AtjQby3Mv5ySGFof5UGRHrRioSJ5iG680cYNjE/yWk671nROcpPj4hAS8nyLhSw==}
+
   zod@4.0.8:
     resolution: {integrity: sha512-+MSh9cZU9r3QKlHqrgHMTSr3QwMGv4PLfR0M4N/sYWV5/x67HgXEhIGObdBkpnX8G78pTgWnIrBL2lZcNJOtfg==}
 
@@ -719,12 +724,12 @@ snapshots:
 
   '@alcyone-labs/arg-parser@file:../../..':
     dependencies:
+      '@alcyone-labs/modelcontextprotocol-sdk': 1.16.0
       '@alcyone-labs/simple-chalk': 1.0.1
-      '@alcyone-labs/simple-mcp-logger': 1.1.0
-      '@modelcontextprotocol/sdk': https://codeload.github.com/Alcyone-Labs/mcp-typescript-sdk/tar.gz/ce40daadf48c261fd0348d0f608b99a2bad6835f
+      '@alcyone-labs/simple-mcp-logger': 1.2.1
       get-tsconfig: 4.10.1
       magic-regexp: 0.10.0
-      zod: 4.0.8
+      zod: 4.0.14
     optionalDependencies:
       dotenv: 16.6.1
       express: 5.1.0
@@ -745,9 +750,25 @@ snapshots:
       - winston
       - winston-transport
 
+  '@alcyone-labs/modelcontextprotocol-sdk@1.16.0':
+    dependencies:
+      ajv: 6.12.6
+      content-type: 1.0.5
+      cors: 2.8.5
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.3
+      express: 5.1.0
+      express-rate-limit: 7.5.1(express@5.1.0)
+      pkce-challenge: 5.0.0
+      raw-body: 3.0.0
+      zod: 4.0.8
+    transitivePeerDependencies:
+      - supports-color
+
   '@alcyone-labs/simple-chalk@1.0.1': {}
 
-  '@alcyone-labs/simple-mcp-logger@1.1.0': {}
+  '@alcyone-labs/simple-mcp-logger@1.2.1': {}
 
   '@babel/generator@7.28.0':
     dependencies:
@@ -807,22 +828,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.4
     optional: true
-
-  '@modelcontextprotocol/sdk@https://codeload.github.com/Alcyone-Labs/mcp-typescript-sdk/tar.gz/ce40daadf48c261fd0348d0f608b99a2bad6835f':
-    dependencies:
-      ajv: 6.12.6
-      content-type: 1.0.5
-      cors: 2.8.5
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.0.3
-      express: 5.1.0
-      express-rate-limit: 7.5.1(express@5.1.0)
-      pkce-challenge: 5.0.0
-      raw-body: 3.0.0
-      zod: 4.0.8
-    transitivePeerDependencies:
-      - supports-color
 
   '@napi-rs/wasm-runtime@1.0.1':
     dependencies:
@@ -1461,5 +1466,7 @@ snapshots:
       isexe: 2.0.0
 
   wrappy@1.0.2: {}
+
+  zod@4.0.14: {}
 
   zod@4.0.8: {}
