@@ -49,6 +49,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Configuration Priority](#configuration-priority)
     - [Configuration Merging](#configuration-merging)
     - [Path Resolution Options](#path-resolution-options)
+  - [MCP Lifecycle Events](#mcp-lifecycle-events)
   - [MCP Resources - Real-Time Data Feeds](#mcp-resources---real-time-data-feeds)
     - [Basic Resource Setup](#basic-resource-setup)
     - [URI Templates with Dynamic Parameters](#uri-templates-with-dynamic-parameters)
@@ -1291,6 +1292,64 @@ const parser = ArgParser.withMcp({
 ```
 
 The CLI flag always takes precedence, allowing users to override the developer's programmatic configuration when needed. By default, relative paths resolve relative to the application's entry point, making logs predictably located near DXT packages.
+
+### MCP Lifecycle Events
+
+ArgParser MCP servers support lifecycle events that allow you to perform initialization, cleanup, and other operations at specific points in the MCP protocol flow. These events are particularly useful for database connections, resource setup, and graceful shutdown procedures.
+
+```typescript
+const cli = ArgParser.withMcp({
+  appName: "Database CLI",
+  appCommandName: "db-cli",
+  mcp: {
+    serverInfo: { name: "database-server", version: "1.0.0" },
+    lifecycle: {
+      onInitialize: async (ctx) => {
+        // Called when client sends "initialize" request
+        // Perfect for database connections, resource setup
+        ctx.logger.mcpError("Initializing server...");
+
+        const dbUrl = ctx.getFlag("database_url");
+        if (dbUrl) {
+          await connectToDatabase(dbUrl);
+          ctx.logger.mcpError("Database connected successfully");
+        }
+      },
+
+      onInitialized: async (ctx) => {
+        // Called when client sends "initialized" notification
+        // Server is ready for normal operations
+        ctx.logger.mcpError("Server ready for requests");
+        await startBackgroundTasks();
+      },
+
+      onShutdown: async (ctx) => {
+        // Called during server shutdown
+        // Perfect for cleanup, closing connections
+        ctx.logger.mcpError(`Shutting down: ${ctx.reason}`);
+        await cleanupResources();
+        await closeDatabase();
+      }
+    }
+  }
+});
+```
+
+**Lifecycle Events:**
+
+- **`onInitialize`**: Called when a client sends an "initialize" request. Ideal for database connections, resource initialization, configuration validation, and authentication setup.
+- **`onInitialized`**: Called when a client sends an "initialized" notification, indicating the client is ready for normal operations. Perfect for final setup steps and background task initialization.
+- **`onShutdown`**: Called when the MCP server is shutting down. Essential for cleanup, resource disposal, and graceful shutdown procedures.
+
+**Context Properties:**
+
+Each lifecycle event receives a context object with:
+- `getFlag(name)`: Access parsed CLI flags and environment variables
+- `logger`: MCP-compliant logger instance for the current context
+- `serverInfo`: Server information (name, version, description)
+- `clientInfo`: Client information (available in onInitialize and onInitialized)
+- `protocolVersion`: MCP protocol version being used
+- `reason`: Shutdown reason (only in onShutdown: "client_disconnect", "server_shutdown", "error", "signal")
 
 ### MCP Resources - Real-Time Data Feeds
 

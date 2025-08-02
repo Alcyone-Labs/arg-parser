@@ -18,6 +18,7 @@ import {
   compareVersions,
   CURRENT_MCP_PROTOCOL_VERSION,
 } from "../mcp/mcp-protocol-versions";
+import { sanitizeMcpToolName } from "../mcp/mcp-utils";
 import {
   debugSchemaStructure,
   validateMcpSchemaCompatibility,
@@ -32,7 +33,6 @@ import type {
   ParseResult,
 } from "./types";
 import { createOutputSchema } from "./types";
-import { sanitizeMcpToolName } from "../mcp/mcp-utils";
 
 /**
  * Configuration for a single MCP transport
@@ -342,7 +342,14 @@ export class ArgParser<
 
       // If logPath is present but log config also specified a logToFile,
       // use logPath for more flexible path resolution (this preserves the nice LogPath features)
-      if (hasLogPath && mcpConfig.logPath && hasLogConfig && mcpConfig.log && typeof mcpConfig.log === "object" && mcpConfig.log.logToFile) {
+      if (
+        hasLogPath &&
+        mcpConfig.logPath &&
+        hasLogConfig &&
+        mcpConfig.log &&
+        typeof mcpConfig.log === "object" &&
+        mcpConfig.log.logToFile
+      ) {
         // Use logPath for path resolution, but keep the logToFile from log config as fallback
         config.logToFile = resolveLogPath(mcpConfig.logPath);
       }
@@ -504,8 +511,9 @@ export class ArgParser<
   public addMcpTool(toolConfig: McpToolConfig): this {
     // Use stderr to avoid STDOUT contamination in MCP mode
     try {
-      if (typeof process !== 'undefined' && process.stderr) {
-        process.stderr.write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+      if (typeof process !== "undefined" && process.stderr) {
+        process.stderr
+          .write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
 Please use addTool() instead for a unified CLI/MCP experience.
 Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md\n`);
       } else {
@@ -1058,7 +1066,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
       // Set up lifecycle manager if lifecycle events are configured
       // Skip lifecycle setup during MCP server creation to prevent infinite recursion
-      const isInMcpServeMode = process.argv.includes('--s-mcp-serve');
+      const isInMcpServeMode = process.argv.includes("--s-mcp-serve");
       if (this._mcpServerConfig?.lifecycle && !isInMcpServeMode) {
         const { McpLifecycleManager } = await import("../mcp/mcp-lifecycle");
 
@@ -1073,21 +1081,27 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         try {
           // Parse arguments without executing handlers to get flag values
           // Filter out system flags that could cause infinite recursion during server creation
-          const filteredArgs = process.argv.slice(2).filter(arg =>
-            !arg.startsWith('--s-mcp-') && arg !== '--s-mcp-serve'
-          );
+          const filteredArgs = process.argv
+            .slice(2)
+            .filter(
+              (arg) => !arg.startsWith("--s-mcp-") && arg !== "--s-mcp-serve",
+            );
           const parsedResult = await this.parse(filteredArgs, {
             skipHandlerExecution: true,
-            isMcp: true
+            isMcp: true,
           });
 
           // Extract the parsed arguments from the result
           const parsedArgs = (parsedResult as any)?.args || parsedResult || {};
           lifecycleManager.setParsedArgs(parsedArgs);
 
-          logger.mcpError(`Lifecycle manager initialized with parsed args: ${Object.keys(parsedArgs).join(', ')}`);
+          logger.mcpError(
+            `Lifecycle manager initialized with parsed args: ${Object.keys(parsedArgs).join(", ")}`,
+          );
         } catch (parseError) {
-          logger.mcpError(`Warning: Could not parse arguments for lifecycle manager: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+          logger.mcpError(
+            `Warning: Could not parse arguments for lifecycle manager: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
+          );
           // Continue without parsed args - will fall back to environment variables
         }
 
@@ -2046,6 +2060,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
     const mcpHandler = async (ctx: IHandlerContext): Promise<void> => {
       // Hijack console globally to prevent STDOUT contamination in MCP mode
+      // TODO: upgrade to options-based API
       const logger = createMcpLogger("MCP Handler");
       // Ensure the logger is properly cast as Console interface
       (globalThis as any).console = logger;

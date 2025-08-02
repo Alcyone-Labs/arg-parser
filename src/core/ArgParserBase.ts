@@ -2131,9 +2131,12 @@ ${descriptionLines
     const mcpServerConfig = this.#_getMcpServerConfiguration();
     debug.log("Got MCP server config:", JSON.stringify(mcpServerConfig));
 
-    // Determine log path: CLI flag > programmatic config > default
+    // Determine log path: CLI flag > log.logToFile > logPath > default
     const effectiveLogPath =
-      transportOptions.logPath || mcpServerConfig?.logPath || "./logs/mcp.log";
+      transportOptions.logPath ||
+      (mcpServerConfig?.log && typeof mcpServerConfig.log === "object" ? mcpServerConfig.log.logToFile : null) ||
+      mcpServerConfig?.logPath ||
+      "./logs/mcp.log";
     debug.log("Effective log path:", effectiveLogPath);
     const resolvedLogPath = resolveLogPath(effectiveLogPath);
     debug.log("Resolved log path:", resolvedLogPath);
@@ -2242,7 +2245,7 @@ ${descriptionLines
   /**
    * Resolve logger configuration for MCP serve with proper priority
    * @param mcpServerConfig MCP server configuration
-   * @param resolvedLogPath Resolved log path from CLI flags
+   * @param resolvedLogPath Resolved log path from CLI flags and config priority
    * @returns Logger configuration object or string path
    */
   #_resolveLoggerConfigForServe(mcpServerConfig: any, resolvedLogPath: string): any {
@@ -2259,12 +2262,13 @@ ${descriptionLines
         };
       } else {
         // Full options object - merge with resolved path
+        // The resolvedLogPath already includes the correct priority: CLI > log.logToFile > logPath > default
         return {
           prefix: "MCP Serve",
           level: "error", // Default level for backward compatibility
           mcpMode: true,
           ...mcpServerConfig.log,
-          // Use CLI-resolved path if available, otherwise use config path
+          // Use the resolved path which respects the proper priority order
           logToFile: resolvedLogPath,
         };
       }
