@@ -25,6 +25,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Runtime Type Validation](#runtime-type-validation)
     - [Automatic Type Processing](#automatic-type-processing)
     - [Async Custom Parser Support](#async-custom-parser-support)
+    - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
     - [Type Conversion Examples](#type-conversion-examples)
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
@@ -69,6 +70,9 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.5.0](#v250)
+  - [v2.4.2](#v242)
+  - [v2.4.1](#v241)
   - [v2.4.0](#v240)
   - [v2.3.0](#v230)
   - [v2.2.1](#v221)
@@ -102,6 +106,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Runtime Type Validation](#runtime-type-validation)
     - [Automatic Type Processing](#automatic-type-processing)
     - [Async Custom Parser Support](#async-custom-parser-support)
+    - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
     - [Type Conversion Examples](#type-conversion-examples)
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
@@ -447,7 +452,7 @@ const cli = ArgParser.withMcp({
 // parse() is async and works with both sync and async handlers
 async function main() {
   try {
-    // Option 1: Auto-detection (NEW) - convenient for simple scripts
+    // Option 1: Auto-detection - convenient for simple scripts
     const result = await cli.parse();
 
     // Option 2: Explicit arguments - full control
@@ -604,7 +609,7 @@ Flags are defined using the `IFlag` interface within the `flags` array of a tool
 interface IFlag {
   name: string; // Internal name (e.g., 'verbose')
   options: string[]; // Command-line options (e.g., ['--verbose', '-v'])
-  type: "string" | "number" | "boolean" | "array" | "object" | Function;
+  type: "string" | "number" | "boolean" | "array" | "object" | Function | ZodSchema;
   description?: string; // Help text
   mandatory?: boolean | ((args: any) => boolean); // Whether the flag is required
   defaultValue?: any; // Default value if not provided
@@ -756,6 +761,79 @@ const result = await parser.parse(process.argv.slice(2));
 // Async custom parser functions
 --config "./settings.json" → parsed JSON from file (async)
 --user-id "123"            → user data from API (async)
+
+// Zod schema validation (structured JSON)
+--config '{"host":"localhost","port":5432}' → validated object
+--deployment '{"env":"prod","region":"us-east-1"}' → validated object
+```
+
+#### Zod Schema Flags (Structured JSON Validation)
+
+**Since v2.5.0** - You can now use Zod schemas as flag types for structured JSON input with automatic validation and proper MCP JSON Schema generation:
+
+```typescript
+import { z } from "zod";
+
+const DatabaseConfigSchema = z.object({
+  host: z.string().describe("Database host address"),
+  port: z.number().min(1).max(65535).describe("Database port number"),
+  credentials: z.object({
+    username: z.string().describe("Database username"),
+    password: z.string().describe("Database password"),
+  }),
+  ssl: z.boolean().optional().describe("Enable SSL connection"),
+});
+
+const cli = ArgParser.withMcp({
+  appName: "Database CLI",
+  appCommandName: "db-cli",
+}).addTool({
+  name: "connect",
+  description: "Connect to database with structured configuration",
+  flags: [
+    {
+      name: "config",
+      options: ["--config", "-c"],
+      type: DatabaseConfigSchema, // 🎉 Zod schema as type!
+      description: "Database configuration as JSON object",
+      mandatory: true,
+    },
+  ],
+  handler: async (ctx) => {
+    // ctx.args.config is fully typed and validated!
+    const { host, port, credentials, ssl } = ctx.args.config;
+    console.log(`Connecting to ${host}:${port} as ${credentials.username}`);
+    return { success: true };
+  },
+});
+
+// CLI usage with JSON validation:
+// db-cli connect --config '{"host":"localhost","port":5432,"credentials":{"username":"admin","password":"secret"},"ssl":true}'
+
+// MCP usage: Generates proper JSON Schema for MCP clients
+// db-cli --s-mcp-serve
+```
+
+**Example with Complex Nested Schema:**
+
+```typescript
+const DeploymentSchema = z.object({
+  environment: z.enum(["dev", "staging", "prod"]),
+  region: z.string(),
+  scaling: z.object({
+    minInstances: z.number().min(1),
+    maxInstances: z.number().min(1),
+    targetCpu: z.number().min(10).max(100),
+  }),
+  monitoring: z.object({
+    enabled: z.boolean(),
+    alertEmail: z.string().email().optional(),
+    metrics: z.array(z.string()),
+  }),
+});
+
+// This generates comprehensive JSON Schema for MCP clients
+// while providing full validation and type safety for CLI usage
 ```
 
 ### Hierarchical CLIs (Sub-Commands)
@@ -1745,6 +1823,26 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.5.0
+
+**Feat**
+
+- **Zod Schema Flags**: You can now use Zod schemas as flag types for structured JSON input validation. This enables complex object validation with automatic JSON Schema generation for MCP clients while maintaining full type safety and CLI compatibility.
+- **Improved MCP Tool Documentation**: Zod schema descriptions automatically become MCP tool parameter documentation
+
+### v2.4.2
+
+**Fixes and Changes**
+
+- add missing MCP lifecycle event documentation
+- fix the behavior of the withMcp() options.mcp.log that was not working as expected
+
+### v2.4.1
+
+**Fixes and Changes**
+
+- switch to NPM version of @alcyone-labs/modelcontextprotocol-sdk to freeze the dependency and avoid side-effects
 
 ### v2.4.0
 

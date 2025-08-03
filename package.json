@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "description": "A robust, type-safe CLI builder with out-of-the-box support for creating MCPs and bundling Claude Desktop's DXT packages",
   "type": "module",
   "main": "dist/index.cjs",

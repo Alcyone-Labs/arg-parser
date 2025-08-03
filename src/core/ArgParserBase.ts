@@ -332,7 +332,24 @@ export class ArgParserBase<THandlerReturn = any> {
       value =
         result && typeof result.then === "function" ? await result : result;
     } else if (typeof flag["type"] === "object") {
-      value = new (flag["type"] as ObjectConstructor)(value);
+      // Check if it's a Zod schema
+      if (flag["type"] && (flag["type"] as any)._def) {
+        // It's a Zod schema - parse JSON and validate
+        try {
+          const parsedJson = typeof value === "string" ? JSON.parse(value as string) : value;
+          value = (flag["type"] as any).parse(parsedJson);
+        } catch (error) {
+          if (error instanceof SyntaxError) {
+            throw new Error(`Invalid JSON for flag '${flag["name"]}': ${error.message}`);
+          } else {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Validation failed for flag '${flag["name"]}': ${errorMessage}`);
+          }
+        }
+      } else {
+        // Regular object constructor
+        value = new (flag["type"] as ObjectConstructor)(value);
+      }
     }
 
     if (flag["enum"] && flag["enum"].length > 0) {
@@ -1577,7 +1594,36 @@ export class ArgParserBase<THandlerReturn = any> {
 
           // Determine the type name for display
           let typeName = "unknown";
-          if (typeof flag["type"] === "function") {
+          let typeDetails: string[] = [];
+
+          if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+            // It's a Zod schema - show JSON object with structure
+            typeName = "JSON object";
+            try {
+              // Try to generate a simple structure preview
+              const zodSchema = flag["type"] as any;
+              const def = zodSchema._def;
+
+              // In Zod v4, check for object shape directly (typeName might be undefined)
+              if (def.shape) {
+                const shape = typeof def.shape === "function" ? def.shape() : def.shape;
+                const properties = Object.keys(shape);
+                if (properties.length > 0) {
+                  if (properties.length <= 4) {
+                    typeDetails.push(`Properties: ${properties.join(", ")}`);
+                  } else {
+                    typeDetails.push(`Properties: ${properties.slice(0, 4).join(", ")}, ... (${properties.length} total)`);
+                  }
+                }
+              }
+
+              // Add a hint about JSON format
+              typeDetails.push("Expected: JSON string");
+            } catch (error) {
+              // Fallback if schema introspection fails
+              typeDetails.push("Expected: JSON string");
+            }
+          } else if (typeof flag["type"] === "function") {
             typeName = flag["type"].name || "custom function";
             // Make the type names more user-friendly
             if (typeName === "Boolean") typeName = "boolean";
@@ -1590,6 +1636,11 @@ export class ArgParserBase<THandlerReturn = any> {
           }
 
           metaLines.push(`Type: ${typeName}`);
+
+          // Add type details for Zod schemas
+          if (typeDetails.length > 0) {
+            metaLines.push(...typeDetails);
+          }
 
           if (flag["flagOnly"]) {
             metaLines.push("Flag only (no value expected)");
@@ -1844,7 +1895,9 @@ ${descriptionLines
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
         let typeName = "unknown";
-        if (typeof flag["type"] === "function") {
+        if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+          typeName = "Zod schema";
+        } else if (typeof flag["type"] === "function") {
           typeName = flag["type"].name || "custom function";
         } else if (typeof flag["type"] === "string") {
           typeName = flag["type"];
@@ -1919,7 +1972,9 @@ ${descriptionLines
     const flags = parser.#flagManager.flags;
     config.flags = flags.map((flag: ProcessedFlag) => {
       let typeName = "unknown";
-      if (typeof flag["type"] === "function") {
+      if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+        typeName = "Zod schema";
+      } else if (typeof flag["type"] === "function") {
         typeName = flag["type"].name || "custom function";
       } else if (typeof flag["type"] === "string") {
         typeName = flag["type"];

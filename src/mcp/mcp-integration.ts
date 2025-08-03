@@ -68,6 +68,32 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
   property: any;
   isRequired: boolean;
 } {
+  // Handle Zod schemas specially - use Zod v4's native JSON Schema support
+  if (flag.type && typeof flag.type === "object" && flag.type._def) {
+    const zodSchema = flag.type as ZodTypeAny;
+
+    try {
+      const property = z.toJSONSchema(zodSchema);
+
+      if (flag.description) {
+        property.description = flag.description;
+      }
+
+      const isRequired = !!(flag.mandatory || (flag as any).required);
+
+      return { property, isRequired };
+    } catch (error) {
+      // Fallback if JSON Schema conversion fails
+      console.warn(`Failed to convert Zod schema to JSON Schema for flag '${flag.name}':`, error);
+      const property = {
+        type: "object" as const,
+        description: flag.description || `${flag.name} parameter (Zod schema)`,
+      };
+      const isRequired = !!(flag.mandatory || (flag as any).required);
+      return { property, isRequired };
+    }
+  }
+
   const property: any = {
     type: getJsonSchemaTypeFromFlag(flag.type),
     description: flag.description || `${flag.name} parameter`,
@@ -250,8 +276,14 @@ export interface IMcpToolStructure {
 }
 
 function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
-  let zodSchema: ZodTypeAny = z.string(); // Initialize with default value
   const flagTypeOpt = flag["type"];
+
+  // Handle Zod schemas directly - return them as-is
+  if (flagTypeOpt && typeof flagTypeOpt === "object" && flagTypeOpt._def) {
+    return flagTypeOpt as ZodTypeAny;
+  }
+
+  let zodSchema: ZodTypeAny = z.string(); // Initialize with default value
   let typeName: string;
 
   if (typeof flagTypeOpt === "function") {
