@@ -34,6 +34,13 @@ export {
   type LogPathConfig,
 } from "./core/log-path-utils";
 
+// DXT path resolution exports
+export {
+  DxtPathResolver,
+  type IPathContext,
+  type IDxtVariableConfig,
+} from "./core/dxt-path-resolver";
+
 // Debug utility exports
 export { debug } from "./utils/debug-utils";
 

@@ -27,7 +27,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Async Custom Parser Support](#async-custom-parser-support)
     - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
     - [Type Conversion Examples](#type-conversion-examples)
-  - [DXT Package User Configuration](#dxt-package-user-configuration)
+  - [DXT Package User Configuration & Path Handling](#dxt-package-user-configuration--path-handling)
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
@@ -71,75 +71,11 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.6.0](#v260)
   - [v2.5.0](#v250)
   - [v2.4.2](#v242)
   - [v2.4.1](#v241)
   - [v2.4.0](#v240)
-  - [v2.3.0](#v230)
-  - [v2.2.1](#v221)
-  - [v2.2.0](#v220)
-  - [v2.1.1](#v211)
-  - [v2.1.0](#v210)
-  - [v2.0.0](#v200)
-  - [v1.3.0](#v130)
-  - [v1.2.0](#v120)
-  - [v1.1.0](#v110)
-- [Backlog](#backlog)
-  - [(known) Bugs / DX improvement points](#known-bugs--dx-improvement-points)
-
-- [Features Overview](#features-overview)
-- [Installation](#installation)
-- [Quick Start: The Unified `addTool` API](#quick-start-the-unified-addtool-api)
-- [How to Run It](#how-to-run-it)
-  - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
-- [Parsing Command-Line Arguments](#parsing-command-line-arguments)
-  - [Automatic Argument Detection](#automatic-argument-detection)
-  - [Cannonical Usage Pattern](#cannonical-usage-pattern)
-  - [Top-level await](#top-level-await)
-  - [Promise-based parsing](#promise-based-parsing)
-- [Migrating from v1.x to the v2.0 `addTool` API](#migrating-from-v1x-to-the-v20-addtool-api)
-  - [Before v2.0: Separate Definitions](#before-v20-separate-definitions)
-  - [After v2.0: The Unified `addTool()` Method](#after-v20-the-unified-addtool-method)
-- [Core Concepts](#core-concepts)
-  - [Defining Flags](#defining-flags)
-  - [Type Handling and Validation](#type-handling-and-validation)
-    - [Supported Type Formats](#supported-type-formats)
-    - [Runtime Type Validation](#runtime-type-validation)
-    - [Automatic Type Processing](#automatic-type-processing)
-    - [Async Custom Parser Support](#async-custom-parser-support)
-    - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
-    - [Type Conversion Examples](#type-conversion-examples)
-  - [DXT Package User Configuration](#dxt-package-user-configuration)
-  - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
-    - [MCP Exposure Control](#mcp-exposure-control)
-  - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
-- [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
-  - [Output Schema Support](#output-schema-support)
-    - [Basic Usage](#basic-usage)
-    - [Predefined Schema Patterns](#predefined-schema-patterns)
-    - [Custom Zod Schemas](#custom-zod-schemas)
-    - [MCP Version Compatibility](#mcp-version-compatibility)
-    - [Automatic Error Handling](#automatic-error-handling)
-  - [Writing Effective MCP Tool Descriptions](#writing-effective-mcp-tool-descriptions)
-    - [Best Practices for Tool Descriptions](#best-practices-for-tool-descriptions)
-    - [Complete Example: Well-Documented Tool](#complete-example-well-documented-tool)
-    - [Parameter Description Guidelines](#parameter-description-guidelines)
-    - [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
-  - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
-  - [MCP Transports](#mcp-transports)
-  - [MCP Log Path Configuration](#mcp-log-path-configuration)
-  - [MCP Resources - Real-Time Data Feeds](#mcp-resources---real-time-data-feeds) ⭐
-  - [Automatic Console Safety](#automatic-console-safety)
-  - [Generating DXT Packages (`--s-build-dxt`)](#generating-dxt-packages---s-build-dxt)
-  - [Logo Configuration](#logo-configuration)
-    - [Supported Logo Sources](#supported-logo-sources)
-  - [How DXT Generation Works](#how-dxt-generation-works)
-  - [DXT Bundling Strategies](#dxt-bundling-strategies)
-    - [Standard Approach (Recommended for Most Projects)](#standard-approach-recommended-for-most-projects)
-    - [Native Dependencies Approach](#native-dependencies-approach)
-- [Typical Errors](#typical-errors)
-- [System Flags & Configuration](#system-flags--configuration)
-- [Changelog](#changelog)
   - [v2.3.0](#v230)
   - [v2.2.1](#v221)
   - [v2.2.0](#v220)
@@ -611,7 +547,14 @@ Flags are defined using the `IFlag` interface within the `flags` array of a tool
 interface IFlag {
   name: string; // Internal name (e.g., 'verbose')
   options: string[]; // Command-line options (e.g., ['--verbose', '-v'])
-  type: "string" | "number" | "boolean" | "array" | "object" | Function | ZodSchema;
+  type:
+    | "string"
+    | "number"
+    | "boolean"
+    | "array"
+    | "object"
+    | Function
+    | ZodSchema;
   description?: string; // Help text
   mandatory?: boolean | ((args: any) => boolean); // Whether the flag is required
   defaultValue?: any; // Default value if not provided
@@ -633,69 +576,139 @@ interface DxtOptions {
 }
 ```
 
-### DXT Package User Configuration
+### DXT Package User Configuration & Path Handling
 
-When generating DXT packages with `--s-build-dxt`, flags with an `env` property automatically create user configuration entries in the DXT manifest. You can customize how these appear in Claude Desktop using `dxtOptions`:
+ArgParser v2.5.0 introduces comprehensive DXT (Desktop Extension Toolkit) support with rich user interfaces, automatic path resolution, and context-aware development tools.
+
+#### Enhanced dxtOptions
+
+When generating DXT packages with `--s-build-dxt`, you can create rich user configuration interfaces using `dxtOptions`:
 
 ```typescript
-parser.addFlags([
-  {
-    name: "apiKey",
-    description: "Your API key for the service",
-    options: ["--api-key"],
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
+
+const parser = new ArgParser()
+  .withMcp({
+    name: "file-processor",
+    version: "1.0.0",
+    logPath: "${HOME}/logs/file-processor.log", // DXT variables supported!
+  })
+  .addFlag({
+    name: "input-file",
+    description: "File to process",
     type: "string",
-    env: "API_KEY",
     mandatory: true,
     dxtOptions: {
-      type: "string",
-      title: "Service API Key",
-      sensitive: true, // Hides the value in Claude Desktop UI
+      type: "file",
+      title: "Select Input File",
     },
-  },
-  {
-    name: "maxRetries",
-    description: "Maximum number of retry attempts",
-    options: ["--max-retries"],
+  })
+  .addFlag({
+    name: "output-dir",
+    description: "Output directory for processed files",
+    type: "string",
+    dxtOptions: {
+      type: "directory",
+      localDefault: "${DOCUMENTS}/processed-files", // Smart defaults with DXT variables
+      title: "Output Directory",
+    },
+  })
+  .addFlag({
+    name: "api-key",
+    description: "API authentication key",
+    type: "string",
+    env: "API_KEY",
+    dxtOptions: {
+      type: "string",
+      sensitive: true, // Excluded from DXT manifest for security
+      title: "API Key",
+    },
+  })
+  .addFlag({
+    name: "quality",
+    description: "Processing quality (1-100)",
     type: "number",
-    env: "MAX_RETRIES",
     dxtOptions: {
       type: "number",
-      title: "Max Retry Attempts",
-      default: 3,
-      min: 0,
-      max: 10,
-      sensitive: false, // Shows the value in UI (safe for non-sensitive data)
+      min: 1,
+      max: 100,
+      localDefault: 85,
+      title: "Quality (%)",
     },
-  },
-  {
-    name: "configFile",
-    description: "Path to configuration file",
-    options: ["--config"],
-    type: "string",
-    env: "CONFIG_FILE",
+  })
+  .addFlag({
+    name: "parallel",
+    description: "Enable parallel processing",
+    type: "boolean",
     dxtOptions: {
-      type: "file", // Shows a file picker in Claude Desktop
-      title: "Configuration File",
-      default: "./config.json",
+      type: "boolean",
+      localDefault: true,
+      title: "Parallel Processing",
     },
-  },
-]);
+  });
 ```
 
-**DXT Options Properties:**
+#### DXT Variables & Path Resolution
 
-- **`type`**: Controls the input UI in Claude Desktop:
-  - `"string"`: Text input field
-  - `"file"`: File picker dialog
-  - `"directory"`: Directory picker dialog
-  - `"boolean"`: Checkbox
-  - `"number"`: Numeric input with validation
-- **`title`**: Display name in Claude Desktop (defaults to a formatted version of the flag name)
-- **`sensitive`**: Whether to hide the value in the UI (defaults to `true` for security)
-- **`default`**: Default value shown in the configuration UI
-- **`min`/`max`**: For number types, sets validation bounds
+ArgParser automatically resolves paths based on your runtime environment:
 
-**Security Note**: By default, all user configuration values are marked as `sensitive: true` to protect potentially sensitive information. Set `sensitive: false` only for values that are safe to display (like retry counts, timeouts, etc.).
+```typescript
+// DXT variables work everywhere - in flags, MCP config, and code
+const logPath = "${HOME}/logs/app.log";
+const configPath = "${DOCUMENTS}/myapp/config.json";
+const resourcePath = "${__dirname}/templates/default.hbs";
+
+// Helper functions for common patterns
+const userDataPath = DxtPathResolver.createUserDataPath("cache.db");
+const tempPath = DxtPathResolver.createTempPath("processing.tmp");
+const configPath = DxtPathResolver.createConfigPath("settings.json");
+
+// Context detection
+const context = DxtPathResolver.detectContext();
+if (context.isDxt) {
+  console.log("Running in DXT environment");
+} else {
+  console.log("Running in development");
+}
+```
+
+**Supported DXT Variables:**
+
+- `${HOME}` - User's home directory
+- `${DOCUMENTS}` - Documents folder
+- `${DOWNLOADS}` - Downloads folder
+- `${DESKTOP}` - Desktop folder
+- `${__dirname}` - Entry point directory (DXT package root in DXT)
+- `${pathSeparator}` - Platform-specific path separator
+- `${DXT_DIR}` - DXT package directory (DXT only)
+- `${EXTENSION_DIR}` - Extension root directory (DXT only)
+
+#### dxtOptions Properties
+
+| Property       | Type                                                         | Description                                      |
+| -------------- | ------------------------------------------------------------ | ------------------------------------------------ |
+| `type`         | `'string' \| 'file' \| 'directory' \| 'boolean' \| 'number'` | UI component type                                |
+| `sensitive`    | `boolean`                                                    | Mark as sensitive (excluded from manifest)       |
+| `localDefault` | `string \| number \| boolean`                                | Default for development (supports DXT variables) |
+| `multiple`     | `boolean`                                                    | Allow multiple values                            |
+| `min` / `max`  | `number`                                                     | Validation constraints                           |
+| `title`        | `string`                                                     | Custom display name                              |
+
+#### Security & Best Practices
+
+- **Sensitive Data**: Use `sensitive: true` for passwords, API keys, tokens
+- **Smart Defaults**: Use DXT variables in `localDefault` for portable paths
+- **Type Safety**: Match `dxtOptions.type` with flag `type` for validation
+- **Cross-Platform**: Use `${pathSeparator}` for platform-independent paths
+
+#### Comprehensive Documentation
+
+For detailed guides and examples:
+
+- **[DXT Path Handling Guide](./docs/DXT_PATH_HANDLING.md)** - Complete path resolution guide
+- **[dxtOptions API Documentation](./docs/DXT_OPTIONS_API.md)** - Full API reference with examples
+- **[DXT Migration Guide](./docs/DXT_MIGRATION.md)** - Migrate existing applications
+- **[DXT Practical Examples](./docs/DXT_EXAMPLES.md)** - Real-world usage patterns
 
 ### Type Handling and Validation
 
@@ -1483,9 +1496,9 @@ const cli = ArgParser.withMcp({
         ctx.logger.mcpError(`Shutting down: ${ctx.reason}`);
         await cleanupResources();
         await closeDatabase();
-      }
-    }
-  }
+      },
+    },
+  },
 });
 ```
 
@@ -1498,6 +1511,7 @@ const cli = ArgParser.withMcp({
 **Context Properties:**
 
 Each lifecycle event receives a context object with:
+
 - `getFlag(name)`: Access parsed CLI flags and environment variables
 - `logger`: MCP-compliant logger instance for the current context
 - `serverInfo`: Server information (name, version, description)
@@ -1900,6 +1914,34 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
+### v2.6.0
+
+**Feat**
+
+**DXT**:
+
+- Improve how paths and dynamic variables are handled when bundling into a DXT, to improve compatibility and reduce paths that will fail in a sandbox when the CLI / MCP expects path available on the system. Dynamic path resolution with `${VARIABLE}` syntax supporting `${HOME}`, `${DOCUMENTS}`, `${__dirname}`, `${DXT_DIR}`, and more. Context-aware path resolution with `DxtPathResolver.createUserDataPath()`, `createTempPath()`, `createConfigPath()`.
+- Add new IFlag.dxtOption set of options for each flag to allow finer control on how the flags are perceived on the DXT manifest / Claude Desktop.
+
+Read more her: [DXT Package User Configuration & Path Handling](#dxt-package-user-configuration--path-handling)
+
+**Fixes and Changes**
+
+**DXT**:
+
+- Improve handling of sensitive env variable, they were previously always showing as sensitive.
+
+**Known Limitations**
+
+**DXT**:
+
+The DXT bundling / packing / unpacking / launching process is notoriously early and brittle. There are many reasons something is not working, but **MOST** importantly it will not work if:
+
+1. You are bundling a package in a mono-repo (you will need to temporarily create a pnpm-workspace.yaml file for example to break the hierarchy)
+2. You do _not_ hard-install your node_modules as detailed in the documentation (it will only work if the node_modules are hard installed)
+3. In some cases if your CLI entrypoint does not run a main loop (see documentation for working examples)
+4. If you use PATH-dependent variables (for example relying on ~/.config/path/to/some.json). This has been addressed in v2.6.0, but you have to make sure you use the correct patterns (see documentation)
+
 ### v2.5.0
 
 **Feat**
@@ -1928,7 +1970,7 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 - MCP client now sanitizes the method names to ensure spec-compliants MCP behavior, names that collision will be logged
 - There were some use-cases where the DXT bundling failed, this new release addresses all of them, namely:
   1. Output structure will match that of the input so relative files (for example DB migrations) will work
-  2.
+  2. Deeper folder structure was previously not working
 - DXT bundling now supports including resources via options: `{dxt: {include: ['TSDown blob-like paths']}`
 - Logger was improved to support log level via `options:{ log: {} }` so you can set it to level: 'debug' and the MCP log will contain 100% of the console output, logPath setting was not impacted
 
@@ -2022,8 +2064,8 @@ Make sure to clearly identify if you need to include the node_modules or not. In
 - [x] Upgrade to Zod/V4 (V4 does not support functions well, this will take more time, not a priority)
 - [ ] Add System flags to args.systemArgs
 - [ ] Improve flag options collision prevention
-- [ ] Add support for locales / translations
 - [ ] (potentially) add support for fully typed parsed output, this has proven very challenging
+- [ ] Add support for locales / translations
 
 ### (known) Bugs / DX improvement points
 

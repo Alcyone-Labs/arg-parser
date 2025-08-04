@@ -6,6 +6,7 @@ import chalk from "@alcyone-labs/simple-chalk";
 import type { ParseResult } from "../core/types";
 import { getJsonSchemaTypeFromFlag } from "../core/types";
 import { DxtGeneratorTestUtils } from "./DxtGenerator-testUtils";
+import { DxtPathResolver } from "../core/dxt-path-resolver";
 
 /**
  * DxtGenerator handles the generation of DXT (Desktop Extension) packages
@@ -647,38 +648,52 @@ export class DxtGenerator {
               for (const includeItem of mcpConfig.dxt.include) {
                 if (typeof includeItem === "string") {
                   // Simple string path - copy to same relative location in DXT package root
-                  const sourcePath = path.resolve(projectRoot, includeItem);
+                  // First substitute any DXT variables in the path
+                  const resolvedIncludePath = DxtPathResolver.substituteVariables(
+                    includeItem,
+                    DxtPathResolver.detectContext(),
+                    { allowUndefined: true } // Allow undefined variables for flexibility
+                  );
+                  const sourcePath = path.resolve(projectRoot, resolvedIncludePath);
                   if (fs.existsSync(sourcePath)) {
-                    console.log(chalk.gray(`  • ${includeItem}`));
+                    console.log(chalk.gray(`  • ${resolvedIncludePath}`));
                     outputPaths.push({
                       from: sourcePath,
-                      to: path.join(dxtPackageRoot, includeItem),
+                      to: path.join(dxtPackageRoot, resolvedIncludePath),
                     });
                   } else {
                     console.warn(
                       chalk.yellow(
-                        `  ⚠ File not found: ${includeItem} (resolved to ${sourcePath})`,
+                        `  ⚠ File not found: ${resolvedIncludePath} (resolved to ${sourcePath})`,
                       ),
                     );
                   }
                 } else {
                   // Object with from/to mapping - copy to specified location in DXT package root
-                  const sourcePath = path.resolve(
-                    projectRoot,
+                  // Substitute DXT variables in both from and to paths
+                  const resolvedFromPath = DxtPathResolver.substituteVariables(
                     includeItem.from,
+                    DxtPathResolver.detectContext(),
+                    { allowUndefined: true }
                   );
+                  const resolvedToPath = DxtPathResolver.substituteVariables(
+                    includeItem.to,
+                    DxtPathResolver.detectContext(),
+                    { allowUndefined: true }
+                  );
+                  const sourcePath = path.resolve(projectRoot, resolvedFromPath);
                   if (fs.existsSync(sourcePath)) {
                     console.log(
-                      chalk.gray(`  • ${includeItem.from} → ${includeItem.to}`),
+                      chalk.gray(`  • ${resolvedFromPath} → ${resolvedToPath}`),
                     );
                     outputPaths.push({
                       from: sourcePath,
-                      to: path.join(dxtPackageRoot, includeItem.to),
+                      to: path.join(dxtPackageRoot, resolvedToPath),
                     });
                   } else {
                     console.warn(
                       chalk.yellow(
-                        `  ⚠ File not found: ${includeItem.from} (resolved to ${sourcePath})`,
+                        `  ⚠ File not found: ${resolvedFromPath} (resolved to ${sourcePath})`,
                       ),
                     );
                   }

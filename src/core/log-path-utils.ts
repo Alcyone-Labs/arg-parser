@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { DxtPathResolver } from "./dxt-path-resolver";
 
 /**
  * Configuration object for log path with explicit relative base
@@ -85,7 +86,12 @@ export function resolveLogPath(
 ): string {
   // Handle string inputs
   if (typeof logPath === "string") {
-    const normalizedPath = normalizePath(logPath);
+    // First, substitute any DXT variables in the path
+    const pathWithVariables = DxtPathResolver.substituteVariables(
+      logPath,
+      DxtPathResolver.detectContext()
+    );
+    const normalizedPath = normalizePath(pathWithVariables);
 
     // Absolute paths - return as-is
     if (path.isAbsolute(normalizedPath)) {
@@ -114,12 +120,22 @@ export function resolveLogPath(
 
   // Handle object form
   const { path: logFilePath, relativeTo = "entry", basePath } = logPath;
-  const normalizedPath = normalizePath(logFilePath);
+  // Substitute DXT variables in the path
+  const pathWithVariables = DxtPathResolver.substituteVariables(
+    logFilePath,
+    DxtPathResolver.detectContext()
+  );
+  const normalizedPath = normalizePath(pathWithVariables);
 
   switch (relativeTo) {
     case "absolute":
       if (basePath) {
-        return path.resolve(basePath, normalizedPath);
+        // Substitute DXT variables in basePath as well
+        const resolvedBasePath = DxtPathResolver.substituteVariables(
+          basePath,
+          DxtPathResolver.detectContext()
+        );
+        return path.resolve(resolvedBasePath, normalizedPath);
       }
       if (path.isAbsolute(normalizedPath)) {
         return normalizedPath;
