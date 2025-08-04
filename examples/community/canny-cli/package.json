@@ -10,7 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.13.1",
+  "packageManager": "pnpm@10.14.0",
   "dependencies": {
     "@alcyone-labs/arg-parser": "file:../../../",
     "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",

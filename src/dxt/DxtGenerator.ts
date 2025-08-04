@@ -575,39 +575,50 @@ export class DxtGenerator {
           silent: process.env["NO_SILENCE"] !== "1",
           unbundle: true,
           external: (id, importer) => {
-            const external = this.shouldModuleBeExternal(
-              id,
-              importer,
-              withNodeModules,
-            );
-
-            if (Boolean(process.env["DEBUG"]))
-              console.log(
-                `[${chalk.blue("External")}] ${chalk.yellow(external ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+            try {
+              const external = this.shouldModuleBeExternal(
+                id,
+                importer,
+                withNodeModules,
               );
 
-            return external;
+              if (Boolean(process.env["DEBUG"]))
+                console.log(
+                  `[${chalk.blue("External")}] ${chalk.yellow(external ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+                );
+
+              return Boolean(external);
+            } catch (error) {
+              console.warn(`Warning: Error in external function for ${id}:`, error);
+              return true; // Default to external on error
+            }
           },
           noExternal: (id, importer) => {
-            const external = this.shouldModuleBeExternal(
-              id,
-              importer,
-              withNodeModules,
-            );
-
-            if (Boolean(process.env["DEBUG"]))
-              console.log(
-                `[${chalk.yellow("noExternal")}] ${chalk.yellow(external === false ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+            try {
+              const external = this.shouldModuleBeExternal(
+                id,
+                importer,
+                withNodeModules,
               );
 
-            return external === false;
+              if (Boolean(process.env["DEBUG"]))
+                console.log(
+                  `[${chalk.yellow("noExternal")}] ${chalk.yellow(external === false ? "true" : "false")} for module: (${chalk.green(id)}), path: '${chalk.grey(importer ?? "")}'`,
+                );
+
+              return Boolean(external === false);
+            } catch (error) {
+              console.warn(`Warning: Error in noExternal function for ${id}:`, error);
+              return false; // Default to not noExternal on error
+            }
           },
           copy: async (
             options,
           ): Promise<Array<string | { from: string; to: string }>> => {
-            const outputPaths: Array<string | { from: string; to: string }> = [
-              "package.json",
-            ];
+            try {
+              const outputPaths: Array<string | { from: string; to: string }> = [
+                "package.json",
+              ];
 
             // Only include node_modules if --s-with-node-modules flag is set
             if (withNodeModules) {
@@ -701,7 +712,11 @@ export class DxtGenerator {
               }
             }
 
-            return outputPaths;
+              return outputPaths;
+            } catch (error) {
+              console.warn(`Warning: Error in copy function:`, error);
+              return ["package.json"]; // Return minimal copy list on error
+            }
           },
           platform: "node" as const,
           plugins: [],
@@ -736,9 +751,18 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           );
         }
 
-        await build(buildConfig as any);
-
-        console.log(chalk.green("✅ TSDown bundling completed"));
+        try {
+          await build(buildConfig as any);
+          console.log(chalk.green("✅ TSDown bundling completed"));
+        } catch (buildError) {
+          console.error(chalk.red("❌ TSDown build failed with error:"));
+          console.error(buildError);
+          if (buildError instanceof Error) {
+            console.error(chalk.red("Error message:"), buildError.message);
+            console.error(chalk.red("Error stack:"), buildError.stack);
+          }
+          throw new Error(`TSDown DXT build failed: ${buildError instanceof Error ? buildError.message : String(buildError)}`);
+        }
 
         // Determine the actual output filename from TSDown
         const detectedOutputFile = this.detectTsdownOutputFile(
@@ -1051,7 +1075,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           properties[flag.name].enum = flag.enum;
         }
 
-        if (flag.defaultValue !== undefined) {
+        if (flag.defaultValue !== undefined && typeof flag.defaultValue !== 'function') {
           properties[flag.name].default = flag.defaultValue;
         }
 
@@ -1443,7 +1467,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       // Add default value to description if available
       const defaultValue = flag.dxtOptions?.default ?? flag.dxtOptions?.localDefault ?? flag.defaultValue;
-      if (defaultValue !== undefined) {
+      if (defaultValue !== undefined && typeof defaultValue !== 'function') {
         baseDescription += ` (default: ${defaultValue})`;
       }
 
@@ -1481,9 +1505,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         if (flag.dxtOptions?.max !== undefined) {
           userConfigEntry.max = flag.dxtOptions.max;
         }
-        if (flag.dxtOptions?.default !== undefined) {
+        if (flag.dxtOptions?.default !== undefined && typeof flag.dxtOptions.default !== 'function') {
           userConfigEntry.default = flag.dxtOptions.default;
-        } else if (flag.dxtOptions?.localDefault !== undefined) {
+        } else if (flag.dxtOptions?.localDefault !== undefined && typeof flag.dxtOptions.localDefault !== 'function') {
           userConfigEntry.default = flag.dxtOptions.localDefault;
         }
 
@@ -1525,9 +1549,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
             if (flag.dxtOptions?.max !== undefined) {
               userConfigEntry.max = flag.dxtOptions.max;
             }
-            if (flag.dxtOptions?.default !== undefined) {
+            if (flag.dxtOptions?.default !== undefined && typeof flag.dxtOptions.default !== 'function') {
               userConfigEntry.default = flag.dxtOptions.default;
-            } else if (flag.dxtOptions?.localDefault !== undefined) {
+            } else if (flag.dxtOptions?.localDefault !== undefined && typeof flag.dxtOptions.localDefault !== 'function') {
               userConfigEntry.default = flag.dxtOptions.localDefault;
             }
 
@@ -1568,10 +1592,10 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
         // Create paths matcher
         const pathsMatcher = createPathsMatcher(tsconfig);
-        if (!pathsMatcher) {
+        if (!pathsMatcher || typeof pathsMatcher !== 'function') {
           if (Boolean(process.env["DEBUG"])) {
             console.log(
-              `  <${chalk.gray("ts-paths")}> Failed to create paths matcher`,
+              `  <${chalk.gray("ts-paths")}> Failed to create paths matcher or matcher is not a function`,
             );
           }
           // Fall through to regular file resolution
