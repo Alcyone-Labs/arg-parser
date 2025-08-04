@@ -27,6 +27,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Async Custom Parser Support](#async-custom-parser-support)
     - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
     - [Type Conversion Examples](#type-conversion-examples)
+  - [DXT Package User Configuration](#dxt-package-user-configuration)
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
@@ -108,6 +109,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Async Custom Parser Support](#async-custom-parser-support)
     - [Zod Schema Flags (Structured JSON Validation)](#zod-schema-flags-structured-json-validation)
     - [Type Conversion Examples](#type-conversion-examples)
+  - [DXT Package User Configuration](#dxt-package-user-configuration)
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
@@ -618,8 +620,82 @@ interface IFlag {
   validate?: (value: any, parsedArgs?: any) => boolean | string | void; // Custom validation function
   allowMultiple?: boolean; // Allow the flag to be provided multiple times
   env?: string; // Links the flag to an environment variable for DXT packages, will automatically generate user_config entries in the DXT manifest and fill the flag value to the ENV value if found (process.env)
+  dxtOptions?: DxtOptions; // Customizes how this flag appears in DXT package user_config
+}
+
+interface DxtOptions {
+  type?: "string" | "directory" | "file" | "boolean" | "number"; // UI input type in Claude Desktop
+  title?: string; // Display name in Claude Desktop (defaults to formatted flag name)
+  sensitive?: boolean; // Whether to hide the value in UI (defaults to true for security)
+  default?: any; // Default value for the user_config entry
+  min?: number; // Minimum value (for number types)
+  max?: number; // Maximum value (for number types)
 }
 ```
+
+### DXT Package User Configuration
+
+When generating DXT packages with `--s-build-dxt`, flags with an `env` property automatically create user configuration entries in the DXT manifest. You can customize how these appear in Claude Desktop using `dxtOptions`:
+
+```typescript
+parser.addFlags([
+  {
+    name: "apiKey",
+    description: "Your API key for the service",
+    options: ["--api-key"],
+    type: "string",
+    env: "API_KEY",
+    mandatory: true,
+    dxtOptions: {
+      type: "string",
+      title: "Service API Key",
+      sensitive: true, // Hides the value in Claude Desktop UI
+    },
+  },
+  {
+    name: "maxRetries",
+    description: "Maximum number of retry attempts",
+    options: ["--max-retries"],
+    type: "number",
+    env: "MAX_RETRIES",
+    dxtOptions: {
+      type: "number",
+      title: "Max Retry Attempts",
+      default: 3,
+      min: 0,
+      max: 10,
+      sensitive: false, // Shows the value in UI (safe for non-sensitive data)
+    },
+  },
+  {
+    name: "configFile",
+    description: "Path to configuration file",
+    options: ["--config"],
+    type: "string",
+    env: "CONFIG_FILE",
+    dxtOptions: {
+      type: "file", // Shows a file picker in Claude Desktop
+      title: "Configuration File",
+      default: "./config.json",
+    },
+  },
+]);
+```
+
+**DXT Options Properties:**
+
+- **`type`**: Controls the input UI in Claude Desktop:
+  - `"string"`: Text input field
+  - `"file"`: File picker dialog
+  - `"directory"`: Directory picker dialog
+  - `"boolean"`: Checkbox
+  - `"number"`: Numeric input with validation
+- **`title`**: Display name in Claude Desktop (defaults to a formatted version of the flag name)
+- **`sensitive`**: Whether to hide the value in the UI (defaults to `true` for security)
+- **`default`**: Default value shown in the configuration UI
+- **`min`/`max`**: For number types, sets validation bounds
+
+**Security Note**: By default, all user configuration values are marked as `sensitive: true` to protect potentially sensitive information. Set `sensitive: false` only for values that are safe to display (like retry counts, timeouts, etc.).
 
 ### Type Handling and Validation
 

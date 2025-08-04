@@ -44,8 +44,10 @@ export { sanitizeMcpToolName, isValidMcpToolName } from "./mcp/mcp-utils";
 
 export {
   zodFlagSchema,
+  zodDxtOptionsSchema,
   type IFlagCore,
   type IFlag,
+  type IDxtOptions,
   type ProcessedFlagCore,
   type ProcessedFlag,
   type TParsedArgsTypeFromFlagDef,

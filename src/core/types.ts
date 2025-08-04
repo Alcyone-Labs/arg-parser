@@ -5,6 +5,62 @@ import { z, type ZodTypeAny } from "zod";
 // It represents an instance of the ArgParser class.
 export type ArgParserInstance = any;
 
+/**
+ * Zod schema for validating DXT-specific options
+ */
+export const zodDxtOptionsSchema = z
+  .object({
+    sensitive: z
+      .boolean()
+      .optional()
+      .describe("Whether this field should be marked as sensitive in DXT user_config"),
+    localDefault: z
+      .string()
+      .optional()
+      .describe("Default value specific to DXT sandbox environment"),
+    type: z
+      .enum(["string", "directory", "file", "boolean", "number"])
+      .optional()
+      .describe("DXT input type - determines UI component in DXT clients"),
+    multiple: z
+      .boolean()
+      .optional()
+      .describe("Allow multiple values (for arrays)"),
+    min: z
+      .number()
+      .optional()
+      .describe("Minimum value (for number type)"),
+    max: z
+      .number()
+      .optional()
+      .describe("Maximum value (for number type)"),
+    default: z
+      .any()
+      .optional()
+      .describe("DXT-specific default value (overrides localDefault if provided)"),
+    title: z
+      .string()
+      .optional()
+      .describe("Custom title for the user_config field"),
+  })
+  .strict()
+  .refine(
+    (data) => {
+      // If min or max are provided, type should be "number"
+      if ((data.min !== undefined || data.max !== undefined) && data.type !== "number") {
+        return false;
+      }
+      // If min and max are both provided, min should be <= max
+      if (data.min !== undefined && data.max !== undefined && data.min > data.max) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Invalid dxtOptions: min/max can only be used with type 'number', and min must be <= max",
+    }
+  );
+
 export const zodFlagSchema = z
   .object({
     name: z
@@ -119,6 +175,9 @@ export const zodFlagSchema = z
       .describe(
         "Environment variables that should be set from this flag's value in DXT packages.",
       ),
+    dxtOptions: zodDxtOptionsSchema
+      .optional()
+      .describe("DXT-specific configuration options for enhanced DXT manifest generation"),
   })
   // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
@@ -177,6 +236,36 @@ export type ProcessedFlagCore = Omit<z.output<typeof zodFlagSchema>, "type"> & {
 };
 
 /**
+ * DXT-specific configuration options for flags that will be included in DXT manifests.
+ * These options control how the flag appears in DXT user_config and how it behaves in DXT environments.
+ */
+export interface IDxtOptions {
+  /** Whether this field should be marked as sensitive in DXT user_config (default: true for ENV-linked flags) */
+  sensitive?: boolean;
+
+  /** Default value specific to DXT sandbox environment (different from regular default) */
+  localDefault?: string;
+
+  /** DXT input type - determines UI component in DXT clients (default: inferred from IFlag.type) */
+  type?: "string" | "directory" | "file" | "boolean" | "number";
+
+  /** Allow multiple values (for arrays) */
+  multiple?: boolean;
+
+  /** Minimum value (for number type) */
+  min?: number;
+
+  /** Maximum value (for number type) */
+  max?: number;
+
+  /** DXT-specific default value (overrides localDefault if provided) */
+  default?: any;
+
+  /** Custom title for the user_config field (overrides auto-generated title) */
+  title?: string;
+}
+
+/**
  * The user-facing type for defining a flag. It includes aliases like `default` and `required`.
  * The `handler` property is removed as handlers are typically associated with commands/subcommands, not individual flags.
  */
@@ -187,6 +276,8 @@ export type IFlag = IFlagCore & {
   required?: boolean | ((parsedArgs: TParsedArgs<any>) => boolean);
   /** Environment variables that should be set from this flag's value in DXT packages */
   env?: string | string[];
+  /** DXT-specific configuration options for enhanced DXT manifest generation */
+  dxtOptions?: IDxtOptions;
 };
 
 /**

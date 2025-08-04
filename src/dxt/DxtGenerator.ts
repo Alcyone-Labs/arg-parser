@@ -1291,6 +1291,66 @@ export default ${JSON.stringify(buildConfig, null, 2)};
   }
 
   /**
+   * Validate dxtOptions for common mistakes and security issues
+   * @param flag The flag with dxtOptions to validate
+   * @param envVar The environment variable name for context
+   */
+  private validateDxtOptions(flag: any, envVar: string): void {
+    const dxtOptions = flag.dxtOptions;
+    if (!dxtOptions) return;
+
+    // Critical validations (throw errors)
+    if (dxtOptions.min !== undefined && dxtOptions.max !== undefined) {
+      if (dxtOptions.min > dxtOptions.max) {
+        throw new Error(
+          `Invalid dxtOptions for ${envVar}: min (${dxtOptions.min}) cannot be greater than max (${dxtOptions.max})`
+        );
+      }
+    }
+
+    if (dxtOptions.type !== undefined) {
+      const validTypes = ["string", "directory", "file", "boolean", "number"];
+      if (!validTypes.includes(dxtOptions.type)) {
+        throw new Error(
+          `Invalid dxtOptions.type for ${envVar}: "${dxtOptions.type}". Must be one of: ${validTypes.join(", ")}`
+        );
+      }
+    }
+
+    // Type consistency check for default values
+    if (dxtOptions.default !== undefined && dxtOptions.type !== undefined) {
+      const defaultType = typeof dxtOptions.default;
+      if (dxtOptions.type === "number" && defaultType !== "number") {
+        throw new Error(
+          `Invalid dxtOptions.default for ${envVar}: expected number, got ${defaultType}`
+        );
+      }
+      if (dxtOptions.type === "boolean" && defaultType !== "boolean") {
+        throw new Error(
+          `Invalid dxtOptions.default for ${envVar}: expected boolean, got ${defaultType}`
+        );
+      }
+    }
+
+    // Security warnings (log but continue)
+    const sensitiveKeywords = ["key", "token", "password", "secret", "auth"];
+    const envLower = envVar.toLowerCase();
+    const hasSensitiveKeyword = sensitiveKeywords.some(keyword => envLower.includes(keyword));
+
+    if (hasSensitiveKeyword && dxtOptions.sensitive === false) {
+      console.warn(
+        `⚠️  Security Warning: ${envVar} contains sensitive keyword but dxtOptions.sensitive is false`
+      );
+    }
+
+    if (flag.mandatory === true && dxtOptions.sensitive !== false) {
+      console.warn(
+        `⚠️  Security Warning: ${envVar} is required and sensitive - consider providing a secure default or making it optional`
+      );
+    }
+  }
+
+  /**
    * Generate environment variables and user configuration from ArgParser flags
    * @returns Object containing envVars and userConfig
    */
@@ -1317,9 +1377,62 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
     // Helper function to determine if a flag should be sensitive
     const shouldBeSensitive = (flag: any): boolean => {
-      // If a flag is tied to an ENV, it should be sensitive
+      // Check if dxtOptions explicitly sets sensitivity
+      if (flag.dxtOptions?.sensitive !== undefined) {
+        return flag.dxtOptions.sensitive;
+      }
+      // Default: If a flag is tied to an ENV, it should be sensitive
       const envVar = (flag as any).env || (flag as any).envVar;
       return !!envVar;
+    };
+
+    // Helper function to determine DXT type from flag
+    const getDxtType = (flag: any): string => {
+      // Check if dxtOptions explicitly sets type
+      if (flag.dxtOptions?.type) {
+        return flag.dxtOptions.type;
+      }
+      // Try to infer from IFlag.type
+      if (typeof flag.type === "string") {
+        const lowerType = flag.type.toLowerCase();
+        if (["string", "boolean", "number"].includes(lowerType)) {
+          return lowerType;
+        }
+      } else if (flag.type === String) {
+        return "string";
+      } else if (flag.type === Boolean) {
+        return "boolean";
+      } else if (flag.type === Number) {
+        return "number";
+      }
+      // Default to string
+      return "string";
+    };
+
+    // Helper function to get title for user_config
+    const getDxtTitle = (flag: any, envVar: string): string => {
+      // Check if dxtOptions explicitly sets title
+      if (flag.dxtOptions?.title) {
+        return flag.dxtOptions.title;
+      }
+      // Default: Convert env var to title case (first letter of each word capitalized)
+      return envVar
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (l: string) => l.toUpperCase());
+    };
+
+    // Helper function to get description with default value
+    const getDxtDescription = (flag: any, envVar: string): string => {
+      let baseDescription = flag.description || `${envVar} environment variable`;
+
+      // Add default value to description if available
+      const defaultValue = flag.dxtOptions?.default ?? flag.dxtOptions?.localDefault ?? flag.defaultValue;
+      if (defaultValue !== undefined) {
+        baseDescription += ` (default: ${defaultValue})`;
+      }
+
+      return baseDescription;
     };
 
     // Get all flags from the main ArgParser to find environment variables
@@ -1328,19 +1441,38 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     for (const flag of mainFlags) {
       const envVar = (flag as any).env || (flag as any).envVar;
       if (envVar) {
+        // Validate dxtOptions before processing
+        this.validateDxtOptions(flag, envVar);
+
         // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
         envVars[envVar] = `\${user_config.${envVar}}`;
 
         // Add to user_config - use the original env var name to maintain compatibility
-        userConfig[envVar] = {
-          type: "string",
-          title: envVar
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (l: string) => l.toUpperCase()),
-          description: flag.description || `${envVar} environment variable`,
+        const userConfigEntry: any = {
+          type: getDxtType(flag),
+          title: getDxtTitle(flag, envVar),
+          description: getDxtDescription(flag, envVar),
           required: shouldBeRequired(flag), // Respect the flag's mandatory setting
-          sensitive: shouldBeSensitive(flag), // Set to sensitive if tied to ENV
+          sensitive: shouldBeSensitive(flag), // Use dxtOptions or default logic
         };
+
+        // Add DXT-specific properties if available
+        if (flag.dxtOptions?.multiple !== undefined) {
+          userConfigEntry.multiple = flag.dxtOptions.multiple;
+        }
+        if (flag.dxtOptions?.min !== undefined) {
+          userConfigEntry.min = flag.dxtOptions.min;
+        }
+        if (flag.dxtOptions?.max !== undefined) {
+          userConfigEntry.max = flag.dxtOptions.max;
+        }
+        if (flag.dxtOptions?.default !== undefined) {
+          userConfigEntry.default = flag.dxtOptions.default;
+        } else if (flag.dxtOptions?.localDefault !== undefined) {
+          userConfigEntry.default = flag.dxtOptions.localDefault;
+        }
+
+        userConfig[envVar] = userConfigEntry;
       }
     }
 
@@ -1353,19 +1485,38 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           const envVar = (flag as any).env || (flag as any).envVar;
           if (envVar && !envVars[envVar]) {
             // Only add if not already present
+            // Validate dxtOptions before processing
+            this.validateDxtOptions(flag, envVar);
+
             // Add to server env - use the original env var name so process.env.CANNY_API_KEY works
             envVars[envVar] = `\${user_config.${envVar}}`;
 
             // Add to user_config - use the original env var name to maintain compatibility
-            userConfig[envVar] = {
-              type: "string",
-              title: envVar
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (l: string) => l.toUpperCase()),
-              description: flag.description || `${envVar} environment variable`,
+            const userConfigEntry: any = {
+              type: getDxtType(flag),
+              title: getDxtTitle(flag, envVar),
+              description: getDxtDescription(flag, envVar),
               required: shouldBeRequired(flag), // Respect the flag's mandatory setting
-              sensitive: shouldBeSensitive(flag), // Set to sensitive if tied to ENV
+              sensitive: shouldBeSensitive(flag), // Use dxtOptions or default logic
             };
+
+            // Add DXT-specific properties if available
+            if (flag.dxtOptions?.multiple !== undefined) {
+              userConfigEntry.multiple = flag.dxtOptions.multiple;
+            }
+            if (flag.dxtOptions?.min !== undefined) {
+              userConfigEntry.min = flag.dxtOptions.min;
+            }
+            if (flag.dxtOptions?.max !== undefined) {
+              userConfigEntry.max = flag.dxtOptions.max;
+            }
+            if (flag.dxtOptions?.default !== undefined) {
+              userConfigEntry.default = flag.dxtOptions.default;
+            } else if (flag.dxtOptions?.localDefault !== undefined) {
+              userConfigEntry.default = flag.dxtOptions.localDefault;
+            }
+
+            userConfig[envVar] = userConfigEntry;
           }
         }
       }

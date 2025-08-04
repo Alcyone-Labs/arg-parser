@@ -51,6 +51,7 @@ export class FlagManager {
       enum: parsedFromZod["enum"],
       mandatory: parsedFromZod["mandatory"],
       env: parsedFromZod["env"],
+      dxtOptions: parsedFromZod["dxtOptions"],
     };
   }
 

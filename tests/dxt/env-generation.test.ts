@@ -52,7 +52,7 @@ describe("DXT Environment Variable Generation", () => {
     // Verify user config properties
     expect(userConfig.API_KEY).toEqual({
       type: "string",
-      title: "API KEY",
+      title: "Api Key",
       description: "API key for service",
       required: false, // Not mandatory by default for top-level flags
       sensitive: true, // Sensitive because tied to ENV
@@ -60,7 +60,7 @@ describe("DXT Environment Variable Generation", () => {
 
     expect(userConfig.AUTH_TOKEN).toEqual({
       type: "string",
-      title: "AUTH TOKEN",
+      title: "Auth Token",
       description: "Authentication token",
       required: true, // Mandatory because flag has mandatory: true
       sensitive: true, // Sensitive because tied to ENV
@@ -114,7 +114,7 @@ describe("DXT Environment Variable Generation", () => {
     // Verify user config properties
     expect(userConfig.SECRET_KEY).toEqual({
       type: "string",
-      title: "SECRET KEY",
+      title: "Secret Key",
       description: "Secret key for processing",
       required: false, // Not mandatory in the flag definition
       sensitive: true, // Sensitive because tied to ENV
@@ -122,7 +122,7 @@ describe("DXT Environment Variable Generation", () => {
 
     expect(userConfig.DB_PASSWORD).toEqual({
       type: "string",
-      title: "DB PASSWORD",
+      title: "Db Password",
       description: "Database password",
       required: true, // Mandatory in the flag definition
       sensitive: true, // Sensitive because tied to ENV
@@ -199,7 +199,7 @@ describe("DXT Environment Variable Generation", () => {
     // Main flag should take precedence for SHARED_VAR
     expect(userConfig.SHARED_VAR).toEqual({
       type: "string",
-      title: "SHARED VAR",
+      title: "Shared Var",
       description: "Shared variable from main",
       required: false, // Not mandatory by default for top-level flags
       sensitive: true, // Sensitive because tied to ENV
@@ -270,7 +270,7 @@ describe("DXT Environment Variable Generation", () => {
 
     expect(userConfig.NO_DESC_VAR).toEqual({
       type: "string",
-      title: "NO DESC VAR",
+      title: "No Desc Var",
       description: "Flag with description",
       required: false, // Not mandatory by default for top-level flags
       sensitive: true, // Sensitive because tied to ENV
@@ -313,7 +313,7 @@ describe("DXT Environment Variable Generation", () => {
     // Verify complex name formatting
     expect(userConfig.MY_APP_API_KEY_V2_PRODUCTION).toEqual({
       type: "string",
-      title: "MY APP API KEY V2 PRODUCTION",
+      title: "My App Api Key V2 Production",
       description: "Variable with complex name",
       required: false, // Not mandatory by default for top-level flags
       sensitive: true, // Sensitive because tied to ENV
@@ -322,7 +322,7 @@ describe("DXT Environment Variable Generation", () => {
     // Verify simple name formatting
     expect(userConfig.TOKEN).toEqual({
       type: "string",
-      title: "TOKEN",
+      title: "Token",
       description: "Single word env var",
       required: false, // Not mandatory by default for top-level flags
       sensitive: true, // Sensitive because tied to ENV
@@ -527,7 +527,7 @@ describe("DXT Environment Variable Generation", () => {
     // First tool's description should be used (first wins)
     expect(userConfig.SHARED_API_KEY).toEqual({
       type: "string",
-      title: "SHARED API KEY",
+      title: "Shared Api Key",
       description: "API key for tool1",
       required: false, // Not mandatory by default for tool flags
       sensitive: true, // Sensitive because tied to ENV
@@ -574,10 +574,10 @@ describe("DXT Environment Variable Generation", () => {
     dxtGenerator = new DxtGenerator(parser);
     const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
 
-    // All should be treated as string type in user_config regardless of original type
+    // Types should be inferred from IFlag type (improved behavior)
     expect(userConfig.STRING_ENV).toHaveProperty("type", "string");
-    expect(userConfig.NUMBER_ENV).toHaveProperty("type", "string");
-    expect(userConfig.BOOLEAN_ENV).toHaveProperty("type", "string");
+    expect(userConfig.NUMBER_ENV).toHaveProperty("type", "number");
+    expect(userConfig.BOOLEAN_ENV).toHaveProperty("type", "boolean");
 
     // All should have proper descriptions
     expect(userConfig.STRING_ENV).toHaveProperty(
@@ -687,10 +687,22 @@ describe("DXT Environment Variable Generation", () => {
 
     // Should have 4 env vars (only flags with env property)
     expect(Object.keys(envVars)).toHaveLength(4);
-    expect(envVars).toHaveProperty("OPTIONAL_ENV_VAR", "${user_config.OPTIONAL_ENV_VAR}");
-    expect(envVars).toHaveProperty("MANDATORY_ENV_VAR", "${user_config.MANDATORY_ENV_VAR}");
-    expect(envVars).toHaveProperty("TOOL_OPTIONAL_ENV", "${user_config.TOOL_OPTIONAL_ENV}");
-    expect(envVars).toHaveProperty("TOOL_MANDATORY_ENV", "${user_config.TOOL_MANDATORY_ENV}");
+    expect(envVars).toHaveProperty(
+      "OPTIONAL_ENV_VAR",
+      "${user_config.OPTIONAL_ENV_VAR}",
+    );
+    expect(envVars).toHaveProperty(
+      "MANDATORY_ENV_VAR",
+      "${user_config.MANDATORY_ENV_VAR}",
+    );
+    expect(envVars).toHaveProperty(
+      "TOOL_OPTIONAL_ENV",
+      "${user_config.TOOL_OPTIONAL_ENV}",
+    );
+    expect(envVars).toHaveProperty(
+      "TOOL_MANDATORY_ENV",
+      "${user_config.TOOL_MANDATORY_ENV}",
+    );
 
     // Should have 4 user config entries (only flags with env property)
     expect(Object.keys(userConfig)).toHaveLength(4);
@@ -698,7 +710,7 @@ describe("DXT Environment Variable Generation", () => {
     // Top-level optional flag with env: not required, but sensitive
     expect(userConfig.OPTIONAL_ENV_VAR).toEqual({
       type: "string",
-      title: "OPTIONAL ENV VAR",
+      title: "Optional Env Var",
       description: "Optional flag with env var",
       required: false, // Respects flag's mandatory: false
       sensitive: true, // Sensitive because tied to ENV
@@ -707,7 +719,7 @@ describe("DXT Environment Variable Generation", () => {
     // Top-level mandatory flag with env: required and sensitive
     expect(userConfig.MANDATORY_ENV_VAR).toEqual({
       type: "string",
-      title: "MANDATORY ENV VAR",
+      title: "Mandatory Env Var",
       description: "Mandatory flag with env var",
       required: true, // Respects flag's mandatory: true
       sensitive: true, // Sensitive because tied to ENV
@@ -716,7 +728,7 @@ describe("DXT Environment Variable Generation", () => {
     // Tool optional flag with env: not required, but sensitive
     expect(userConfig.TOOL_OPTIONAL_ENV).toEqual({
       type: "string",
-      title: "TOOL OPTIONAL ENV",
+      title: "Tool Optional Env",
       description: "Tool optional flag with env",
       required: false, // Respects flag's mandatory: false
       sensitive: true, // Sensitive because tied to ENV
@@ -725,7 +737,7 @@ describe("DXT Environment Variable Generation", () => {
     // Tool mandatory flag with env: required and sensitive
     expect(userConfig.TOOL_MANDATORY_ENV).toEqual({
       type: "string",
-      title: "TOOL MANDATORY ENV",
+      title: "Tool Mandatory Env",
       description: "Tool mandatory flag with env",
       required: true, // Respects flag's mandatory: true
       sensitive: true, // Sensitive because tied to ENV
@@ -759,7 +771,8 @@ describe("DXT Environment Variable Generation", () => {
       })
       .addFlag({
         name: "memory_threshold_seconds",
-        description: "Time threshold in seconds after which memories trigger notifications",
+        description:
+          "Time threshold in seconds after which memories trigger notifications",
         options: ["--memory-threshold"],
         env: "MEMORY_THRESHOLD_SECONDS",
         type: "number",
@@ -772,8 +785,14 @@ describe("DXT Environment Variable Generation", () => {
 
     // Should have 2 env vars
     expect(Object.keys(envVars)).toHaveLength(2);
-    expect(envVars).toHaveProperty("DATABASE_URL", "${user_config.DATABASE_URL}");
-    expect(envVars).toHaveProperty("MEMORY_THRESHOLD_SECONDS", "${user_config.MEMORY_THRESHOLD_SECONDS}");
+    expect(envVars).toHaveProperty(
+      "DATABASE_URL",
+      "${user_config.DATABASE_URL}",
+    );
+    expect(envVars).toHaveProperty(
+      "MEMORY_THRESHOLD_SECONDS",
+      "${user_config.MEMORY_THRESHOLD_SECONDS}",
+    );
 
     // Should have 2 user config entries
     expect(Object.keys(userConfig)).toHaveLength(2);
@@ -781,7 +800,7 @@ describe("DXT Environment Variable Generation", () => {
     // DATABASE_URL: not mandatory (no mandatory property), but sensitive (has env)
     expect(userConfig.DATABASE_URL).toEqual({
       type: "string",
-      title: "DATABASE URL",
+      title: "Database Url",
       description: "The database URL to connect to",
       required: false, // Not mandatory by default
       sensitive: true, // Sensitive because tied to ENV
@@ -789,9 +808,10 @@ describe("DXT Environment Variable Generation", () => {
 
     // MEMORY_THRESHOLD_SECONDS: not mandatory (no mandatory property), but sensitive (has env)
     expect(userConfig.MEMORY_THRESHOLD_SECONDS).toEqual({
-      type: "string",
-      title: "MEMORY THRESHOLD SECONDS",
-      description: "Time threshold in seconds after which memories trigger notifications",
+      type: "number", // Inferred from IFlag type
+      title: "Memory Threshold Seconds",
+      description:
+        "Time threshold in seconds after which memories trigger notifications (default: 10)", // Includes default
       required: false, // Not mandatory by default
       sensitive: true, // Sensitive because tied to ENV
     });
