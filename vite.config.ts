@@ -119,14 +119,17 @@ export default defineConfig(({ command, mode }) => {
           },
         },
         include: ["./tests/**/*.test.ts"],
-        exclude: [
-          "**/node_modules/**",
-          "**/dist/**",
-          "**/examples/**",
-          "**/fixtures/**",
-          // Exclude slow integration tests by default
-          "**/integration/**",
-        ],
+        exclude: (() => {
+          const base = [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/examples/**",
+            "**/fixtures/**",
+          ];
+          // Exclude slow integration tests by default unless explicitly enabled
+          if (!process.env.VITEST_INCLUDE_INTEGRATION) base.push("**/integration/**");
+          return base;
+        })(),
         name: "Alcyone Labs ArgParser",
         // Add teardown timeout to ensure processes are cleaned up
         teardownTimeout: 3000, // Reduced teardown timeout

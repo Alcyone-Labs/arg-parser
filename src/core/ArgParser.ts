@@ -37,12 +37,47 @@ import { createOutputSchema } from "./types";
 /**
  * Configuration for a single MCP transport
  */
+export type CorsOptions = {
+  origins?: "*" | string | RegExp | Array<string | RegExp>;
+  methods?: string[];
+  headers?: string[];
+  exposedHeaders?: string[];
+  credentials?: boolean;
+  maxAge?: number;
+};
+
+export type JwtVerifyOptions = {
+  algorithms?: ("HS256" | "RS256")[];
+  secret?: string; // for HS256
+  publicKey?: string; // for RS256
+  getPublicKey?: (
+    header: Record<string, unknown>,
+    payload: Record<string, unknown>,
+  ) => Promise<string> | string;
+  audience?: string | string[];
+  issuer?: string | string[];
+  clockToleranceSec?: number;
+};
+
+export type AuthOptions = {
+  required?: boolean; // default true for MCP endpoint
+  scheme?: "bearer" | "jwt";
+  allowedTokens?: string[]; // simple bearer allowlist
+  validator?: (req: any, token: string | undefined) => boolean | Promise<boolean>;
+  jwt?: JwtVerifyOptions;
+  publicPaths?: string[]; // paths that skip auth
+  protectedPaths?: string[]; // if provided, only these paths require auth
+  customMiddleware?: (req: any, res: any, next: any) => any; // full control hook
+};
+
 export type McpTransportConfig = {
   type: "stdio" | "sse" | "streamable-http";
   port?: number;
   host?: string;
   path?: string;
   sessionIdGenerator?: () => string;
+  cors?: CorsOptions; // streamable-http only
+  auth?: AuthOptions; // streamable-http only
 };
 
 /**
@@ -136,6 +171,10 @@ export type DxtOptions = {
  * MCP server configuration options for withMcp() method
  * This centralizes MCP server metadata that was previously scattered across addMcpSubCommand calls
  */
+export type HttpServerOptions = {
+  configureExpress?: (app: any) => void;
+};
+
 export type McpServerOptions = {
   /** MCP server metadata */
   serverInfo?: DxtServerInfo;
@@ -177,6 +216,8 @@ export type McpServerOptions = {
   lifecycle?: McpLifecycleEvents;
   /** DXT package configuration options */
   dxt?: DxtOptions;
+  /** Optional HTTP server configuration hooks */
+  httpServer?: HttpServerOptions;
 };
 
 /**
@@ -1682,6 +1723,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       host?: string;
       path?: string;
       sessionIdGenerator?: () => string;
+      cors?: CorsOptions;
+      auth?: AuthOptions;
     }>,
     toolOptions?: GenerateMcpToolsOptions,
     logPath?: LogPath,
@@ -1722,6 +1765,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       host?: string;
       path?: string;
       sessionIdGenerator?: () => string;
+      cors?: CorsOptions;
+      auth?: AuthOptions;
     } = {},
     toolOptions?: GenerateMcpToolsOptions,
     logPath?: LogPath,
@@ -1750,6 +1795,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       host?: string;
       path?: string;
       sessionIdGenerator?: () => string;
+      cors?: CorsOptions;
+      auth?: AuthOptions;
     },
     logPath?: LogPath,
   ): Promise<void> {
@@ -1812,15 +1859,163 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const app = express();
           app.use(express.json());
 
+          // Allow user to customize Express before we register routes
+          try {
+            this._mcpServerConfig?.httpServer?.configureExpress?.(app);
+          } catch (e) {
+            // ignore hook errors to avoid breaking server start
+          }
+
           const port = transportConfig.port || 3000;
           const path = transportConfig.path || "/mcp";
+
+          // CORS middleware (optional)
+          if (transportConfig.cors) {
+            const cors = transportConfig.cors;
+            const allowMethods = cors.methods?.join(", ") || "GET,POST,PUT,PATCH,DELETE,OPTIONS";
+            const allowHeaders = (req: any) =>
+              cors.headers?.join(", ") || req.headers["access-control-request-headers"] || "Content-Type, Authorization, MCP-Session-Id";
+            const exposed = cors.exposedHeaders?.join(", ") || undefined;
+
+            const resolveOrigin = (req: any): string | undefined => {
+              const reqOrigin = req.headers.origin as string | undefined;
+              const origins = cors.origins ?? "*";
+              if (origins === "*") return cors.credentials ? reqOrigin : "*";
+              if (!reqOrigin) return undefined;
+              const list = Array.isArray(origins) ? origins : [origins];
+              for (const o of list) {
+                if (typeof o === "string" && o === reqOrigin) return reqOrigin;
+                if (o instanceof RegExp && o.test(reqOrigin)) return reqOrigin;
+              }
+              return undefined;
+            };
+
+            const applyCorsHeaders = (req: any, res: any) => {
+              const origin = resolveOrigin(req);
+              if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+              if (cors.credentials) res.setHeader("Access-Control-Allow-Credentials", "true");
+              res.setHeader("Vary", "Origin");
+              res.setHeader("Access-Control-Allow-Methods", allowMethods);
+              const hdrs = allowHeaders(req);
+              if (hdrs) res.setHeader("Access-Control-Allow-Headers", hdrs);
+              if (exposed) res.setHeader("Access-Control-Expose-Headers", exposed);
+              if (typeof cors.maxAge === "number") res.setHeader("Access-Control-Max-Age", String(cors.maxAge));
+            };
+
+            app.options(path, (req: any, res: any) => {
+              applyCorsHeaders(req, res);
+              res.status(204).end();
+            });
+
+            app.use((req: any, res: any, next: any) => {
+              if (req.path === path) applyCorsHeaders(req, res);
+              next();
+            });
+          }
+
+          // Custom auth middleware hook (optional)
+          if (transportConfig.auth?.customMiddleware) {
+            app.use(transportConfig.auth.customMiddleware);
+          }
+
+          // Built-in auth (optional)
+          const authOpts = transportConfig.auth;
+          const shouldRequireAuthFor = (req: any): boolean => {
+            if (!authOpts) return false;
+            const reqPath = req.path;
+            const pub = authOpts.publicPaths || [];
+            const prot = authOpts.protectedPaths;
+            if (pub.includes(reqPath)) return false;
+            if (prot && !prot.includes(reqPath)) return false;
+            return authOpts.required !== false; // default true
+          };
+
+          // Minimal JWT verifier supporting HS256 and RS256
+          const base64urlDecode = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+          const verifyJwt = async (token: string): Promise<boolean> => {
+            if (!authOpts?.jwt) return false;
+            const [h, p, sig] = token.split(".");
+            if (!h || !p || !sig) return false;
+            const header = JSON.parse(base64urlDecode(h).toString("utf8"));
+            const payload = JSON.parse(base64urlDecode(p).toString("utf8"));
+            const alg = header.alg as "HS256" | "RS256";
+            if (authOpts.jwt.algorithms && !authOpts.jwt.algorithms.includes(alg)) return false;
+            const data = Buffer.from(`${h}.${p}`);
+            const signature = base64urlDecode(sig);
+            if (alg === "HS256") {
+              const secret = authOpts.jwt.secret;
+              if (!secret) return false;
+              const hmac = (await import("node:crypto")).createHmac("sha256", secret).update(data).digest();
+              if (!hmac.equals(signature)) return false;
+            } else if (alg === "RS256") {
+              const crypto = await import("node:crypto");
+              let key = authOpts.jwt.publicKey;
+              if (!key && authOpts.jwt.getPublicKey) {
+                key = await authOpts.jwt.getPublicKey(header, payload);
+              }
+              if (!key) return false;
+              const verify = crypto.createVerify("RSA-SHA256");
+              verify.update(data);
+              verify.end();
+              const ok = verify.verify(key, signature);
+              if (!ok) return false;
+            } else {
+              return false;
+            }
+            // Optional audience/issuer checks
+            if (authOpts.jwt.audience) {
+              const allowed = Array.isArray(authOpts.jwt.audience) ? authOpts.jwt.audience : [authOpts.jwt.audience];
+              if (!allowed.includes(payload.aud)) return false;
+            }
+            if (authOpts.jwt.issuer) {
+              const allowed = Array.isArray(authOpts.jwt.issuer) ? authOpts.jwt.issuer : [authOpts.jwt.issuer];
+              if (!allowed.includes(payload.iss)) return false;
+            }
+            const nowSec = Math.floor(Date.now() / 1000);
+            const tol = authOpts.jwt.clockToleranceSec || 0;
+            if (payload.nbf && nowSec + tol < payload.nbf) return false;
+            if (payload.exp && nowSec - tol >= payload.exp) return false;
+            return true;
+          };
+
+          const authenticate = async (req: any): Promise<boolean> => {
+            if (!authOpts) return true;
+            const authz = req.headers.authorization as string | undefined;
+            const token = authz?.startsWith("Bearer ") ? authz.slice(7) : undefined;
+            if (!token) {
+              // allow custom validator to decide on missing token
+              if (authOpts.validator) return !!(await authOpts.validator(req, token));
+              return false;
+            }
+            if (authOpts.scheme === "jwt" || authOpts.jwt) {
+              const ok = await verifyJwt(token);
+              if (!ok) return false;
+            } else if (authOpts.scheme === "bearer" || !authOpts.scheme) {
+              if (authOpts.allowedTokens && !authOpts.allowedTokens.includes(token)) {
+                // fall through to validator if provided
+                if (authOpts.validator) return !!(await authOpts.validator(req, token));
+                return false;
+              }
+            }
+            if (authOpts.validator) {
+              const ok = await authOpts.validator(req, token);
+              if (!ok) return false;
+            }
+            return true;
+          };
 
           const transports: { [sessionId: string]: any } = {};
 
           app.all(path, async (req: any, res: any) => {
-            const sessionId = req.headers["mcp-session-id"] as
-              | string
-              | undefined;
+            if (shouldRequireAuthFor(req)) {
+              const ok = await authenticate(req);
+              if (!ok) {
+                res.status(401).json({ error: "Unauthorized" });
+                return;
+              }
+            }
+
+            const sessionId = req.headers["mcp-session-id"] as string | undefined;
             let transport: any;
 
             if (sessionId && transports[sessionId]) {
@@ -1836,9 +2031,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               });
 
               transport.onclose = () => {
-                if (transport.sessionId) {
-                  delete transports[transport.sessionId];
-                }
+                if (transport.sessionId) delete transports[transport.sessionId];
               };
 
               await server.connect(transport);
@@ -1939,6 +2132,39 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    */
   public parseAsync(processArgs?: string[], options?: any): Promise<any> {
     return this.parse(processArgs, options);
+  }
+
+  /**
+   * Convenience method for auto-execution: only runs if the script is executed directly (not imported).
+   * This eliminates the need for boilerplate code to check if the script is being run directly.
+   *
+   * @param importMetaUrl Pass import.meta.url from your script for reliable detection
+   * @param processArgs Optional arguments to parse (defaults to process.argv.slice(2))
+   * @param options Additional parse options
+   * @returns Promise that resolves to the parse result, or empty object if script is imported
+   *
+   * @example
+   * ```typescript
+   * // At the bottom of your CLI script:
+   * await cli.parseIfExecutedDirectly(import.meta.url);
+   *
+   * // With error handling:
+   * await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
+   *   console.error("Fatal error:", error instanceof Error ? error.message : String(error));
+   *   process.exit(1);
+   * });
+   * ```
+   */
+  public async parseIfExecutedDirectly(
+    importMetaUrl: string,
+    processArgs?: string[],
+    options?: any
+  ): Promise<any> {
+    return this.parse(processArgs, {
+      ...options,
+      autoExecute: true,
+      importMetaUrl,
+    });
   }
 
   async #processAsyncHandlerPromise(result: any): Promise<any> {

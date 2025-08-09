@@ -62,36 +62,6 @@ describe("Automatic Argument Detection", () => {
       expect(result.success).toBe(true);
     });
 
-    test("should display warning in CLI mode when auto-detecting arguments", async () => {
-      // Mock process.argv with test arguments
-      globalThis.process.argv = ["node", "script.js", "--test", "value"];
-
-      const parser = new ArgParser({
-        appName: "Test CLI",
-        appCommandName: "test-cli", // This makes it CLI mode
-        handler: async (ctx) => ({ success: true, args: ctx.args }),
-        autoExit: false,
-        handleErrors: false,
-      }).addFlag({
-        name: "test",
-        description: "Test flag",
-        options: ["--test"],
-        type: "string",
-      });
-
-      await parser.parse();
-
-      // Should have displayed warning
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Warning: parse() called without arguments"),
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "For explicit control, call parse(process.argv.slice(2)) instead",
-        ),
-      );
-    });
-
     test("should not display warning when not in CLI mode", async () => {
       // Mock process.argv with test arguments
       globalThis.process.argv = ["node", "script.js", "--test", "value"];

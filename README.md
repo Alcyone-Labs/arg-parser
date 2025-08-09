@@ -45,6 +45,9 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [Common Pitfalls to Avoid](#common-pitfalls-to-avoid)
   - [Automatic MCP Server Mode (`--s-mcp-serve`)](#automatic-mcp-server-mode---s-mcp-serve)
   - [MCP Transports](#mcp-transports)
+    - [Adding custom HTTP routes (e.g., /health)](#adding-custom-http-routes-eg-health)
+    - [CORS and Authentication for streamable-http](#cors-and-authentication-for-streamable-http)
+    - [Multiple transports and improved logging](#multiple-transports-and-improved-logging)
   - [MCP Logging Configuration](#mcp-logging-configuration)
     - [Enhanced Logging (Recommended)](#enhanced-logging-recommended)
     - [Simple Logging Configuration](#simple-logging-configuration)
@@ -71,6 +74,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.7.0](#v270)
   - [v2.6.0](#v260)
   - [v2.5.0](#v250)
   - [v2.4.2](#v242)
@@ -337,9 +341,9 @@ yarn unlink
 
 ArgParser's `parse()` method is async and automatically handles both synchronous and asynchronous handlers:
 
-### Automatic Argument Detection
+### Auto-Execution versus Import: No More Boilerplate
 
-`parse()` can now be called without arguments for improved developer experience:
+ArgParser now provides auto-execution ability that eliminates the need for boilerplate code to check if your script is being run directly vs. imported. This enables use cases such as programmatically loading the CLI and scanning for tools or testing it from another script via the --s-enable-fuzzy flag or your own script.
 
 ```typescript
 const cli = ArgParser.withMcp({
@@ -348,32 +352,27 @@ const cli = ArgParser.withMcp({
   handler: async (ctx) => ({ success: true, data: ctx.args }),
 });
 
-// You can call parse() without arguments
-// Automatically detects Node.js environment and uses process.argv.slice(2)
-async function main() {
-  try {
-    const result = await cli.parse(); // No arguments needed!
-    console.log("Success:", result);
-  } catch (error) {
-    console.error("Error:", error.message);
-    process.exit(1);
-  }
-}
+// Now, this will NOT automatically execute the parser if the script is imported, but will execute if called directly:
+await cli.parse(undefined, {
+  importMetaUrl: import.meta.url
+}).catch(handleError);
+
+
+// Or, using the manual APIs:
+await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
+  console.error("Fatal error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
 ```
 
-**How it works:**
+**Replaces previously confusing patterns:**
 
-- ✅ **Auto-detection**: When `parse()` is called without arguments, ArgParser automatically detects if it's running in Node.js
-- ✅ **Smart fallback**: Uses `process.argv.slice(2)` automatically in Node.js environments
-- ✅ **User-friendly warning**: Shows a helpful warning in CLI mode to inform users about the behavior
-- ✅ **Error handling**: Throws a clear error in non-Node.js environments when arguments are required
-- ✅ **Backward compatible**: Explicit arguments still work exactly as before
-
-**When warnings are shown:**
-
-- ✅ CLI mode (when `appCommandName` is set)
-- ❌ Library/programmatic usage (no `appCommandName`)
-- ❌ MCP mode (warnings suppressed for clean MCP output)
+```typescript
+// Brittle and breaks in sandboxes
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await cli.parse().catch(handleError);
+}
+```
 
 ### Cannonical Usage Pattern
 
@@ -1296,6 +1295,14 @@ my-tool --s-mcp-serve --s-mcp-transports '[{"type":"stdio"},{"type":"sse","port"
 # Single transport with custom options
 my-tool --s-mcp-serve --s-mcp-transport sse --s-mcp-port 3000 --s-mcp-host 0.0.0.0
 
+# Streamable HTTP CORS/auth via CLI flags (JSON strings)
+my-tool --s-mcp-serve \
+  --s-mcp-transport streamable-http \
+  --s-mcp-port 3002 --s-mcp-path /api/mcp \
+  --s-mcp-cors '{"origins":["http://localhost:5173"],"credentials":true,"methods":["GET","POST","OPTIONS"],"maxAge":600}' \
+  --s-mcp-auth '{"required":true,"scheme":"jwt","jwt":{"algorithms":["HS256"],"secret":"$MY_JWT_SECRET"},"publicPaths":["/health"]}'
+
+
 # Custom log path via CLI flag (logs to specified file instead of ./logs/mcp.log)
 my-tool --s-mcp-serve --s-mcp-log-path /var/log/my-mcp-server.log
 
@@ -1303,6 +1310,130 @@ my-tool --s-mcp-serve --s-mcp-log-path /var/log/my-mcp-server.log
 const parser = ArgParser.withMcp({
   mcp: {
     serverInfo: { name: 'my-tool', version: '1.0.0' },
+
+```
+
+### CORS and Authentication for streamable-http
+
+CORS is often required when connecting a Web UI to an MCP server over HTTP.
+
+- Programmatic transport config:
+
+```ts
+import type { McpTransportConfig } from "@alcyone-labs/arg-parser";
+
+const defaultTransports: McpTransportConfig[] = [{
+  type: "streamable-http",
+  port: 3002,
+  path: "/api/mcp",
+  cors: {
+    origins: ["http://localhost:5173", /^https?:\/\/example\.com$/],
+    methods: ["GET","POST","OPTIONS"],
+    headers: ["Content-Type","Authorization","MCP-Session-Id"],
+    exposedHeaders: ["MCP-Session-Id"],
+    credentials: true,
+    maxAge: 600,
+  },
+  auth: {
+    required: true,
+    scheme: "jwt", // or "bearer"
+    // Bearer allowlist:
+    // allowedTokens: ["token1","token2"],
+    // JWT verification (HS256):
+    // jwt: { algorithms: ["HS256"], secret: process.env.JWT_SECRET },
+    // JWT verification (RS256 with static public key):
+    // jwt: { algorithms: ["RS256"], publicKey: process.env.RS256_PUBLIC_KEY },
+    // JWT verification (RS256 with dynamic JWKS):
+    // jwt: { algorithms: ["RS256"], getPublicKey: async (header)=>{ /* fetch JWKS and return PEM */ } },
+    publicPaths: ["/health"],
+    protectedPaths: undefined, // if set, only listed paths require auth
+    // Optional custom validator to add extra checks
+    validator: async (req, token) => true,
+  },
+}];
+```
+
+- CLI flags (JSON strings):
+
+```bash
+my-tool --s-mcp-serve \
+  --s-mcp-transport streamable-http \
+  --s-mcp-port 3002 --s-mcp-path /api/mcp \
+  --s-mcp-cors '{"origins":["http://localhost:5173"],"credentials":true,"methods":["GET","POST","OPTIONS"],"maxAge":600}' \
+  --s-mcp-auth '{"required":true,"scheme":"jwt","jwt":{"algorithms":["HS256"],"secret":"'$JWT_SECRET'"},"publicPaths":["/health"]}'
+```
+
+- Express hook for custom routes:
+
+```ts
+httpServer: {
+  configureExpress: (app) => {
+    app.get("/health", (_req, res) => res.json({ ok: true }));
+  },
+}
+```
+
+See examples:
+- examples/streamable-http/secure-mcp.ts (HS256)
+- examples/streamable-http/rs256-mcp.ts (RS256)
+- examples/streamable-http/jwks-mcp.ts (JWKS)
+- examples/streamable-http/bearer-mcp.ts (Bearer)
+- examples/streamable-http/productized-mcp.ts (token + session usage)
+
+#### TypeScript types
+
+- CorsOptions
+
+```ts
+export type CorsOptions = {
+  origins?: "*" | string | RegExp | Array<string | RegExp>;
+  methods?: string[];
+  headers?: string[];
+  exposedHeaders?: string[];
+  credentials?: boolean;
+  maxAge?: number;
+};
+```
+
+- AuthOptions and JwtVerifyOptions
+
+```ts
+export type JwtVerifyOptions = {
+  algorithms?: ("HS256" | "RS256")[];
+  secret?: string;        // HS256
+  publicKey?: string;     // RS256 static
+  getPublicKey?: (header: Record<string, unknown>, payload: Record<string, unknown>) => Promise<string> | string; // RS256 dynamic
+  audience?: string | string[];
+  issuer?: string | string[];
+  clockToleranceSec?: number;
+};
+
+export type AuthOptions = {
+  required?: boolean; // default true for MCP endpoint
+  scheme?: "bearer" | "jwt";
+  allowedTokens?: string[]; // simple bearer allowlist
+  validator?: (req: any, token: string | undefined) => boolean | Promise<boolean>;
+  jwt?: JwtVerifyOptions;
+  publicPaths?: string[];     // paths that skip auth
+  protectedPaths?: string[];  // if provided, only these paths require auth
+  customMiddleware?: (req: any, res: any, next: any) => any; // full control hook
+};
+```
+
+- HttpServerOptions
+
+```ts
+export type HttpServerOptions = {
+  configureExpress?: (app: any) => void;
+};
+```
+
+Notes:
+- When credentials are true, Access-Control-Allow-Origin echoes the request Origin rather than using "*".
+- You can manage CORS for non-MCP routes in configureExpress.
+- Use publicPaths to allow some routes without auth; use protectedPaths to only require auth for certain routes.
+
+
     log: {
       level: 'debug',       // Capture all log levels
       logToFile: '/var/log/my-mcp-server.log',
@@ -1310,9 +1441,28 @@ const parser = ArgParser.withMcp({
     }
     // LEGACY: logPath: '/var/log/my-mcp-server.log'  // Still works
   }
-});
 
-# Multiple transports and improved logging (configured via --s-mcp-serve system flag)
+### Adding custom HTTP routes (e.g., /health)
+
+Use the httpServer.configureExpress(app) hook to register routes before MCP endpoints are bound. Example:
+
+```ts
+const cli = ArgParser.withMcp({
+  mcp: {
+    serverInfo: { name: "my-mcp", version: "1.0.0" },
+    defaultTransports: [
+      { type: "streamable-http", port: 3002, path: "/api/mcp", auth: { required: true, publicPaths: ["/health"] } }
+    ],
+    httpServer: { configureExpress: (app) => app.get("/health", (_req, res) => res.json({ ok: true })) },
+  }
+});
+```
+
+- To make a route public (no auth), add it to auth.publicPaths.
+- CORS headers for non-MCP paths can be applied by your own middleware inside the hook if desired.
+
+### Multiple transports and improved logging
+
 const cli = ArgParser.withMcp({
   appName: 'multi-tool',
   appCommandName: 'multi-tool',
@@ -1913,6 +2063,19 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.7.0
+
+**Feat**
+
+**MCP**:
+
+- Add support for CORS and authentication options, enabling powerful tools to serve Web UIs and publicly exposed APIs
+- Add supports for configuring express by exposing the app before it runs
+
+**CLI**:
+
+- Add support for NOT automatically executing the CLI if the script is imported, but will execute if called directly as a CLI. This enables use cases such as programmatically loading the CLI and scanning for tools or testing it from another script via the --s-enable-fuzzy flag or your own script.
 
 ### v2.6.0
 

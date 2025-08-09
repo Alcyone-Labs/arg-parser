@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
 import chalk from "@alcyone-labs/simple-chalk";
 import { ConfigurationManager } from "../config/ConfigurationManager";
@@ -132,6 +133,19 @@ export interface IParseOptions {
    * @internal
    */
   isMcp?: boolean;
+  /**
+   * When true, automatically executes the CLI if the script is being run directly (not imported).
+   * When false, disables auto-execution detection even if importMetaUrl is provided.
+   * Uses robust detection that works across different environments and sandboxes.
+   * Only takes effect when importMetaUrl is also provided.
+   * @default true (when importMetaUrl is provided)
+   */
+  autoExecute?: boolean;
+  /**
+   * The import.meta.url from the calling script, required for reliable auto-execution detection.
+   * Only used when autoExecute is true.
+   */
+  importMetaUrl?: string;
 }
 
 type TParsedArgsWithRouting<T = any> = T & {
@@ -1093,11 +1107,51 @@ export class ArgParserBase<THandlerReturn = any> {
     }
   }
 
+  /**
+   * Detects if the current script is being executed directly (not imported)
+   * Uses a robust method that works across different environments and sandboxes
+   * @param importMetaUrl The import.meta.url from the calling script (optional)
+   * @returns true if the script is being executed directly, false if imported
+   */
+  private static isExecutedDirectly(importMetaUrl?: string): boolean {
+    try {
+      // Use import.meta.url if provided (most reliable for ES modules)
+      if (importMetaUrl) {
+        const currentFile = fileURLToPath(importMetaUrl);
+        const executedFile = path.resolve(process.argv[1]);
+        return currentFile === executedFile;
+      }
+
+      // Fallback
+      if (typeof process !== "undefined" && process.argv && process.argv[1]) {
+        // Conservative approach
+        return false;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
   async parse(
     processArgs?: string[],
     options?: IParseOptions,
   ): Promise<TParsedArgsWithRouting<any> | ParseResult> {
     debug.log("ArgParserBase.parse() called with args:", processArgs);
+
+    // Handle auto-execution: only run if script is executed directly (not imported)
+    // Default to true unless explicitly disabled, but only when importMetaUrl is provided
+    const shouldCheckAutoExecution = options?.importMetaUrl && (options?.autoExecute !== false);
+    if (shouldCheckAutoExecution) {
+      const isDirectExecution = ArgParserBase.isExecutedDirectly(options.importMetaUrl);
+      if (!isDirectExecution) {
+        // Script is being imported, not executed directly - return early without parsing
+        debug.log("Auto-execution enabled but script is imported, skipping execution");
+        return {} as TParsedArgsWithRouting<any>;
+      }
+    }
+
     // Handle automatic argument detection when no arguments provided
     if (processArgs === undefined) {
       // Check if we're in a Node.js environment
@@ -1107,20 +1161,6 @@ export class ArgParserBase<THandlerReturn = any> {
         Array.isArray(process.argv)
       ) {
         processArgs = process.argv.slice(2);
-
-        // Display warning in CLI mode (when we have appCommandName set and not in MCP mode)
-        const isCliMode = !this.#parentParser && !!this.#appCommandName;
-        const isMcpMode =
-          options?.isMcp || (globalThis as any).console?.mcpError;
-
-        if (isCliMode && !isMcpMode) {
-          console.warn(
-            `Warning: parse() called without arguments. Auto-detected Node.js environment and using process.argv.slice(2).`,
-          );
-          console.warn(
-            `For explicit control, call parse(process.argv.slice(2)) instead.`,
-          );
-        }
       } else {
         // Not in Node.js environment, throw an error
         throw new Error(
@@ -2375,6 +2415,8 @@ ${descriptionLines
       path?: string;
       transports?: string;
       logPath?: string;
+      cors?: any;
+      auth?: any;
     },
   ): Promise<void> {
     // We need to cast this to ArgParser to access MCP methods
@@ -2419,6 +2461,9 @@ ${descriptionLines
         port: transportOptions.port,
         host: transportOptions.host || "localhost",
         path: transportOptions.path || "/mcp",
+        // Pass-through for streamable-http only; harmlessly ignored for others
+        cors: transportOptions.cors,
+        auth: transportOptions.auth,
       };
 
       await mcpParser.startMcpServerWithTransport(
@@ -2511,6 +2556,8 @@ ${descriptionLines
     path?: string;
     transports?: string;
     logPath?: string;
+    cors?: any;
+    auth?: any;
   } {
     const options: {
       transportType?: string;
@@ -2519,6 +2566,8 @@ ${descriptionLines
       path?: string;
       transports?: string;
       logPath?: string;
+      cors?: any;
+      auth?: any;
     } = {};
 
     // Look for transport-related system flags
@@ -2561,6 +2610,19 @@ ${descriptionLines
           if (nextArg && !nextArg.startsWith("-")) {
             options.logPath = nextArg;
             i++; // Skip next arg since we consumed it
+          }
+          break;
+        // Streamable HTTP extras (accept JSON string)
+        case "--s-mcp-cors":
+          if (nextArg && !nextArg.startsWith("-")) {
+            try { options.cors = JSON.parse(nextArg); } catch { options.cors = nextArg; }
+            i++;
+          }
+          break;
+        case "--s-mcp-auth":
+          if (nextArg && !nextArg.startsWith("-")) {
+            try { options.auth = JSON.parse(nextArg); } catch { options.auth = nextArg; }
+            i++;
           }
           break;
         // Backward compatibility: support old flags but with deprecation warning

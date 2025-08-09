@@ -16,6 +16,10 @@ export {
   type DxtCopyEntry,
   type DxtCopyOptions,
   type DxtOptions,
+  type CorsOptions,
+  type AuthOptions,
+  type JwtVerifyOptions,
+  type HttpServerOptions,
 } from "./core/ArgParser";
 
 // Re-export McpLoggerOptions directly from the library for user convenience

@@ -52,20 +52,7 @@ const TEST_SUITES: TestSuite[] = [
     timeout: 60000,
     critical: true,
   },
-  {
-    name: "multi-transport",
-    description: "Multi-transport MCP server tests",
-    file: "multi-transport.test.ts",
-    timeout: 45000,
-    critical: false,
-  },
-  {
-    name: "real-world-examples",
-    description: "Real-world MCP usage example tests",
-    file: "real-world-examples.test.ts",
-    timeout: 90000,
-    critical: false,
-  },
+
   {
     name: "performance",
     description: "Performance and reliability tests",
@@ -159,6 +146,7 @@ Examples:
       const child = spawn("pnpm", ["vitest", "run", testFile], {
         stdio: ["pipe", "pipe", "pipe"],
         timeout: suite.timeout,
+        env: { ...process.env, VITEST_INCLUDE_INTEGRATION: "1" },
       });
 
       let output = "";

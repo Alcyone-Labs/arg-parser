@@ -51,12 +51,15 @@ import { ArgParser } from '@alcyone-labs/arg-parser';
 
 | Example                    | Purpose            | Key Features                                              |
 | -------------------------- | ------------------ | --------------------------------------------------------- |
-| `getting-started.ts`       | Learn the basics   | Complete executable CLI, subcommands, MCP integration     |
-| `simple-cli.ts`            | Essential patterns | Clean flag examples, modern handler patterns              |
-| `v1.1.0-showcase.ts`       | Latest features    | System flags, environment loading, multi-transport MCP    |
-| `fzf-search-cli.ts`        | Real-world usage   | Production-ready tool, complex validation, error handling |
-| `with-env-example.ts`      | Configuration      | File loading, environment management, save/load workflow  |
-| `mcp-preset-transports.ts` | MCP advanced       | Preset transport configuration, multiple protocols        |
+| `core/getting-started.ts`       | Learn the basics   | Complete executable CLI, subcommands, MCP integration     |
+| `core/simple-cli.ts`            | Essential patterns | Clean flag examples, modern handler patterns              |
+| `v1.1.0-showcase.ts`            | Latest features    | System flags, environment loading, multi-transport MCP    |
+| `fzf-search-cli.ts`             | Real-world usage   | Production-ready tool, complex validation, error handling |
+| `with-env-example.ts`           | Configuration      | File loading, environment management, save/load workflow  |
+| `MCP/preset-transports.ts`      | MCP advanced       | Preset transport configuration, multiple protocols        |
+| `streamable-http/secure-mcp.ts` | HTTP security demo | CORS + JWT (HS256) + /health                              |
+| `streamable-http/rs256-mcp.ts`  | HTTP security demo | CORS + JWT (RS256) + /health                              |
+| `streamable-http/bearer-mcp.ts` | HTTP security demo | CORS + Bearer allowlist + /health                         |
 
 ## Featured Examples
 
