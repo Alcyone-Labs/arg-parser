@@ -2250,11 +2250,13 @@ ${descriptionLines
       if (typeof loggerConfig === "string") {
         mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", loggerConfig);
       } else {
-        // Use legacy API for now - future versions will support options-based API
-        mcpLogger = mcpLoggerModule.createMcpLogger(
-          loggerConfig.prefix || "MCP Serve",
-          loggerConfig.logToFile
-        );
+        // Use options-based API when full config is provided to honor level and mcpMode
+        mcpLogger = mcpLoggerModule.createMcpLogger({
+          prefix: loggerConfig.prefix || "MCP Serve",
+          logToFile: loggerConfig.logToFile,
+          level: loggerConfig.level,
+          mcpMode: loggerConfig.mcpMode ?? true,
+        });
       }
 
       debug.log("Created MCP logger, about to hijack console");

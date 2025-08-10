@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 
 function startExample(example: string, env?: Record<string, string>) {
   const full = resolve(example);
-  const proc = spawn("node", [full, "--s-mcp-serve"], { env: { ...process.env, ...env }, stdio: "pipe" });
+  const proc = spawn("npx", ["tsx", full, "--s-mcp-serve"], { env: { ...process.env, ...env }, stdio: "pipe" });
   return proc;
 }
 
@@ -64,7 +64,17 @@ describe("streamable-http JWKS", () => {
     jwksUrl = "http://localhost:4055/.well-known/jwks.json";
 
     mcpProc = startExample("examples/streamable-http/jwks-mcp.ts", { JWKS_URL: jwksUrl });
-    await delay(500);
+
+    // Wait for MCP server to start
+    await delay(2000);
+
+    // Verify server is responding
+    try {
+      await httpRequest({ host: "localhost", port: 3005, path: "/health" });
+    } catch (error) {
+      console.error("MCP server failed to start:", error);
+      throw error;
+    }
   });
 
   afterAll(() => {

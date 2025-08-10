@@ -31,12 +31,18 @@ const cli = ArgParser.withMcp({
     ],
     httpServer: {
       configureExpress: (app) => {
-        app.get("/health", (_req: any, res: any) => res.json({ ok: true }));
+        app.get("/health", (_req, res) => res.json({ ok: true }));
       },
     },
   },
 })
-  .addTool({ name: "noop", description: "No-op", handler: async () => ({ ok: true }) });
+  .addTool({ name: "noop", description: "No-op", flags: [], handler: async () => ({ ok: true }) });
 
 export default cli;
+
+// Auto-execute only when run directly
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
 

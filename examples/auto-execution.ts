@@ -40,8 +40,8 @@ console.log("   - Run directly: bun examples/auto-execution.ts --name Alice --co
 console.log("   - Import: import('./auto-execution.ts') - won't execute");
 console.log("");
 
-// 🚀 NEW: Simple one-liner that replaces the brittle boilerplate
-await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
+// 🚀 Canonical usage: parse with auto-execution detection via importMetaUrl
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
   console.error(
     "Fatal error:",
     error instanceof Error ? error.message : String(error),

@@ -80,10 +80,10 @@ const cli = ArgParser.withMcp({
                 id: z.string(),
                 name: z.string(),
               })
-              .optional()
+              .nullable()
               .describe("Category information"),
             created: z.string().optional().describe("Creation timestamp"),
-            eta: z.string().optional().describe("Estimated time of arrival"),
+            eta: z.string().nullable().describe("Estimated time of arrival"),
           }),
         )
         .describe("Array of matching Canny posts"),

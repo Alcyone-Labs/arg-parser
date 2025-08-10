@@ -463,7 +463,5 @@ function getFilesRecursively(dirPath: string): string[] {
 // Export for testing
 export default cli;
 
-// Run the CLI when executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  cli.parse(process.argv.slice(2));
-}
+// Auto-execute only when run directly
+await cli.parse(undefined, { importMetaUrl: import.meta.url });

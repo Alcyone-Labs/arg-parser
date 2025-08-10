@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 
 function startExample(example: string, extraArgs: string[] = []) {
   const full = resolve(example);
-  const proc = spawn("node", [full, "--s-mcp-serve", ...extraArgs], {
+  const proc = spawn("npx", ["tsx", full, "--s-mcp-serve", ...extraArgs], {
     env: { ...process.env, MY_JWT_SECRET: "test-secret" },
     stdio: "pipe",
   });
@@ -36,7 +36,18 @@ describe("streamable-http CORS/Auth", () => {
   beforeAll(async () => {
     jwtProc = startExample("examples/streamable-http/secure-mcp.ts");
     bearerProc = startExample("examples/streamable-http/bearer-mcp.ts");
-    await delay(500);
+
+    // Wait for servers to start by checking health endpoints
+    await delay(2000);
+
+    // Verify servers are responding
+    try {
+      await httpRequest({ host: "localhost", port: 3002, path: "/health" });
+      await httpRequest({ host: "localhost", port: 3003, path: "/health" });
+    } catch (error) {
+      console.error("Servers failed to start:", error);
+      throw error;
+    }
   });
 
   afterAll(() => {
@@ -55,6 +66,9 @@ describe("streamable-http CORS/Auth", () => {
     expect(res.status).toBe(204);
     expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
     expect(res.headers["access-control-allow-methods"]).toContain("POST");
+    // Credentials and Vary header coverage
+    expect(res.headers["access-control-allow-credentials"]).toBe("true");
+    expect(res.headers["vary"]).toContain("Origin");
   });
 
   it("allows public /health without auth", async () => {

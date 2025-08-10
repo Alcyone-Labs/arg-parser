@@ -33,6 +33,7 @@ import type {
   ParseResult,
 } from "./types";
 import { createOutputSchema } from "./types";
+import type { Application as ExpressApplication } from "express";
 
 /**
  * Configuration for a single MCP transport
@@ -172,7 +173,7 @@ export type DxtOptions = {
  * This centralizes MCP server metadata that was previously scattered across addMcpSubCommand calls
  */
 export type HttpServerOptions = {
-  configureExpress?: (app: any) => void;
+  configureExpress?: (app: ExpressApplication) => void;
 };
 
 export type McpServerOptions = {
@@ -1350,16 +1351,35 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           });
         }
 
-        // TODO: Include output schema in MCP tool registration for MCP 2025-06-18+ clients
-        // Currently commented out as MCP SDK v1.15.1 doesn't support outputSchema in registerTool
-        // This should be conditionally enabled based on negotiated protocol version
-        // Unlike input schemas, output schemas should remain as Zod schema objects
-        // for proper validation by the MCP integration layer
-        /*
-        if (tool.outputSchema) {
-          toolConfig.outputSchema = tool.outputSchema;
+        // Include output schema in MCP tool registration for MCP 2025-06-18+ clients
+        // The Alcyone Labs MCP SDK fork v1.16.0+ supports outputSchema in registerTool
+        // This is conditionally enabled based on negotiated protocol version
+        // Output schemas must be converted to Zod schema objects before passing to MCP SDK
+        if (tool.outputSchema && this.supportsOutputSchemas()) {
+          // Convert outputSchema to Zod schema (handles plain objects, patterns, and existing Zod schemas)
+          const convertedOutputSchema = createOutputSchema(tool.outputSchema);
+          toolConfig.outputSchema = convertedOutputSchema;
+
+          if (process.env["MCP_DEBUG"]) {
+            console.error(
+              `[MCP Debug] Including outputSchema for tool '${tool.name}':`,
+              typeof tool.outputSchema
+            );
+            console.error(
+              `[MCP Debug] Converted outputSchema constructor:`,
+              convertedOutputSchema?.constructor?.name
+            );
+            console.error(
+              `[MCP Debug] supportsOutputSchemas():`,
+              this.supportsOutputSchemas()
+            );
+          }
+        } else if (process.env["MCP_DEBUG"]) {
+          console.error(
+            `[MCP Debug] NOT including outputSchema for tool '${tool.name}':`,
+            `hasOutputSchema=${!!tool.outputSchema}, supportsOutputSchemas=${this.supportsOutputSchemas()}`
+          );
         }
-        */
 
         // Simple tool execution that matches the working minimal MCP server pattern
         const simpleExecute = async (args: any) => {
@@ -1857,7 +1877,20 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const express = (await import("express")).default;
 
           const app = express();
+          app.disable("x-powered-by");
           app.use(express.json());
+
+          // Add a simple favicon to prevent 404 errors
+          app.get("/favicon.ico", (_req, res) => {
+            // Simple red dot on white background as SVG
+            const favicon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+              <rect width="16" height="16" fill="white"/>
+              <circle cx="8" cy="8" r="4" fill="red"/>
+            </svg>`;
+            res.setHeader("Content-Type", "image/svg+xml");
+            res.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+            res.send(favicon);
+          });
 
           // Allow user to customize Express before we register routes
           try {

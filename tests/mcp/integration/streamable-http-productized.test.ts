@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 
 function startExample(example: string, extraArgs: string[] = []) {
   const full = resolve(example);
-  const proc = spawn("node", [full, "--s-mcp-serve", ...extraArgs], { stdio: "pipe" });
+  const proc = spawn("npx", ["tsx", full, "--s-mcp-serve", ...extraArgs], { stdio: "pipe" });
   return proc;
 }
 
@@ -30,7 +30,17 @@ describe("productized MCP auth + session usage tracking", () => {
 
   beforeAll(async () => {
     proc = startExample("examples/streamable-http/productized-mcp.ts");
-    await delay(500);
+
+    // Wait for server to start
+    await delay(2000);
+
+    // Verify server is responding
+    try {
+      await httpRequest({ host: "localhost", port: 3010, path: "/usage" });
+    } catch (error) {
+      console.error("Productized server failed to start:", error);
+      throw error;
+    }
   });
 
   afterAll(() => { proc?.kill(); });

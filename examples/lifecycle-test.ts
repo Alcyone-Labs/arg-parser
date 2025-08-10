@@ -80,10 +80,8 @@ const cli = ArgParser.withMcp({
 // Export for testing
 export { cli };
 
-// Only run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  cli.parse(process.argv.slice(2)).catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-  });
-}
+// Auto-execute only when run directly
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

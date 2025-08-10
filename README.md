@@ -74,6 +74,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.7.1](#v271)
   - [v2.7.0](#v270)
   - [v2.6.0](#v260)
   - [v2.5.0](#v250)
@@ -356,7 +357,6 @@ const cli = ArgParser.withMcp({
 await cli.parse(undefined, {
   importMetaUrl: import.meta.url
 }).catch(handleError);
-
 
 // Or, using the manual APIs:
 await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
@@ -2063,6 +2063,22 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.7.1
+
+**Feat**
+
+**MCP**:
+
+- outputSchema is now included in MCP tool registration for MCP 2025-06-18+ clients and will generate a JSON Schema in `tools/list` responses to make JSON introspection easier.
+
+**Fixes and Changes**
+
+**MCP**:
+
+- The app parameter in configureExpress: (app) => {} is now fully typed to improve intellisense.
+- Express' x-powered-by was disabled by default. It can be re-enabled or changed via configureExpress as needed.
+- Logger parameters were still not fully functional and log level was still ignored, this has been fixed.
 
 ### v2.7.0
 

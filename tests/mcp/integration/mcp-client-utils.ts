@@ -117,7 +117,7 @@ export abstract class BaseMcpClient extends EventEmitter {
   }): Promise<McpServerInfo> {
     this.log("Initializing MCP connection", clientInfo);
     const result = await this.sendRequest("initialize", {
-      protocolVersion: "2024-11-05",
+      protocolVersion: "2025-06-18", // Use latest protocol version to enable outputSchema support
       capabilities: {
         tools: {},
       },

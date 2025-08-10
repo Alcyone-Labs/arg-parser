@@ -72,6 +72,7 @@ const cli = ArgParser.withMcp({
   .addTool({
     name: "chargeable-op",
     description: "A tool that increments usage per token and per session",
+    flags: [],
     handler: async (ctx) => {
       const authz = ctx.req?.headers?.["authorization"]; // available under HTTP
       const token = typeof authz === "string" && authz.startsWith("Bearer ") ? authz.slice(7) : undefined;
@@ -83,4 +84,10 @@ const cli = ArgParser.withMcp({
   });
 
 export default cli;
+
+// Auto-execute only when run directly
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
 
