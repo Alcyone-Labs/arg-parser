@@ -16,7 +16,13 @@ const cli = ArgParser.withMcp({
       version: "1.0.0",
       description: "Canny MCP server",
     },
-    logPath: "./canny.log",
+    log: {
+      level: "debug",
+      logToFile: "./canny.log",
+    },
+    httpServer: {
+      configureExpress: (app) => {},
+    },
   },
   description: "Search Canny for relevant feature requests (CLI + MCP server)",
 })

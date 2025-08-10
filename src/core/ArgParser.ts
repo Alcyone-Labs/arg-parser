@@ -35,6 +35,8 @@ import type {
 import { createOutputSchema } from "./types";
 import type { Application as ExpressApplication } from "express";
 
+export type { Application as ExpressApplication } from "express";
+
 /**
  * Configuration for a single MCP transport
  */

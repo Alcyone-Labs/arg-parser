@@ -20,6 +20,7 @@ export {
   type AuthOptions,
   type JwtVerifyOptions,
   type HttpServerOptions,
+  type ExpressApplication,
 } from "./core/ArgParser";
 
 // Re-export McpLoggerOptions directly from the library for user convenience

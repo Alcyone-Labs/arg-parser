@@ -74,7 +74,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
-  - [v2.7.1](#v271)
+  - [v2.7.2](#v272)
   - [v2.7.0](#v270)
   - [v2.6.0](#v260)
   - [v2.5.0](#v250)
@@ -2064,7 +2064,7 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
-### v2.7.1
+### v2.7.2
 
 **Feat**
 
