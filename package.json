@@ -102,7 +102,7 @@
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
     "get-tsconfig": "^4.10.1",
     "magic-regexp": "^0.10.0",
-    "zod": "^4.0.10"
+    "zod": "^4.1.11"
   },
   "optionalDependencies": {
     "dotenv": "^16.6.1",
