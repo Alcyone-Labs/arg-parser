@@ -31,6 +31,8 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Hierarchical CLIs (Sub-Commands)](#hierarchical-clis-sub-commands)
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
+  - [Dynamic Flags (`dynamicRegister`)](#dynamic-flags-dynamicregister)
+
 - [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
   - [Output Schema Support](#output-schema-support)
     - [Basic Usage](#basic-usage)
@@ -74,6 +76,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.8.1](#v281)
   - [v2.7.2](#v272)
   - [v2.7.0](#v270)
   - [v2.6.0](#v260)
@@ -90,6 +93,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [v1.3.0](#v130)
   - [v1.2.0](#v120)
   - [v1.1.0](#v110)
+
 - [Backlog](#backlog)
   - [(known) Bugs / DX improvement points](#known-bugs--dx-improvement-points)
 
@@ -354,13 +358,18 @@ const cli = ArgParser.withMcp({
 });
 
 // Now, this will NOT automatically execute the parser if the script is imported, but will execute if called directly:
-await cli.parse(undefined, {
-  importMetaUrl: import.meta.url
-}).catch(handleError);
+await cli
+  .parse(undefined, {
+    importMetaUrl: import.meta.url,
+  })
+  .catch(handleError);
 
 // Or, using the manual APIs:
 await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
-  console.error("Fatal error:", error instanceof Error ? error.message : String(error));
+  console.error(
+    "Fatal error:",
+    error instanceof Error ? error.message : String(error),
+  );
   process.exit(1);
 });
 ```
@@ -986,6 +995,49 @@ const childParser = new ArgParser({ inheritParentFlags: true }).addFlags([
 parentParser.addSubCommand({ name: "deploy", parser: childParser });
 ```
 
+### Dynamic Flags (`dynamicRegister`)
+
+Register flags at runtime from another flag's value (e.g., load a manifest and add flags programmatically). This works in normal runs and when showing `--help`.
+
+- Two-phase parsing: loader flags run first, can register more flags, then parsing continues with the full set
+- Help preload: when `--help` is present, dynamic loaders run to show complete help (no command handlers execute)
+- Cleanup: dynamic flags are removed between parses (no accumulation)
+- Async-friendly: loaders can be async (e.g., `fs.readFile`)
+
+```ts
+import { readFile } from "node:fs/promises";
+import { ArgParser } from "@alcyone-labs/arg-parser";
+
+const cli = new ArgParser().addFlags([
+  {
+    name: "manifest",
+    options: ["-w", "--manifest"],
+    type: "string",
+    description: "Path to manifest.json that defines extra flags",
+    dynamicRegister: async ({ value, registerFlags }) => {
+      const json = JSON.parse(await readFile(value, "utf8"));
+      if (Array.isArray(json.flags)) {
+        // Each entry should be a valid IFlag
+        registerFlags(json.flags);
+      }
+    },
+  },
+]);
+
+// Examples:
+// my-cli -w manifest.json --help     → help includes dynamic flags
+// my-cli -w manifest.json --foo bar  → dynamic flag "--foo" parsed/validated normally
+```
+
+Notes:
+
+- Inherited behavior works normally: if loader lives on a parent parser and children use `inheritParentFlags`, dynamic flags will be visible to children
+- For heavy loaders, implement app-level caching inside your `dynamicRegister` (e.g., memoize by absolute path + mtime); library-level caching may be added later
+
+parentParser.addSubCommand({ name: "deploy", parser: childParser });
+
+````
+
 ---
 
 ## MCP & Claude Desktop Integration
@@ -1040,7 +1092,7 @@ import { z } from "zod";
 
 // CLI usage (outputSchema ignored): mycli process-file --path /my/file.txt
 // MCP usage (outputSchema provides structure): mycli --s-mcp-serve
-```
+````
 
 #### Predefined Schema Patterns
 
@@ -1322,35 +1374,37 @@ CORS is often required when connecting a Web UI to an MCP server over HTTP.
 ```ts
 import type { McpTransportConfig } from "@alcyone-labs/arg-parser";
 
-const defaultTransports: McpTransportConfig[] = [{
-  type: "streamable-http",
-  port: 3002,
-  path: "/api/mcp",
-  cors: {
-    origins: ["http://localhost:5173", /^https?:\/\/example\.com$/],
-    methods: ["GET","POST","OPTIONS"],
-    headers: ["Content-Type","Authorization","MCP-Session-Id"],
-    exposedHeaders: ["MCP-Session-Id"],
-    credentials: true,
-    maxAge: 600,
+const defaultTransports: McpTransportConfig[] = [
+  {
+    type: "streamable-http",
+    port: 3002,
+    path: "/api/mcp",
+    cors: {
+      origins: ["http://localhost:5173", /^https?:\/\/example\.com$/],
+      methods: ["GET", "POST", "OPTIONS"],
+      headers: ["Content-Type", "Authorization", "MCP-Session-Id"],
+      exposedHeaders: ["MCP-Session-Id"],
+      credentials: true,
+      maxAge: 600,
+    },
+    auth: {
+      required: true,
+      scheme: "jwt", // or "bearer"
+      // Bearer allowlist:
+      // allowedTokens: ["token1","token2"],
+      // JWT verification (HS256):
+      // jwt: { algorithms: ["HS256"], secret: process.env.JWT_SECRET },
+      // JWT verification (RS256 with static public key):
+      // jwt: { algorithms: ["RS256"], publicKey: process.env.RS256_PUBLIC_KEY },
+      // JWT verification (RS256 with dynamic JWKS):
+      // jwt: { algorithms: ["RS256"], getPublicKey: async (header)=>{ /* fetch JWKS and return PEM */ } },
+      publicPaths: ["/health"],
+      protectedPaths: undefined, // if set, only listed paths require auth
+      // Optional custom validator to add extra checks
+      validator: async (req, token) => true,
+    },
   },
-  auth: {
-    required: true,
-    scheme: "jwt", // or "bearer"
-    // Bearer allowlist:
-    // allowedTokens: ["token1","token2"],
-    // JWT verification (HS256):
-    // jwt: { algorithms: ["HS256"], secret: process.env.JWT_SECRET },
-    // JWT verification (RS256 with static public key):
-    // jwt: { algorithms: ["RS256"], publicKey: process.env.RS256_PUBLIC_KEY },
-    // JWT verification (RS256 with dynamic JWKS):
-    // jwt: { algorithms: ["RS256"], getPublicKey: async (header)=>{ /* fetch JWKS and return PEM */ } },
-    publicPaths: ["/health"],
-    protectedPaths: undefined, // if set, only listed paths require auth
-    // Optional custom validator to add extra checks
-    validator: async (req, token) => true,
-  },
-}];
+];
 ```
 
 - CLI flags (JSON strings):
@@ -1374,6 +1428,7 @@ httpServer: {
 ```
 
 See examples:
+
 - examples/streamable-http/secure-mcp.ts (HS256)
 - examples/streamable-http/rs256-mcp.ts (RS256)
 - examples/streamable-http/jwks-mcp.ts (JWKS)
@@ -1400,9 +1455,12 @@ export type CorsOptions = {
 ```ts
 export type JwtVerifyOptions = {
   algorithms?: ("HS256" | "RS256")[];
-  secret?: string;        // HS256
-  publicKey?: string;     // RS256 static
-  getPublicKey?: (header: Record<string, unknown>, payload: Record<string, unknown>) => Promise<string> | string; // RS256 dynamic
+  secret?: string; // HS256
+  publicKey?: string; // RS256 static
+  getPublicKey?: (
+    header: Record<string, unknown>,
+    payload: Record<string, unknown>,
+  ) => Promise<string> | string; // RS256 dynamic
   audience?: string | string[];
   issuer?: string | string[];
   clockToleranceSec?: number;
@@ -1412,10 +1470,13 @@ export type AuthOptions = {
   required?: boolean; // default true for MCP endpoint
   scheme?: "bearer" | "jwt";
   allowedTokens?: string[]; // simple bearer allowlist
-  validator?: (req: any, token: string | undefined) => boolean | Promise<boolean>;
+  validator?: (
+    req: any,
+    token: string | undefined,
+  ) => boolean | Promise<boolean>;
   jwt?: JwtVerifyOptions;
-  publicPaths?: string[];     // paths that skip auth
-  protectedPaths?: string[];  // if provided, only these paths require auth
+  publicPaths?: string[]; // paths that skip auth
+  protectedPaths?: string[]; // if provided, only these paths require auth
   customMiddleware?: (req: any, res: any, next: any) => any; // full control hook
 };
 ```
@@ -1429,17 +1490,17 @@ export type HttpServerOptions = {
 ```
 
 Notes:
-- When credentials are true, Access-Control-Allow-Origin echoes the request Origin rather than using "*".
+
+- When credentials are true, Access-Control-Allow-Origin echoes the request Origin rather than using "\*".
 - You can manage CORS for non-MCP routes in configureExpress.
 - Use publicPaths to allow some routes without auth; use protectedPaths to only require auth for certain routes.
 
-
-    log: {
-      level: 'debug',       // Capture all log levels
-      logToFile: '/var/log/my-mcp-server.log',
-      prefix: 'MyTool'
-    }
-    // LEGACY: logPath: '/var/log/my-mcp-server.log'  // Still works
+  log: {
+  level: 'debug', // Capture all log levels
+  logToFile: '/var/log/my-mcp-server.log',
+  prefix: 'MyTool'
+  }
+  // LEGACY: logPath: '/var/log/my-mcp-server.log' // Still works
   }
 
 ### Adding custom HTTP routes (e.g., /health)
@@ -1451,10 +1512,18 @@ const cli = ArgParser.withMcp({
   mcp: {
     serverInfo: { name: "my-mcp", version: "1.0.0" },
     defaultTransports: [
-      { type: "streamable-http", port: 3002, path: "/api/mcp", auth: { required: true, publicPaths: ["/health"] } }
+      {
+        type: "streamable-http",
+        port: 3002,
+        path: "/api/mcp",
+        auth: { required: true, publicPaths: ["/health"] },
+      },
     ],
-    httpServer: { configureExpress: (app) => app.get("/health", (_req, res) => res.json({ ok: true })) },
-  }
+    httpServer: {
+      configureExpress: (app) =>
+        app.get("/health", (_req, res) => res.json({ ok: true })),
+    },
+  },
 });
 ```
 
@@ -1464,29 +1533,30 @@ const cli = ArgParser.withMcp({
 ### Multiple transports and improved logging
 
 const cli = ArgParser.withMcp({
-  appName: 'multi-tool',
-  appCommandName: 'multi-tool',
-  mcp: {
-    // NEW: improved logging configuration
-    log: {
-      level: 'info',
-      logToFile: './logs/multi-tool-mcp.log',
-      prefix: 'MultiTool'
-    },
-    serverInfo: {
-      name: 'multi-tool-mcp',
-      version: '1.0.0'
-    },
-    transports: [
-      // Can be a single string...
-      "stdio",
-      // or one of the other transport types supported by @modelcontextprotocol/sdk
-      { type: "sse", port: 3000, host: "0.0.0.0" },
-      { type: "websocket", port: 3001, path: "/ws" }
-    ]
-  }
+appName: 'multi-tool',
+appCommandName: 'multi-tool',
+mcp: {
+// NEW: improved logging configuration
+log: {
+level: 'info',
+logToFile: './logs/multi-tool-mcp.log',
+prefix: 'MultiTool'
+},
+serverInfo: {
+name: 'multi-tool-mcp',
+version: '1.0.0'
+},
+transports: [
+// Can be a single string...
+"stdio",
+// or one of the other transport types supported by @modelcontextprotocol/sdk
+{ type: "sse", port: 3000, host: "0.0.0.0" },
+{ type: "websocket", port: 3001, path: "/ws" }
+]
+}
 });
-```
+
+````
 
 ### MCP Logging Configuration
 
@@ -1510,7 +1580,7 @@ const parser = ArgParser.withMcp({
     },
   },
 });
-```
+````
 
 **Available log levels**: `"debug"` | `"info"` | `"warn"` | `"error"` | `"silent"`
 
@@ -2063,6 +2133,15 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.8.1
+
+- Feature: Dynamic flags via `IFlag.dynamicRegister(ctx)` to register additional flags at runtime (e.g., from a manifest file)
+- Help: `--help` preloads dynamic flags without executing handlers; help output includes both static and dynamic flags
+- Flow: Two-phase parsing (load dynamic flags → re-parse with full flag set)
+- Cleanup: Dynamically registered flags are reset between parses to avoid accumulation
+- Types: Exported `DynamicRegisterContext` and `DynamicRegisterFn`
+- Internal: `FlagManager.removeFlag(name)` to support cleanup
 
 ### v2.7.2
 
