@@ -134,6 +134,12 @@ export interface IParseOptions {
    */
   isMcp?: boolean;
   /**
+   * Internal: when true, this parse call is only for dynamic flag preloading for help
+   * Suppresses side effects and handler execution
+   * @internal
+   */
+  dynamicHelpPreload?: boolean;
+  /**
    * When true, automatically executes the CLI if the script is being run directly (not imported).
    * When false, disables auto-execution detection even if importMetaUrl is provided.
    * Uses robust detection that works across different environments and sandboxes.
@@ -181,6 +187,9 @@ export class ArgParserBase<THandlerReturn = any> {
   #dxtGenerator: DxtGenerator;
   #configurationManager: ConfigurationManager;
   #fuzzyMode: boolean = false;
+
+  // Track dynamically added flags so we can clean them between parses
+  #dynamicFlagNames: Set<string> = new Set();
 
   // MCP-related managers
   #mcpResourcesManager: McpResourcesManager = new McpResourcesManager();
@@ -350,14 +359,20 @@ export class ArgParserBase<THandlerReturn = any> {
       if (flag["type"] && (flag["type"] as any)._def) {
         // It's a Zod schema - parse JSON and validate
         try {
-          const parsedJson = typeof value === "string" ? JSON.parse(value as string) : value;
+          const parsedJson =
+            typeof value === "string" ? JSON.parse(value as string) : value;
           value = (flag["type"] as any).parse(parsedJson);
         } catch (error) {
           if (error instanceof SyntaxError) {
-            throw new Error(`Invalid JSON for flag '${flag["name"]}': ${error.message}`);
+            throw new Error(
+              `Invalid JSON for flag '${flag["name"]}': ${error.message}`,
+            );
           } else {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Validation failed for flag '${flag["name"]}': ${errorMessage}`);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            throw new Error(
+              `Validation failed for flag '${flag["name"]}': ${errorMessage}`,
+            );
           }
         }
       } else {
@@ -399,6 +414,65 @@ export class ArgParserBase<THandlerReturn = any> {
     return flag["allowMultiple"]
       ? (output[flag["name"]] as any[]).push(value)
       : (output[flag["name"]] = value as any);
+  }
+
+  // Register flags coming from dynamic loaders and track them for cleanup
+  #registerDynamicFlags(flags: readonly IFlag[]): void {
+    if (!Array.isArray(flags) || flags.length === 0) return;
+    for (const flag of flags) {
+      const name = (flag as any)["name"] as string;
+      const existed = this.#flagManager.hasFlag(name);
+      this.#flagManager.addFlag(flag);
+      if (!existed) this.#dynamicFlagNames.add(name);
+    }
+  }
+
+  // Remove dynamically registered flags on this parser and all sub-parsers
+  #resetDynamicFlagsRecursive(parser: ArgParserBase = this): void {
+    for (const name of parser.#dynamicFlagNames) {
+      parser.#flagManager.removeFlag(name);
+    }
+    parser.#dynamicFlagNames.clear();
+    for (const [, sub] of parser.#subCommands) {
+      if (sub && sub.parser instanceof ArgParserBase) {
+        sub.parser.#resetDynamicFlagsRecursive();
+      }
+    }
+  }
+
+  // Preload dynamic flags for help display without executing handlers
+  async #_preloadDynamicFlagsForHelp(processArgs: string[]): Promise<void> {
+    let currentParser: ArgParserBase = this;
+    let remaining = [...processArgs];
+
+    while (true) {
+      // Find first index that matches a sub-command of currentParser
+      let subIndex = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        if (currentParser.#subCommands.has(remaining[i]!)) {
+          subIndex = i;
+          break;
+        }
+      }
+
+      const segment =
+        subIndex === -1 ? remaining : remaining.slice(0, subIndex);
+      try {
+        await currentParser.#parseFlags(segment, {
+          skipHelpHandling: true,
+          dynamicHelpPreload: true,
+        });
+      } catch {
+        // ignore errors during help preloading
+      }
+
+      if (subIndex === -1) break;
+      const nextName = remaining[subIndex]!;
+      const sub = currentParser.#subCommands.get(nextName);
+      if (!sub || !(sub.parser instanceof ArgParserBase)) break;
+      currentParser = sub.parser;
+      remaining = remaining.slice(subIndex + 1);
+    }
   }
 
   addFlags(flags: readonly IFlag[]): this {
@@ -888,6 +962,7 @@ export class ArgParserBase<THandlerReturn = any> {
       );
 
       if (helpRequested) {
+        await this.#_preloadDynamicFlagsForHelp(processArgs);
         console.log(identifiedFinalParser.helpText());
         return this._handleExit(0, "Help displayed", "help");
       }
@@ -1142,12 +1217,17 @@ export class ArgParserBase<THandlerReturn = any> {
 
     // Handle auto-execution: only run if script is executed directly (not imported)
     // Default to true unless explicitly disabled, but only when importMetaUrl is provided
-    const shouldCheckAutoExecution = options?.importMetaUrl && (options?.autoExecute !== false);
+    const shouldCheckAutoExecution =
+      options?.importMetaUrl && options?.autoExecute !== false;
     if (shouldCheckAutoExecution) {
-      const isDirectExecution = ArgParserBase.isExecutedDirectly(options.importMetaUrl);
+      const isDirectExecution = ArgParserBase.isExecutedDirectly(
+        options.importMetaUrl,
+      );
       if (!isDirectExecution) {
         // Script is being imported, not executed directly - return early without parsing
-        debug.log("Auto-execution enabled but script is imported, skipping execution");
+        debug.log(
+          "Auto-execution enabled but script is imported, skipping execution",
+        );
         return {} as TParsedArgsWithRouting<any>;
       }
     }
@@ -1169,6 +1249,9 @@ export class ArgParserBase<THandlerReturn = any> {
         );
       }
     }
+
+    // Reset dynamically registered flags before each parse to avoid accumulation
+    this.#resetDynamicFlagsRecursive();
 
     // Store original args for fuzzy mode logging
     const originalProcessArgs = [...processArgs];
@@ -1437,7 +1520,112 @@ export class ArgParserBase<THandlerReturn = any> {
     parsedArgs: TParsedArgs<ProcessedFlag[]>;
     firstUnconsumedIndex: number;
   }> {
-    const flags = this.#flagManager.flags;
+    let flags = this.#flagManager.flags;
+
+    // Dynamic pre-pass: run loaders first to register new flags
+    const dynamicCandidates = flags.filter(
+      (f: any) => typeof (f as any)["dynamicRegister"] === "function",
+    );
+    if (dynamicCandidates.length > 0) {
+      const loaderOutput: TParsedArgs<ProcessedFlag[]> = Object.fromEntries(
+        dynamicCandidates.map((f) => [
+          f["name"],
+          f["allowMultiple"] ? [] : undefined,
+        ]),
+      ) as TParsedArgs<ProcessedFlag[]>;
+      const tmpConsumed = new Set<number>();
+
+      // Ligature pre-pass
+      for (const flagToCheck of dynamicCandidates) {
+        if (flagToCheck["allowLigature"] && !flagToCheck["flagOnly"]) {
+          const regex = createRegExp(
+            anyOf(
+              ...flagToCheck["options"].map((option: string) => `${option}=`),
+            ),
+            oneOrMore(char).groupedAs("arg"),
+          );
+          for (let i = 0; i < args.length; i++) {
+            if (tmpConsumed.has(i)) continue;
+            const matches = regex.exec(`${args[i]}`);
+            if (matches?.groups?.["arg"]) {
+              await this._addToOutput(
+                flagToCheck,
+                matches.groups["arg"],
+                loaderOutput,
+                options,
+              );
+              tmpConsumed.add(i);
+              if (!flagToCheck["allowMultiple"]) break;
+            }
+          }
+        }
+      }
+
+      // Split pre-pass
+      for (const flagToCheck of dynamicCandidates) {
+        for (let index = 0; index < args.length; index++) {
+          if (tmpConsumed.has(index)) continue;
+          const value = args[index];
+          const nextIndex = index + 1;
+          const nextValueExists = nextIndex < args.length;
+          const nextValue = nextValueExists ? args[nextIndex] : undefined;
+          const nextValueIsFlag =
+            typeof nextValue === "string" && nextValue.startsWith("-");
+          if (flagToCheck["options"].includes(value)) {
+            tmpConsumed.add(index);
+            if (flagToCheck["flagOnly"]) {
+              await this._addToOutput(flagToCheck, true, loaderOutput, options);
+            } else if (nextValueExists && !nextValueIsFlag) {
+              await this._addToOutput(
+                flagToCheck,
+                nextValue,
+                loaderOutput,
+                options,
+              );
+              tmpConsumed.add(nextIndex);
+            } else if (flagToCheck["type"] === Boolean) {
+              await this._addToOutput(flagToCheck, true, loaderOutput, options);
+            }
+            if (!flagToCheck["allowMultiple"]) break;
+          }
+        }
+      }
+
+      // Invoke dynamicRegister per candidate
+      for (const flagToCheck of dynamicCandidates) {
+        const val = (loaderOutput as any)[flagToCheck["name"]];
+        const hasValue = flagToCheck["allowMultiple"]
+          ? Array.isArray(val) && val.length > 0
+          : val !== undefined;
+        if (!hasValue) continue;
+
+        const registerFlags = (newFlags: readonly IFlag[]) => {
+          if (Array.isArray(newFlags) && newFlags.length) {
+            this.#registerDynamicFlags(newFlags);
+          }
+        };
+
+        const dyn = (flagToCheck as any)["dynamicRegister"];
+        if (typeof dyn === "function") {
+          const maybe = dyn({
+            value: val,
+            argsSoFar: loaderOutput,
+            parser: this,
+            processArgs: args,
+            forHelp: !!options?.dynamicHelpPreload,
+            registerFlags,
+          });
+          const awaited =
+            maybe && typeof (maybe as any).then === "function"
+              ? await maybe
+              : maybe;
+          if (Array.isArray(awaited)) registerFlags(awaited);
+        }
+      }
+
+      // Refresh flags after dynamic registration
+      flags = this.#flagManager.flags;
+    }
 
     const output: TParsedArgs<ProcessedFlag[]> = Object.fromEntries(
       flags.map((flag) => [
@@ -1636,7 +1824,11 @@ export class ArgParserBase<THandlerReturn = any> {
           let typeName = "unknown";
           let typeDetails: string[] = [];
 
-          if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+          if (
+            flag["type"] &&
+            typeof flag["type"] === "object" &&
+            (flag["type"] as any)._def
+          ) {
             // It's a Zod schema - show JSON object with structure
             typeName = "JSON object";
             try {
@@ -1646,13 +1838,16 @@ export class ArgParserBase<THandlerReturn = any> {
 
               // In Zod v4, check for object shape directly (typeName might be undefined)
               if (def.shape) {
-                const shape = typeof def.shape === "function" ? def.shape() : def.shape;
+                const shape =
+                  typeof def.shape === "function" ? def.shape() : def.shape;
                 const properties = Object.keys(shape);
                 if (properties.length > 0) {
                   if (properties.length <= 4) {
                     typeDetails.push(`Properties: ${properties.join(", ")}`);
                   } else {
-                    typeDetails.push(`Properties: ${properties.slice(0, 4).join(", ")}, ... (${properties.length} total)`);
+                    typeDetails.push(
+                      `Properties: ${properties.slice(0, 4).join(", ")}, ... (${properties.length} total)`,
+                    );
                   }
                 }
               }
@@ -1935,7 +2130,11 @@ ${descriptionLines
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
         let typeName = "unknown";
-        if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+        if (
+          flag["type"] &&
+          typeof flag["type"] === "object" &&
+          (flag["type"] as any)._def
+        ) {
           typeName = "Zod schema";
         } else if (typeof flag["type"] === "function") {
           typeName = flag["type"].name || "custom function";
@@ -2012,7 +2211,11 @@ ${descriptionLines
     const flags = parser.#flagManager.flags;
     config.flags = flags.map((flag: ProcessedFlag) => {
       let typeName = "unknown";
-      if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
+      if (
+        flag["type"] &&
+        typeof flag["type"] === "object" &&
+        (flag["type"] as any)._def
+      ) {
         typeName = "Zod schema";
       } else if (typeof flag["type"] === "function") {
         typeName = flag["type"].name || "custom function";
@@ -2229,7 +2432,9 @@ ${descriptionLines
     // Determine log path: CLI flag > log.logToFile > logPath > default
     const effectiveLogPath =
       transportOptions.logPath ||
-      (mcpServerConfig?.log && typeof mcpServerConfig.log === "object" ? mcpServerConfig.log.logToFile : null) ||
+      (mcpServerConfig?.log && typeof mcpServerConfig.log === "object"
+        ? mcpServerConfig.log.logToFile
+        : null) ||
       mcpServerConfig?.logPath ||
       "./logs/mcp.log";
     debug.log("Effective log path:", effectiveLogPath);
@@ -2245,7 +2450,10 @@ ${descriptionLines
       debug.log("Successfully imported simple-mcp-logger");
 
       // Resolve logger configuration from MCP server config
-      const loggerConfig = this.#_resolveLoggerConfigForServe(mcpServerConfig, resolvedLogPath);
+      const loggerConfig = this.#_resolveLoggerConfigForServe(
+        mcpServerConfig,
+        resolvedLogPath,
+      );
 
       if (typeof loggerConfig === "string") {
         mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", loggerConfig);
@@ -2345,7 +2553,10 @@ ${descriptionLines
    * @param resolvedLogPath Resolved log path from CLI flags and config priority
    * @returns Logger configuration object or string path
    */
-  #_resolveLoggerConfigForServe(mcpServerConfig: any, resolvedLogPath: string): any {
+  #_resolveLoggerConfigForServe(
+    mcpServerConfig: any,
+    resolvedLogPath: string,
+  ): any {
     // Priority 1: CLI flag override (already resolved in resolvedLogPath)
     // Priority 2: New 'log' configuration from withMcp
     if (mcpServerConfig?.log) {
@@ -2617,13 +2828,21 @@ ${descriptionLines
         // Streamable HTTP extras (accept JSON string)
         case "--s-mcp-cors":
           if (nextArg && !nextArg.startsWith("-")) {
-            try { options.cors = JSON.parse(nextArg); } catch { options.cors = nextArg; }
+            try {
+              options.cors = JSON.parse(nextArg);
+            } catch {
+              options.cors = nextArg;
+            }
             i++;
           }
           break;
         case "--s-mcp-auth":
           if (nextArg && !nextArg.startsWith("-")) {
-            try { options.auth = JSON.parse(nextArg); } catch { options.auth = nextArg; }
+            try {
+              options.auth = JSON.parse(nextArg);
+            } catch {
+              options.auth = nextArg;
+            }
             i++;
           }
           break;

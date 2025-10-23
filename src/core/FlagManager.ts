@@ -94,6 +94,10 @@ export class FlagManager {
     return this.#_flags.has(name);
   }
 
+  removeFlag(name: string): boolean {
+    return this.#_flags.delete(name);
+  }
+
   getFlag(name: string): ProcessedFlag | undefined {
     return this.#_flags.get(name);
   }

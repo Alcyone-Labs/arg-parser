@@ -13,7 +13,9 @@ export const zodDxtOptionsSchema = z
     sensitive: z
       .boolean()
       .optional()
-      .describe("Whether this field should be marked as sensitive in DXT user_config"),
+      .describe(
+        "Whether this field should be marked as sensitive in DXT user_config",
+      ),
     localDefault: z
       .string()
       .optional()
@@ -26,18 +28,14 @@ export const zodDxtOptionsSchema = z
       .boolean()
       .optional()
       .describe("Allow multiple values (for arrays)"),
-    min: z
-      .number()
-      .optional()
-      .describe("Minimum value (for number type)"),
-    max: z
-      .number()
-      .optional()
-      .describe("Maximum value (for number type)"),
+    min: z.number().optional().describe("Minimum value (for number type)"),
+    max: z.number().optional().describe("Maximum value (for number type)"),
     default: z
       .any()
       .optional()
-      .describe("DXT-specific default value (overrides localDefault if provided)"),
+      .describe(
+        "DXT-specific default value (overrides localDefault if provided)",
+      ),
     title: z
       .string()
       .optional()
@@ -47,18 +45,26 @@ export const zodDxtOptionsSchema = z
   .refine(
     (data) => {
       // If min or max are provided, type should be "number"
-      if ((data.min !== undefined || data.max !== undefined) && data.type !== "number") {
+      if (
+        (data.min !== undefined || data.max !== undefined) &&
+        data.type !== "number"
+      ) {
         return false;
       }
       // If min and max are both provided, min should be <= max
-      if (data.min !== undefined && data.max !== undefined && data.min > data.max) {
+      if (
+        data.min !== undefined &&
+        data.max !== undefined &&
+        data.min > data.max
+      ) {
         return false;
       }
       return true;
     },
     {
-      message: "Invalid dxtOptions: min/max can only be used with type 'number', and min must be <= max",
-    }
+      message:
+        "Invalid dxtOptions: min/max can only be used with type 'number', and min must be <= max",
+    },
   );
 
 export const zodFlagSchema = z
@@ -177,7 +183,15 @@ export const zodFlagSchema = z
       ),
     dxtOptions: zodDxtOptionsSchema
       .optional()
-      .describe("DXT-specific configuration options for enhanced DXT manifest generation"),
+      .describe(
+        "DXT-specific configuration options for enhanced DXT manifest generation",
+      ),
+    dynamicRegister: z
+      .custom<DynamicRegisterFn>((val) => typeof val === "function")
+      .optional()
+      .describe(
+        "Optional callback that can register additional flags dynamically when this flag is present.",
+      ),
   })
   // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
@@ -278,7 +292,28 @@ export type IFlag = IFlagCore & {
   env?: string | string[];
   /** DXT-specific configuration options for enhanced DXT manifest generation */
   dxtOptions?: IDxtOptions;
+  /** Optional callback to dynamically register additional flags when this flag is present */
+  dynamicRegister?: DynamicRegisterFn;
 };
+
+/**
+ * Context for dynamic flag registration callbacks.
+ */
+export type DynamicRegisterContext = {
+  value: any | any[];
+  argsSoFar: Record<string, any>;
+  parser: ArgParserInstance;
+  processArgs: string[];
+  forHelp?: boolean;
+  registerFlags: (flags: readonly IFlag[]) => void;
+};
+
+/**
+ * Function signature for dynamic flag loader/registrar.
+ */
+export type DynamicRegisterFn = (
+  ctx: DynamicRegisterContext,
+) => Promise<readonly IFlag[] | void> | readonly IFlag[] | void;
 
 /**
  * A more refined type for a flag after it has been fully processed by ArgParser,
@@ -297,6 +332,7 @@ export type ProcessedFlag = Omit<
   enum?: any[]; // Enum values, type-checked by user or ArgParser
   mandatory?: boolean | ((parsedArgs: TParsedArgs<ProcessedFlag[]>) => boolean);
   env?: string | string[]; // Environment variables for DXT packages
+  dynamicRegister?: DynamicRegisterFn;
 };
 
 /**

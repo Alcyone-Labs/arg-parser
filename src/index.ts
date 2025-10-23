@@ -71,6 +71,8 @@ export {
   type MainHandler,
   type ISubCommand,
   type ArgParserInstance,
+  type DynamicRegisterContext,
+  type DynamicRegisterFn,
   getJsonSchemaTypeFromFlag,
   OutputSchemaPatterns,
   type OutputSchemaPatternName,
