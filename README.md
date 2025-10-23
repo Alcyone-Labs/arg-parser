@@ -76,6 +76,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.8.2](#v282)
   - [v2.8.1](#v281)
   - [v2.7.2](#v272)
   - [v2.7.0](#v270)
@@ -2133,6 +2134,12 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.8.2
+
+- UX: Help shows example values via `valueHint` for non-boolean flags; repeatable flags display 'Multiple values allowed (repeat flag)' with example; examples use `valueHint` when present.
+- Types: Added `IFlag.valueHint?: string`; accepted by `zodFlagSchema`; included in processed flags; supported in manifest-driven dynamic flags.
+- Examples: `examples/core/dynamic-flags-demo.ts` updated to demonstrate `valueHint` for `--url`.
 
 ### v2.8.1
 

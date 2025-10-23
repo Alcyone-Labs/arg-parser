@@ -1872,6 +1872,48 @@ export class ArgParserBase<THandlerReturn = any> {
 
           metaLines.push(`Type: ${typeName}`);
 
+          // Usage/example hints. If repeatable, show repeat syntax; otherwise show single value.
+          {
+            let isRepeatable = false;
+            try {
+              if (
+                typeof flag["type"] === "function" &&
+                flag["type"].name === "Array"
+              ) {
+                isRepeatable = true;
+              }
+              const anyType: any = flag["type"] as any;
+              if (
+                anyType &&
+                typeof anyType === "object" &&
+                anyType._def &&
+                anyType._def.typeName === "ZodArray"
+              ) {
+                isRepeatable = true;
+              }
+              if (flag["allowMultiple"]) isRepeatable = true;
+            } catch {}
+
+            const primaryOpt =
+              flag["options"].find((o: string) => o.startsWith("--")) ??
+              flag["options"][0];
+            const valueHint = (flag as any)["valueHint"] as string | undefined;
+
+            if (!flag["flagOnly"]) {
+              if (isRepeatable) {
+                metaLines.push("Multiple values allowed (repeat flag)");
+                const v1 = valueHint ?? "value1";
+                const v2 = valueHint ?? "value2";
+                metaLines.push(
+                  `Example: ${primaryOpt} ${v1} ${primaryOpt} ${v2}`,
+                );
+              } else {
+                const v = valueHint ?? "value";
+                metaLines.push(`Example: ${primaryOpt} ${v}`);
+              }
+            }
+          }
+
           // Add type details for Zod schemas
           if (typeDetails.length > 0) {
             metaLines.push(...typeDetails);

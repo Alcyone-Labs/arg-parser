@@ -1,0 +1,20 @@
+{
+  "flags": [
+    {
+      "name": "env",
+      "description": "Environment",
+      "options": ["--env"],
+      "type": "string",
+      "enum": ["dev", "staging", "prod"],
+      "mandatory": true
+    },
+    {
+      "name": "label",
+      "description": "Labels (repeat flag)",
+      "options": ["--label", "-l"],
+      "type": "string",
+      "allowMultiple": true
+    }
+  ]
+}
+

@@ -91,6 +91,10 @@ export const zodFlagSchema = z
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe("Textual description for help messages."),
+    valueHint: z
+      .string()
+      .optional()
+      .describe("Hint/example value shown in help and examples."),
     options: z
       .array(z.string().min(1))
       .min(1, "Flag must have at least one option (e.g., ['-f', '--flag'])")
