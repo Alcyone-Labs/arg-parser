@@ -100,7 +100,7 @@
     "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
     "@alcyone-labs/simple-chalk": "^1.0.1",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
-    "get-tsconfig": "^4.10.1",
+    "get-tsconfig": "^4.11.0",
     "magic-regexp": "^0.10.0",
     "zod": "^4.1.11"
   },
