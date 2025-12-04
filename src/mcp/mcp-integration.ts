@@ -340,9 +340,9 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
       case "string":
         zodSchema =
           flagEnum &&
-          Array.isArray(flagEnum) &&
-          flagEnum.length > 0 &&
-          flagEnum.every((e) => typeof e === "string")
+            Array.isArray(flagEnum) &&
+            flagEnum.length > 0 &&
+            flagEnum.every((e) => typeof e === "string")
             ? z.enum(flagEnum as [string, ...string[]])
             : z.string();
         break;
@@ -377,9 +377,9 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
       case "array":
         const itemSchema =
           flagEnum &&
-          Array.isArray(flagEnum) &&
-          flagEnum.length > 0 &&
-          flagEnum.every((e) => typeof e === "string")
+            Array.isArray(flagEnum) &&
+            flagEnum.length > 0 &&
+            flagEnum.every((e) => typeof e === "string")
             ? z.enum(flagEnum as [string, ...string[]])
             : z.string(); // Default item type for arrays
         zodSchema = z.array(itemSchema);
@@ -418,8 +418,8 @@ export interface GenerateMcpToolsOptions {
   defaultOutputSchema?: ZodTypeAny;
   /** Automatically generate output schemas for tools that don't have explicit schemas */
   autoGenerateOutputSchema?:
-    | boolean
-    | keyof typeof import("../core/types").OutputSchemaPatterns;
+  | boolean
+  | keyof typeof import("../core/types").OutputSchemaPatterns;
   generateToolName?: (commandPath: string[], appName?: string) => string;
   includeSubCommands?: boolean;
   toolNamePrefix?: string;
@@ -550,8 +550,8 @@ export function generateMcpToolsFromArgParser(
         const customSchema = options.outputSchemaMap[toolName];
         outputSchema =
           typeof customSchema === "object" &&
-          customSchema !== null &&
-          !customSchema._def
+            customSchema !== null &&
+            !customSchema._def
             ? z.object(customSchema as unknown as ZodRawShape)
             : customSchema;
       } else if (options?.defaultOutputSchema) {
@@ -875,8 +875,8 @@ export function generateMcpToolsFromArgParser(
                               const fieldSchema = shape[key];
                               if (fieldSchema && fieldSchema._def) {
                                 switch (
-                                  fieldSchema._def.typeName ||
-                                  fieldSchema._def.type
+                                fieldSchema._def.typeName ||
+                                fieldSchema._def.type
                                 ) {
                                   case "ZodString":
                                   case "string":
@@ -1022,12 +1022,13 @@ export function generateMcpToolsFromArgParser(
                   i === 0 &&
                   finalParser &&
                   cmdName ===
-                    ((finalParser as any).getAppCommandName
-                      ? (finalParser as any).getAppCommandName()
-                      : (finalParser as any)["#appCommandName"] ||
-                        ((finalParser as any).getAppName
-                          ? (finalParser as any).getAppName()
-                          : (finalParser as any)["#appName"]))
+                  ((finalParser as any).getAppCommandName
+                    ? (finalParser as any).getAppCommandName()
+                    : (finalParser as any)["#appCommandName"]
+                    ||
+                    ((finalParser as any).getAppName
+                      ? (finalParser as any).getAppName()
+                      : (finalParser as any)["#appName"]))
                 ) {
                   currentArgs = { ...parseResult };
                   // Clean up special properties again after resetting from parseResult
@@ -1110,6 +1111,9 @@ export function generateMcpToolsFromArgParser(
             }
 
             if (handlerResponse && typeof handlerResponse === "object") {
+              try {
+                require('fs').appendFileSync('/tmp/mcp-debug.log', `[DEBUG] Handler response: ${JSON.stringify(handlerResponse, null, 2)}\n`);
+              } catch (e) { } // Ignore errors during debug logging
               // If handler already returned MCP format with content field, use it
               if (
                 handlerResponse.content &&
@@ -1227,48 +1231,68 @@ export function generateMcpToolsFromArgParser(
               };
 
               // Try to extract schema requirements and provide default values
-              if (
-                outputSchema &&
-                typeof outputSchema === "object" &&
-                outputSchema !== null &&
-                outputSchema._def
-              ) {
-                const zodSchema = outputSchema as any;
-                if (zodSchema._def.type === "object") {
-                  const shapeGetter = zodSchema._def.shape;
-                  const shape =
-                    typeof shapeGetter === "function"
-                      ? shapeGetter()
-                      : shapeGetter;
+              try {
+                if (
+                  outputSchema &&
+                  typeof outputSchema === "object" &&
+                  outputSchema !== null &&
+                  outputSchema._def
+                ) {
+                  const zodSchema = outputSchema as any;
+                  if (
+                    zodSchema._def?.typeName === "ZodObject" ||
+                    zodSchema._def?.type === "object"
+                  ) {
+                    const shapeGetter = zodSchema._def?.shape;
+                    if (shapeGetter) {
+                      const shape =
+                        typeof shapeGetter === "function"
+                          ? shapeGetter()
+                          : shapeGetter;
 
-                  // Provide default values for required fields
-                  Object.keys(shape).forEach((key) => {
-                    if (!(key in structuredError)) {
-                      const fieldSchema = shape[key];
-                      if (fieldSchema && fieldSchema._def) {
-                        switch (fieldSchema._def.type) {
-                          case "string":
-                            structuredError[key] = "";
-                            break;
-                          case "number":
-                            structuredError[key] = 0;
-                            break;
-                          case "boolean":
-                            structuredError[key] = false;
-                            break;
-                          case "array":
-                            structuredError[key] = [];
-                            break;
-                          case "object":
-                            structuredError[key] = {};
-                            break;
-                          default:
-                            structuredError[key] = null;
-                        }
+                      if (shape && typeof shape === "object") {
+                        // Provide default values for required fields
+                        Object.keys(shape).forEach((key) => {
+                          if (!(key in structuredError)) {
+                            const fieldSchema = shape[key];
+                            if (fieldSchema && fieldSchema._def) {
+                              const typeName =
+                                fieldSchema._def.typeName ||
+                                fieldSchema._def.type;
+
+                              switch (typeName) {
+                                case "ZodString":
+                                case "string":
+                                  structuredError[key] = "";
+                                  break;
+                                case "ZodNumber":
+                                case "number":
+                                  structuredError[key] = 0;
+                                  break;
+                                case "ZodBoolean":
+                                case "boolean":
+                                  structuredError[key] = false;
+                                  break;
+                                case "ZodArray":
+                                case "array":
+                                  structuredError[key] = [];
+                                  break;
+                                case "ZodObject":
+                                case "object":
+                                  structuredError[key] = {};
+                                  break;
+                                default:
+                                  structuredError[key] = null;
+                              }
+                            }
+                          }
+                        });
                       }
                     }
-                  });
+                  }
                 }
+              } catch (schemaError) {
+                // Ignore schema processing errors during error handling
               }
 
               return {

@@ -5,7 +5,7 @@
  * that clients can discover and execute with custom parameters for dynamic text generation.
  */
 
-import { z, ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 
 /**
  * Prompt message content types

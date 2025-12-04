@@ -1,6 +1,4 @@
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
-import { z } from "zod";
-import { ArgParser } from "../../../src/index.js";
 import { McpStdioClient } from "./mcp-client-utils.js";
 
 describe("Output Schema Verification", () => {
@@ -14,7 +12,7 @@ describe("Output Schema Verification", () => {
       {
         timeout: 15000,
         debug: true,
-        env: { CANNY_API_KEY: "test" },
+        env: { CANNY_API_KEY: "test", MCP_DEBUG: "true" },
       },
     );
 
@@ -40,7 +38,9 @@ describe("Output Schema Verification", () => {
     expect(toolsResponse.tools.length).toBeGreaterThan(0);
 
     const searchTool = toolsResponse.tools.find((tool: any) => tool.name === "search");
-    expect(searchTool).toBeDefined();
+    if (!searchTool) {
+      throw new Error("Search tool not found");
+    }
     expect(searchTool.description).toBeDefined();
     expect(searchTool.inputSchema).toBeDefined();
 

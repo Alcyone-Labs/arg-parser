@@ -110,14 +110,13 @@ export default defineConfig(({ command, mode }) => {
       plugins: [tsconfigPaths({ projects: ["./tsconfig.dev.json"] })],
       test: {
         globals: true,
-        testTimeout: 10000, // Reduced timeout for faster feedback
-        fileParallelism: true, // Enable parallel execution for faster tests
-        pool: 'forks', // Use fork pool instead of threads for better isolation
-        poolOptions: {
-          forks: {
-            singleFork: false, // Allow multiple forks for parallelism
-          },
-        },
+        testTimeout: 10000,
+        fileParallelism: true,
+        pool: "forks",
+        execArgv: ["--expose-gc"],
+        isolate: false,
+        maxWorkers: 1,
+        vmMemoryLimit: "300Mb",
         include: ["./tests/**/*.test.ts"],
         exclude: (() => {
           const base = [
@@ -127,7 +126,8 @@ export default defineConfig(({ command, mode }) => {
             "**/fixtures/**",
           ];
           // Exclude slow integration tests by default unless explicitly enabled
-          if (!process.env.VITEST_INCLUDE_INTEGRATION) base.push("**/integration/**");
+          if (!process.env.VITEST_INCLUDE_INTEGRATION)
+            base.push("**/integration/**");
           return base;
         })(),
         name: "Alcyone Labs ArgParser",
@@ -135,6 +135,15 @@ export default defineConfig(({ command, mode }) => {
         teardownTimeout: 3000, // Reduced teardown timeout
         // Retry failed tests once in case of flaky issues
         retry: 1,
+        ...(process.env.VITEST_INCLUDE_INTEGRATION
+          ? {
+              poolOptions: {
+                forks: {
+                  singleFork: true,
+                },
+              },
+            }
+          : {}),
       },
     });
 

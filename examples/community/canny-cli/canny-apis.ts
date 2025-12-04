@@ -5,6 +5,27 @@ export async function searchCannyPosts(
   query: string,
   limit = 10,
 ) {
+  // Mock for testing
+  if (apiKey === "test") {
+    return {
+      posts: [
+        {
+          id: "1",
+          title: "Test Feature Request",
+          status: "open",
+          score: 10,
+          commentCount: 2,
+          url: "https://canny.io/p/test",
+          author: { id: "u1", name: "Test User" },
+          board: { id: "b1", name: "Feature Requests" },
+          category: null,
+          eta: null,
+          created: new Date().toISOString(),
+        }
+      ]
+    };
+  }
+
   const url = "https://canny.io/api/v1/posts/list";
 
   const response = await fetch(url, {

@@ -18,6 +18,7 @@ export interface McpTool {
   name: string;
   description?: string;
   inputSchema: any;
+  outputSchema?: any;
 }
 
 export interface McpServerInfo {
@@ -34,11 +35,13 @@ export interface McpServerInfo {
 export interface McpClientOptions {
   timeout?: number;
   debug?: boolean;
+  env?: NodeJS.ProcessEnv;
 }
 
 export abstract class BaseMcpClient extends EventEmitter {
   protected timeout: number;
   protected debug: boolean;
+  protected env?: NodeJS.ProcessEnv;
   protected messageId: number = 1;
   protected pendingRequests: Map<
     string | number,
@@ -53,6 +56,7 @@ export abstract class BaseMcpClient extends EventEmitter {
     super();
     this.timeout = options.timeout || 10000;
     this.debug = options.debug || false;
+    this.env = options.env;
   }
 
   protected log(message: string, ...args: any[]) {
@@ -179,12 +183,16 @@ export class McpStdioClient extends BaseMcpClient {
 
     this.process = spawn(this.command, this.args, {
       stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, ...this.env },
     });
 
     let buffer = "";
 
     this.process.stdout?.on("data", (data) => {
-      buffer += data.toString();
+      const dataStr = data.toString();
+      this.log("Server stdout", dataStr);
+
+      buffer += dataStr;
       const lines = buffer.split("\n");
       buffer = lines.pop() || "";
 
@@ -228,7 +236,7 @@ export class McpStdioClient extends BaseMcpClient {
     this.log("Disconnecting from MCP server");
 
     // Clear pending requests
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error("Client disconnected"));
     }

@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { ArgParser } from "../../../src";
-import type { IFlag } from "../../../src";
 import { generateMcpToolsFromArgParser } from "../../../src/mcp/mcp-integration";
 import { McpStdioClient } from "./mcp-client-utils";
 
@@ -413,7 +412,7 @@ describe("MCP End-to-End Integration Tests", () => {
 
     test("should start Canny CLI as MCP server and connect successfully", async () => {
       // Skip this test if no CANNY_API_KEY is available
-      if (!process.env.CANNY_API_KEY) {
+      if (!process.env["CANNY_API_KEY"]) {
         console.warn("Skipping Canny CLI MCP test - CANNY_API_KEY not set");
         return;
       }
@@ -447,7 +446,7 @@ describe("MCP End-to-End Integration Tests", () => {
     }, 20000);
 
     test("should list Canny search tool correctly", async () => {
-      if (!process.env.CANNY_API_KEY || !client) {
+      if (!process.env["CANNY_API_KEY"] || !client) {
         console.warn(
           "Skipping Canny CLI tool listing test - CANNY_API_KEY not set or client not connected",
         );
@@ -476,7 +475,7 @@ describe("MCP End-to-End Integration Tests", () => {
     }, 15000);
 
     test("should execute Canny search tool successfully", async () => {
-      if (!process.env.CANNY_API_KEY || !client) {
+      if (!process.env["CANNY_API_KEY"] || !client) {
         console.warn(
           "Skipping Canny CLI tool execution test - CANNY_API_KEY not set or client not connected",
         );
@@ -519,7 +518,7 @@ describe("MCP End-to-End Integration Tests", () => {
     }, 20000);
 
     test("should handle invalid parameters gracefully", async () => {
-      if (!process.env.CANNY_API_KEY || !client) {
+      if (!process.env["CANNY_API_KEY"] || !client) {
         console.warn(
           "Skipping Canny CLI error handling test - CANNY_API_KEY not set or client not connected",
         );
@@ -544,7 +543,7 @@ describe("MCP End-to-End Integration Tests", () => {
           // Should not reach here without an error
           expect(true).toBe(false);
         }
-      } catch (error) {
+      } catch (error: any) {
         // Also accept MCP errors as valid error handling
         expect(error).toBeDefined();
         expect(error.message).toMatch(
@@ -554,7 +553,7 @@ describe("MCP End-to-End Integration Tests", () => {
     }, 15000);
 
     test("should handle invalid parameters correctly", async () => {
-      if (!process.env.CANNY_API_KEY || !client) {
+      if (!process.env["CANNY_API_KEY"] || !client) {
         console.warn(
           "Skipping Canny CLI parameter validation test - CANNY_API_KEY not set or client not connected",
         );
@@ -579,7 +578,7 @@ describe("MCP End-to-End Integration Tests", () => {
           // Should not reach here without an error
           expect(true).toBe(false);
         }
-      } catch (error) {
+      } catch (error: any) {
         // Also accept MCP errors as valid error handling
         expect(error).toBeDefined();
         if (error.message) {

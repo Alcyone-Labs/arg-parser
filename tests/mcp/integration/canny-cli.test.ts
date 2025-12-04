@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
-import { ChildProcess, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -59,7 +59,7 @@ describe("Canny CLI Integration Tests", () => {
     test("should handle missing API key gracefully in CLI mode", async () => {
       // Create environment without CANNY_API_KEY
       const env = { ...globalThis.process.env };
-      delete env.CANNY_API_KEY;
+      delete env["CANNY_API_KEY"];
 
       const process = spawn(
         "deno",
@@ -105,7 +105,7 @@ describe("Canny CLI Integration Tests", () => {
     }, 10000);
 
     test("should execute search successfully with API key from environment", async () => {
-      if (!globalThis.process.env.CANNY_API_KEY) {
+      if (!globalThis.process.env["CANNY_API_KEY"]) {
         console.warn("Skipping CLI search test - CANNY_API_KEY not set");
         return;
       }
@@ -151,7 +151,7 @@ describe("Canny CLI Integration Tests", () => {
   });
 
   describe("MCP Server Mode Tests", () => {
-    let client: McpStdioClient;
+    let client: McpStdioClient | undefined;
 
     afterAll(async () => {
       if (client) {
@@ -160,7 +160,7 @@ describe("Canny CLI Integration Tests", () => {
     });
 
     test("should start as MCP server and initialize correctly", async () => {
-      if (!globalThis.process.env.CANNY_API_KEY) {
+      if (!globalThis.process.env["CANNY_API_KEY"]) {
         console.warn("Skipping MCP server test - CANNY_API_KEY not set");
         return;
       }
@@ -419,7 +419,7 @@ describe("Canny CLI Integration Tests", () => {
 
   describe("Transport Configuration Tests", () => {
     test("should support multiple transport configurations", async () => {
-      if (!globalThis.process.env.CANNY_API_KEY) {
+      if (!globalThis.process.env["CANNY_API_KEY"]) {
         console.warn(
           "Skipping transport configuration test - CANNY_API_KEY not set",
         );

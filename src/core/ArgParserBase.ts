@@ -6,13 +6,13 @@ import chalk from "@alcyone-labs/simple-chalk";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { DxtGenerator } from "../dxt/DxtGenerator";
 import {
-  McpChangeType,
   McpNotificationsManager,
+  type McpChangeType,
 } from "../mcp/mcp-notifications.js";
-import { McpPromptConfig, McpPromptsManager } from "../mcp/mcp-prompts.js";
+import { McpPromptsManager, type McpPromptConfig } from "../mcp/mcp-prompts.js";
 import {
-  McpResourceConfig,
   McpResourcesManager,
+  type McpResourceConfig,
 } from "../mcp/mcp-resources.js";
 import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";

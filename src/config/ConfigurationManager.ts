@@ -35,7 +35,7 @@ export class ConfigurationManager {
 
     // Convert to a safe filename format (PascalCase for .env files)
     baseName = baseName
-      .split(/[\s-_]+/)
+      .split(/[\s\-_]+/)
       .map(
         (word: string) =>
           word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
@@ -91,7 +91,7 @@ export class ConfigurationManager {
       const finalParser = parserChain[parserChain.length - 1];
       const parsedArgs = finalParser.getLastParseResult();
 
-      if (!parsedArgs) {
+      if (!parsedArgs || !parsedArgs.data) {
         console.log(
           chalk.yellow(
             "No parsed arguments available. Run the command first to generate configuration.",
@@ -113,7 +113,7 @@ export class ConfigurationManager {
       // Try to use plugin system first
       const plugin = globalConfigPluginRegistry.getPluginByExtension(ext);
       if (plugin) {
-        content = plugin.generate({}, allFlags, parsedArgs);
+        content = plugin.generate({}, allFlags, parsedArgs.data);
       } else {
         // Fallback to legacy methods for unsupported formats
         switch (ext) {
@@ -140,7 +140,7 @@ export class ConfigurationManager {
       console.log(chalk.green(`✅ Configuration saved to: ${filePath}`));
       console.log(chalk.gray(`Format: ${ext || ".env"}`));
       console.log(
-        chalk.gray(`Flags saved: ${Object.keys(parsedArgs.args).length}`),
+        chalk.gray(`Flags saved: ${Object.keys(parsedArgs.data).length}`),
       );
     } catch (error) {
       console.error(
@@ -555,9 +555,9 @@ export class ConfigurationManager {
     lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs["args"][flag["name"]];
+      const value = parsedArgs["data"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# ${flag["description"] || flag["name"]} `);
         lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {
@@ -583,7 +583,8 @@ export class ConfigurationManager {
   ): string {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".yaml");
     if (plugin) {
-      return plugin.generate({}, flags, parsedArgs);
+      // Plugin expects raw data object, not TParsedArgs
+      return plugin.generate({}, flags, parsedArgs.data || parsedArgs);
     }
 
     // Fallback: Simple YAML generation
@@ -593,9 +594,9 @@ export class ConfigurationManager {
     lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs["args"][flag["name"]];
+      const value = parsedArgs["data"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# ${flag["description"] || flag["name"]} `);
         lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {
@@ -627,7 +628,7 @@ export class ConfigurationManager {
     const config: Record<string, any> = {};
 
     for (const flag of flags) {
-      const value = parsedArgs["args"][flag["name"]];
+      const value = parsedArgs["data"][flag["name"]];
       if (value !== undefined) {
         config[flag["name"]] = value;
       }
@@ -645,7 +646,8 @@ export class ConfigurationManager {
   ): string {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".toml");
     if (plugin) {
-      return plugin.generate({}, flags, parsedArgs);
+      // Plugin expects raw data object, not TParsedArgs
+      return plugin.generate({}, flags, parsedArgs.data || parsedArgs);
     }
 
     // Fallback: Simple TOML generation
@@ -655,9 +657,9 @@ export class ConfigurationManager {
     lines.push("");
 
     for (const flag of flags) {
-      const value = parsedArgs["args"][flag["name"]];
+      const value = parsedArgs["data"][flag["name"]];
       if (value !== undefined) {
-        lines.push(`# ${flag["description"] || flag["name"]}`);
+        lines.push(`# ${flag["description"] || flag["name"]} `);
         lines.push(`# Type: ${this.getTypeString(flag["type"])}`);
 
         if (Array.isArray(value)) {

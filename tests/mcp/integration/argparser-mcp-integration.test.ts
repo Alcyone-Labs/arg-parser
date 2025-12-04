@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { z } from "zod";
 import { ArgParser } from "../../../src/core/ArgParser.js";
 import type {
-  McpPromptConfig,
   McpResourceConfig,
 } from "../../../src/mcp/mcp-resources.js";
+import type {
+  McpPromptConfig,
+} from "../../../src/mcp/mcp-prompts.js";
 
 describe("ArgParser MCP Integration", () => {
   let parser: ArgParser;
@@ -18,7 +20,7 @@ describe("ArgParser MCP Integration", () => {
       appName: "Test MCP App",
       appCommandName: "test-mcp",
       description: "Test application with MCP support",
-      handler: async (ctx) => ({ success: true, args: ctx.args }),
+      handler: async () => ({ success: true, args: {} }),
     });
   });
 
@@ -33,7 +35,7 @@ describe("ArgParser MCP Integration", () => {
           contents: [
             {
               uri: uri.href,
-              text: `Test data for ID: ${params.id}`,
+              text: `Test data for ID: ${params["id"]}`,
               mimeType: "text/plain",
             },
           ],
@@ -89,14 +91,14 @@ describe("ArgParser MCP Integration", () => {
           text: z.string(),
           style: z.enum(["formal", "casual"]).optional(),
         }),
-        handler: ({ text, style }) => ({
-          description: `Processing text in ${style || "default"} style`,
+        handler: (args: any) => ({
+          description: `Processing text in ${args.style || "default"} style`,
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Please process this text in ${style || "default"} style: ${text}`,
+                text: `Please process this text in ${args.style || "default"} style: ${args.text}`,
               },
             },
           ],
@@ -139,14 +141,14 @@ describe("ArgParser MCP Integration", () => {
             timestamp: z.number().optional(),
           }).optional().describe("Optional metadata"),
         }),
-        handler: async ({ message, format, metadata }) => ({
-          description: `Processing message in ${format || "text"} format`,
+        handler: async (args: any) => ({
+          description: `Processing message in ${args.format || "text"} format`,
           messages: [
             {
               role: "user",
               content: {
                 type: "text",
-                text: `Process this message: ${message}${metadata ? ` (by ${metadata.author})` : ""}`,
+                text: `Process this message: ${args.message}${args.metadata ? ` (by ${args.metadata.author})` : ""}`,
               },
             },
           ],
@@ -270,7 +272,13 @@ describe("ArgParser MCP Integration", () => {
     test("should integrate with existing ArgParser fluent API", () => {
       const fullParser = ArgParser.withMcp({
         appName: "Full Featured App",
-        handler: async (ctx) => ({ result: "success" }),
+        handler: async () => ({ result: "success" }),
+        mcp: {
+          serverInfo: {
+            name: "full-featured-mcp-server",
+            version: "1.0.0",
+          },
+        },
       })
         .addFlags([
           {
@@ -297,7 +305,7 @@ describe("ArgParser MCP Integration", () => {
             contents: [
               {
                 uri: uri.href,
-                text: `Content of file: ${params.path}`,
+                text: `Content of file: ${params["path"]}`,
                 mimeType: "text/plain",
               },
             ],
@@ -311,23 +319,17 @@ describe("ArgParser MCP Integration", () => {
             filePath: z.string(),
             summaryType: z.enum(["brief", "detailed"]).optional(),
           }),
-          handler: ({ filePath, summaryType }) => ({
+          handler: (args: any) => ({
             messages: [
               {
                 role: "user",
                 content: {
                   type: "text",
-                  text: `Please provide a ${summaryType || "brief"} summary of the file: ${filePath}`,
+                  text: `Please provide a ${args.summaryType || "brief"} summary of the file: ${args.filePath}`,
                 },
               },
             ],
           }),
-        })
-        .addMcpSubCommand("serve", {
-          name: "full-featured-mcp-server",
-          version: "1.0.0",
-          description:
-            "Full featured MCP server with tools, resources, and prompts",
         });
 
       // Should have CLI flags converted to tools
@@ -343,10 +345,6 @@ describe("ArgParser MCP Integration", () => {
       const prompts = fullParser.getMcpPrompts();
       expect(prompts).toHaveLength(1);
       expect(prompts[0].name).toBe("file-summary");
-
-      // Should have MCP subcommand
-      const subCommands = fullParser.getSubCommands();
-      expect(subCommands.has("serve")).toBe(true);
     });
   });
 

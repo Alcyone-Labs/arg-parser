@@ -1,12 +1,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createPathsMatcher, getTsconfig } from "get-tsconfig";
-import { type Options } from "tsdown";
 import chalk from "@alcyone-labs/simple-chalk";
+import { DxtPathResolver } from "../core/dxt-path-resolver";
 import type { ParseResult } from "../core/types";
 import { getJsonSchemaTypeFromFlag } from "../core/types";
 import { DxtGeneratorTestUtils } from "./DxtGenerator-testUtils";
-import { DxtPathResolver } from "../core/dxt-path-resolver";
+
+// tsdown types - Options type is not exported, using any for now
+type TsdownOptions = any;
 
 /**
  * DxtGenerator handles the generation of DXT (Desktop Extension) packages
@@ -429,7 +431,8 @@ export class DxtGenerator {
 
         // If still not found, try relative to process.cwd()
         if (!fs.existsSync(logoPath)) {
-          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+          const currentDir =
+            typeof process !== "undefined" ? process.cwd() : "/test";
           logoPath = path.join(
             currentDir,
             "docs",
@@ -441,7 +444,8 @@ export class DxtGenerator {
 
         // If still not found, try node_modules (when package is installed)
         if (!fs.existsSync(logoPath)) {
-          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+          const currentDir =
+            typeof process !== "undefined" ? process.cwd() : "/test";
           logoPath = path.join(
             currentDir,
             "node_modules",
@@ -455,7 +459,8 @@ export class DxtGenerator {
 
         // If still not found, try package root dist/assets (for local build)
         if (!fs.existsSync(logoPath)) {
-          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+          const currentDir =
+            typeof process !== "undefined" ? process.cwd() : "/test";
           logoPath = path.join(
             currentDir,
             "dist",
@@ -533,7 +538,8 @@ export class DxtGenerator {
       );
 
       // Run TSDown build from the project root directory
-      const originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
+      const originalCwd =
+        typeof process !== "undefined" ? process.cwd() : "/test";
       try {
         // process.chdir(projectRoot);
 
@@ -554,11 +560,12 @@ export class DxtGenerator {
 
         // Preserve directory structure by including the entry directory in outDir
         const entryDir = path.dirname(relativeEntryPath);
-        const preservedOutDir = entryDir !== "." && entryDir !== ""
-          ? path.resolve(originalCwd, outputDir, entryDir)
-          : path.resolve(originalCwd, outputDir);
+        const preservedOutDir =
+          entryDir !== "." && entryDir !== ""
+            ? path.resolve(originalCwd, outputDir, entryDir)
+            : path.resolve(originalCwd, outputDir);
 
-        const buildConfig: Options = {
+        const buildConfig: TsdownOptions = {
           entry: [relativeEntryPath],
           outDir: preservedOutDir,
           format: ["es"],
@@ -574,7 +581,7 @@ export class DxtGenerator {
           clean: [outputDir, "./.dxtignore", `${outputDir}.dxt`],
           silent: process.env["NO_SILENCE"] !== "1",
           unbundle: true,
-          external: (id, importer) => {
+          external: (id: string, importer?: string) => {
             try {
               const external = this.shouldModuleBeExternal(
                 id,
@@ -589,11 +596,14 @@ export class DxtGenerator {
 
               return Boolean(external);
             } catch (error) {
-              console.warn(`Warning: Error in external function for ${id}:`, error);
+              console.warn(
+                `Warning: Error in external function for ${id}:`,
+                error,
+              );
               return true; // Default to external on error
             }
           },
-          noExternal: (id, importer) => {
+          noExternal: (id: string, importer?: string) => {
             try {
               const external = this.shouldModuleBeExternal(
                 id,
@@ -608,109 +618,123 @@ export class DxtGenerator {
 
               return Boolean(external === false);
             } catch (error) {
-              console.warn(`Warning: Error in noExternal function for ${id}:`, error);
+              console.warn(
+                `Warning: Error in noExternal function for ${id}:`,
+                error,
+              );
               return false; // Default to not noExternal on error
             }
           },
           copy: async (
-            options,
+            options: any,
           ): Promise<Array<string | { from: string; to: string }>> => {
             try {
-              const outputPaths: Array<string | { from: string; to: string }> = [
-                "package.json",
-              ];
+              const outputPaths: Array<string | { from: string; to: string }> =
+                ["package.json"];
 
-            // Only include node_modules if --s-with-node-modules flag is set
-            if (withNodeModules) {
-              console.log(
-                chalk.gray(
-                  "📦 Including node_modules in bundle (may take longer)...",
-                ),
-              );
-              outputPaths.push("node_modules");
-            }
-
-            // Calculate the DXT package root (parent of outDir when preserving structure)
-            const dxtPackageRoot = entryDir !== "." && entryDir !== ""
-              ? path.dirname(options.outDir)
-              : options.outDir;
-
-            // Add logo if it was successfully prepared
-            if (logoFilename) {
-              const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
-              const logoPath = path.join(currentDir, logoFilename);
-              if (fs.existsSync(logoPath)) {
-                console.log(chalk.gray(`Adding logo from: ${logoPath}`));
-                outputPaths.push({
-                  from: logoPath,
-                  to: path.join(dxtPackageRoot, logoFilename),
-                });
+              // Only include node_modules if --s-with-node-modules flag is set
+              if (withNodeModules) {
+                console.log(
+                  chalk.gray(
+                    "📦 Including node_modules in bundle (may take longer)...",
+                  ),
+                );
+                outputPaths.push("node_modules");
               }
-            }
 
-            // Add user-specified include files from DXT configuration
-            if (mcpConfig?.dxt?.include) {
-              console.log(
-                chalk.gray(
-                  "📁 Including additional files from DXT configuration...",
-                ),
-              );
+              // Calculate the DXT package root (parent of outDir when preserving structure)
+              const dxtPackageRoot =
+                entryDir !== "." && entryDir !== ""
+                  ? path.dirname(options.outDir)
+                  : options.outDir;
 
-              for (const includeItem of mcpConfig.dxt.include) {
-                if (typeof includeItem === "string") {
-                  // Simple string path - copy to same relative location in DXT package root
-                  // First substitute any DXT variables in the path
-                  const resolvedIncludePath = DxtPathResolver.substituteVariables(
-                    includeItem,
-                    DxtPathResolver.detectContext(),
-                    { allowUndefined: true } // Allow undefined variables for flexibility
-                  );
-                  const sourcePath = path.resolve(projectRoot, resolvedIncludePath);
-                  if (fs.existsSync(sourcePath)) {
-                    console.log(chalk.gray(`  • ${resolvedIncludePath}`));
-                    outputPaths.push({
-                      from: sourcePath,
-                      to: path.join(dxtPackageRoot, resolvedIncludePath),
-                    });
+              // Add logo if it was successfully prepared
+              if (logoFilename) {
+                const currentDir =
+                  typeof process !== "undefined" ? process.cwd() : "/test";
+                const logoPath = path.join(currentDir, logoFilename);
+                if (fs.existsSync(logoPath)) {
+                  console.log(chalk.gray(`Adding logo from: ${logoPath}`));
+                  outputPaths.push({
+                    from: logoPath,
+                    to: path.join(dxtPackageRoot, logoFilename),
+                  });
+                }
+              }
+
+              // Add user-specified include files from DXT configuration
+              if (mcpConfig?.dxt?.include) {
+                console.log(
+                  chalk.gray(
+                    "📁 Including additional files from DXT configuration...",
+                  ),
+                );
+
+                for (const includeItem of mcpConfig.dxt.include) {
+                  if (typeof includeItem === "string") {
+                    // Simple string path - copy to same relative location in DXT package root
+                    // First substitute any DXT variables in the path
+                    const resolvedIncludePath =
+                      DxtPathResolver.substituteVariables(
+                        includeItem,
+                        DxtPathResolver.detectContext(),
+                        { allowUndefined: true }, // Allow undefined variables for flexibility
+                      );
+                    const sourcePath = path.resolve(
+                      projectRoot,
+                      resolvedIncludePath,
+                    );
+                    if (fs.existsSync(sourcePath)) {
+                      console.log(chalk.gray(`  • ${resolvedIncludePath}`));
+                      outputPaths.push({
+                        from: sourcePath,
+                        to: path.join(dxtPackageRoot, resolvedIncludePath),
+                      });
+                    } else {
+                      console.warn(
+                        chalk.yellow(
+                          `  ⚠ File not found: ${resolvedIncludePath} (resolved to ${sourcePath})`,
+                        ),
+                      );
+                    }
                   } else {
-                    console.warn(
-                      chalk.yellow(
-                        `  ⚠ File not found: ${resolvedIncludePath} (resolved to ${sourcePath})`,
-                      ),
+                    // Object with from/to mapping - copy to specified location in DXT package root
+                    // Substitute DXT variables in both from and to paths
+                    const resolvedFromPath =
+                      DxtPathResolver.substituteVariables(
+                        includeItem.from,
+                        DxtPathResolver.detectContext(),
+                        { allowUndefined: true },
+                      );
+                    const resolvedToPath = DxtPathResolver.substituteVariables(
+                      includeItem.to,
+                      DxtPathResolver.detectContext(),
+                      { allowUndefined: true },
                     );
-                  }
-                } else {
-                  // Object with from/to mapping - copy to specified location in DXT package root
-                  // Substitute DXT variables in both from and to paths
-                  const resolvedFromPath = DxtPathResolver.substituteVariables(
-                    includeItem.from,
-                    DxtPathResolver.detectContext(),
-                    { allowUndefined: true }
-                  );
-                  const resolvedToPath = DxtPathResolver.substituteVariables(
-                    includeItem.to,
-                    DxtPathResolver.detectContext(),
-                    { allowUndefined: true }
-                  );
-                  const sourcePath = path.resolve(projectRoot, resolvedFromPath);
-                  if (fs.existsSync(sourcePath)) {
-                    console.log(
-                      chalk.gray(`  • ${resolvedFromPath} → ${resolvedToPath}`),
+                    const sourcePath = path.resolve(
+                      projectRoot,
+                      resolvedFromPath,
                     );
-                    outputPaths.push({
-                      from: sourcePath,
-                      to: path.join(dxtPackageRoot, resolvedToPath),
-                    });
-                  } else {
-                    console.warn(
-                      chalk.yellow(
-                        `  ⚠ File not found: ${resolvedFromPath} (resolved to ${sourcePath})`,
-                      ),
-                    );
+                    if (fs.existsSync(sourcePath)) {
+                      console.log(
+                        chalk.gray(
+                          `  • ${resolvedFromPath} → ${resolvedToPath}`,
+                        ),
+                      );
+                      outputPaths.push({
+                        from: sourcePath,
+                        to: path.join(dxtPackageRoot, resolvedToPath),
+                      });
+                    } else {
+                      console.warn(
+                        chalk.yellow(
+                          `  ⚠ File not found: ${resolvedFromPath} (resolved to ${sourcePath})`,
+                        ),
+                      );
+                    }
                   }
                 }
               }
-            }
 
               return outputPaths;
             } catch (error) {
@@ -761,7 +785,9 @@ export default ${JSON.stringify(buildConfig, null, 2)};
             console.error(chalk.red("Error message:"), buildError.message);
             console.error(chalk.red("Error stack:"), buildError.stack);
           }
-          throw new Error(`TSDown DXT build failed: ${buildError instanceof Error ? buildError.message : String(buildError)}`);
+          throw new Error(
+            `TSDown DXT build failed: ${buildError instanceof Error ? buildError.message : String(buildError)}`,
+          );
         }
 
         // Determine the actual output filename from TSDown
@@ -795,8 +821,6 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       );
     }
   }
-
-
 
   /**
    * Checks if a module ID is a Node.js built-in
@@ -931,7 +955,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
    */
   public isNodeModulesPackage(packageId: string): boolean {
     try {
-      const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+      const currentDir =
+        typeof process !== "undefined" ? process.cwd() : "/test";
       let searchDir = currentDir;
       let attempts = 0;
       const maxAttempts = 3;
@@ -986,7 +1011,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       // 2. From node_modules/@alcyone-labs/arg-parser/dist/assets (when installed via npm)
       path.join(
-        typeof process !== 'undefined' ? process.cwd() : "/test",
+        typeof process !== "undefined" ? process.cwd() : "/test",
         "node_modules",
         "@alcyone-labs",
         "arg-parser",
@@ -996,10 +1021,19 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       ),
 
       // 3. From the root directory (development/local build)
-      path.join(typeof process !== 'undefined' ? process.cwd() : "/test", ".dxtignore.template"),
+      path.join(
+        typeof process !== "undefined" ? process.cwd() : "/test",
+        ".dxtignore.template",
+      ),
 
       // 4. From the library root (when using local file dependency)
-      path.join(typeof process !== 'undefined' ? process.cwd() : "/test", "..", "..", "..", ".dxtignore.template"),
+      path.join(
+        typeof process !== "undefined" ? process.cwd() : "/test",
+        "..",
+        "..",
+        "..",
+        ".dxtignore.template",
+      ),
     ];
 
     for (const ignorePath of possiblePaths) {
@@ -1023,7 +1057,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     actualOutputFilename?: string,
     logoFilename: string = "logo.jpg",
   ): Promise<void> {
-    const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+    const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
     const dxtDir = path.resolve(currentDir, outputDir);
     if (!fs.existsSync(dxtDir)) {
       throw new Error(`TSDown output directory (${outputDir}) not found`);
@@ -1075,7 +1109,10 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           properties[flag.name].enum = flag.enum;
         }
 
-        if (flag.defaultValue !== undefined && typeof flag.defaultValue !== 'function') {
+        if (
+          flag.defaultValue !== undefined &&
+          typeof flag.defaultValue !== "function"
+        ) {
           properties[flag.name].default = flag.defaultValue;
         }
 
@@ -1179,7 +1216,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     expectedBaseName: string,
   ): string | null {
     try {
-      const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+      const currentDir =
+        typeof process !== "undefined" ? process.cwd() : "/test";
       const dxtDir = path.resolve(currentDir, outputDir);
       if (!fs.existsSync(dxtDir)) {
         console.warn(
@@ -1342,7 +1380,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     if (dxtOptions.min !== undefined && dxtOptions.max !== undefined) {
       if (dxtOptions.min > dxtOptions.max) {
         throw new Error(
-          `Invalid dxtOptions for ${envVar}: min (${dxtOptions.min}) cannot be greater than max (${dxtOptions.max})`
+          `Invalid dxtOptions for ${envVar}: min (${dxtOptions.min}) cannot be greater than max (${dxtOptions.max})`,
         );
       }
     }
@@ -1351,7 +1389,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       const validTypes = ["string", "directory", "file", "boolean", "number"];
       if (!validTypes.includes(dxtOptions.type)) {
         throw new Error(
-          `Invalid dxtOptions.type for ${envVar}: "${dxtOptions.type}". Must be one of: ${validTypes.join(", ")}`
+          `Invalid dxtOptions.type for ${envVar}: "${dxtOptions.type}". Must be one of: ${validTypes.join(", ")}`,
         );
       }
     }
@@ -1361,12 +1399,12 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       const defaultType = typeof dxtOptions.default;
       if (dxtOptions.type === "number" && defaultType !== "number") {
         throw new Error(
-          `Invalid dxtOptions.default for ${envVar}: expected number, got ${defaultType}`
+          `Invalid dxtOptions.default for ${envVar}: expected number, got ${defaultType}`,
         );
       }
       if (dxtOptions.type === "boolean" && defaultType !== "boolean") {
         throw new Error(
-          `Invalid dxtOptions.default for ${envVar}: expected boolean, got ${defaultType}`
+          `Invalid dxtOptions.default for ${envVar}: expected boolean, got ${defaultType}`,
         );
       }
     }
@@ -1374,17 +1412,19 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     // Security warnings (log but continue)
     const sensitiveKeywords = ["key", "token", "password", "secret", "auth"];
     const envLower = envVar.toLowerCase();
-    const hasSensitiveKeyword = sensitiveKeywords.some(keyword => envLower.includes(keyword));
+    const hasSensitiveKeyword = sensitiveKeywords.some((keyword) =>
+      envLower.includes(keyword),
+    );
 
     if (hasSensitiveKeyword && dxtOptions.sensitive === false) {
       console.warn(
-        `⚠️  Security Warning: ${envVar} contains sensitive keyword but dxtOptions.sensitive is false`
+        `⚠️  Security Warning: ${envVar} contains sensitive keyword but dxtOptions.sensitive is false`,
       );
     }
 
     if (flag.mandatory === true && dxtOptions.sensitive !== false) {
       console.warn(
-        `⚠️  Security Warning: ${envVar} is required and sensitive - consider providing a secure default or making it optional`
+        `⚠️  Security Warning: ${envVar} is required and sensitive - consider providing a secure default or making it optional`,
       );
     }
   }
@@ -1463,11 +1503,15 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
     // Helper function to get description with default value
     const getDxtDescription = (flag: any, envVar: string): string => {
-      let baseDescription = flag.description || `${envVar} environment variable`;
+      let baseDescription =
+        flag.description || `${envVar} environment variable`;
 
       // Add default value to description if available
-      const defaultValue = flag.dxtOptions?.default ?? flag.dxtOptions?.localDefault ?? flag.defaultValue;
-      if (defaultValue !== undefined && typeof defaultValue !== 'function') {
+      const defaultValue =
+        flag.dxtOptions?.default ??
+        flag.dxtOptions?.localDefault ??
+        flag.defaultValue;
+      if (defaultValue !== undefined && typeof defaultValue !== "function") {
         baseDescription += ` (default: ${defaultValue})`;
       }
 
@@ -1505,9 +1549,15 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         if (flag.dxtOptions?.max !== undefined) {
           userConfigEntry.max = flag.dxtOptions.max;
         }
-        if (flag.dxtOptions?.default !== undefined && typeof flag.dxtOptions.default !== 'function') {
+        if (
+          flag.dxtOptions?.default !== undefined &&
+          typeof flag.dxtOptions.default !== "function"
+        ) {
           userConfigEntry.default = flag.dxtOptions.default;
-        } else if (flag.dxtOptions?.localDefault !== undefined && typeof flag.dxtOptions.localDefault !== 'function') {
+        } else if (
+          flag.dxtOptions?.localDefault !== undefined &&
+          typeof flag.dxtOptions.localDefault !== "function"
+        ) {
           userConfigEntry.default = flag.dxtOptions.localDefault;
         }
 
@@ -1549,9 +1599,15 @@ export default ${JSON.stringify(buildConfig, null, 2)};
             if (flag.dxtOptions?.max !== undefined) {
               userConfigEntry.max = flag.dxtOptions.max;
             }
-            if (flag.dxtOptions?.default !== undefined && typeof flag.dxtOptions.default !== 'function') {
+            if (
+              flag.dxtOptions?.default !== undefined &&
+              typeof flag.dxtOptions.default !== "function"
+            ) {
               userConfigEntry.default = flag.dxtOptions.default;
-            } else if (flag.dxtOptions?.localDefault !== undefined && typeof flag.dxtOptions.localDefault !== 'function') {
+            } else if (
+              flag.dxtOptions?.localDefault !== undefined &&
+              typeof flag.dxtOptions.localDefault !== "function"
+            ) {
               userConfigEntry.default = flag.dxtOptions.localDefault;
             }
 
@@ -1583,7 +1639,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         // Fall through to regular file resolution
       } else {
         if (Boolean(process.env["DEBUG"])) {
-          const currentDir = typeof process !== 'undefined' ? process.cwd() : "/test";
+          const currentDir =
+            typeof process !== "undefined" ? process.cwd() : "/test";
           console.log(
             `  <${chalk.gray("ts-paths")}> Found tsconfig at '${path.relative(currentDir, tsconfig.path)}' with paths:`,
             Object.keys(tsconfig.config.compilerOptions.paths),
@@ -1592,7 +1649,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
         // Create paths matcher
         const pathsMatcher = createPathsMatcher(tsconfig);
-        if (!pathsMatcher || typeof pathsMatcher !== 'function') {
+        if (!pathsMatcher || typeof pathsMatcher !== "function") {
           if (Boolean(process.env["DEBUG"])) {
             console.log(
               `  <${chalk.gray("ts-paths")}> Failed to create paths matcher or matcher is not a function`,
