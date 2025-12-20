@@ -179,11 +179,11 @@ export const zodFlagSchema = z
       .array(z.any())
       .optional()
       .describe("Array of allowed values for the flag."),
-    env: z // Environment variables for DXT packages
+    env: z // Environment variables mapping
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe(
-        "Environment variables that should be set from this flag's value in DXT packages.",
+        "Environment variable(s) to map to this flag. Logic: Fallback (Env -> Flag) and Sync (Flag -> Env). Precedence: Flag > Env > Default.",
       ),
     dxtOptions: zodDxtOptionsSchema
       .optional()

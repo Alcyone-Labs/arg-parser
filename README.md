@@ -10,6 +10,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [MCP Tool Name Constraints](#mcp-tool-name-constraints)
 - [How to Run It](#how-to-run-it)
   - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
+- [OpenTUI: Reactive Rich Terminal Interfaces](#opentui-reactive-rich-terminal-interfaces)
 - [Parsing Command-Line Arguments](#parsing-command-line-arguments)
   - [Automatic Argument Detection](#automatic-argument-detection)
   - [Cannonical Usage Pattern](#cannonical-usage-pattern)
@@ -76,6 +77,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.10.0](#v2100)
   - [v2.8.2](#v282)
   - [v2.8.1](#v281)
   - [v2.7.2](#v272)
@@ -109,10 +111,53 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - **DXT Package Generation**: Generate complete, ready-to-install Claude Desktop Extension (`.dxt`) packages with the `--s-build-dxt` command and `--s-with-node-modules` for platform-dependent builds.
 - **Hierarchical Sub-commands**: Create complex, nested sub-command structures (e.g., `git commit`, `docker container ls`) with flag inheritance.
 - **Configuration Management**: Easily load (`--s-with-env`) and save (`--s-save-to-env`) configurations from/to `.env`, `.json`, `.yaml`, and `.toml` files.
-- **Automatic Help & Error Handling**: Context-aware help text and user-friendly error messages are generated automatically.
-- **Debugging Tools**: Built-in system flags like `--s-debug` and `--s-debug-print` for easy troubleshooting.
+- **OpenTUI Framework** ⭐: A standardized, event-driven TUI engine with mouse support, multi-layer navigation, and reactive themes (Dark, Ocean, Monokai).
 
 ---
+
+## OpenTUI: Reactive Rich Terminal Interfaces
+
+ArgParser now includes **OpenTUI**, a standardized framework for building deep, multi-layered terminal applications with minimal boilerplate. It features a stack-based navigation system (`StackNavigator`), mouse wheel support, and a reactive theming engine.
+
+### Core TUI Features
+
+- **Standardized Navigation**: `Enter` / `Right` to dive into details, `Esc` / `Left` to go back.
+- **Reactive Theming**: Cycle through built-in themes (`Default`, `Ocean`, `Monokai`) or create your own using semantic color variables.
+- **Mouse & Scroll Performance**: Built-in SGR mouse reporting support with smooth scrolling and left-aligned thematic scrollbars.
+- **Component Based**: Reusable `List`, `ScrollArea`, `Input`, and `SplitLayout` components.
+
+### Quick TUI Example
+
+```typescript
+import { UI } from "@alcyone-labs/arg-parser";
+
+const app = new UI.App();
+
+// Create components
+const list = new UI.List({
+  items: [{ label: "Help", value: "help" }, { label: "Exit", value: "exit" }],
+  onSubmit: (item) => {
+    if (item.value === "exit") app.stop();
+  }
+});
+
+const details = new UI.ScrollArea({ 
+  content: "Select an item to see more..." 
+});
+
+// Build layout
+const layout = new UI.SplitLayout({
+  direction: "horizontal",
+  first: list,
+  second: details,
+  ratio: 0.3
+});
+
+// Run with automatic TTY cleanup
+app.run(layout);
+```
+
+For a comprehensive implementation, check out `examples/complex-tui-demo.ts`.
 
 ## Installation
 
@@ -521,7 +566,7 @@ cli.addTool({
   description: "Search for items",
   flags: [
     { name: "query", type: "string", mandatory: true },
-    { name: "apiKey", type: "string", env: "API_KEY" }, // For DXT integration
+    { name: "apiKey", type: "string", env: "API_KEY" }, // Universal Env support (also used for DXT)
   ],
   handler: async (ctx) => {
     // No more MCP detection! Use console.log freely.
@@ -571,7 +616,7 @@ interface IFlag {
   enum?: any[]; // An array of allowed values
   validate?: (value: any, parsedArgs?: any) => boolean | string | void; // Custom validation function
   allowMultiple?: boolean; // Allow the flag to be provided multiple times
-  env?: string; // Links the flag to an environment variable for DXT packages, will automatically generate user_config entries in the DXT manifest and fill the flag value to the ENV value if found (process.env)
+  env?: string | string[]; // Maps flag to environment variable(s). Logic: Fallback (Env -> Flag) and Sync (Flag -> Env). Precedence: Flag > Env > Default.
   dxtOptions?: DxtOptions; // Customizes how this flag appears in DXT package user_config
 }
 
@@ -584,6 +629,29 @@ interface DxtOptions {
   max?: number; // Maximum value (for number types)
 }
 ```
+
+### Environment Variable Support
+
+ArgParser provides universal support for environment variables across all commands.
+
+**Features:**
+1.  **Automatic Fallback**: If a flag is not provided via CLI, ArgParser looks for configured environment variables.
+2.  **Priority Handling**: `CLI Flag` > `Environment Variable` > `Default Value`.
+3.  **Reverse Sync**: Once a flag value is resolved (whether from CLI or Env), it is automatically written back to `process.env`. This ensures downstream code accessing `process.env` sees the consistent, final value.
+4.  **Array Support**: You can specify multiple env vars for a single flag; the first one found is used.
+
+**Example:**
+```typescript
+parser.addFlag({
+  name: "apiKey",
+  type: "string",
+  env: ["MY_APP_API_KEY", "LEGACY_API_KEY"], // First match wins
+  defaultValue: "dev-key"
+});
+```
+- If passed `--api-key val`: `apiKey` is "val", and `process.env.MY_APP_API_KEY` becomes "val".
+- If not passed, but `MY_APP_API_KEY` exists: `apiKey` uses the env value.
+- If neither: `apiKey` is "dev-key", and `process.env.MY_APP_API_KEY` is set to "dev-key".
 
 ### DXT Package User Configuration & Path Handling
 
@@ -2022,7 +2090,7 @@ When you run `--s-build-dxt`, ArgParser performs several steps to create a self-
 1.  **Introspection**: It analyzes all tools defined with `.addTool()`.
 2.  **Manifest Generation**: It creates a `manifest.json` file.
     - Tool flags are converted into a JSON Schema for the `input_schema`.
-    - Flags with an `env` property (e.g., `{ name: 'apiKey', env: 'API_KEY' }`) are automatically added to the `user_config` section, prompting the user for the value upon installation and making it available as an environment variable to your tool.
+    - Flags with an `env` property (e.g., `{ name: 'apiKey', env: 'API_KEY' }`) provide universal `process.env` fallback/sync and are automatically added to the `user_config` section of the DXT manifest.
 3.  **Autonomous Build**: It bundles your CLI's source code and its dependencies into a single entry point (e.g., `server.js`) that can run without `node_modules`. This ensures the DXT is portable and reliable. If you have properly setup your node_modules (via `pnpm install --prod --node-linker=hoisted`) and pass `--s-with-node-nodules` to the bundling process, the resulting DXT will include all necessary dependencies, this is useful for projects that require native dependencies or have complex dependency trees.
 4.  **Packaging**: It assembles all necessary files (manifest, server bundle, logo, etc.) into the specified output directory, ready to be used by Claude Desktop or packed with `npx @anthropic-ai/dxt`.
 
@@ -2134,6 +2202,26 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.10.0 - OpenTUI integration + IFlag "env" property now first-class citizen
+
+#### OpenTUI Integration
+
+- **OpenTUI**: Integrated a complete Terminal User Interface (TUI) framework into the library core.
+- **StackNavigator**: Standardized UX for deep navigation with `Enter`/`Right` to push and `Esc`/`Left` to pop views.
+- **Reactive Themes**: Centralized `ThemeManager` with `Default`, `Ocean` (High-Contrast), and `Monokai` presets.
+- **Scroll Performance**: ANSI-aware left-side scrollbars with automatic height calculation and scroll-state management.
+- **Mouse Integration**: Native SGR mouse reporting for wheel scrolling and hit-detected clicks.
+- **Safety**: Robust TTY restoration and process-level cleanup to prevent terminal lockups on exit or crash.
+- **Components**: Exported `List`, `ScrollArea`, `Input`, and `SplitLayout` under the `UI` namespace.
+
+#### Universal Environment Variable Support
+
+- **Universal `env` Support**: The `env` property is now a core feature available to all commands and tools, not just DXT/MCP contexts.
+- **Resolution Priority**: Implemented strict precedence: **CLI Flag > Environment Variable > Default Value**.
+- **Reverse Sync**: Resolved flag values (from CLI or Env) are now automatically synced back to `process.env`, ensuring downstream code sees the correct configuration.
+- **Flexible Mapping**: Supports both string and array-of-strings for `env` (first match wins).
+- **Automatic Type Conversion**: Environment variables are automatically coerced to the flag's defined type (Number, Boolean, etc.).
 
 ### v2.8.2
 
@@ -2296,7 +2384,7 @@ Make sure to clearly identify if you need to include the node_modules or not. In
 ### v2.0.0
 
 - **Unified Tool Architecture**: Introduced `.addTool()` to define CLI subcommands and MCP tools in a single declaration.
-- **Environment Variables Support**: The `env` property on any IFlag now automatically pull value from the `process.env[${ENV}]` key and generates `user_config` entries in the DXT manifest and fills the flag value to the ENV value if found (process.env).
+- **Universal Environment Variables Support**: The `env` property on any `IFlag` now provides native `process.env` fallback/sync logic for all commands, while maintaining its role in generating `user_config` entries for DXT manifests.
 - **Enhanced DXT Generation**: The `env` property on flags now automatically generates `user_config` entries in the DXT manifest.
 - **Automatic Console Safety**: Console output is automatically and safely redirected in MCP mode to prevent protocol contamination.
 - **Breaking Changes**: The `addMcpSubCommand()` and separate `addSubCommand()` for MCP tools are deprecated in favor of `addTool()` and `--s-mcp-serve`.

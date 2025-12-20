@@ -135,3 +135,6 @@ export {
   type LogLevel,
   type LoggerConfig,
 } from "@alcyone-labs/simple-mcp-logger";
+
+// TUI System exports
+export * as UI from "./ui";

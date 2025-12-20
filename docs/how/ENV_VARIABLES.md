@@ -90,64 +90,17 @@ ArgParser supports loading environment files via:
 - `--s-with-env .env.test` (testing)
 - `--s-with-env .env` (production)
 
-## Issues Identified and Resolved
+## Universal Support & Feature Status
 
-### Issue 1: Context Mismatch ✅ **FIXED**
+The flag resolution system is now a core part of `ArgParserBase` and works consistently across all contexts:
 
-**Problem**: Two different context types existed with inconsistent `getFlag()` availability:
-- `McpLifecycleBaseContext` - Had `getFlag()` method (lifecycle events only)
-- `IHandlerContext` - **Missing `getFlag()` method** (regular handlers)
+- ✅ **Standard CLI**: Native support for `process.env` fallback
+- ✅ **MCP Mode**: `ctx.args` already contains resolved values, and `ctx.getFlag()` provides a unified API
+- ✅ **Fallback Logic**: Proper priority: CLI flag > ENV variable > default value
+- ✅ **Reverse Sync**: Resolving a flag value automatically updates `process.env` (syncing CLI -> Env)
+- ✅ **Type Safety**: Automatically converts environment strings to flag types (number, boolean, etc.)
 
-**Solution**: Extended `IHandlerContext` with optional `getFlag?: (name: string) => any` method for MCP mode.
-
-### Issue 2: Missing Flag Resolution in Handler Contexts ✅ **FIXED**
-
-**Problem**: Regular MCP handlers couldn't access flag resolution logic, forcing users to manually parse `process.argv`.
-
-**Solution**: Implemented `getFlag` function in MCP handler context creation that:
-1. Tries parsed arguments first (from MCP input)
-2. Falls back to environment variables using `flagDef["env"]`
-3. Falls back to default values using `flagDef["defaultValue"]`
-4. Handles both `string` and `string[]` env types
-
-### Issue 3: Environment Variables in DXT Context ⚠️ **PARTIALLY ADDRESSED**
-
-**Problem**: In DXT packages running inside Claude Desktop, `process.env` doesn't contain expected environment variables.
-
-**Root Cause**: DXT packages run in isolated contexts where:
-- Local `.env` files are not loaded
-- Parent process environment variables are not inherited
-- Only explicitly set environment variables are available
-
-**Status**: The flag resolution now properly handles missing environment variables by falling back to defaults, but environment variable loading in DXT contexts remains limited by the execution environment.
-
-## Flag Resolution Implementation
-
-The `getFlag()` method follows this priority chain:
-1. **CLI Arguments**: Values from MCP tool input
-2. **Environment Variables**: Using the `env` property from flag definitions
-3. **Default Values**: Fallback to `defaultValue` from flag definitions
-
-The `env` property supports both single environment variables (`string`) and multiple options (`string[]`).
-
-## Current Status
-
-The flag resolution system now works correctly across all contexts:
-
-- ✅ **MCP Handler Context**: `ctx.getFlag()` available in MCP mode
-- ✅ **Environment Variables**: Proper fallback to env vars when CLI flags not provided
-- ✅ **Default Values**: Graceful fallback to defaults when neither CLI nor env available
-- ✅ **Type Safety**: Handles both single and multiple environment variable configurations
-
-### Usage Example
-
-```typescript
-// Clean, consistent API across all contexts
-const dbUrl = ctx.getFlag("database_url") || "";
-const verbose = ctx.getFlag("verbose") || false;
-```
-
-## Environment File Behavior by Context
+### Environment File Behavior by Context
 
 ### Development (Local) ✅
 - Loads `.env.local` automatically via `--s-with-env`

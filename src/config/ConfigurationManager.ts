@@ -584,7 +584,7 @@ export class ConfigurationManager {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".yaml");
     if (plugin) {
       // Plugin expects raw data object, not TParsedArgs
-      return plugin.generate({}, flags, parsedArgs.data || parsedArgs);
+      return plugin.generate({}, flags, parsedArgs['data'] || parsedArgs);
     }
 
     // Fallback: Simple YAML generation
@@ -647,7 +647,7 @@ export class ConfigurationManager {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".toml");
     if (plugin) {
       // Plugin expects raw data object, not TParsedArgs
-      return plugin.generate({}, flags, parsedArgs.data || parsedArgs);
+      return plugin.generate({}, flags, parsedArgs['data'] || parsedArgs);
     }
 
     // Fallback: Simple TOML generation

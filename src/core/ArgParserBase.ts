@@ -642,7 +642,12 @@ export class ArgParserBase<THandlerReturn = any> {
     // This ensures that only parsers intended as main CLI tools trigger auto-help
     const isRootCliParser = !this.#parentParser && !!this.#appCommandName;
 
-    if (processArgs.length === 0 && isRootCliParser && !this.#handler) {
+    if (
+      processArgs.length === 0 &&
+      isRootCliParser &&
+      !this.#handler &&
+      !options?.skipHelpHandling
+    ) {
       console.log(this.helpText());
       return this._handleExit(0, "Help displayed", "help");
     }
@@ -1096,6 +1101,77 @@ export class ArgParserBase<THandlerReturn = any> {
     }
   }
 
+  #_applyEnvFallback(
+    finalArgs: TParsedArgsWithRouting<any>,
+    finalParser: ArgParserBase,
+  ): void {
+    for (const flag of finalParser.#flagManager.flags) {
+      const flagName = flag["name"] as string;
+      
+      if (!flag["env"]) continue;
+
+      // Check if value is already set (by CLI).
+      // If we move this call BEFORE defaults, then 'undefined' means truly "not set by CLI".
+      if (finalArgs[flagName] !== undefined) {
+          // If allowMultiple, we might append? Usually env var is just a fallback source.
+          // If CLI provided check, we skip Env.
+          continue; 
+      }
+
+      const envVars = Array.isArray(flag["env"]) ? flag["env"] : [flag["env"]];
+      let foundVal: string | undefined;
+
+      for (const envKey of envVars) {
+        if (process.env[envKey] !== undefined) {
+          foundVal = process.env[envKey];
+          break; // First match wins
+        }
+      }
+
+      if (foundVal !== undefined) {
+        try {
+          const typedVal = this.#configurationManager.convertValueToFlagType(foundVal, flag);
+           if (flag["allowMultiple"]) {
+             // If allowMultiple, convertValueToFlagType returns array or single.
+             // We ensure it's set correctly.
+              finalArgs[flagName] = Array.isArray(typedVal) ? typedVal : [typedVal];
+           } else {
+              finalArgs[flagName] = typedVal;
+           }
+        } catch (e) {
+           console.warn(chalk.yellow(`Warning: Failed to parse env var for flag '${flagName}': ${e}`));
+        }
+      }
+    }
+  }
+
+  #_syncToEnv(
+     finalArgs: TParsedArgsWithRouting<any>,
+     finalParser: ArgParserBase,
+  ): void {
+      for (const flag of finalParser.#flagManager.flags) {
+          if (!flag["env"]) continue;
+          
+          const flagName = flag["name"];
+          const value = finalArgs[flagName];
+          
+          if (value !== undefined) {
+               const envVars = Array.isArray(flag["env"]) ? flag["env"] : [flag["env"]];
+               // Convert value to string for Env
+               let strVal = "";
+               if (typeof value === 'object') {
+                   strVal = JSON.stringify(value);
+               } else {
+                   strVal = String(value);
+               }
+               
+               for (const envKey of envVars) {
+                   process.env[envKey] = strVal;
+               }
+          }
+      }
+  }
+
   #_prepareAndExecuteHandler(
     handlerToExecute: RecursiveParseResult["handlerToExecute"],
     finalArgs: TParsedArgsWithRouting<any>,
@@ -1438,8 +1514,17 @@ export class ArgParserBase<THandlerReturn = any> {
     const { parsedArgs: currentLevelArgs, firstUnconsumedIndex } =
       await currentParser.#parseFlags(argsForCurrentLevel, options);
 
+    // Apply environment variables fallback
+    // Priority: CLI Flag > Env Var > Default Value
+    // This runs after CLI flags are parsed (so CLI wins if present)
+    // But BEFORE default values (so Env wins over Default)
+    this.#_applyEnvFallback(currentLevelArgs, currentParser);
+
     // Apply default values for the current parser's flags to its args
     currentParser.#_applyDefaultValues(currentLevelArgs, currentParser);
+
+    // Sync resolved values back to environment variables if configured
+    this.#_syncToEnv(currentLevelArgs, currentParser);
 
     const combinedArgsFromThisAndParents = {
       ...accumulatedParentArgs,
