@@ -1,4 +1,4 @@
-import * as readline from "node:readline";
+
 
 export class Terminal {
   private static instance: Terminal;
@@ -38,7 +38,7 @@ export class Terminal {
   }
 
   public moveCursor(x: number, y: number): void {
-    readline.cursorTo(process.stdout, x, y);
+    process.stdout.write(`\x1b[${y + 1};${x + 1}H`);
   }
 
   public enableRawMode(): void {
