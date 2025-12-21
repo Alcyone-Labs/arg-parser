@@ -77,6 +77,8 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.10.2](#v2102)
+  - [v2.10.1](#v2101)
   - [v2.10.0](#v2100)
   - [v2.8.2](#v282)
   - [v2.8.1](#v281)
@@ -117,14 +119,63 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 
 ## OpenTUI: Reactive Rich Terminal Interfaces
 
-ArgParser now includes **OpenTUI**, a standardized framework for building deep, multi-layered terminal applications with minimal boilerplate. It features a stack-based navigation system (`StackNavigator`), mouse wheel support, and a reactive theming engine.
+ArgParser includes **OpenTUI**, a standardized framework for building deep, multi-layered terminal applications with minimal boilerplate. It features a stack-based navigation system (`StackNavigator`), mouse wheel support, and a reactive theming engine.
 
 ### Core TUI Features
 
 - **Standardized Navigation**: `Enter` / `Right` to dive into details, `Esc` / `Left` to go back.
-- **Reactive Theming**: Cycle through built-in themes (`Default`, `Ocean`, `Monokai`) or create your own using semantic color variables.
-- **Mouse & Scroll Performance**: Built-in SGR mouse reporting support with smooth scrolling and left-aligned thematic scrollbars.
+- **Reactive Theming**: Cycle through built-in themes (`Default`, `Ocean`, `Monokai`) or create your own.
+- **Mouse & Scroll Performance**: Built-in SGR mouse reporting support with smooth scrolling and high-performance rendering.
 - **Component Based**: Reusable `List`, `ScrollArea`, `Input`, and `SplitLayout` components.
+
+### Component Reference
+
+#### `App`
+
+The main entry point for TUI applications. It handles TTY raw mode, mouse reporting, and ensures clean terminal restoration on exit or crash.
+
+```typescript
+const app = new UI.App();
+app.run(rootComponent);
+// Exit manually
+app.stop();
+```
+
+#### `ScrollArea`
+
+A container for long text blocks with automatic scrollbars and mouse-wheel support.
+
+- `content`: The text to display (supports ANSI colors).
+- `wrapText`: (New in v2.10.2) If true, automatically wraps long lines to fit the area width.
+
+```typescript
+const details = new UI.ScrollArea({
+  content: "Long text...",
+  wrapText: true,
+});
+```
+
+#### `StackNavigator`
+
+Manages a stack of components, perfect for "Drill-down" interfaces.
+
+- Handles `Esc` and `Left Arrow` automatically to return to the previous view.
+- Resizes restore components to the correct dimensions.
+
+```typescript
+const nav = new UI.StackNavigator({ initialComponent: homeList });
+nav.push(detailsView); // Drill down
+```
+
+#### `ThemeManager`
+
+Allows real-time theme switching without affecting application logic.
+
+```typescript
+UI.ThemeManager.setTheme("Ocean");
+const t = UI.ThemeManager.current;
+console.log(t.accent("Statically colored text"));
+```
 
 ### Quick TUI Example
 
@@ -135,14 +186,18 @@ const app = new UI.App();
 
 // Create components
 const list = new UI.List({
-  items: [{ label: "Help", value: "help" }, { label: "Exit", value: "exit" }],
+  items: [
+    { label: "Help", value: "help" },
+    { label: "Exit", value: "exit" },
+  ],
   onSubmit: (item) => {
     if (item.value === "exit") app.stop();
-  }
+  },
 });
 
-const details = new UI.ScrollArea({ 
-  content: "Select an item to see more..." 
+const details = new UI.ScrollArea({
+  content: "Select an item to see more...",
+  wrapText: true,
 });
 
 // Build layout
@@ -150,10 +205,9 @@ const layout = new UI.SplitLayout({
   direction: "horizontal",
   first: list,
   second: details,
-  ratio: 0.3
+  splitRatio: 0.3,
 });
 
-// Run with automatic TTY cleanup
 app.run(layout);
 ```
 
@@ -635,20 +689,23 @@ interface DxtOptions {
 ArgParser provides universal support for environment variables across all commands.
 
 **Features:**
+
 1.  **Automatic Fallback**: If a flag is not provided via CLI, ArgParser looks for configured environment variables.
 2.  **Priority Handling**: `CLI Flag` > `Environment Variable` > `Default Value`.
 3.  **Reverse Sync**: Once a flag value is resolved (whether from CLI or Env), it is automatically written back to `process.env`. This ensures downstream code accessing `process.env` sees the consistent, final value.
 4.  **Array Support**: You can specify multiple env vars for a single flag; the first one found is used.
 
 **Example:**
+
 ```typescript
 parser.addFlag({
   name: "apiKey",
   type: "string",
   env: ["MY_APP_API_KEY", "LEGACY_API_KEY"], // First match wins
-  defaultValue: "dev-key"
+  defaultValue: "dev-key",
 });
 ```
+
 - If passed `--api-key val`: `apiKey` is "val", and `process.env.MY_APP_API_KEY` becomes "val".
 - If not passed, but `MY_APP_API_KEY` exists: `apiKey` uses the env value.
 - If neither: `apiKey` is "dev-key", and `process.env.MY_APP_API_KEY` is set to "dev-key".
@@ -2202,6 +2259,17 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.10.2
+
+- **OpenTUI Improvements**:
+  - **Soft Wrapping**: Added `wrapText` (boolean) to `ScrollArea` component. When enabled, text automatically reflows to fit the container width (preventing clipping).
+  - **ANSI Preservation**: Soft-wrapping logic is ANSI-aware; color and style states are correctly carried over to wrapped lines.
+
+### v2.10.1
+
+- **Bug Fixes**:
+  - Fixed a crash in `Terminal.moveCursor` when running in certain environments where `node:readline` utilities were inaccessible. Switched to direct ANSI escape codes for cursor positioning.
 
 ### v2.10.0 - OpenTUI integration + IFlag "env" property now first-class citizen
 

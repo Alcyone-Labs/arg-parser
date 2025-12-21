@@ -16,6 +16,7 @@ const capabilities = [
     value: "logs",
     description: "System Logs (Long Scroll)",
   },
+  { label: "ui/demos", value: "demos", description: "UI Component Demos" },
 ];
 
 const tools: Record<string, UI.IListItem[]> = {
@@ -40,6 +41,9 @@ const tools: Record<string, UI.IListItem[]> = {
   ],
   logs: [
     { label: "verbose", value: "sys-logs", description: "View verbose logs" },
+  ],
+  demos: [
+    { label: "Text Wrapping", value: "demo-wrapping", description: "Test soft wrapping with ANSI colors" },
   ],
 };
 
@@ -139,6 +143,25 @@ ${t.muted("Retrieve relevant context for a query.")}`,
     content += `\n${t.accent("--- End of Logs ---")}\n${t.muted(`Total: ${totalLines} lines displayed`)}`;
     return content;
   },
+  
+  "demo-wrapping": (t) => {
+      const red = t.error; // usually red
+      const blue = t.accent; // usually blue/cyan
+      const bold = (s: string) => `\x1b[1m${s}\x1b[22m`;
+      
+      let content = `${t.accent("Text Wrapping Demo")}\n\n`;
+      content += `This area has strict width boundaries. The following text should wrap naturally without breaking words incorrectly (well, character-based for now) and ${bold("most importantly")}, without losing ANSI color state.\n\n`;
+      
+      content += `${red("This is a long sentence that starts in RED and should continue to be RED even after it wraps to the next line.")} If it turns white (or default) on the second line, the fix failed.\n\n`;
+      
+      content += `Now mixing colors: This is default. ${blue("This is BLUE. " + bold("This is BLUE BOLD. ") + "Still BLUE.")} Back to default.\n\n`;
+      
+      content += `Here is a block of text to test resizing:\n`;
+      const longText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ";
+      content += t.muted(longText.repeat(3));
+      
+      return content;
+  },
 };
 
 // --- Logic ---
@@ -148,6 +171,7 @@ UI.ThemeManager.setTheme("Default");
 // Right Pane
 const detailsArea = new UI.ScrollArea({
   content: "Select an item to view details...",
+  wrapText: true,
 });
 
 // Left Pane Logic

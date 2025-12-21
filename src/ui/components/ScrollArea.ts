@@ -1,8 +1,10 @@
 import { Component, type IComponentConfig } from "../Component";
 import { ThemeManager } from "../Theme";
+import { wrapText, stripAnsi } from "../utils/ansi-utils";
 
 export interface IScrollAreaConfig extends IComponentConfig {
   content: string;
+  wrapText?: boolean;
 }
 
 export class ScrollArea extends Component {
@@ -10,9 +12,12 @@ export class ScrollArea extends Component {
   private contentLines: string[] = [];
   private scrollOffset: number = 0;
 
+  private wrapText: boolean = false;
+
   constructor(config: IScrollAreaConfig) {
     super(config);
     this.content = config.content;
+    this.wrapText = !!config.wrapText;
     this.updateContentLines();
   }
 
@@ -22,8 +27,21 @@ export class ScrollArea extends Component {
     this.updateContentLines();
   }
 
+  public override resize(x: number, y: number, width: number, height: number): void {
+    super.resize(x, y, width, height);
+    if (this.wrapText) {
+       this.updateContentLines();
+    }
+  }
+
   private updateContentLines(): void {
-    this.contentLines = this.content.split("\n");
+    if (this.wrapText && this.width > 0) {
+        // Wrap to width - 2 to allow space for the scrollbar (which appears on the left).
+        // If scrollbar is not needed, this just leaves a small right margin, which is fine.
+        this.contentLines = wrapText(this.content, Math.max(1, this.width - 2));
+    } else {
+        this.contentLines = this.content.split("\n");
+    }
   }
 
   public render(): string[] {
@@ -47,8 +65,7 @@ export class ScrollArea extends Component {
         scrollbarTop = Math.floor(scrollPercent * maxTop);
     }
 
-    // ANSI Strip Helper (inlined for simplicity)
-    const stripAnsi = (str: string) => str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, "");
+
 
     for (let i = 0; i < this.height; i++) {
         const lineContent = visibleLines[i] || "";
