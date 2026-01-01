@@ -11,6 +11,7 @@ The ArgParser TUI SDK provides a powerful, component-based framework for buildin
 - [Theming and Styling](#theming-and-styling)
 - [Event Handling](#event-handling)
 - [Advanced Patterns](#advanced-patterns)
+- [Interactive Dashboards](#interactive-dashboards)
 - [Best Practices](#best-practices)
 - [Examples](#examples)
 
@@ -190,7 +191,8 @@ Divides space into two regions (horizontal or vertical).
 ```typescript
 const splitLayout = new UI.SplitLayout({
   direction: "horizontal", // or "vertical"
-  splitRatio: 0.3, // 30% for first component
+  splitRatio: "auto", // Automatically sizes based on content (v2.10.4)
+  gap: 1, // Adds a space between panes
   first: leftComponent,
   second: rightComponent,
 });
@@ -419,6 +421,55 @@ class AsyncComponent extends UI.Component {
   }
 }
 ```
+
+## Interactive Dashboards
+
+### Click-to-Copy Pattern
+
+Using `Label` and `Clipboard` together to create interactive IDs or snippets.
+
+```typescript
+new UI.Label({
+  text: `ID: ${item.id}`,
+  onClick: async () => {
+    await UI.Clipboard.copy(item.id);
+    app.toast.show("ID Copied to clipboard", "success");
+  },
+  style: { hoverStyle: { color: "cyan" } }
+});
+```
+
+### Complex Navigation
+
+Combine `SplitLayout` with `StackNavigator` for rich drill-down dashboards.
+
+```typescript
+const layout = new UI.SplitLayout({
+  direction: "horizontal",
+  splitRatio: "auto",
+  gap: 1,
+  first: sidebarList,
+  second: detailStack // A StackNavigator for the main area
+});
+```
+
+### Handling Async Updates
+
+If your component updates its state asynchronously (e.g., from a timer or network request), the App might not know it needs to re-render. You can force a redraw using the new `app.forceRedraw()` method.
+
+```typescript
+// In your component logic
+setInterval(() => {
+  this.data = newData;
+  // If you have access to the app instance:
+  app.forceRedraw(); 
+}, 1000);
+```
+
+The App automatically handles redraws for:
+- User Input (Keyboard/Mouse)
+- Window Resize
+- Toast Notifications (show/hide)
 
 ## Best Practices
 

@@ -1,5 +1,6 @@
 import { Component } from "./Component";
 import { Terminal } from "./Terminal";
+import { Toast } from "./components/Toast";
 
 export interface IMouseEvent {
     x: number;
@@ -13,10 +14,29 @@ export class App {
   private root?: Component;
   private isRunning: boolean = false;
   private lastRenderedLines: string[] = [];
+  
+  public toast: Toast;
 
   constructor() {
     this.terminal = Terminal.getInstance();
+    this.toast = new Toast();
+    
+    // Hacky way to let toast trigger render: override show/hide or pass callback
+    // For now, we just rely on next event or maybe we add a tick
+    const originalShow = this.toast.show.bind(this.toast);
+    const originalHide = this.toast.hide.bind(this.toast);
+    
+    this.toast.show = (...args) => {
+        originalShow(...args);
+        this.forceRedraw();
+    };
+    this.toast.hide = () => {
+        originalHide();
+        this.forceRedraw();
+    };
   }
+
+  private forceRedrawNextFrame: boolean = false;
 
   public run(root: Component): void {
     this.root = root;
@@ -107,6 +127,7 @@ export class App {
 
     // Handle resize
     process.stdout.on('resize', () => {
+        this.forceRedrawNextFrame = true;
         this.render();
     });
   }
@@ -117,8 +138,20 @@ export class App {
     process.exit(0);
   }
 
+  public forceRedraw(): void {
+      this.forceRedrawNextFrame = true;
+      this.render();
+  }
+
   private render(): void {
     if (!this.root || !this.isRunning) return;
+
+    // Reset diffing if forced
+    if (this.forceRedrawNextFrame) {
+        this.lastRenderedLines = [];
+        this.terminal.clear(); // Actually clear screen to be safe
+        this.forceRedrawNextFrame = false;
+    }
 
     const width = this.terminal.width;
     const height = this.terminal.height;
@@ -128,12 +161,14 @@ export class App {
 
     const lines = this.root.render();
     
-    // Simple diffing: only write lines that changed
-    // Ideally we goto(0,0) and overwrite, but that can flicker.
-    // A better way usually involves double buffering or only drawing changes.
-    // For simplicity, we'll reset cursor to top left and write all lines, 
-    // relying on terminal speed.
-    // Optimization: check if lines exact match previous frame.
+    // Overlay Toast if visible
+    // NOTE: If toast was visible last frame and is now hidden, we MUST have cleared the screen
+    // or redrawn the background. 
+    // The "forceRedrawNextFrame" handles this if called from hide().
+
+    if (this.toast.visible) {
+        // ... (toast rendering logic same as before, simplified for overlay) ...
+    }
     
     // We strictly limit to height-1 to avoid scrolling the terminal wrapper
     const maxLines = Math.min(lines.length, height - 1);
@@ -148,6 +183,22 @@ export class App {
             this.terminal.moveCursor(0, i);
             this.terminal.write(line);
             this.terminal.write("\x1b[K"); // Clear rest of line
+        }
+    }
+    
+    // Draw Toast Overlay directly
+    if (this.toast.visible) {
+        const toastLines = this.toast.render();
+        if (toastLines.length > 0) {
+             const tLine = toastLines[0];
+             // Strip ansi for length calc
+             const visibleLen = tLine.replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '').length;
+             
+             const tx = width - visibleLen - 2;
+             const ty = 2; // Top right
+             
+             this.terminal.moveCursor(tx, ty);
+             this.terminal.write(tLine);
         }
     }
     

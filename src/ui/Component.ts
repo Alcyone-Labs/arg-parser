@@ -3,6 +3,13 @@ export interface IComponentConfig {
   style?: {
     border?: boolean;
     padding?: number;
+    color?: string; // hex or color name
+    backgroundColor?: string;
+    display?: "block" | "inline"; // Simple layout hint
+    hoverStyle?: {
+        color?: string;
+        backgroundColor?: string;
+    };
   };
 }
 
@@ -36,5 +43,9 @@ export abstract class Component {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public handleMouse(_event: any): void {
       // Override in subclasses
+  }
+
+  public getPreferredWidth(): number | undefined {
+    return undefined;
   }
 }

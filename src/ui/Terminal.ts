@@ -50,15 +50,16 @@ export class Terminal {
   }
 
   public enableMouse(): void {
-      // Enable mouse reporting (Button event tracking) + SGR generic mode (1006)
+      // Enable mouse reporting
       // 1000: Click release
       // 1002: Drag
+      // 1003: Any event (move/hover)
       // 1006: SGR format (preferred for modern terminals)
-      process.stdout.write("\x1b[?1000h\x1b[?1002h\x1b[?1006h");
+      process.stdout.write("\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h");
   }
 
   public disableMouse(): void {
-      process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1006l");
+      process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l");
   }
 
   public disableRawMode(): void {

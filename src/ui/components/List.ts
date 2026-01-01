@@ -105,4 +105,15 @@ export class List extends Component {
           if (this.onSubmit) this.onSubmit(this.items[this.selectedIndex]);
       }
   }
+  public override getPreferredWidth(): number | undefined {
+      // Calculate max width of items
+      let maxLen = 0;
+      for (const item of this.items) {
+          if (item.label.length > maxLen) {
+              maxLen = item.label.length;
+          }
+      }
+      // Add padding (pointer + space + label + space)
+      return maxLen + 4; 
+  }
 }

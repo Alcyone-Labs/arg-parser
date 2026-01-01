@@ -5,17 +5,8 @@ import { UI } from "../src";
 const capabilities = [
   { label: "ai/model", value: "model", description: "AI Model management" },
   { label: "ai/repl", value: "repl", description: "Interactive REPL" },
-  {
-    label: "ai/embedding",
-    value: "embedding",
-    description: "Vector Embeddings",
-  },
-  { label: "ai/rag", value: "rag", description: "Retrieval Augmented Gen" },
-  {
-    label: "sys/logs",
-    value: "logs",
-    description: "System Logs (Long Scroll)",
-  },
+  { label: "ai/embedding", value: "embedding", description: "Vector Embeddings" },
+  { label: "sys/logs", value: "logs", description: "System Logs (Live)" },
   { label: "ui/demos", value: "demos", description: "UI Component Demos" },
 ];
 
@@ -28,329 +19,216 @@ const tools: Record<string, UI.IListItem[]> = {
     { label: "start", value: "repl-start", description: "Start REPL session" },
   ],
   embedding: [
-    {
-      label: "generate",
-      value: "embed-gen",
-      description: "Generate embedding",
-    },
+    { label: "generate", value: "embed-gen", description: "Generate embedding" },
     { label: "batch", value: "embed-batch", description: "Batch generation" },
-  ],
-  rag: [
-    { label: "ingest", value: "rag-ingest", description: "Ingest documents" },
-    { label: "query", value: "rag-query", description: "Query knowledge base" },
   ],
   logs: [
     { label: "verbose", value: "sys-logs", description: "View verbose logs" },
   ],
   demos: [
-    { label: "Text Wrapping", value: "demo-wrapping", description: "Test soft wrapping with ANSI colors" },
+    { label: "Text Wrapping", value: "demo-wrapping", description: "Test soft wrapping" },
   ],
 };
 
-const toolDetails: Record<string, (t: UI.ITheme) => string> = {
-  "model-list": (t) => `${t.accent("Tool: List Models")}
-${t.muted("List all available AI models from configured providers.")}
-${t.warning("Usage:")} aquaria ai model list [options]`,
+// --- View Factories ---
 
-  "model-show": (t) => `${t.accent("Tool: Show Model")}
-${t.muted("Display detailed information about a specific model.")}`,
-
-  "repl-start": (t) => `${t.accent("Tool: REPL")}
-${t.muted("Start an interactive AI chat session.")}`,
-
-  "embed-gen": (t) => `${t.accent("Tool: Generate Embedding")}
-${t.muted("Create vector embeddings for text.")}`,
-
-  "embed-batch": (t) => `${t.accent("Tool: Batch Embeddings")}
-${t.muted("Create multiple embeddings at once.")}`,
-
-  "rag-ingest": (t) => `${t.accent("Tool: RAG Ingest")}
-${t.muted("Ingest files into the vector database.")}`,
-
-  "rag-query": (t) => `${t.accent("Tool: RAG Query")}
-${t.muted("Retrieve relevant context for a query.")}`,
-
-  // New Long Content for Scrolling
-  "sys-logs": (t) => {
-    const totalLines = 200;
-    let content = `${t.accent("System Logs (Verbose - Extended for Scrolling Test)")}\n${t.muted(`Showing last ${totalLines} entries...`)}\n${t.muted("Use arrow keys, Page Up/Down, or mouse wheel to scroll")}\n\n`;
-
-    const logTypes = [
-      {
-        type: "[INFO]",
-        color: t.success,
-        messages: [
-          "API request processed",
-          "Database connection established",
-          "Cache hit",
-          "User authenticated",
-          "File uploaded successfully",
-        ],
-      },
-      {
-        type: "[WARN]",
-        color: t.warning,
-        messages: [
-          "Rate limit approaching",
-          "Memory usage high",
-          "Slow query detected",
-          "Deprecated API used",
-          "Configuration missing",
-        ],
-      },
-      {
-        type: "[ERR]",
-        color: t.error,
-        messages: [
-          "Database connection failed",
-          "Invalid API key",
-          "Timeout occurred",
-          "File not found",
-          "Permission denied",
-        ],
-      },
-      {
-        type: "[DEBUG]",
-        color: t.muted,
-        messages: [
-          "Entering function",
-          "Variable state",
-          "Loop iteration",
-          "Cache miss",
-          "Network request",
-        ],
-      },
-    ];
-
-    for (let i = 1; i <= totalLines; i++) {
-      const logType = logTypes[i % logTypes.length];
-      const message =
-        logType.messages[Math.floor(Math.random() * logType.messages.length)];
-      const timestamp = `2023-10-27 ${String(Math.floor(i / 60) + 10).padStart(2, "0")}:${String(i % 60).padStart(2, "0")}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}`;
-      const latency = Math.floor(Math.random() * 500);
-      const lineNum = String(i).padStart(3, "0");
-
-      content += `${t.muted(`[${lineNum}]`)} ${t.muted(timestamp)} ${logType.color(logType.type)} ${message} (latency: ${latency}ms)\n`;
-
-      // Occasionally add multi-line entries for more realistic scrolling
-      if (i % 15 === 0) {
-        content += `${t.muted(`[${lineNum}]`)} ${t.muted(timestamp)} ${logType.color(logType.type)} Stack trace:\n`;
-        content += `${t.muted(`[${lineNum}]`)}   ${t.muted("  at processRequest (app.js:234:15)")}\n`;
-        content += `${t.muted(`[${lineNum}]`)}   ${t.muted("  at handleAPI (router.js:89:8)")}\n`;
-      }
-    }
-
-    content += `\n${t.accent("--- End of Logs ---")}\n${t.muted(`Total: ${totalLines} lines displayed`)}`;
-    return content;
-  },
-  
-  "demo-wrapping": (t) => {
-      const red = t.error; // usually red
-      const blue = t.accent; // usually blue/cyan
-      const bold = (s: string) => `\x1b[1m${s}\x1b[22m`;
-      
-      let content = `${t.accent("Text Wrapping Demo")}\n\n`;
-      content += `This area has strict width boundaries. The following text should wrap naturally without breaking words incorrectly (well, character-based for now) and ${bold("most importantly")}, without losing ANSI color state.\n\n`;
-      
-      content += `${red("This is a long sentence that starts in RED and should continue to be RED even after it wraps to the next line.")} If it turns white (or default) on the second line, the fix failed.\n\n`;
-      
-      content += `Now mixing colors: This is default. ${blue("This is BLUE. " + bold("This is BLUE BOLD. ") + "Still BLUE.")} Back to default.\n\n`;
-      
-      content += `Here is a block of text to test resizing:\n`;
-      const longText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ";
-      content += t.muted(longText.repeat(3));
-      
-      return content;
-  },
-};
-
-// --- Logic ---
-
-UI.ThemeManager.setTheme("Default");
-
-// Right Pane
-const detailsArea = new UI.ScrollArea({
-  content: "Select an item to view details...",
-  wrapText: true,
-});
-
-// Left Pane Logic
-const navStack = new UI.StackNavigator({
-  // Initial placeholder, will be set below
-  initialComponent: undefined as any,
-});
-
-// Helper to manage current selection for theme updates
-let currentDetailsId = "";
-
-function updateDetails(idOrText: string) {
-  // If it looks like a known ID, store it
-  if (toolDetails[idOrText]) {
-    currentDetailsId = idOrText;
-    const generator = toolDetails[idOrText];
-    detailsArea.setContent(generator(UI.ThemeManager.current));
-  } else {
-    // Raw text (fallback)
-    currentDetailsId = ""; // clear ID if raw text
-    detailsArea.setContent(idOrText);
-  }
-}
-
-// 2. Tools List Factory
-function createToolsList(capabilityId: string) {
-  return new UI.List({
-    items: tools[capabilityId] || [],
-    onSelect: (item) => {
-      updateDetails(item.value);
-    },
-    onSubmit: (item) => {
-      updateDetails(chalk.green("Executing: " + item.label + "..."));
-    },
-  });
-}
-
-// 1. Capabilities List (Root)
-const capabilitiesList = new UI.List({
-  items: capabilities,
-  onSelect: (item) => {
-    // Generate dynamic text for category
+/**
+ * Creates a rich interactive view for a tool using Cards and Buttons.
+ */
+function createToolDetailView(id: string, label: string): UI.Component {
     const t = UI.ThemeManager.current;
-    const text = `${t.accent(item.label)}\n${t.muted(item.description || "")}\n\nPress ${t.highlight("Enter")} or ${t.highlight("Right")} to view tools.`;
-    detailsArea.setContent(text);
-    currentDetailsId = ""; // No specific tool ID
-  },
-  onSubmit: (item) => {
-    const nextList = createToolsList(item.value);
-    navStack.push(nextList);
-    // Force update details for the first item of the new list?
-    // Or wait for user to move?
-    // Better UX: select first item automatically?
-    // For now, let standard behavior apply (List selects index 0 by default).
-    // Manually trigger onSelect for the new list's first item to update details?
-    if (tools[item.value]?.length > 0) {
-      const firstTool = tools[item.value][0];
-      // Pass ID to let updateDetails handle generation
-      updateDetails(firstTool.value);
-    } else {
-      updateDetails("No tools found.");
-    }
-  },
-});
 
-// Re-init stack with correct component
-// (Dirty hack accessing private stack or just making a new StackNav? New StackNav is cleaner)
-const realNavStack = new UI.StackNavigator({
-  initialComponent: capabilitiesList,
-});
+    // 1. Description Card (Top)
+    const descCard = new UI.Card({
+        title: ` About ${label} `,
+        children: [
+            new UI.Label({
+                text: `\n  Tool: ${chalk.bold(id)}\n  Category: AI Operations\n\n  Use this tool to interact with the system backend.\n  Config: ${t.highlight("~/.aquaria/config.json")}`,
+                align: "left"
+            })
+        ],
+        style: { border: true }
+    });
 
-// Search Input
-const searchInput = new UI.Input({
-  placeholder: "Type to filter...",
-  prefix: "🔍 ",
-  onChange: (val) => {
-    updateDetails(`Searching for: ${chalk.yellow(val)}...`);
-  },
-});
+    // 2. Action Buttons (Bottom)
+    const copyBtn = new UI.Button({
+        label: " Copy Command ",
+        onClick: () => {
+            UI.Clipboard.copy(`aquaria run ${id}`);
+            app.toast.show("Command Copied!", "success");
+        }
+    });
 
-// Left Column Layout (Input + Stack)
-const leftColumn = new UI.SplitLayout({
-  direction: "vertical",
-  splitRatio: 0.1, // Small header
-  first: searchInput,
-  second: realNavStack,
-});
+    const runBtn = new UI.Button({
+        label: " Run Tool ",
+        onClick: () => {
+            app.toast.show("Executing tool in background...", "info");
+        }
+    });
+    
+    const actionsLayout = new UI.SplitLayout({
+        direction: "horizontal",
+        first: copyBtn,
+        second: runBtn,
+        gap: 2,
+        splitRatio: "auto"
+    });
 
-// Main Layout (Left Col + Right Details)
-const mainLayout = new UI.SplitLayout({
-  direction: "horizontal",
-  splitRatio: 0.3,
-  first: leftColumn,
-  second: detailsArea,
-});
+    const actionsCard = new UI.Card({
+        title: " Actions ",
+        children: [actionsLayout],
+        style: { borderColor: "green" }
+    });
 
-// Global Key Wrapper for Theme Toggle & Exit
-class GlobalHandler extends UI.Component {
-  constructor(private child: UI.Component) {
-    super({});
-  }
-
-  public override resize(x: number, y: number, width: number, height: number) {
-    this.child.resize(x, y, width, height);
-  }
-  public override render() {
-    return this.child.render();
-  }
-
-  public override handleInput(key: string) {
-    if (key === "q") {
-      // Avoid conflicting with search? No, search has focus?
-      // In input, "q" is a letter.
-      // We need focus management or a modifier.
-      // Let's use Ctrl+C for exit (handled by App).
-      // Let's use 'Tab' to switch themes? Or F1?
-    }
-
-    // Let's use F1 to toggle theme
-    // F1 is \u001bOP or \u001b[11~ or similar depending on term.
-    // Let's use 'Ctrl+t' => \u0014
-    if (key === "\u0014") {
-      const current = UI.ThemeManager.current;
-      // Simple toggle
-      if (current === UI.Themes.Default) UI.ThemeManager.setTheme("Light");
-      else if (current === UI.Themes.Light) UI.ThemeManager.setTheme("Monokai");
-      else UI.ThemeManager.setTheme("Default");
-
-      // Refresh Content
-      if (currentDetailsId && toolDetails[currentDetailsId]) {
-        updateDetails(currentDetailsId);
-      } else {
-        // Force refresh active list selection to re-trigger onSelect?
-        // Or just let next navigation fix it.
-        // ideally we re-render the current view's explanation.
-        // Hack: trigger a fake move? No.
-        // Let's just update the status line if nothing else.
-        const t = UI.ThemeManager.current;
-        // If at root:
-        // detailsArea.setContent(`${t.accent("Theme Changed")}... Select item to refresh view.`);
-      }
-      return;
-    }
-
-    this.child.handleInput(key);
-  }
-
-  public override handleMouse(event: any) {
-    this.child.handleMouse(event);
-  }
+    // Combine Top and Bottom
+    return new UI.SplitLayout({
+        direction: "vertical",
+        first: descCard,
+        second: actionsCard,
+        splitRatio: 0.6, // Description takes 60%
+        gap: 1
+    });
 }
 
-const root = new GlobalHandler(mainLayout);
+function createLogView(): UI.Component {
+    return new UI.Card({
+        title: " System Logs ",
+        style: { border: true },
+        children: [
+            new UI.ScrollArea({
+                content: "[INFO] System started\n[INFO] Connecting to mesh...\n[WARN] High latency on node-5\n[INFO] AI Module loaded\n... (Scroll for more)",
+                wrapText: true
+            })
+        ]
+    });
+}
+
+// --- App Setup ---
 
 const app = new UI.App();
+UI.ThemeManager.setTheme("Default");
 
-// Initial Content
-if (capabilities.length > 0) {
-  // Manually trigger the select logic for the first item to populate details
-  // using the handler we defined (ugly access but verified works in JS/TS pattern)
-  // Or just manually set it.
-  const t = UI.ThemeManager.current;
-  const item = capabilities[0];
-  const text = `${t.accent(item.label)}\n${t.muted(item.description || "")}\n\nPress ${t.highlight("Enter")} or ${t.highlight("Right")} to view tools.`;
-  detailsArea.setContent(text);
+// Right Pane: Managed by a StackNavigator to allow swapping views
+const rightPaneStack = new UI.StackNavigator({
+    initialComponent: new UI.Label({ 
+        text: "\n  Select a category from the left to begin.", 
+        dim: true, 
+        align: "left" 
+    })
+});
+
+// Left Pane: Navigation List
+const navList = new UI.List({
+    items: capabilities,
+    onSelect: (item) => {
+        // When category selected, show summary
+        rightPaneStack.setRoot(new UI.Card({
+            title: ` Category: ${item.label} `,
+            children: [
+                new UI.Label({ text: `\n  ${item.description}\n\n  Press [Enter] to drill down.` })
+            ]
+        }));
+    },
+    onSubmit: (item) => {
+        // Drill down to tools
+        const toolItems = tools[item.value] || [];
+        if (toolItems.length === 0) return;
+
+        const toolList = new UI.List({
+            items: toolItems,
+            onSelect: (tItem) => {
+                // Show tool details in Right Pane
+                if (tItem.value === "sys-logs") {
+                    rightPaneStack.setRoot(createLogView());
+                } else {
+                    rightPaneStack.setRoot(createToolDetailView(tItem.value, tItem.label));
+                }
+            },
+            onSubmit: (tItem) => {
+                 app.toast.show(`Selected ${tItem.label}`, "success");
+            }
+        });
+
+        // Push new list to Left Pane Stack (we need a stack there too!)
+        leftStack.push(toolList);
+        
+        // Auto-select first tool
+        if (toolItems.length > 0) {
+            const first = toolItems[0];
+             if (first.value === "sys-logs") {
+                rightPaneStack.setRoot(createLogView());
+            } else {
+                rightPaneStack.setRoot(createToolDetailView(first.value, first.label));
+            }
+        }
+    }
+});
+
+const leftStack = new UI.StackNavigator({
+    initialComponent: navList
+});
+
+// Main Layout
+const mainLayout = new UI.SplitLayout({
+    direction: "horizontal",
+    first: leftStack,
+    second: rightPaneStack,
+    splitRatio: 0.3, 
+    gap: 1
+});
+
+// Footer
+const footer = new UI.Card({
+    style: { border: false, backgroundColor: "bgBlack" }, // Inverted bar style? Or just label
+    children: [
+        new UI.Label({ 
+            text: " [Esc] Back   [Arrows] Navigate   [Enter] Select   [Ctrl+T] Theme   [Q] Quit ",
+            align: "center",
+            dim: true
+        })
+    ]
+});
+// Simplify footer to Label if Card overhead is unwanted
+const footerLabel = new UI.Label({ 
+     text: " [Esc] Back   [Arrows] Navigate   [Enter] Select   [Ctrl+T] Theme   [Q] Quit ",
+     align: "center",
+     dim: true
+});
+
+
+const root = new UI.SplitLayout({
+    direction: "vertical",
+    first: mainLayout,
+    second: footerLabel,
+    splitRatio: 0.9,
+    gap: 0
+});
+
+// Global Handler
+class GlobalHandler extends UI.Component {
+    constructor(private child: UI.Component) { super(); }
+    public override resize(x:number, y:number, w:number, h:number) { this.child.resize(x,y,w,h); }
+    public override render() { return this.child.render(); }
+    public override handleInput(key: string) {
+        if (key === "\u0014") { // Ctrl+T
+            const current = UI.ThemeManager.currentName;
+            const themes = ["Default", "Ocean", "Monokai"];
+            const nextIdx = (themes.indexOf(current) + 1) % themes.length;
+            UI.ThemeManager.setTheme(themes[nextIdx]);
+            app.forceRedraw();
+        } else if (key === "q" || key === "\u0003") {
+            app.stop();
+        } else {
+            this.child.handleInput(key);
+        }
+    }
+    public override handleMouse(ev: any) { this.child.handleMouse(ev); }
 }
 
-// Initial resize to fill screen
+const finalRoot = new GlobalHandler(root);
 const { columns, rows } = process.stdout;
-root.resize(0, 0, columns, rows);
+finalRoot.resize(0, 0, columns, rows);
 
 console.clear();
-console.log(chalk.cyan("Starting Standardized TUI Demo..."));
-console.log(
-  chalk.gray(
-    "Controls: Arrows to navigate, Enter/Right to Drill Down, Esc/Left to Go Back. Ctrl+T to Toggle Theme.",
-  ),
-);
-
-setTimeout(() => {
-  app.run(root);
-}, 1000);
+console.log(chalk.cyan("Launching Interactive TUI Demo..."));
+setTimeout(() => app.run(finalRoot), 500);

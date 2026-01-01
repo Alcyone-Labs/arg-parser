@@ -21,7 +21,14 @@ export class StackNavigator extends Component {
   public pop(): void {
     if (this.stack.length > 1) {
       this.stack.pop();
+      // Ensure the restored component is resized
+      this.currentComponent.resize(this.x, this.y, this.width, this.height);
     }
+  }
+
+  public setRoot(component: Component): void {
+      this.stack = [component];
+      component.resize(this.x, this.y, this.width, this.height);
   }
 
   public get currentComponent(): Component {
