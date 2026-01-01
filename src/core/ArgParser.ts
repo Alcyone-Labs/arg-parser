@@ -895,6 +895,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               commandChain: [toolConfig.name],
               parser: this,
               isMcp: true,
+              displayHelp: () => {
+                console.error("Help display is not supported in MCP mode.");
+              },
             };
 
             const startTime = Date.now();

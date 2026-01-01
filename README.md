@@ -33,6 +33,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
   - [Dynamic Flags (`dynamicRegister`)](#dynamic-flags-dynamicregister)
+  - [Automatic Help Display](#automatic-help-display)
 
 - [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
   - [Output Schema Support](#output-schema-support)
@@ -126,6 +127,7 @@ ArgParser includes **OpenTUI**, a standardized framework for building deep, mult
 - **Standardized Navigation**: `Enter` / `Right` to dive into details, `Esc` / `Left` to go back.
 - **Reactive Theming**: Cycle through built-in themes (`Default`, `Ocean`, `Monokai`) or create your own.
 - **Mouse & Scroll Performance**: Built-in SGR mouse reporting support with smooth scrolling and high-performance rendering.
+- **New Components**: `Label` (Text), `Button` (Interactive), `Card` (Container), `Toast` (Notification).
 - **Component Based**: Reusable `List`, `ScrollArea`, `Input`, and `SplitLayout` components.
 
 ### Component Reference
@@ -1106,20 +1108,44 @@ parser.addTool({ name: "process", handler: async () => {} }); // ❌ Error: Sub-
 
 ### Flag Inheritance (`inheritParentFlags`)
 
-To share common flags (like `--verbose` or `--config`) across sub-commands, set `inheritParentFlags: true` in the sub-command's parser.
+ArgParser supports flag inheritance for CLI hierarchies. By default, sub-commands do not inherit flags from their parents. You can control this behavior using the `inheritParentFlags` option, using either a boolean (for basic/legacy behavior) or the `FlagInheritance` configuration object (for advanced control).
+
+#### Basic Inheritance (Snapshot)
+
+Set `inheritParentFlags: true` (or `FlagInheritance.DirectParentOnly`) to inherit flags from the *direct parent* at the moment the sub-command is attached.
+
+> **Note**: This is a snapshot of the parent's flags at the time `.addSubCommand()` is called. If the parent acquires new flags later (e.g., by inheriting from a grandparent), the child will NOT see them unless `FlagInheritance.AllParents` is used.
 
 ```typescript
-const parentParser = new ArgParser().addFlags([
-  { name: "verbose", options: ["-v"], type: "boolean" },
-]);
-
-// This child parser will automatically have the --verbose flag
-const childParser = new ArgParser({ inheritParentFlags: true }).addFlags([
-  { name: "target", options: ["-t"], type: "string" },
-]);
-
-parentParser.addSubCommand({ name: "deploy", parser: childParser });
+// Child inherits current flags from parent
+const childParser = new ArgParser({ inheritParentFlags: true });
 ```
+
+#### Full Chain Inheritance
+
+For complex hierarchies (e.g. `root -> mid -> leaf`), especially when constructing parsers bottom-up, use `FlagInheritance.AllParents`. This ensures that flags propagate down the entire chain, even if the intermediate parent inherits them *after* the leaf was attached.
+
+```typescript
+import { ArgParser, FlagInheritance } from "@alcyone-labs/arg-parser";
+
+const root = new ArgParser().addFlag({ name: "root-flag", options: ["--root"] });
+const mid = new ArgParser({ inheritParentFlags: FlagInheritance.AllParents });
+const leaf = new ArgParser({ inheritParentFlags: FlagInheritance.AllParents });
+
+// Even if you link bottom-up:
+mid.addSubCommand({ name: "leaf", parser: leaf });
+root.addSubCommand({ name: "mid", parser: mid });
+
+// 'leaf' will correctly have 'root-flag' thanks to deep propagation
+```
+
+#### Inheritance Options Reference
+
+| Value | Legacy Boolean | Behavior |
+|-------|----------------|----------|
+| `FlagInheritance.NONE` | `false` | No flags are inherited (Default) |
+| `FlagInheritance.DirectParentOnly` | `true` | Inherits from direct parent only (Snapshot) |
+| `FlagInheritance.AllParents` | N/A | Inherits from entire ancestor chain (Recursive Propagation) |
 
 ### Dynamic Flags (`dynamicRegister`)
 
@@ -1160,9 +1186,15 @@ Notes:
 - Inherited behavior works normally: if loader lives on a parent parser and children use `inheritParentFlags`, dynamic flags will be visible to children
 - For heavy loaders, implement app-level caching inside your `dynamicRegister` (e.g., memoize by absolute path + mtime); library-level caching may be added later
 
-parentParser.addSubCommand({ name: "deploy", parser: childParser });
+### Automatic Help Display
 
-````
+ArgParser provides features to automatically show help messages when a command is invoked incorrectly or as a "container" command.
+
+- **`ctx.displayHelp()`**: Programmatically trigger help for the current command from within its handler.
+- **`autoHelpHandler`**: A pre-built handler for container commands (e.g., `git remote`) that simply displays the help text.
+- **`triggerAutoHelpIfNoHandler`**: A setting that, when enabled, automatically triggers the help display for any command or sub-command that does not have an explicit handler defined.
+
+For more details, see the [Automatic Help Display Guide](docs/DISPLAY_HELP.md) and the [example demo](examples/auto-help-demo.ts).
 
 ---
 
@@ -2260,11 +2292,27 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
+### v2.10.3
+
+**Flag Inheritance Improvements**
+
+- **Full Chain Inheritance**: Introduced `FlagInheritance.AllParents` option to support deep flag propagation. This fixes issues where nested sub-commands (e.g., `root > mid > leaf`) failed to inherit root flags when constructed bottom-up.
+- **Granular Control**: New `FlagInheritance` configuration object provides clear options: `NONE`, `DirectParentOnly` (legacy behavior), and `AllParents`.
+- **Type Safety**: New `TFlagInheritance` type definition for better TypeScript support.
+- **Backward Compatibility**: Kept `inheritParentFlags` for legacy behavior, but now it's just an alias for `FlagInheritance.DirectParentOnly`.
+
+**Auto-Help Features**
+
+- **Programmatic Help**: Added `ctx.displayHelp()` method to command handlers, allowing easy help display from within your logic.
+- **Auto-Trigger**: Added `triggerAutoHelpIfNoHandler` option to automatically show help messages for "container" commands that don't have their own handler.
+- **Helper Function**: Exported `autoHelpHandler` utility for quick setup of help-only commands. This can be passed as `setHandler(autoHelpHandler)` or `handler: autoHelpHandler` depending on your API of choice.
+
 ### v2.10.2
 
-- **OpenTUI Improvements**:
-  - **Soft Wrapping**: Added `wrapText` (boolean) to `ScrollArea` component. When enabled, text automatically reflows to fit the container width (preventing clipping).
-  - **ANSI Preservation**: Soft-wrapping logic is ANSI-aware; color and style states are correctly carried over to wrapped lines.
+**OpenTUI Improvements**
+
+- **Soft Wrapping**: Added `wrapText` (boolean) to `ScrollArea` component. When enabled, text automatically reflows to fit the container width (preventing clipping).
+- **ANSI Preservation**: Soft-wrapping logic is ANSI-aware; color and style states are correctly carried over to wrapped lines.
 
 ### v2.10.1
 

@@ -754,6 +754,11 @@ export function generateMcpToolsFromArgParser(
                     parentArgs: undefined,
                     isMcp: true,
                     getFlag,
+                    displayHelp: () => {
+                      console.error(
+                        "Help display is not supported in MCP mode.",
+                      );
+                    },
                   };
 
                   const handlerResult =
@@ -1089,6 +1094,11 @@ export function generateMcpToolsFromArgParser(
                   parentArgs: resolvedParentArgs,
                   isMcp: true,
                   getFlag,
+                  displayHelp: () => {
+                    console.error(
+                      "Help display is not supported in MCP mode.",
+                    );
+                  },
                 };
                 try {
                   handlerResponse = await handlerToCall(handlerContext);
