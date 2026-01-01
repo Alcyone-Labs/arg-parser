@@ -17,12 +17,14 @@ import {
 import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
+import { FlagInheritance } from "./types";
 import type {
   IFlag,
   IHandlerContext,
   ISubCommand,
   ParseResult,
   ProcessedFlag,
+  TFlagInheritance,
   TParsedArgs,
 } from "./types";
 
@@ -107,7 +109,13 @@ export interface IArgParserParams<THandlerReturn = any> {
    * already exists in this parser. Child flags take precedence.
    * @default false
    */
-  inheritParentFlags?: boolean;
+  inheritParentFlags?: TFlagInheritance;
+  /**
+   * If true, when no handler is provided for a command (root or sub-command),
+   * the help message will be automatically displayed.
+   * @default false
+   */
+  triggerAutoHelpIfNoHandler?: boolean;
 }
 
 export interface IParseOptions {
@@ -181,12 +189,13 @@ export class ArgParserBase<THandlerReturn = any> {
   #autoExit: boolean = true;
   #parentParser?: ArgParserBase;
   #lastParseResult: TParsedArgs<ProcessedFlag[]> = {};
-  #inheritParentFlags: boolean = false;
+  #inheritParentFlags: TFlagInheritance = false;
   #subCommands: Map<string, ISubCommand> = new Map();
   #flagManager: FlagManager;
   #dxtGenerator: DxtGenerator;
   #configurationManager: ConfigurationManager;
   #fuzzyMode: boolean = false;
+  #triggerAutoHelpIfNoHandler: boolean = false;
 
   // Track dynamically added flags so we can clean them between parses
   #dynamicFlagNames: Set<string> = new Set();
@@ -235,6 +244,7 @@ export class ArgParserBase<THandlerReturn = any> {
     this.#handleErrors = options.handleErrors ?? true;
     this.#autoExit = options.autoExit ?? true;
     this.#inheritParentFlags = options.inheritParentFlags ?? false;
+    this.#triggerAutoHelpIfNoHandler = options.triggerAutoHelpIfNoHandler ?? false;
     this.#description = options.description;
     this.#handler = options.handler;
     this.#appCommandName = options.appCommandName;
@@ -508,8 +518,16 @@ export class ArgParserBase<THandlerReturn = any> {
     // Inherit autoExit setting from parent to ensure consistent error handling
     // across the parser hierarchy. Child parsers should follow parent's exit behavior.
     subParser.#autoExit = this.#autoExit;
+    subParser.#triggerAutoHelpIfNoHandler = this.#triggerAutoHelpIfNoHandler;
 
-    if (subParser.#inheritParentFlags) {
+    // Initial inheritance (Snapshot behavior)
+    // If inheritParentFlags is true or DirectParentOnly or AllParents, we copy current parent flags.
+    const shouldInherit =
+      subParser.#inheritParentFlags === true ||
+      subParser.#inheritParentFlags === FlagInheritance.DirectParentOnly ||
+      subParser.#inheritParentFlags === FlagInheritance.AllParents;
+
+    if (shouldInherit) {
       const parentFlags = this.#flagManager.flags;
       for (const parentFlag of parentFlags) {
         if (!subParser.#flagManager.hasFlag(parentFlag["name"])) {
@@ -519,12 +537,50 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     this.#subCommands.set(subCommandConfig.name, subCommandConfig);
+    // We trigger a propagation from the subParser downwards.
+    // This ensures that if subParser just acquired flags from 'this',
+    // any existing children of subParser properly inherit them.
+    this.#propagateFlagsRecursive(subParser);
 
     if (subCommandConfig.handler) {
       subParser.setHandler(subCommandConfig.handler);
     }
 
     return this;
+  }
+
+  /**
+   * Propagates available flags from the current parser to its subcommands,
+   * if those subcommands are configured to inherit recursively (AllParents).
+   */
+  #propagateFlagsRecursive(parser: ArgParserBase): void {
+    // We iterate over all children of 'parser'
+    for (const [_, subConfig] of parser.getSubCommands()) {
+      const childParser = subConfig.parser;
+      if (!(childParser instanceof ArgParserBase)) continue;
+
+      // Check if child wants multiple levels of inheritance
+      const isAllParents =
+        childParser.#inheritParentFlags === FlagInheritance.AllParents;
+
+      if (isAllParents) {
+        // Copy flags from 'parser' (which is the parent of childParser) to 'childParser'
+        const parentFlags = parser.#flagManager.flags;
+        let flagsAdded = false;
+        
+        for (const parentFlag of parentFlags) {
+           if (!childParser.#flagManager.hasFlag(parentFlag["name"])) {
+             childParser.#flagManager._setProcessedFlagForInheritance(parentFlag);
+             flagsAdded = true;
+           }
+        }
+
+        // If we added new flags to the child, we must recurse deeper
+        if (flagsAdded) {
+          this.#propagateFlagsRecursive(childParser);
+        }
+      }
+    }
   }
 
   /**
@@ -1547,16 +1603,37 @@ export class ArgParserBase<THandlerReturn = any> {
 
       let handlerToExecute: RecursiveParseResult["handlerToExecute"] =
         undefined;
+      
+      // Create context with displayHelp implementation
+      const handlerContext: IHandlerContext<any, any> = {
+        args: currentLevelArgs,
+        parentArgs: accumulatedParentArgs,
+        commandChain: commandChainSoFar,
+        parser: currentParser,
+        parentParser: parentParser,
+        // displayHelp implementation that respects autoExit setting
+        displayHelp: () => {
+          console.log(currentParser.helpText());
+          if (
+            currentParser.getAutoExit() &&
+            typeof process === "object" &&
+            typeof process.exit === "function"
+          ) {
+            process.exit(0);
+          }
+        },
+      };
+
       if (currentParser.#handler) {
         handlerToExecute = {
           handler: currentParser.#handler,
-          context: {
-            args: currentLevelArgs,
-            parentArgs: accumulatedParentArgs,
-            commandChain: commandChainSoFar,
-            parser: currentParser,
-            parentParser: parentParser,
-          },
+          context: handlerContext,
+        };
+      } else if (currentParser.#triggerAutoHelpIfNoHandler) {
+        // Automatically provide a handler that displays help if configured
+        handlerToExecute = {
+          handler: (ctx: IHandlerContext) => ctx.displayHelp(),
+          context: handlerContext,
         };
       }
       return { finalArgs: finalParseResultArgs, handlerToExecute };
@@ -3010,3 +3087,11 @@ ${descriptionLines
     return options;
   }
 }
+
+/**
+ * A reusable handler that simply displays help.
+ * Can be used as a default handler for subcommands that act as containers.
+ */
+export const autoHelpHandler = async (ctx: IHandlerContext) => {
+  ctx.displayHelp();
+};

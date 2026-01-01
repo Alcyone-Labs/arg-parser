@@ -6,6 +6,30 @@ import { z, type ZodTypeAny } from "zod";
 export type ArgParserInstance = any;
 
 /**
+ * Defines the behavior for flag inheritance in sub-commands.
+ */
+export const FlagInheritance = {
+  /**
+   * No flags are inherited from the parent.
+   */
+  NONE: "none",
+  /**
+   * Inherits flags only from the direct parent at the time of attachment (Snapshot behavior).
+   * Equivalent to `true` in legacy boolean config.
+   */
+  DirectParentOnly: "direct-parent-only",
+  /**
+   * Inherits flags from the entire parent chain, ensuring grandchildren receive root flags
+   * even in bottom-up construction scenarios.
+   */
+  AllParents: "all-parents",
+} as const;
+
+export type TFlagInheritance =
+  | (typeof FlagInheritance)[keyof typeof FlagInheritance]
+  | boolean;
+
+/**
  * Zod schema for validating DXT-specific options
  */
 export const zodDxtOptionsSchema = z
@@ -421,6 +445,10 @@ export type IHandlerContext<
    * Only available in MCP mode when isMcp is true.
    */
   getFlag?: (name: string) => any;
+  /**
+   * Display the help message for the current command context.
+   */
+  displayHelp: () => void;
 };
 
 /**

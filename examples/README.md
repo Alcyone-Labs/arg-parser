@@ -60,6 +60,7 @@ import { ArgParser } from '@alcyone-labs/arg-parser';
 | `streamable-http/secure-mcp.ts` | HTTP security demo | CORS + JWT (HS256) + /health                              |
 | `streamable-http/rs256-mcp.ts`  | HTTP security demo | CORS + JWT (RS256) + /health                              |
 | `streamable-http/bearer-mcp.ts` | HTTP security demo | CORS + Bearer allowlist + /health                         |
+| `auto-help-demo.ts`           | Help automation    | `displayHelp()`, `autoHelpHandler`, `triggerAutoHelpIfNoHandler` |
 
 ## Featured Examples
 
@@ -182,8 +183,6 @@ A complete, production-ready CLI tool demonstrating:
 - **Error handling**: Graceful handling of missing dependencies
 - **Modern patterns**: Clean code structure and TypeScript types
 
-**Run the example:**
-
 ```bash
 # Basic file search
 bun examples/fzf-search-cli.ts --query "test" --directory src
@@ -196,6 +195,24 @@ bun examples/fzf-search-cli.ts mcp-server
 
 # Show help
 bun examples/fzf-search-cli.ts --help
+```
+
+### 4. **Automatic Help Display** (`auto-help-demo.ts`)
+
+Demonstrates how to automate help display to improve User Experience:
+
+- **Framework-level auto-help**: `triggerAutoHelpIfNoHandler: true`
+- **Manual help trigger**: Using `ctx.displayHelp()` inside your handler
+- **Simplified container commands**: Using the `autoHelpHandler` utility
+
+**Run the example:**
+
+```bash
+# Running a command without a handler (auto-help triggered)
+bun examples/auto-help-demo.ts utils
+
+# Explicitly trigger help from within a handler
+bun examples/auto-help-demo.ts manual
 ```
 
 ## **Development Tips**

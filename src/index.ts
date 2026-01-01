@@ -1,6 +1,7 @@
 export {
   ArgParserBase,
   ArgParserError,
+  autoHelpHandler,
   type IParseOptions,
 } from "./core/ArgParserBase";
 export {
@@ -57,6 +58,8 @@ export { sanitizeMcpToolName, isValidMcpToolName } from "./mcp/mcp-utils";
 export {
   zodFlagSchema,
   zodDxtOptionsSchema,
+  FlagInheritance,
+  type TFlagInheritance,
   type IFlagCore,
   type IFlag,
   type IDxtOptions,
