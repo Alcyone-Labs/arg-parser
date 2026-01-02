@@ -4,6 +4,9 @@
  * This module provides functionality for managing MCP change notifications,
  * allowing clients to subscribe to changes in tools, resources, and prompts.
  */
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
+const logger = createMcpLogger("MCP Notifications");
 
 /**
  * Types of MCP entities that can change
@@ -143,7 +146,7 @@ export class McpNotificationsManager {
       try {
         listener(event);
       } catch (error) {
-        console.error("Error in global change listener:", error);
+        logger.error("Error in global change listener:", error);
       }
     }
 
@@ -229,7 +232,7 @@ export class McpNotificationsManager {
         );
       }
     } catch (error) {
-      console.error(
+      logger.error(
         `Error sending notification to client ${client.clientId}:`,
         error,
       );
@@ -341,6 +344,7 @@ export function createLoggingListener(
 ): McpChangeListener {
   return (event: McpChangeEvent) => {
     const entityInfo = event.entityName ? ` (${event.entityName})` : "";
+    // Use console.log directly for debugging output (not MCP-safe, but this is a debug utility)
     console.log(
       `${prefix} ${event.type} ${event.action}${entityInfo} at ${event.timestamp.toISOString()}`,
     );

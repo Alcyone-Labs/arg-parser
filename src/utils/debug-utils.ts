@@ -18,6 +18,10 @@ const isDebugEnabled = (): boolean => {
   }
 };
 
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
+const logger = createMcpLogger("DEBUG");
+
 /**
  * Debug logger that only outputs when DEBUG environment variable is set
  */
@@ -27,7 +31,8 @@ export const debug = {
    */
   log: (...args: any[]): void => {
     if (isDebugEnabled()) {
-      console.error("[DEBUG]", ...args);
+      const [msg, ...rest] = args;
+      logger.error(typeof msg === 'string' ? msg : String(msg), ...rest);
     }
   },
 
@@ -36,7 +41,8 @@ export const debug = {
    */
   error: (...args: any[]): void => {
     if (isDebugEnabled()) {
-      console.error("[DEBUG ERROR]", ...args);
+      const [msg, ...rest] = args;
+      logger.error(typeof msg === 'string' ? msg : String(msg), ...rest);
     }
   },
 
@@ -45,7 +51,8 @@ export const debug = {
    */
   warn: (...args: any[]): void => {
     if (isDebugEnabled()) {
-      console.error("[DEBUG WARN]", ...args);
+      const [msg, ...rest] = args;
+      logger.warn(typeof msg === 'string' ? msg : String(msg), ...rest);
     }
   },
 
@@ -54,7 +61,8 @@ export const debug = {
    */
   info: (...args: any[]): void => {
     if (isDebugEnabled()) {
-      console.error("[DEBUG INFO]", ...args);
+      const [msg, ...rest] = args;
+      logger.info(typeof msg === 'string' ? msg : String(msg), ...rest);
     }
   },
 
@@ -63,7 +71,8 @@ export const debug = {
    */
   prefixed: (prefix: string, ...args: any[]): void => {
     if (isDebugEnabled()) {
-      console.error(`[DEBUG ${prefix}]`, ...args);
+      const [msg, ...rest] = args;
+      logger.info(`[${prefix}] ${typeof msg === 'string' ? msg : String(msg)}`, ...rest);
     }
   },
 

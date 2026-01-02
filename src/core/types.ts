@@ -45,6 +45,7 @@ export interface IArgParser<THandlerReturn = any> {
   getAutoExit(): boolean;
   getHandler(): ((ctx: IHandlerContext) => void) | undefined;
   getSubCommands(): Map<string, ISubCommand>;
+  get logger(): any;
   
   // Flag methods
   get flags(): ProcessedFlag[];
@@ -578,6 +579,11 @@ export type IHandlerContext<
    * const userInputPath = path.resolve(ctx.rootPath, ctx.args.input);
    */
   rootPath?: string;
+  /**
+   * Data-safe logger instance.
+   * In MCP mode, this logger ensures STDOUT safety by routing logs to STDERR or a file.
+   */
+  logger: any; // Using any to avoid circular dependency or complex type imports in types.ts
 };
 
 /**

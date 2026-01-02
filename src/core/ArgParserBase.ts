@@ -19,6 +19,7 @@ import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
 import { FlagInheritance } from "./types";
+import { type Logger, createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 import type {
   IArgParser,
   IFlag,
@@ -119,6 +120,11 @@ export interface IArgParserParams<THandlerReturn = any> {
    * @default false
    */
   triggerAutoHelpIfNoHandler?: boolean;
+  /**
+   * Optional logger instance to use.
+   * If not provided, a default one will be created.
+   */
+  logger?: Logger;
 }
 
 export interface IParseOptions {
@@ -208,6 +214,7 @@ export class ArgParserBase<
   #configurationManager: ConfigurationManager;
   #fuzzyMode: boolean = false;
   #triggerAutoHelpIfNoHandler: boolean = false;
+  #logger: Logger;
 
   // Track dynamically added flags so we can clean them between parses
   #dynamicFlagNames: Set<string> = new Set();
@@ -271,6 +278,12 @@ export class ArgParserBase<
     this.#description = options.description;
     this.#handler = options.handler;
     this.#appCommandName = options.appCommandName;
+    this.#logger =
+      options.logger ||
+      createMcpLogger({
+        prefix: this.#appName,
+        mcpMode: false,
+      });
 
     const helpFlag: IFlag = {
       name: "help",
@@ -314,6 +327,13 @@ export class ArgParserBase<
 
   public getAppCommandName(): string | undefined {
     return this.#appCommandName;
+  }
+
+  /**
+   * Access to the logger
+   */
+  public get logger(): Logger {
+    return this.#logger;
   }
 
   public getSubCommandName(): string {
@@ -637,7 +657,7 @@ export class ArgParserBase<
           const outputObject = this.#_buildRecursiveJson(this);
           const jsonString = JSON.stringify(outputObject, null, 2);
           fs.writeFileSync(filePath, jsonString);
-          console.log(`ArgParser configuration JSON dumped to: ${filePath}`);
+          this.#logger.info(`ArgParser configuration JSON dumped to: ${filePath}`);
         } else {
           const outputString = this.#_buildRecursiveString(this, 0);
           const plainText = outputString.replace(
@@ -645,18 +665,18 @@ export class ArgParserBase<
             "",
           );
           fs.writeFileSync(filePath, plainText);
-          console.log(`ArgParser configuration text dumped to: ${filePath}`);
+          this.#logger.info(`ArgParser configuration text dumped to: ${filePath}`);
         }
       } catch (error) {
-        console.error(
+        this.#logger.error(
           `Error writing ArgParser configuration to file '${filePath}':`,
           error,
         );
       }
     } else {
-      console.log("\n--- ArgParser Configuration Dump ---");
+      this.#logger.info("\n--- ArgParser Configuration Dump ---");
       this.#_printRecursiveToConsole(this, 0);
-      console.log("--- End Configuration Dump ---\\n");
+      this.#logger.info("--- End Configuration Dump ---\\n");
     }
   }
 
@@ -750,6 +770,7 @@ export class ArgParserBase<
 
             // Validate path exists and is a directory
             if (!fs.existsSync(resolvedPath)) {
+              // Use console.warn directly for user-facing warnings
               console.warn(
                 chalk.yellow(
                   `Warning: Working directory '${resolvedPath}' specified by ${option} does not exist. Using current directory instead.`,
@@ -759,6 +780,7 @@ export class ArgParserBase<
             }
 
             if (!fs.statSync(resolvedPath).isDirectory()) {
+              // Use console.warn directly for user-facing warnings
               console.warn(
                 chalk.yellow(
                   `Warning: Path '${resolvedPath}' specified by ${option} is not a directory. Using current directory instead.`,
@@ -768,6 +790,9 @@ export class ArgParserBase<
             }
 
             foundCwd = resolvedPath;
+
+            // Actually change the working directory
+            process.chdir(resolvedPath);
 
             // Check for multiple chdir flags
             const allChdirIndices: { index: number; flag: string }[] = [];
@@ -785,7 +810,7 @@ export class ArgParserBase<
             }
 
             if (allChdirIndices.length > 1) {
-              console.warn(
+              this.#logger.warn(
                 chalk.yellow(
                   `Warning: Multiple working directory flags detected. Using '${option}' (last one in command chain).`,
                 ),
@@ -837,7 +862,7 @@ export class ArgParserBase<
       !this.#handler &&
       !options?.skipHelpHandling
     ) {
-      console.log(this.helpText());
+      this.#logger.info(this.helpText());
       return this._handleExit(0, "Help displayed", "help");
     }
 
@@ -880,7 +905,7 @@ export class ArgParserBase<
           envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
           if (!envFilePath) {
-            console.warn(
+            this.#logger.warn(
               chalk.yellow(
                 "Warning: No .env file found in working directory. Continuing without environment configuration.",
               ),
@@ -897,9 +922,9 @@ export class ArgParserBase<
         envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
         if (envFilePath) {
-          console.log(chalk.dim(`Auto-discovered env file: ${envFilePath}`));
+          this.#logger.info(chalk.dim(`Auto-discovered env file: ${envFilePath}`));
         } else {
-          console.warn(
+          this.#logger.warn(
             chalk.yellow(
               "Warning: No .env file found in working directory. Continuing without environment configuration.",
             ),
@@ -1130,42 +1155,42 @@ export class ArgParserBase<
             : remainingArgs.slice(nextSubCommandIndex);
       }
 
-      console.log(chalk.yellow("\nParsing Simulation Steps:"));
+      this.#logger.info(chalk.yellow("\nParsing Simulation Steps:"));
       parsingSteps.forEach((step) => {
-        console.log(`  Level: ${chalk.cyan(step.level)}`);
-        console.log(
+        this.#logger.info(`  Level: ${chalk.cyan(step.level)}`);
+        this.#logger.info(
           `    Args Slice Considered: ${JSON.stringify(step.argsSlice)}`,
         );
         if (step.parsed) {
-          console.log(
+          this.#logger.info(
             `    Parsed Args at this Level: ${JSON.stringify(step.parsed)}`,
           );
         }
         if (step.error) {
-          console.log(
+          this.#logger.info(
             `    ${chalk.red("Error during parse simulation:")} ${step.error}`,
           );
         }
       });
 
-      console.log(
+      this.#logger.info(
         chalk.yellow(
           "\nFinal Accumulated Args State (before final validation):",
         ),
       );
-      console.log(JSON.stringify(accumulatedArgs, null, 2));
+      this.#logger.info(JSON.stringify(accumulatedArgs, null, 2));
 
-      console.log(chalk.yellow("\nArguments Remaining After Simulation:"));
-      console.log(JSON.stringify(remainingArgs, null, 2));
+      this.#logger.info(chalk.yellow("\nArguments Remaining After Simulation:"));
+      this.#logger.info(JSON.stringify(remainingArgs, null, 2));
 
-      console.log(
+      this.#logger.info(
         chalk.yellow.bold(
           "\n--- ArgParser Static Configuration (Final Parser) ---",
         ),
       );
       identifiedFinalParser.printAll();
 
-      console.log(chalk.yellow.bold("--- End ArgParser --s-debug ---"));
+      this.#logger.info(chalk.yellow.bold("--- End ArgParser --s-debug ---"));
       return this._handleExit(0, "Debug information displayed", "debug");
     }
 
@@ -1825,6 +1850,7 @@ export class ArgParserBase<
         parentParser: parentParser,
         // displayHelp implementation that respects autoExit setting
         displayHelp: () => {
+          // Use console.log directly for help text (this is user-facing output, not logging)
           console.log(currentParser.helpText());
           if (
             currentParser.getAutoExit() &&
@@ -1837,6 +1863,8 @@ export class ArgParserBase<
 
         // Add rootPath if working directory was resolved
         rootPath: this.#rootPath || undefined,
+        logger: this.#logger,
+        isMcp: options?.isMcp || false,
       };
 
       if (currentParser.#handler) {
@@ -2405,8 +2433,8 @@ ${descriptionLines
       } catch {}
     }
 
-    console.error(`\n${chalk.red.bold("Error:")} ${error.message}`);
-    console.error(
+    this.#logger.error(`\n${chalk.red.bold("Error:")} ${error.message}`);
+    this.#logger.error(
       `\n${chalk.dim(`Try '${commandNameToSuggest} --help' for usage details.`)}`,
     );
 
@@ -2436,67 +2464,67 @@ ${descriptionLines
     const subIndent = "  ".repeat(level + 1);
     const flagIndent = "  ".repeat(level + 2);
 
-    console.log(
+    this.#logger.info(
       `${indent}Parser: ${chalk.blueBright(parser.#subCommandName || parser.#appName)}`,
     );
     if (parser.#description) {
-      console.log(`${subIndent}Description: ${parser.#description}`);
+      this.#logger.info(`${subIndent}Description: ${parser.#description}`);
     }
-    console.log(`${subIndent}Options:`);
-    console.log(`${flagIndent}appName: ${parser.#appName}`);
-    console.log(
+    this.#logger.info(`${subIndent}Options:`);
+    this.#logger.info(`${flagIndent}appName: ${parser.#appName}`);
+    this.#logger.info(
       `${flagIndent}appCommandName: ${parser.#appCommandName ?? chalk.dim("undefined")}`,
     );
-    console.log(`${flagIndent}handleErrors: ${parser.#handleErrors}`);
-    console.log(
+    this.#logger.info(`${flagIndent}handleErrors: ${parser.#handleErrors}`);
+    this.#logger.info(
       `${flagIndent}throwForDuplicateFlags: ${parser.#throwForDuplicateFlags}`,
     );
-    console.log(
+    this.#logger.info(
       `${flagIndent}inheritParentFlags: ${parser.#inheritParentFlags}`,
     );
-    console.log(`${flagIndent}Handler Defined: ${!!parser.#handler}`);
-    console.log(
+    this.#logger.info(`${flagIndent}Handler Defined: ${!!parser.#handler}`);
+    this.#logger.info(
       `${subIndent}Internal Params: ${JSON.stringify(parser.#parameters)}`,
     );
 
     const flags = parser.#flagManager.flags;
     if (flags.length > 0) {
-      console.log(`${subIndent}Flags (${flags.length}):`);
+      this.#logger.info(`${subIndent}Flags (${flags.length}):`);
       flags.forEach((flag: ProcessedFlag) => {
-        console.log(`${flagIndent}* ${chalk.green(flag["name"])}:`);
-        console.log(`${flagIndent}  Options: ${flag["options"].join(", ")}`);
-        console.log(
+        this.#logger.info(`${flagIndent}* ${chalk.green(flag["name"])}:`);
+        this.#logger.info(`${flagIndent}  Options: ${flag["options"].join(", ")}`);
+        this.#logger.info(
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
-        console.log(
+        this.#logger.info(
           `${flagIndent}  Type: ${typeof flag["type"] === "function" ? flag["type"].name || "custom function" : flag["type"]}`,
         );
-        console.log(
+        this.#logger.info(
           `${flagIndent}  Mandatory: ${typeof flag["mandatory"] === "function" ? "dynamic" : (flag["mandatory"] ?? false)}`,
         );
-        console.log(
+        this.#logger.info(
           `${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`,
         );
-        console.log(`${flagIndent}  Flag Only: ${flag["flagOnly"]}`);
-        console.log(`${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`);
-        console.log(`${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`);
-        console.log(
+        this.#logger.info(`${flagIndent}  Flag Only: ${flag["flagOnly"]}`);
+        this.#logger.info(`${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`);
+        this.#logger.info(`${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`);
+        this.#logger.info(
           `${flagIndent}  Enum: ${flag["enum"] && flag["enum"].length > 0 ? flag["enum"].join(", ") : "none"}`,
         );
-        console.log(`${flagIndent}  Validator Defined: ${!!flag["validate"]}`);
+        this.#logger.info(`${flagIndent}  Validator Defined: ${!!flag["validate"]}`);
       });
     } else {
-      console.log(`${subIndent}Flags: ${chalk.dim("none")}`);
+      this.#logger.info(`${subIndent}Flags: ${chalk.dim("none")}`);
     }
 
     const subCommandParsers = Array.from(parser.#subCommands.values());
     if (subCommandParsers.length > 0) {
-      console.log(`${subIndent}Sub-Commands (${subCommandParsers.length}):`);
+      this.#logger.info(`${subIndent}Sub-Commands (${subCommandParsers.length}):`);
       subCommandParsers.forEach((subCommand: any) => {
         this.#_printRecursiveToConsole(subCommand.parser, level + 1, visited);
       });
     } else {
-      console.log(`${subIndent}Sub-Commands: ${chalk.dim("none")}`);
+      this.#logger.info(`${subIndent}Sub-Commands: ${chalk.dim("none")}`);
     }
   }
 
@@ -2889,6 +2917,7 @@ ${descriptionLines
       debug.log("Created MCP logger, about to hijack console");
       // Hijack console globally to prevent STDOUT contamination in MCP mode
       (globalThis as any).console = mcpLogger;
+      this.#logger = mcpLogger;
       debug.log("Console hijacked successfully");
     } catch {
       debug.log("Failed to import simple-mcp-logger, using fallback");
