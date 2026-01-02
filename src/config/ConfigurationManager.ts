@@ -320,6 +320,37 @@ export class ConfigurationManager {
   }
 
   /**
+   * Discovers .env files in a specified directory
+   * Searches in priority order: .env.local, .env.dev/.env.test, .env
+   *
+   * @param searchDir - The directory to search for .env files
+   * @returns Path to found .env file, or null if none is found
+   */
+  public discoverEnvFile(searchDir: string): string | null {
+    const envFilesToCheck: string[] = [".env.local"];
+
+    // Add environment-specific files based on NODE_ENV
+    const nodeEnv = process.env["NODE_ENV"]?.toLowerCase();
+    if (nodeEnv === "development" || nodeEnv === "dev") {
+      envFilesToCheck.push(".env.dev");
+    } else if (nodeEnv === "test") {
+      envFilesToCheck.push(".env.test");
+    }
+
+    envFilesToCheck.push(".env");
+
+    // Check each file in priority order
+    for (const envFile of envFilesToCheck) {
+      const envPath = path.join(searchDir, envFile);
+      if (fs.existsSync(envPath)) {
+        return envPath;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Parses JSON file content
    */
   public parseJsonFile(content: string): Record<string, any> {

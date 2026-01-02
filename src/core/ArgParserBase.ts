@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
+import { type ZodTypeAny } from "zod";
 import chalk from "@alcyone-labs/simple-chalk";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { DxtGenerator } from "../dxt/DxtGenerator";
@@ -19,8 +20,10 @@ import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
 import { FlagInheritance } from "./types";
 import type {
+  IArgParser,
   IFlag,
   IHandlerContext,
+  IMcpServerMethods,
   ISubCommand,
   ParseResult,
   ProcessedFlag,
@@ -167,12 +170,21 @@ type TParsedArgsWithRouting<T = any> = T & {
   handlerToExecute?: { handler: Function; context: IHandlerContext };
 };
 
+type InternalParsedArgs<T = any> = TParsedArgsWithRouting<T> & {
+  _asyncHandlerPromise?: Promise<any>;
+  _asyncHandlerInfo?: { handler: Function; context: IHandlerContext };
+  _originalInputArgs?: string[] | string;
+  handlerResponse?: any;
+};
+
 type RecursiveParseResult = {
-  finalArgs: TParsedArgsWithRouting<any>;
+  finalArgs: InternalParsedArgs<any>; // Changed from TParsedArgsWithRouting<any>
   handlerToExecute?: { handler: Function; context: IHandlerContext };
 };
 
-export class ArgParserBase<THandlerReturn = any> {
+export class ArgParserBase<
+  THandlerReturn = any,
+> implements IArgParser<THandlerReturn> {
   #appName: string = "Argument Parser";
   #appCommandName?: string;
   #subCommandName: string = "";
@@ -205,6 +217,16 @@ export class ArgParserBase<THandlerReturn = any> {
   #mcpPromptsManager: McpPromptsManager = new McpPromptsManager();
   #mcpNotificationsManager: McpNotificationsManager =
     new McpNotificationsManager();
+
+  // Working directory management
+  /** The effective working directory for this parser instance */
+  #effectiveWorkingDirectory: string | null = null;
+
+  /** The original root path from user's CLI invocation */
+  #rootPath: string | null = null;
+
+  /** Tracks if effective working directory has been resolved */
+  #workingDirectoryResolved = false;
 
   constructor(
     options: IArgParserParams<THandlerReturn> = {},
@@ -244,7 +266,8 @@ export class ArgParserBase<THandlerReturn = any> {
     this.#handleErrors = options.handleErrors ?? true;
     this.#autoExit = options.autoExit ?? true;
     this.#inheritParentFlags = options.inheritParentFlags ?? false;
-    this.#triggerAutoHelpIfNoHandler = options.triggerAutoHelpIfNoHandler ?? false;
+    this.#triggerAutoHelpIfNoHandler =
+      options.triggerAutoHelpIfNoHandler ?? false;
     this.#description = options.description;
     this.#handler = options.handler;
     this.#appCommandName = options.appCommandName;
@@ -366,12 +389,12 @@ export class ArgParserBase<THandlerReturn = any> {
         result && typeof result.then === "function" ? await result : result;
     } else if (typeof flag["type"] === "object") {
       // Check if it's a Zod schema
-      if (flag["type"] && (flag["type"] as any)._def) {
+      if (flag["type"] && (flag["type"] as ZodTypeAny)._def) {
         // It's a Zod schema - parse JSON and validate
         try {
           const parsedJson =
             typeof value === "string" ? JSON.parse(value as string) : value;
-          value = (flag["type"] as any).parse(parsedJson);
+          value = (flag["type"] as ZodTypeAny).parse(parsedJson);
         } catch (error) {
           if (error instanceof SyntaxError) {
             throw new Error(
@@ -567,12 +590,14 @@ export class ArgParserBase<THandlerReturn = any> {
         // Copy flags from 'parser' (which is the parent of childParser) to 'childParser'
         const parentFlags = parser.#flagManager.flags;
         let flagsAdded = false;
-        
+
         for (const parentFlag of parentFlags) {
-           if (!childParser.#flagManager.hasFlag(parentFlag["name"])) {
-             childParser.#flagManager._setProcessedFlagForInheritance(parentFlag);
-             flagsAdded = true;
-           }
+          if (!childParser.#flagManager.hasFlag(parentFlag["name"])) {
+            childParser.#flagManager._setProcessedFlagForInheritance(
+              parentFlag,
+            );
+            flagsAdded = true;
+          }
         }
 
         // If we added new flags to the child, we must recurse deeper
@@ -689,10 +714,118 @@ export class ArgParserBase<THandlerReturn = any> {
     );
   }
 
+  #_resolveWorkingDirectory(
+    processArgs: string[],
+    parserChain: ArgParserBase[],
+  ): { effectiveCwd: string; rootPath: string } {
+    // 1. Store the original root path once
+    if (!this.#rootPath) {
+      this.#rootPath = process.cwd();
+    }
+
+    // 2. Scan for flags with setWorkingDirectory in reverse order
+    //    (last one in command chain wins)
+    let foundCwd: string | null = null;
+
+    for (let i = parserChain.length - 1; i >= 0; i--) {
+      const parser = parserChain[i];
+      const chdirFlags = parser.#flagManager.flags.filter(
+        (flag: ProcessedFlag) => flag["setWorkingDirectory"],
+      );
+
+      for (const flag of chdirFlags) {
+        // Simple pattern matching for flag presence
+        for (const option of flag["options"]) {
+          // Find flag in processArgs
+          const flagIndex = processArgs.indexOf(option);
+          if (flagIndex !== -1 && flagIndex + 1 < processArgs.length) {
+            const value = processArgs[flagIndex + 1];
+            if (!value || value.startsWith("-")) continue;
+
+            // Resolve path relative to current effective working directory
+            const resolvedPath = path.resolve(
+              this.#effectiveWorkingDirectory || this.#rootPath,
+              value,
+            );
+
+            // Validate path exists and is a directory
+            if (!fs.existsSync(resolvedPath)) {
+              console.warn(
+                chalk.yellow(
+                  `Warning: Working directory '${resolvedPath}' specified by ${option} does not exist. Using current directory instead.`,
+                ),
+              );
+              continue;
+            }
+
+            if (!fs.statSync(resolvedPath).isDirectory()) {
+              console.warn(
+                chalk.yellow(
+                  `Warning: Path '${resolvedPath}' specified by ${option} is not a directory. Using current directory instead.`,
+                ),
+              );
+              continue;
+            }
+
+            foundCwd = resolvedPath;
+
+            // Check for multiple chdir flags
+            const allChdirIndices: { index: number; flag: string }[] = [];
+            for (let j = 0; j < processArgs.length; j++) {
+              for (const p of parserChain) {
+                for (const f of p.#flagManager.flags) {
+                  if (
+                    f["setWorkingDirectory"] &&
+                    f["options"].includes(processArgs[j])
+                  ) {
+                    allChdirIndices.push({ index: j, flag: processArgs[j] });
+                  }
+                }
+              }
+            }
+
+            if (allChdirIndices.length > 1) {
+              console.warn(
+                chalk.yellow(
+                  `Warning: Multiple working directory flags detected. Using '${option}' (last one in command chain).`,
+                ),
+              );
+            }
+
+            break; // Use the first found flag in this parser
+          }
+        }
+
+        if (foundCwd) break; // Found valid chdir flag, stop searching
+      }
+
+      if (foundCwd) break; // Found valid chdir flag, stop searching parsers
+    }
+
+    // 3. Return effective working directory
+    return {
+      effectiveCwd: foundCwd || this.#rootPath,
+      rootPath: this.#rootPath,
+    };
+  }
+
   async #_handleGlobalChecks(
     processArgs: string[],
     options?: IParseOptions,
   ): Promise<boolean | ParseResult> {
+    // Resolve working directory FIRST
+    const { finalParser: parserChainParser } =
+      this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+
+    const { effectiveCwd, rootPath } = this.#_resolveWorkingDirectory(
+      processArgs,
+      parserChainParser ? [this, parserChainParser] : [this],
+    );
+
+    this.#effectiveWorkingDirectory = effectiveCwd;
+    this.#rootPath = rootPath;
+    this.#workingDirectoryResolved = true;
+
     // Auto-help should only trigger for root parsers that are intended as main CLI entry points
     // A parser is considered a "root CLI parser" if it has appCommandName explicitly set
     // This ensures that only parsers intended as main CLI tools trigger auto-help
@@ -724,79 +857,143 @@ export class ArgParserBase<THandlerReturn = any> {
     // Handle --s-with-env system flag early to modify processArgs before parsing
     const withEnvIndex = processArgs.findIndex((arg) => arg === "--s-with-env");
     if (withEnvIndex !== -1) {
-      if (withEnvIndex + 1 >= processArgs.length) {
-        console.error(
-          chalk.red("Error: --s-with-env requires a file path argument"),
-        );
-        return this._handleExit(
-          1,
-          "--s-with-env requires a file path argument",
-          "error",
-        );
-      }
+      let envFilePath: string | null = null;
+      let shouldAutoDiscover: boolean;
 
-      const filePath = processArgs[withEnvIndex + 1];
-      if (!filePath || filePath.startsWith("-")) {
-        console.error(
-          chalk.red("Error: --s-with-env requires a file path argument"),
-        );
-        return this._handleExit(
-          1,
-          "--s-with-env requires a file path argument",
-          "error",
-        );
-      }
+      // Auto-discovery: Check if we should auto-discover .env files
+      // Auto-discover when: (1) setWorkingDirectory is set AND (2) --s-with-env is NOT provided (no file path)
+      shouldAutoDiscover =
+        this.#workingDirectoryResolved &&
+        this.#effectiveWorkingDirectory !== this.#rootPath &&
+        withEnvIndex + 1 >= processArgs.length;
 
-      try {
-        // Identify the final parser and parser chain for loading configuration
-        const {
-          finalParser: identifiedFinalParser,
-          parserChain: identifiedParserChain,
-        } = this.#_identifyCommandChainAndParsers(
-          processArgs,
-          this,
-          [],
-          [this],
-        );
+      // Check if a file path is provided
+      if (withEnvIndex + 1 < processArgs.length) {
+        const providedPath = processArgs[withEnvIndex + 1];
+        if (providedPath && !providedPath.startsWith("-")) {
+          // Use effective working directory (or current cwd if not set)
+          const basePath = this.#effectiveWorkingDirectory || process.cwd();
+          envFilePath = path.resolve(basePath, providedPath);
+        } else {
+          // No file path provided - auto-discover
+          const basePath = this.#effectiveWorkingDirectory || process.cwd();
+          envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
-        const envConfigArgs =
-          identifiedFinalParser.#configurationManager.loadEnvFile(
-            filePath,
-            identifiedParserChain,
-          );
-        if (envConfigArgs) {
-          // Merge environment configuration with process args
-          // CLI args take precedence over file configuration
-          const mergedArgs =
-            identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
-              envConfigArgs,
-              processArgs,
+          if (!envFilePath) {
+            console.warn(
+              chalk.yellow(
+                "Warning: No .env file found in working directory. Continuing without environment configuration.",
+              ),
             );
-
-          // Replace the original processArgs array contents
-          processArgs.length = 0;
-          processArgs.push(...mergedArgs);
+            // Remove flag and continue
+            processArgs.splice(withEnvIndex, 1);
+          }
         }
+      }
 
-        // Remove the --s-with-env flag and its file path argument from processArgs
-        // This must be done after merging to avoid interfering with the merge process
-        const finalWithEnvIndex = processArgs.findIndex(
-          (arg) => arg === "--s-with-env",
-        );
-        if (finalWithEnvIndex !== -1) {
-          processArgs.splice(finalWithEnvIndex, 2); // Remove both --s-with-env and the file path
+      // Auto-discovery: If no file path provided, check if we should auto-discover
+      if (shouldAutoDiscover) {
+        const basePath = this.#effectiveWorkingDirectory || process.cwd();
+        envFilePath = this.#configurationManager.discoverEnvFile(basePath);
+
+        if (envFilePath) {
+          console.log(chalk.dim(`Auto-discovered env file: ${envFilePath}`));
+        } else {
+          console.warn(
+            chalk.yellow(
+              "Warning: No .env file found in working directory. Continuing without environment configuration.",
+            ),
+          );
+          // Remove flag and continue
+          processArgs.splice(withEnvIndex, 1);
         }
-      } catch (error) {
-        console.error(
-          chalk.red(
+      }
+
+      // Load env file if found
+      if (envFilePath) {
+        try {
+          // Identify the final parser and parser chain for loading configuration
+          const {
+            finalParser: identifiedFinalParser,
+            parserChain: identifiedParserChain,
+          } = this.#_identifyCommandChainAndParsers(
+            processArgs,
+            this,
+            [],
+            [this],
+          );
+
+          const envConfigArgs =
+            identifiedFinalParser.#configurationManager.loadEnvFile(
+              envFilePath,
+              identifiedParserChain,
+            );
+          if (envConfigArgs) {
+            // Merge environment configuration with process args
+            // CLI args take precedence over file configuration
+            const mergedArgs =
+              identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
+                envConfigArgs,
+                processArgs,
+              );
+
+            // Replace the original processArgs array contents
+            processArgs.length = 0;
+            processArgs.push(...mergedArgs);
+          }
+
+          // Remove the --s-with-env flag and its file path argument from processArgs
+          // This must be done after merging to avoid interfering with the merge process
+          const finalWithEnvIndex = processArgs.findIndex(
+            (arg) => arg === "--s-with-env",
+          );
+          if (finalWithEnvIndex !== -1) {
+            // Check if there's a file path argument after the flag
+            if (
+              finalWithEnvIndex + 1 < processArgs.length &&
+              !processArgs[finalWithEnvIndex + 1].startsWith("-")
+            ) {
+              processArgs.splice(finalWithEnvIndex, 2); // Remove both flag and the file path
+            } else {
+              processArgs.splice(finalWithEnvIndex, 1); // Remove only the flag
+            }
+          }
+        } catch (error) {
+          console.error(
+            chalk.red(
+              `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          );
+          return this._handleExit(
+            1,
             `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        );
-        return this._handleExit(
-          1,
-          `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
-          "error",
-        );
+            "error",
+          );
+        }
+      }
+
+      // Auto-discovery: Check if we should auto-discover .env files
+      // Auto-discover when: (1) setWorkingDirectory is set AND (2) --s-with-env is NOT provided (no file path)
+      shouldAutoDiscover =
+        this.#workingDirectoryResolved &&
+        this.#effectiveWorkingDirectory !== this.#rootPath &&
+        withEnvIndex + 1 >= processArgs.length;
+
+      if (shouldAutoDiscover) {
+        const basePath = this.#effectiveWorkingDirectory || process.cwd();
+        envFilePath = this.#configurationManager.discoverEnvFile(basePath);
+
+        if (envFilePath) {
+          console.warn(`Auto-discovered env file: ${envFilePath}`);
+        } else {
+          console.warn(
+            "Warning: No .env file found in working directory. Continuing without environment configuration.",
+          );
+        }
+        // Remove --s-with-env flag if no env file was found
+        if (!envFilePath) {
+          processArgs.splice(withEnvIndex, 1);
+        }
       }
     }
 
@@ -894,7 +1091,9 @@ export class ArgParserBase<THandlerReturn = any> {
           });
           break;
         }
-        currentParser = currentParser.#subCommands.get(subCommandName)?.parser;
+        currentParser = (currentParser as any).#subCommands.get(
+          subCommandName,
+        )?.parser;
         remainingArgs = remainingArgs.slice(1);
 
         const nextSubCommandIndex = remainingArgs.findIndex((arg) =>
@@ -973,10 +1172,11 @@ export class ArgParserBase<THandlerReturn = any> {
     // ---- BEGIN ADDED DIAGNOSTIC LOG FOR identifiedFinalParser ----
     let parserNameForLog = "undefined_parser";
     if (identifiedFinalParser instanceof ArgParserBase) {
-      // Access private fields only if it's a confirmed ArgParser instance
+      // Access public getters instead of private fields
       parserNameForLog =
-        (identifiedFinalParser as any)["#subCommandName"] ||
-        (identifiedFinalParser as any)["#appName"];
+        identifiedFinalParser.getSubCommandName() ||
+        identifiedFinalParser.getAppName() ||
+        "unknown";
     } else if (identifiedFinalParser) {
       parserNameForLog =
         (identifiedFinalParser as any).name ||
@@ -1163,15 +1363,15 @@ export class ArgParserBase<THandlerReturn = any> {
   ): void {
     for (const flag of finalParser.#flagManager.flags) {
       const flagName = flag["name"] as string;
-      
+
       if (!flag["env"]) continue;
 
       // Check if value is already set (by CLI).
       // If we move this call BEFORE defaults, then 'undefined' means truly "not set by CLI".
       if (finalArgs[flagName] !== undefined) {
-          // If allowMultiple, we might append? Usually env var is just a fallback source.
-          // If CLI provided check, we skip Env.
-          continue; 
+        // If allowMultiple, we might append? Usually env var is just a fallback source.
+        // If CLI provided check, we skip Env.
+        continue;
       }
 
       const envVars = Array.isArray(flag["env"]) ? flag["env"] : [flag["env"]];
@@ -1186,46 +1386,57 @@ export class ArgParserBase<THandlerReturn = any> {
 
       if (foundVal !== undefined) {
         try {
-          const typedVal = this.#configurationManager.convertValueToFlagType(foundVal, flag);
-           if (flag["allowMultiple"]) {
-             // If allowMultiple, convertValueToFlagType returns array or single.
-             // We ensure it's set correctly.
-              finalArgs[flagName] = Array.isArray(typedVal) ? typedVal : [typedVal];
-           } else {
-              finalArgs[flagName] = typedVal;
-           }
+          const typedVal = this.#configurationManager.convertValueToFlagType(
+            foundVal,
+            flag,
+          );
+          if (flag["allowMultiple"]) {
+            // If allowMultiple, convertValueToFlagType returns array or single.
+            // We ensure it's set correctly.
+            finalArgs[flagName] = Array.isArray(typedVal)
+              ? typedVal
+              : [typedVal];
+          } else {
+            finalArgs[flagName] = typedVal;
+          }
         } catch (e) {
-           console.warn(chalk.yellow(`Warning: Failed to parse env var for flag '${flagName}': ${e}`));
+          console.warn(
+            chalk.yellow(
+              `Warning: Failed to parse env var for flag '${flagName}': ${e}`,
+            ),
+          );
         }
       }
     }
   }
 
   #_syncToEnv(
-     finalArgs: TParsedArgsWithRouting<any>,
-     finalParser: ArgParserBase,
+    finalArgs: TParsedArgsWithRouting<any>,
+    finalParser: ArgParserBase,
   ): void {
-      for (const flag of finalParser.#flagManager.flags) {
-          if (!flag["env"]) continue;
-          
-          const flagName = flag["name"];
-          const value = finalArgs[flagName];
-          
-          if (value !== undefined) {
-               const envVars = Array.isArray(flag["env"]) ? flag["env"] : [flag["env"]];
-               // Convert value to string for Env
-               let strVal = "";
-               if (typeof value === 'object') {
-                   strVal = JSON.stringify(value);
-               } else {
-                   strVal = String(value);
-               }
-               
-               for (const envKey of envVars) {
-                   process.env[envKey] = strVal;
-               }
-          }
+    for (const flag of finalParser.#flagManager.flags) {
+      if (!flag["env"]) continue;
+
+      const flagName = flag["name"];
+      const value = finalArgs[flagName];
+
+      if (value !== undefined) {
+        const envVars = Array.isArray(flag["env"])
+          ? flag["env"]
+          : [flag["env"]];
+        // Convert value to string for Env
+        let strVal = "";
+        if (typeof value === "object") {
+          strVal = JSON.stringify(value);
+        } else {
+          strVal = String(value);
+        }
+
+        for (const envKey of envVars) {
+          process.env[envKey] = strVal;
+        }
       }
+    }
   }
 
   #_prepareAndExecuteHandler(
@@ -1244,7 +1455,8 @@ export class ArgParserBase<THandlerReturn = any> {
       const args = handlerToExecute.context.args || {};
 
       // Try to get the original input arguments from the final args if available
-      const inputArgs = (finalArgs as any)._originalInputArgs || "unknown";
+      const inputArgs =
+        (finalArgs as InternalParsedArgs)._originalInputArgs || "unknown";
       const inputArgsStr = Array.isArray(inputArgs)
         ? inputArgs.join(" ")
         : inputArgs;
@@ -1258,13 +1470,13 @@ export class ArgParserBase<THandlerReturn = any> {
     }
 
     const finalParserWhoseHandlerWillRun = handlerToExecute.context.parser;
-    const finalParserFlags = finalParserWhoseHandlerWillRun.#flagManager.flags;
+    const finalParserFlags = finalParserWhoseHandlerWillRun.flags;
     const handlerArgs = handlerToExecute.context.args;
 
     for (const flag of finalParserFlags) {
       const flagName = flag["name"] as keyof typeof finalArgs;
       if (finalArgs.hasOwnProperty(flagName)) {
-        (handlerArgs as any)[flagName] = (finalArgs as any)[flagName];
+        (handlerArgs as any)[flagName] = finalArgs[flagName];
       } else if (
         flag["allowMultiple"] &&
         !handlerArgs.hasOwnProperty(flagName)
@@ -1280,8 +1492,8 @@ export class ArgParserBase<THandlerReturn = any> {
       // Check if result is a Promise (async handler)
       if (handlerResult && typeof handlerResult.then === "function") {
         // Store async handler info for ArgParserWithMcp to handle
-        (finalArgs as any)._asyncHandlerPromise = handlerResult;
-        (finalArgs as any)._asyncHandlerInfo = handlerToExecute;
+        (finalArgs as InternalParsedArgs)._asyncHandlerPromise = handlerResult;
+        (finalArgs as InternalParsedArgs)._asyncHandlerInfo = handlerToExecute;
 
         // Add a catch handler to prevent unhandled rejection warnings
         // The actual error handling will be done in parseAsync()
@@ -1292,7 +1504,7 @@ export class ArgParserBase<THandlerReturn = any> {
         return;
       }
 
-      (finalArgs as any).handlerResponse = handlerResult;
+      (finalArgs as InternalParsedArgs).handlerResponse = handlerResult;
 
       // Merge handler result into final args if it's an object
       if (
@@ -1448,12 +1660,12 @@ export class ArgParserBase<THandlerReturn = any> {
       );
 
       if (identifiedCommandChain.length > 0) {
-        (finalArgs as any).$commandChain = identifiedCommandChain;
+        finalArgs.$commandChain = identifiedCommandChain;
       }
 
       // Store original args for fuzzy mode logging
       if (this.#fuzzyMode) {
-        (finalArgs as any)._originalInputArgs = originalProcessArgs;
+        finalArgs._originalInputArgs = originalProcessArgs;
       }
 
       // Skip mandatory flag validation in fuzzy mode
@@ -1475,10 +1687,10 @@ export class ArgParserBase<THandlerReturn = any> {
 
       // Handle deep option for async handlers (default: true)
       const shouldAwaitHandlers = options?.deep !== false;
-      if (shouldAwaitHandlers && (finalArgs as any)._asyncHandlerPromise) {
+      if (shouldAwaitHandlers && finalArgs._asyncHandlerPromise) {
         try {
-          const handlerResult = await (finalArgs as any)._asyncHandlerPromise;
-          (finalArgs as any).handlerResponse = handlerResult;
+          const handlerResult = await finalArgs._asyncHandlerPromise;
+          finalArgs.handlerResponse = handlerResult;
 
           // Merge handler result into final args if it's an object
           if (
@@ -1490,8 +1702,8 @@ export class ArgParserBase<THandlerReturn = any> {
           }
 
           // Clean up the async handler info since we've awaited it
-          delete (finalArgs as any)._asyncHandlerPromise;
-          delete (finalArgs as any)._asyncHandlerInfo;
+          delete finalArgs._asyncHandlerPromise;
+          delete finalArgs._asyncHandlerInfo;
         } catch (error) {
           // Handle async handler errors - respect the handleErrors setting
           if (this.#handleErrors) {
@@ -1603,7 +1815,7 @@ export class ArgParserBase<THandlerReturn = any> {
 
       let handlerToExecute: RecursiveParseResult["handlerToExecute"] =
         undefined;
-      
+
       // Create context with displayHelp implementation
       const handlerContext: IHandlerContext<any, any> = {
         args: currentLevelArgs,
@@ -1622,6 +1834,9 @@ export class ArgParserBase<THandlerReturn = any> {
             process.exit(0);
           }
         },
+
+        // Add rootPath if working directory was resolved
+        rootPath: this.#rootPath || undefined,
       };
 
       if (currentParser.#handler) {
@@ -1989,14 +2204,14 @@ export class ArgParserBase<THandlerReturn = any> {
           if (
             flag["type"] &&
             typeof flag["type"] === "object" &&
-            (flag["type"] as any)._def
+            (flag["type"] as ZodTypeAny)._def
           ) {
             // It's a Zod schema - show JSON object with structure
             typeName = "JSON object";
             try {
               // Try to generate a simple structure preview
-              const zodSchema = flag["type"] as any;
-              const def = zodSchema._def;
+              const zodSchema = flag["type"] as ZodTypeAny;
+              const def = zodSchema._def as any;
 
               // In Zod v4, check for object shape directly (typeName might be undefined)
               if (def.shape) {
@@ -2044,12 +2259,12 @@ export class ArgParserBase<THandlerReturn = any> {
               ) {
                 isRepeatable = true;
               }
-              const anyType: any = flag["type"] as any;
+              const maybeZodSchema = flag["type"] as ZodTypeAny;
               if (
-                anyType &&
-                typeof anyType === "object" &&
-                anyType._def &&
-                anyType._def.typeName === "ZodArray"
+                maybeZodSchema &&
+                typeof maybeZodSchema === "object" &&
+                maybeZodSchema._def &&
+                (maybeZodSchema._def as any).typeName === "ZodArray"
               ) {
                 isRepeatable = true;
               }
@@ -2796,8 +3011,10 @@ ${descriptionLines
    */
   #_getMcpServerConfiguration(): any {
     // First, check if this is an ArgParser instance with withMcp() configuration
-    if ((this as any).getMcpServerConfig) {
-      const mcpConfig = (this as any).getMcpServerConfig();
+    if ((this as unknown as IMcpServerMethods).getMcpServerConfig) {
+      const mcpConfig = (
+        this as unknown as IMcpServerMethods
+      ).getMcpServerConfig();
       if (mcpConfig) {
         return mcpConfig;
       }
@@ -2837,7 +3054,7 @@ ${descriptionLines
     },
   ): Promise<void> {
     // We need to cast this to ArgParser to access MCP methods
-    const mcpParser = this as any;
+    const mcpParser = this as unknown as IMcpServerMethods;
 
     if (
       !mcpParser.createMcpServer ||

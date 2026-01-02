@@ -7,7 +7,8 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 - [Features Overview](#features-overview)
 - [Installation](#installation)
 - [Quick Start: The Unified `addTool` API](#quick-start-the-unified-addtool-api)
-  - [MCP Tool Name Constraints](#mcp-tool-name-constraints)
+- [Working Directory Management for Monorepos](#working-directory-management)
+- [MCP Tool Name Constraints](#mcp-tool-name-constraints)
 - [How to Run It](#how-to-run-it)
   - [Setting Up System-Wide CLI Access](#setting-up-system-wide-cli-access)
 - [OpenTUI: Reactive Rich Terminal Interfaces](#opentui-reactive-rich-terminal-interfaces)
@@ -1112,7 +1113,7 @@ ArgParser supports flag inheritance for CLI hierarchies. By default, sub-command
 
 #### Basic Inheritance (Snapshot)
 
-Set `inheritParentFlags: true` (or `FlagInheritance.DirectParentOnly`) to inherit flags from the *direct parent* at the moment the sub-command is attached.
+Set `inheritParentFlags: true` (or `FlagInheritance.DirectParentOnly`) to inherit flags from the _direct parent_ at the moment the sub-command is attached.
 
 > **Note**: This is a snapshot of the parent's flags at the time `.addSubCommand()` is called. If the parent acquires new flags later (e.g., by inheriting from a grandparent), the child will NOT see them unless `FlagInheritance.AllParents` is used.
 
@@ -1123,12 +1124,15 @@ const childParser = new ArgParser({ inheritParentFlags: true });
 
 #### Full Chain Inheritance
 
-For complex hierarchies (e.g. `root -> mid -> leaf`), especially when constructing parsers bottom-up, use `FlagInheritance.AllParents`. This ensures that flags propagate down the entire chain, even if the intermediate parent inherits them *after* the leaf was attached.
+For complex hierarchies (e.g. `root -> mid -> leaf`), especially when constructing parsers bottom-up, use `FlagInheritance.AllParents`. This ensures that flags propagate down the entire chain, even if the intermediate parent inherits them _after_ the leaf was attached.
 
 ```typescript
 import { ArgParser, FlagInheritance } from "@alcyone-labs/arg-parser";
 
-const root = new ArgParser().addFlag({ name: "root-flag", options: ["--root"] });
+const root = new ArgParser().addFlag({
+  name: "root-flag",
+  options: ["--root"],
+});
 const mid = new ArgParser({ inheritParentFlags: FlagInheritance.AllParents });
 const leaf = new ArgParser({ inheritParentFlags: FlagInheritance.AllParents });
 
@@ -1141,11 +1145,11 @@ root.addSubCommand({ name: "mid", parser: mid });
 
 #### Inheritance Options Reference
 
-| Value | Legacy Boolean | Behavior |
-|-------|----------------|----------|
-| `FlagInheritance.NONE` | `false` | No flags are inherited (Default) |
-| `FlagInheritance.DirectParentOnly` | `true` | Inherits from direct parent only (Snapshot) |
-| `FlagInheritance.AllParents` | N/A | Inherits from entire ancestor chain (Recursive Propagation) |
+| Value                              | Legacy Boolean | Behavior                                                    |
+| ---------------------------------- | -------------- | ----------------------------------------------------------- |
+| `FlagInheritance.NONE`             | `false`        | No flags are inherited (Default)                            |
+| `FlagInheritance.DirectParentOnly` | `true`         | Inherits from direct parent only (Snapshot)                 |
+| `FlagInheritance.AllParents`       | N/A            | Inherits from entire ancestor chain (Recursive Propagation) |
 
 ### Dynamic Flags (`dynamicRegister`)
 
@@ -1250,7 +1254,7 @@ import { z } from "zod";
 
 // CLI usage (outputSchema ignored): mycli process-file --path /my/file.txt
 // MCP usage (outputSchema provides structure): mycli --s-mcp-serve
-````
+```
 
 #### Predefined Schema Patterns
 

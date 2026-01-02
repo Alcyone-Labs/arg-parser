@@ -25,6 +25,7 @@ import {
 } from "../mcp/zod-compatibility";
 import { debug } from "../utils/debug-utils";
 import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
+import { type IMcpServerMethods } from "./types";
 import { resolveLogPath, type LogPath } from "./log-path-utils";
 import type {
   IFlag,
@@ -302,7 +303,7 @@ export type ToolConfig = {
  */
 export class ArgParser<
   THandlerReturn = any,
-> extends ArgParserBase<THandlerReturn> {
+> extends ArgParserBase<THandlerReturn> implements IMcpServerMethods {
   /** Stored MCP server configuration from withMcp() */
   private _mcpServerConfig?: McpServerOptions;
 
