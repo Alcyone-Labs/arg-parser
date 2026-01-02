@@ -7,6 +7,9 @@
  */
 
 import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
+const logger = createMcpLogger("Zod Compatibility");
 
 /**
  * Type representing a Zod v3 compatible raw shape
@@ -52,7 +55,7 @@ export function convertToMcpCompatibleSchema(
         };
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "[Zod Compatibility] Failed to extract shape from ZodObject:",
         error,
       );
@@ -74,7 +77,7 @@ export function convertToMcpCompatibleSchema(
         safeParse: zodSchema.safeParse.bind(zodSchema),
       };
     } catch (error) {
-      console.error(
+      logger.error(
         "[Zod Compatibility] Failed to extract shape from def property:",
         error,
       );
@@ -145,12 +148,12 @@ export function extractRawShape(
       return typeof shapeValue === "function" ? shapeValue() : shapeValue;
     }
 
-    console.warn(
+    logger.warn(
       "[Zod Compatibility] Could not extract raw shape, returning empty object",
     );
     return {};
   } catch (error) {
-    console.error("[Zod Compatibility] Error extracting raw shape:", error);
+    logger.error("[Zod Compatibility] Error extracting raw shape:", error);
     return {};
   }
 }
@@ -185,8 +188,8 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
 
   // Add null/undefined check at the beginning
   if (!zodSchema) {
-    console.error("[prepareMcpToolSchema] ERROR: zodSchema is null or undefined!");
-    console.error("[prepareMcpToolSchema] Stack trace:", new Error().stack);
+    logger.error("[prepareMcpToolSchema] ERROR: zodSchema is null or undefined!");
+    logger.error("[prepareMcpToolSchema] Stack trace:", new Error().stack);
     throw new Error("prepareMcpToolSchema called with null or undefined zodSchema");
   }
 
@@ -194,26 +197,26 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
   const getDefProperty = (schema: any) => schema._def || schema.def;
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[prepareMcpToolSchema] Input schema:");
-    console.error(`  - Type: ${typeof zodSchema}`);
-    console.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
-    console.error(`  - Has _def: ${!!zodSchema?._def}`);
-    console.error(`  - Has def: ${!!zodSchema?.def}`);
-    console.error(`  - _def content:`, zodSchema?._def);
-    console.error(`  - def content:`, zodSchema?.def);
-    console.error(`  - Has shape: ${!!(zodSchema as any)?.shape}`);
+    logger.error("[prepareMcpToolSchema] Input schema:");
+    logger.error(`  - Type: ${typeof zodSchema}`);
+    logger.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
+    logger.error(`  - Has _def: ${!!zodSchema?._def}`);
+    logger.error(`  - Has def: ${!!zodSchema?.def}`);
+    logger.error(`  - _def content:`, zodSchema?._def);
+    logger.error(`  - def content:`, zodSchema?.def);
+    logger.error(`  - Has shape: ${!!(zodSchema as any)?.shape}`);
   }
 
   if (isZodObjectSchema(zodSchema)) {
     if (process.env["MCP_DEBUG"]) {
-      console.error("[prepareMcpToolSchema] Processing as ZodObject schema");
+      logger.error("[prepareMcpToolSchema] Processing as ZodObject schema");
     }
     // For object schemas, try to return the raw shape or a compatible wrapper
     const rawShape = extractRawShape(zodSchema);
 
     if (process.env["MCP_DEBUG"]) {
-      console.error("[prepareMcpToolSchema] Extracted raw shape:", rawShape);
-      console.error(
+      logger.error("[prepareMcpToolSchema] Extracted raw shape:", rawShape);
+      logger.error(
         "[prepareMcpToolSchema] Raw shape keys:",
         Object.keys(rawShape || {}),
       );
@@ -245,10 +248,10 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
     compatibleSchema._originalSchema = zodSchema;
 
     if (process.env["MCP_DEBUG"]) {
-      console.error("[prepareMcpToolSchema] Created compatible schema:");
-      console.error(`  - Has _def: ${!!compatibleSchema._def}`);
-      console.error(`  - Has shape: ${!!compatibleSchema.shape}`);
-      console.error(
+      logger.error("[prepareMcpToolSchema] Created compatible schema:");
+      logger.error(`  - Has _def: ${!!compatibleSchema._def}`);
+      logger.error(`  - Has shape: ${!!compatibleSchema.shape}`);
+      logger.error(
         `  - Shape keys: ${Object.keys(compatibleSchema.shape || {})}`,
       );
     }
@@ -257,7 +260,7 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
   }
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[prepareMcpToolSchema] Processing as non-object schema");
+    logger.error("[prepareMcpToolSchema] Processing as non-object schema");
   }
 
   // For non-object schemas, return minimal compatible object
@@ -283,9 +286,9 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
   result._originalSchema = zodSchema;
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[prepareMcpToolSchema] Non-object result:");
-    console.error(`  - Has _def: ${!!result._def}`);
-    console.error(`  - Type: ${typeof result}`);
+    logger.error("[prepareMcpToolSchema] Non-object result:");
+    logger.error(`  - Has _def: ${!!result._def}`);
+    logger.error(`  - Type: ${typeof result}`);
   }
 
   return result;
@@ -298,19 +301,19 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
 export function createCleanZodSchema(zodSchema: ZodTypeAny): any {
   if (!zodSchema) {
     if (process.env["MCP_DEBUG"]) {
-      console.error("[createCleanZodSchema] ERROR: zodSchema is null or undefined!");
+      logger.error("[createCleanZodSchema] ERROR: zodSchema is null or undefined!");
     }
     // Return a simple default schema
     return z.object({});
   }
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[createCleanZodSchema] Input schema:");
-    console.error(`  - Type: ${typeof zodSchema}`);
-    console.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
-    console.error(`  - Has ~standard: ${!!(zodSchema as any)['~standard']}`);
-    console.error(`  - Has def: ${!!(zodSchema as any).def}`);
-    console.error(`  - Has _def: ${!!(zodSchema as any)._def}`);
+    logger.error("[createCleanZodSchema] Input schema:");
+    logger.error(`  - Type: ${typeof zodSchema}`);
+    logger.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
+    logger.error(`  - Has ~standard: ${!!(zodSchema as any)['~standard']}`);
+    logger.error(`  - Has def: ${!!(zodSchema as any).def}`);
+    logger.error(`  - Has _def: ${!!(zodSchema as any)._def}`);
   }
 
   // Create a minimal Zod-like object with just the essential properties
@@ -330,13 +333,13 @@ export function createCleanZodSchema(zodSchema: ZodTypeAny): any {
   Object.setPrototypeOf(cleanSchema, Object.getPrototypeOf(zodSchema));
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[createCleanZodSchema] Clean schema created:");
-    console.error(`  - Has ~standard: ${!!(cleanSchema as any)['~standard']}`);
-    console.error(`  - Has def: ${!!(cleanSchema as any).def}`);
-    console.error(`  - Has _def: ${!!(cleanSchema as any)._def}`);
-    console.error(`  - Has parse: ${typeof cleanSchema.parse}`);
-    console.error(`  - Has safeParse: ${typeof cleanSchema.safeParse}`);
-    console.error(`  - Has shape: ${!!(cleanSchema as any).shape}`);
+    logger.error("[createCleanZodSchema] Clean schema created:");
+    logger.error(`  - Has ~standard: ${!!(cleanSchema as any)['~standard']}`);
+    logger.error(`  - Has def: ${!!(cleanSchema as any).def}`);
+    logger.error(`  - Has _def: ${!!(cleanSchema as any)._def}`);
+    logger.error(`  - Has parse: ${typeof cleanSchema.parse}`);
+    logger.error(`  - Has safeParse: ${typeof cleanSchema.safeParse}`);
+    logger.error(`  - Has shape: ${!!(cleanSchema as any).shape}`);
   }
 
   return cleanSchema;
@@ -352,9 +355,9 @@ export function zodToJsonSchema(zodSchema: ZodTypeAny): any {
   }
 
   if (process.env["MCP_DEBUG"]) {
-    console.error("[zodToJsonSchema] Converting Zod schema to JSON Schema");
-    console.error(`  - Input type: ${typeof zodSchema}`);
-    console.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
+    logger.error("[zodToJsonSchema] Converting Zod schema to JSON Schema");
+    logger.error(`  - Input type: ${typeof zodSchema}`);
+    logger.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
   }
 
   // For now, create a basic JSON Schema structure
@@ -398,7 +401,7 @@ export function zodToJsonSchema(zodSchema: ZodTypeAny): any {
     };
 
     if (process.env["MCP_DEBUG"]) {
-      console.error("[zodToJsonSchema] Generated JSON Schema:", JSON.stringify(jsonSchema, null, 2));
+      logger.error("[zodToJsonSchema] Generated JSON Schema:", JSON.stringify(jsonSchema, null, 2));
     }
 
     return jsonSchema;
@@ -416,18 +419,18 @@ export function debugSchemaStructure(
   label: string = "Schema",
 ): void {
   if (process.env["MCP_DEBUG"]) {
-    console.error(`[Zod Compatibility Debug] ${label} structure:`);
-    console.error(`  - Type: ${typeof schema}`);
-    console.error(`  - Constructor: ${schema?.constructor?.name}`);
-    console.error(`  - Has shape: ${!!schema?.shape}`);
-    console.error(`  - Has _def: ${!!schema?._def}`);
-    console.error(`  - _def.typeName: ${schema?._def?.typeName}`);
-    console.error(`  - _def.type: ${schema?._def?.type}`);
-    console.error(`  - Has parse: ${typeof schema?.parse}`);
-    console.error(`  - Has safeParse: ${typeof schema?.safeParse}`);
+    logger.error(`[Zod Compatibility Debug] ${label} structure:`);
+    logger.error(`  - Type: ${typeof schema}`);
+    logger.error(`  - Constructor: ${schema?.constructor?.name}`);
+    logger.error(`  - Has shape: ${!!schema?.shape}`);
+    logger.error(`  - Has _def: ${!!schema?._def}`);
+    logger.error(`  - _def.typeName: ${schema?._def?.typeName}`);
+    logger.error(`  - _def.type: ${schema?._def?.type}`);
+    logger.error(`  - Has parse: ${typeof schema?.parse}`);
+    logger.error(`  - Has safeParse: ${typeof schema?.safeParse}`);
 
     if (schema?.shape) {
-      console.error(`  - Shape keys: ${Object.keys(schema.shape)}`);
+      logger.error(`  - Shape keys: ${Object.keys(schema.shape)}`);
     }
   }
 }
@@ -439,12 +442,12 @@ export function validateMcpSchemaCompatibility(schema: any): boolean {
   try {
     // Check for required methods
     if (typeof schema?.parse !== "function") {
-      console.warn("[Zod Compatibility] Schema missing parse method");
+      logger.warn("[Zod Compatibility] Schema missing parse method");
       return false;
     }
 
     if (typeof schema?.safeParse !== "function") {
-      console.warn("[Zod Compatibility] Schema missing safeParse method");
+      logger.warn("[Zod Compatibility] Schema missing safeParse method");
       return false;
     }
 
@@ -454,7 +457,7 @@ export function validateMcpSchemaCompatibility(schema: any): boolean {
         schema?._def?.type === "object") &&
       !schema?.shape
     ) {
-      console.warn(
+      logger.warn(
         "[Zod Compatibility] ZodObject schema missing shape property",
       );
       return false;
@@ -462,7 +465,7 @@ export function validateMcpSchemaCompatibility(schema: any): boolean {
 
     return true;
   } catch (error) {
-    console.error(
+    logger.error(
       "[Zod Compatibility] Error validating schema compatibility:",
       error,
     );

@@ -7,6 +7,9 @@
  */
 
 // Note: zod imports removed as they're not used in this file
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
+const logger = createMcpLogger("MCP Resources");
 
 /**
  * Resource response content item
@@ -243,7 +246,7 @@ export class McpResourcesManager {
       try {
         listener();
       } catch (error) {
-        console.error("Error in resource change listener:", error);
+        logger.error("Error in resource change listener:", error);
       }
     }
   }

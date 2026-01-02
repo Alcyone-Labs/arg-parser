@@ -328,13 +328,13 @@ describe("McpPromptsManager", () => {
 });
 
 describe("Helper Prompt Functions", () => {
-  test("createCodeReviewPrompt should create valid prompt config", () => {
+  test("createCodeReviewPrompt should create valid prompt config", async () => {
     const config = createCodeReviewPrompt();
     expect(config.name).toBe("code-review");
     expect(config.title).toBe("Code Review Assistant");
     expect(typeof config.handler).toBe("function");
 
-    const result = config.handler({
+    const result = await config.handler({
       code: "console.log('hello')",
       language: "javascript",
       focus: "security",
@@ -343,12 +343,12 @@ describe("Helper Prompt Functions", () => {
     expect(result.messages[0].content.text).toContain("console.log('hello')");
   });
 
-  test("createSummarizationPrompt should create valid prompt config", () => {
+  test("createSummarizationPrompt should create valid prompt config", async () => {
     const config = createSummarizationPrompt();
     expect(config.name).toBe("summarize");
     expect(typeof config.handler).toBe("function");
 
-    const result = config.handler({
+    const result = await config.handler({
       text: "Long text to summarize",
       length: "brief",
       style: "bullet-points",
@@ -357,12 +357,12 @@ describe("Helper Prompt Functions", () => {
     expect(result.messages[0].content.text).toContain("1-2 sentences");
   });
 
-  test("createTranslationPrompt should create valid prompt config", () => {
+  test("createTranslationPrompt should create valid prompt config", async () => {
     const config = createTranslationPrompt();
     expect(config.name).toBe("translate");
     expect(typeof config.handler).toBe("function");
 
-    const result = config.handler({
+    const result = await config.handler({
       text: "Hello world",
       targetLanguage: "Spanish",
       sourceLanguage: "English",
@@ -372,12 +372,12 @@ describe("Helper Prompt Functions", () => {
     expect(result.messages[0].content.text).toContain("formal");
   });
 
-  test("createDocumentationPrompt should create valid prompt config", () => {
+  test("createDocumentationPrompt should create valid prompt config", async () => {
     const config = createDocumentationPrompt();
     expect(config.name).toBe("document-code");
     expect(typeof config.handler).toBe("function");
 
-    const result = config.handler({
+    const result = await config.handler({
       code: "function test() {}",
       language: "javascript",
       style: "jsdoc",

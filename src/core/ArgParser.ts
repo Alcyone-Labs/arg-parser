@@ -25,6 +25,7 @@ import {
 } from "../mcp/zod-compatibility";
 import { debug } from "../utils/debug-utils";
 import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
+import { type IMcpServerMethods } from "./types";
 import { resolveLogPath, type LogPath } from "./log-path-utils";
 import type {
   IFlag,
@@ -302,7 +303,7 @@ export type ToolConfig = {
  */
 export class ArgParser<
   THandlerReturn = any,
-> extends ArgParserBase<THandlerReturn> {
+> extends ArgParserBase<THandlerReturn> implements IMcpServerMethods {
   /** Stored MCP server configuration from withMcp() */
   private _mcpServerConfig?: McpServerOptions;
 
@@ -487,15 +488,11 @@ export class ArgParser<
     // Sanitize the tool name for MCP compatibility
     const sanitizedName = sanitizeMcpToolName(toolConfig.name);
 
-    // Suppress sanitization warnings in MCP mode to avoid STDOUT contamination
+    // Log sanitization warnings via console.warn (user-facing, not data-safe logging)
     if (sanitizedName !== toolConfig.name) {
-      // Only warn in non-MCP contexts
-      const isMcpMode = (globalThis as any).console?.mcpError;
-      if (!isMcpMode) {
-        console.warn(
-          `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
-        );
-      }
+      console.warn(
+        `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
+      );
     }
 
     if (this._tools.has(sanitizedName)) {
@@ -553,37 +550,19 @@ export class ArgParser<
    * @returns This ArgParser instance for chaining
    */
   public addMcpTool(toolConfig: McpToolConfig): this {
-    // Use stderr to avoid STDOUT contamination in MCP mode
-    try {
-      if (typeof process !== "undefined" && process.stderr) {
-        process.stderr
-          .write(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
-Please use addTool() instead for a unified CLI/MCP experience.
-Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md\n`);
-      } else {
-        console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
+    // Use console.warn directly for deprecation warnings (user-facing, not logging)
+    console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
 Please use addTool() instead for a unified CLI/MCP experience.
 Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
-      }
-    } catch {
-      // Fallback for environments where process is not available
-      console.warn(`[DEPRECATED] addMcpTool() is deprecated and will be removed in v2.0.
-Please use addTool() instead for a unified CLI/MCP experience.
-Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-MIGRATION.md`);
-    }
 
     // Sanitize the tool name for MCP compatibility
     const sanitizedName = sanitizeMcpToolName(toolConfig.name);
 
-    // Suppress sanitization warnings in MCP mode to avoid STDOUT contamination
+    // Log sanitization warnings via console.warn (user-facing, not data-safe logging)
     if (sanitizedName !== toolConfig.name) {
-      // Only warn in non-MCP contexts
-      const isMcpMode = (globalThis as any).console?.mcpError;
-      if (!isMcpMode) {
-        console.warn(
-          `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
-        );
-      }
+      console.warn(
+        `[ArgParser] Tool name '${toolConfig.name}' was sanitized to '${sanitizedName}' for MCP compatibility`,
+      );
     }
 
     if (this._mcpTools.has(sanitizedName)) {
@@ -806,11 +785,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         outputSchema = mergedOptions.outputSchemaMap[toolConfig.name];
       } else if (toolConfig.outputSchema) {
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Tool '${toolConfig.name}' has outputSchema:`,
             typeof toolConfig.outputSchema,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] outputSchema has _def:`,
             !!(
               toolConfig.outputSchema &&
@@ -821,7 +800,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         }
         outputSchema = createOutputSchema(toolConfig.outputSchema);
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Created output schema for '${toolConfig.name}':`,
             !!outputSchema,
           );
@@ -841,7 +820,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       // Only include output schema if the MCP protocol version supports it
       if (outputSchema && !this.supportsOutputSchemas()) {
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Output schema for '${toolConfig.name}' removed due to MCP version ${this._mcpProtocolVersion} not supporting output schemas`,
           );
         }
@@ -893,10 +872,11 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               args,
               parentArgs: {},
               commandChain: [toolConfig.name],
-              parser: this,
+              parser: this as any,
               isMcp: true,
+              logger: this.logger,
               displayHelp: () => {
-                console.error("Help display is not supported in MCP mode.");
+                this.logger.error("Help display is not supported in MCP mode.");
               },
             };
 
@@ -906,7 +886,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
             // Log successful execution for debugging
             if (process.env["MCP_DEBUG"]) {
-              console.error(
+              this.logger.error(
                 `[MCP Tool] '${toolConfig.name}' executed successfully in ${executionTime}ms`,
               );
             }
@@ -950,9 +930,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
 
             if (process.env["MCP_DEBUG"]) {
-              console.error(`[MCP Tool Error] ${errorMessage}`);
+              this.logger.error(`[MCP Tool Error] ${errorMessage}`);
               if (error instanceof Error && error.stack) {
-                console.error(`[MCP Tool Stack] ${error.stack}`);
+                this.logger.error(`[MCP Tool Stack] ${error.stack}`);
               }
             }
 
@@ -982,7 +962,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const executionTime = Date.now() - startTime;
 
           if (process.env["MCP_DEBUG"]) {
-            console.error(
+            this.logger.error(
               `[MCP Tool] '${toolConfig.name}' (legacy) executed successfully in ${executionTime}ms`,
             );
           }
@@ -1023,7 +1003,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const errorMessage = `Tool '${toolConfig.name}' execution failed: ${error instanceof Error ? error.message : String(error)}`;
 
           if (process.env["MCP_DEBUG"]) {
-            console.error(`[MCP Tool Error] ${errorMessage}`);
+            this.logger.error(`[MCP Tool Error] ${errorMessage}`);
           }
 
           return createMcpErrorResponse(errorMessage);
@@ -1246,20 +1226,20 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         let mcpCompatibleSchema;
         try {
           if (process.env["MCP_DEBUG"]) {
-            console.error(`[MCP Debug] Preparing schema for tool ${tool.name}`);
-            console.error(`[MCP Debug] Input zodSchema:`, zodSchema);
+            this.logger.error(`[MCP Debug] Preparing schema for tool ${tool.name}`);
+            this.logger.error(`[MCP Debug] Input zodSchema:`, zodSchema);
           }
 
           // Use the original Zod v4 schema directly (MCP SDK now supports v4)
           mcpCompatibleSchema = zodSchema;
 
           if (process.env["MCP_DEBUG"]) {
-            console.error(
+            this.logger.error(
               `[MCP Debug] Successfully prepared schema for tool ${tool.name}`,
             );
           }
         } catch (schemaError) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Error preparing schema for tool ${tool.name}:`,
             schemaError,
           );
@@ -1268,23 +1248,23 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
         // Add detailed debug logging for the prepared schema
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Prepared mcpCompatibleSchema for tool ${tool.name}:`,
             JSON.stringify(mcpCompatibleSchema, null, 2),
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] Schema properties:`,
             Object.keys(mcpCompatibleSchema || {}),
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] Schema def:`,
             (mcpCompatibleSchema as any)?.def,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] Schema shape:`,
             (mcpCompatibleSchema as any)?.shape,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] Schema parse function:`,
             typeof mcpCompatibleSchema?.parse,
           );
@@ -1292,12 +1272,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
         // Add debug logging before schema preparation
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] About to prepare schema for tool ${tool.name}`,
           );
-          console.error(`[MCP Debug] zodSchema type:`, typeof zodSchema);
-          console.error(`[MCP Debug] zodSchema:`, zodSchema);
-          console.error(
+          this.logger.error(`[MCP Debug] zodSchema type:`, typeof zodSchema);
+          this.logger.error(`[MCP Debug] zodSchema:`, zodSchema);
+          this.logger.error(
             `[MCP Debug] zodSchema constructor:`,
             zodSchema?.constructor?.name,
           );
@@ -1321,35 +1301,35 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
         // Debug the final toolConfig being passed to registerTool
         if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] Final toolConfig for ${tool.name}:`,
             JSON.stringify(toolConfig, null, 2),
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] toolConfig.inputSchema type:`,
             typeof toolConfig.inputSchema,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] toolConfig.inputSchema constructor:`,
             toolConfig.inputSchema?.constructor?.name,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] toolConfig.inputSchema._def:`,
             toolConfig.inputSchema?._def,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] toolConfig.inputSchema.shape:`,
             toolConfig.inputSchema?.shape,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] toolConfig.inputSchema._zod:`,
             toolConfig.inputSchema?._zod,
           );
-          console.error(
+          this.logger.error(
             `[MCP Debug] Schema keys:`,
             Object.keys(mcpCompatibleSchema || {}),
           );
-          console.error(`[MCP Debug] About to call server.registerTool with:`, {
+          this.logger.error(`[MCP Debug] About to call server.registerTool with:`, {
             name: tool.name,
             description: tool.description,
             inputSchema: mcpCompatibleSchema,
@@ -1366,21 +1346,21 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           toolConfig.outputSchema = convertedOutputSchema;
 
           if (process.env["MCP_DEBUG"]) {
-            console.error(
+            this.logger.error(
               `[MCP Debug] Including outputSchema for tool '${tool.name}':`,
               typeof tool.outputSchema
             );
-            console.error(
+            this.logger.error(
               `[MCP Debug] Converted outputSchema constructor:`,
               convertedOutputSchema?.constructor?.name
             );
-            console.error(
+            this.logger.error(
               `[MCP Debug] supportsOutputSchemas():`,
               this.supportsOutputSchemas()
             );
           }
         } else if (process.env["MCP_DEBUG"]) {
-          console.error(
+          this.logger.error(
             `[MCP Debug] NOT including outputSchema for tool '${tool.name}':`,
             `hasOutputSchema=${!!tool.outputSchema}, supportsOutputSchemas=${this.supportsOutputSchemas()}`
           );
@@ -1389,7 +1369,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         // Simple tool execution that matches the working minimal MCP server pattern
         const simpleExecute = async (args: any) => {
           if (process.env["MCP_DEBUG"]) {
-            console.error(
+            this.logger.error(
               `[MCP Simple Execute] 🎯 TOOL CALLED: '${tool.name}' with args:`,
               JSON.stringify(args, null, 2),
             );
@@ -1400,7 +1380,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             const result = await tool.execute(args);
 
             if (process.env["MCP_DEBUG"]) {
-              console.error(
+              this.logger.error(
                 `[MCP Simple Execute] Tool '${tool.name}' returned:`,
                 JSON.stringify(result, null, 2),
               );
@@ -1433,7 +1413,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               error instanceof Error ? error.message : String(error);
 
             if (process.env["MCP_DEBUG"]) {
-              console.error(
+              this.logger.error(
                 `[MCP Simple Execute] Tool '${tool.name}' error:`,
                 errorMessage,
               );
@@ -1573,19 +1553,19 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           let mcpCompatibleSchema;
           try {
             if (process.env["MCP_DEBUG"]) {
-              console.error(
+              this.logger.error(
                 `[MCP Debug] Preparing schema for prompt ${prompt.name}`,
               );
-              console.error(`[MCP Debug] Input argsSchema:`, prompt.argsSchema);
+              this.logger.error(`[MCP Debug] Input argsSchema:`, prompt.argsSchema);
             }
             mcpCompatibleSchema = prompt.argsSchema;
             if (process.env["MCP_DEBUG"]) {
-              console.error(
+              this.logger.error(
                 `[MCP Debug] Successfully prepared schema for prompt ${prompt.name}`,
               );
             }
           } catch (schemaError) {
-            console.error(
+            this.logger.error(
               `[MCP Debug] Error preparing schema for prompt ${prompt.name}:`,
               schemaError,
             );
@@ -1619,7 +1599,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               const result = await prompt.handler(validatedArgs);
 
               if (process.env["MCP_DEBUG"]) {
-                console.error(
+                this.logger.error(
                   `[MCP Debug] Prompt '${prompt.name}' executed successfully`,
                 );
               }
@@ -1627,7 +1607,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               return result;
             } catch (error) {
               if (process.env["MCP_DEBUG"]) {
-                console.error(
+                this.logger.error(
                   `[MCP Debug] Prompt '${prompt.name}' execution error:`,
                   error,
                 );
@@ -1866,7 +1846,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
 
           await new Promise<void>((resolve) => {
             app.listen(port, transportConfig.host || "localhost", () => {
-              console.error(
+              this.logger.error(
                 `[${serverInfo.name}] MCP Server listening on http://${transportConfig.host || "localhost"}:${port}${path} (SSE)`,
               );
               resolve();
@@ -2188,7 +2168,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
    *
    * // With error handling:
    * await cli.parseIfExecutedDirectly(import.meta.url).catch((error) => {
-   *   console.error("Fatal error:", error instanceof Error ? error.message : String(error));
+   *   this.logger.error("Fatal error:", error instanceof Error ? error.message : String(error));
    *   process.exit(1);
    * });
    * ```

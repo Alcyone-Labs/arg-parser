@@ -2,8 +2,85 @@ import { z, type ZodTypeAny } from "zod";
 
 // Forward declaration for ArgParser to avoid circular dependency in HandlerContext
 // This will be replaced or refined once ArgParser.ts is updated to use these types.
-// It represents an instance of the ArgParser class.
-export type ArgParserInstance = any;
+export type ArgParserInstance = IArgParser; 
+
+/**
+ * Interface defining the MCP server methods expected by ArgParserBase.
+ * This allows ArgParserBase to use these methods without depending on the concrete ArgParser class.
+ */
+export interface IMcpServerMethods {
+  createMcpServer(
+    serverInfo?: any,
+    toolOptions?: any,
+    logPath?: any,
+  ): Promise<any>;
+  
+  startMcpServerWithTransport(
+    serverInfo: any,
+    transportType: string,
+    transportOptions: any,
+    toolOptions: any,
+    logPath?: string
+  ): Promise<void>;
+
+  startMcpServerWithMultipleTransports(
+    serverInfo: any,
+    transports: any[],
+    toolOptions: any,
+    logPath?: string
+  ): Promise<void>;
+  
+  getMcpServerConfig(): any;
+}
+
+/**
+ * Interface representing the public API of ArgParser/ArgParserBase.
+ */
+export interface IArgParser<THandlerReturn = any> {
+  // Common methods from ArgParserBase
+  getAppName(): string | undefined;
+  getAppCommandName(): string | undefined;
+  getSubCommandName(): string;
+  getDescription(): string | undefined;
+  getAutoExit(): boolean;
+  getHandler(): ((ctx: IHandlerContext) => void) | undefined;
+  getSubCommands(): Map<string, ISubCommand>;
+  get logger(): any;
+  
+  // Flag methods
+  get flags(): ProcessedFlag[];
+  get flagNames(): string[];
+  addFlag(flag: IFlag): this;
+  addFlags(flags: readonly IFlag[]): this;
+  hasFlag(name: string): boolean;
+  getFlagDefinition(name: string): ProcessedFlag | undefined;
+  
+  // Subcommand methods
+  addSubCommand(subCommandConfig: ISubCommand): this;
+  getSubCommand(name: string): ISubCommand | undefined;
+  
+  // Parsing methods
+  parse(processArgs?: string[], options?: any): Promise<any>;
+  
+  // Configuration methods
+  setHandler(handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>): this;
+  
+  // Help
+  helpText(): string;
+  printAll(filePath?: string): void;
+  getCommandChain(): string[];
+  
+  // MCP methods (optional or requires casting)
+  addMcpResource(config: any): this;
+  removeMcpResource(name: string): this;
+  getMcpResources(): any[];
+  addMcpPrompt(config: any): this;
+  removeMcpPrompt(name: string): this;
+  getMcpPrompts(): any[];
+  
+  // MCP methods from ArgParser subclass (optional in interface but present at runtime)
+  getMcpServerConfig?(): any;
+}
 
 /**
  * Defines the behavior for flag inheritance in sub-commands.
@@ -220,6 +297,12 @@ export const zodFlagSchema = z
       .describe(
         "Optional callback that can register additional flags dynamically when this flag is present.",
       ),
+    setWorkingDirectory: z
+      .boolean()
+      .optional()
+      .describe(
+        "If true, this flag's value becomes the effective working directory for file operations.",
+      ),
   })
   // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
@@ -322,6 +405,32 @@ export type IFlag = IFlagCore & {
   dxtOptions?: IDxtOptions;
   /** Optional callback to dynamically register additional flags when this flag is present */
   dynamicRegister?: DynamicRegisterFn;
+  /**
+   * If true, this flag's value becomes the effective working directory.
+   * When set, all file operations (including .env loading) will be relative to this path.
+   * Last flag with this property in the command chain wins.
+   *
+   * @alias chdir
+   *
+   * @example
+   * ```typescript
+   * .addFlag({
+   *   name: "workspace",
+   *   description: "Workspace directory to operate in",
+   *   options: ["--workspace", "-w"],
+   *   type: "string",
+   *   setWorkingDirectory: true,
+   * })
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // User runs: my-cli --workspace ./packages/my-app
+   * // Effective cwd becomes: /repo/packages/my-app/
+   * // All .env files are loaded from: /repo/packages/my-app/
+   * ```
+   */
+  setWorkingDirectory?: boolean;
 };
 
 /**
@@ -423,8 +532,8 @@ export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
  * @template TParentCommandArgs Shape of `parentArgs` from the parent command, if any.
  */
 export type IHandlerContext<
-  TCurrentCommandArgs extends Record<string, any> = Record<string, any>,
-  TParentCommandArgs extends Record<string, any> = Record<string, any>,
+  TCurrentCommandArgs = any,
+  TParentCommandArgs = any,
 > = {
   /** Parsed arguments specific to the current command. */
   args: TCurrentCommandArgs;
@@ -449,6 +558,32 @@ export type IHandlerContext<
    * Display the help message for the current command context.
    */
   displayHelp: () => void;
+  /**
+   * The root path from the user's CLI command perspective.
+   * This is the original current working directory when the CLI was invoked.
+   *
+   * Use this when you need to reference paths relative to where the user ran the command,
+   * as opposed to the effective working directory (which may have been changed by
+   * flags with `setWorkingDirectory`).
+   *
+   * @example
+   * // User runs: my-cli --workspace ./packages/app --input ./data/file.txt
+   * // From /repo/ directory
+   *
+   * // In handler:
+   * console.log(ctx.rootPath);           // "/repo/" (where user ran command)
+   * console.log(process.cwd());           // "/repo/packages/app/" (effective cwd)
+   * console.log(ctx.args.input);          // "./data/file.txt" (relative to effective cwd)
+   *
+   * // To resolve ctx.args.input relative to user's cwd:
+   * const userInputPath = path.resolve(ctx.rootPath, ctx.args.input);
+   */
+  rootPath?: string;
+  /**
+   * Data-safe logger instance.
+   * In MCP mode, this logger ensures STDOUT safety by routing logs to STDERR or a file.
+   */
+  logger: any; // Using any to avoid circular dependency or complex type imports in types.ts
 };
 
 /**

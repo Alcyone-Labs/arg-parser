@@ -6,6 +6,9 @@
  */
 
 import { z, type ZodTypeAny } from "zod";
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
+const logger = createMcpLogger("MCP Prompts");
 
 /**
  * Prompt message content types
@@ -207,7 +210,7 @@ export class McpPromptsManager {
       try {
         listener();
       } catch (error) {
-        console.error("Error in prompt change listener:", error);
+        logger.error("Error in prompt change listener:", error);
       }
     }
   }

@@ -1,5 +1,4 @@
-import type { ArgParserBase } from "../core/ArgParserBase";
-import type { ISubCommand, ProcessedFlag } from "../core/types";
+import type { IArgParser, ISubCommand, ProcessedFlag } from "../core/types";
 
 export interface FuzzyTestOptions {
   /** Maximum depth for command path exploration */
@@ -36,10 +35,10 @@ export interface FuzzyTestReport {
 }
 
 export class ArgParserFuzzyTester {
-  private parser: ArgParserBase;
+  private parser: IArgParser;
   private options: Required<FuzzyTestOptions>;
 
-  constructor(parser: ArgParserBase, options: FuzzyTestOptions = {}) {
+  constructor(parser: IArgParser, options: FuzzyTestOptions = {}) {
     this.parser = parser;
     this.options = {
       maxDepth: options.maxDepth ?? 5,
@@ -58,9 +57,9 @@ export class ArgParserFuzzyTester {
     const results: TestResult[] = [];
 
     if (this.options.verbose) {
-      console.log(`Discovered ${commandPaths.length} command paths:`);
+      this.parser.logger.info(`Discovered ${commandPaths.length} command paths:`);
       commandPaths.forEach((path) =>
-        console.log(`  ${path.join(" ") || "(root)"}`),
+        this.parser.logger.info(`  ${path.join(" ") || "(root)"}`),
       );
     }
 
@@ -91,7 +90,7 @@ export class ArgParserFuzzyTester {
    * Recursively discover subcommand paths
    */
   private discoverSubCommandPaths(
-    parser: ArgParserBase,
+    parser: IArgParser,
     currentPath: string[],
     allPaths: string[][],
     depth: number,
@@ -117,14 +116,14 @@ export class ArgParserFuzzyTester {
   /**
    * Get subcommands from a parser instance
    */
-  private getSubCommands(parser: ArgParserBase): Map<string, ISubCommand> {
+  private getSubCommands(parser: IArgParser): Map<string, ISubCommand> {
     return parser.getSubCommands();
   }
 
   /**
    * Get flags from a parser instance
    */
-  private getFlags(parser: ArgParserBase): ProcessedFlag[] {
+  private getFlags(parser: IArgParser): ProcessedFlag[] {
     return parser.flags;
   }
 
@@ -137,7 +136,7 @@ export class ArgParserFuzzyTester {
     const flags = this.getFlags(targetParser);
 
     if (this.options.verbose) {
-      console.log(`Testing command path: ${commandPath.join(" ") || "(root)"}`);
+      this.parser.logger.info(`Testing command path: ${commandPath.join(" ") || "(root)"}`);
     }
 
     // Test valid combinations
@@ -172,7 +171,7 @@ export class ArgParserFuzzyTester {
   /**
    * Get the parser instance for a specific command path
    */
-  private getParserForPath(commandPath: string[]): ArgParserBase {
+  private getParserForPath(commandPath: string[]): IArgParser {
     let currentParser = this.parser;
 
     for (const command of commandPath) {
