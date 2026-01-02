@@ -17,9 +17,9 @@ const cli = new ArgParser({
       ctx.displayHelp();
       return;
     }
-    
+
     console.log("Processing with args:", ctx.args);
-  }
+  },
 });
 ```
 
@@ -37,19 +37,21 @@ import { ArgParser, autoHelpHandler } from "@alcyone-labs/arg-parser";
 
 const cli = new ArgParser({ appName: "main" });
 
-const configCmd = new ArgParser({ 
+const configCmd = new ArgParser({
   appName: "config",
-  handler: autoHelpHandler // Show help for 'main config' if no sub-command is provided
+  handler: autoHelpHandler, // Show help for 'main config' if no sub-command is provided
 });
 
 configCmd.addSubCommand({
   name: "set",
-  handler: async (ctx) => { /* ... */ }
+  handler: async (ctx) => {
+    /* ... */
+  },
 });
 
 cli.addSubCommand({
   name: "config",
-  parser: configCmd
+  parser: configCmd,
 });
 ```
 
@@ -64,7 +66,7 @@ import { ArgParser } from "@alcyone-labs/arg-parser";
 
 const cli = new ArgParser({
   appName: "my-tool",
-  triggerAutoHelpIfNoHandler: true // Enable auto-help globally
+  triggerAutoHelpIfNoHandler: true, // Enable auto-help globally
 });
 
 // Since no handler is defined for the root, running 'my-tool' will show help.
@@ -72,9 +74,9 @@ const cli = new ArgParser({
 cli.addSubCommand({
   name: "setup",
   parser: new ArgParser({
-    appName: "setup"
+    appName: "setup",
     // No handler here either, running 'my-tool setup' will show help for setup.
-  })
+  }),
 });
 ```
 

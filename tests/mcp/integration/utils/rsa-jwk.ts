@@ -9,7 +9,10 @@ function readLen(buf: Buffer, offset: number): { len: number; read: number } {
   return { len, read: 1 + bytes };
 }
 
-export function parsePkcs1PublicDerToModExp(der: Buffer): { n: Buffer; e: Buffer } {
+export function parsePkcs1PublicDerToModExp(der: Buffer): {
+  n: Buffer;
+  e: Buffer;
+} {
   let i = 0;
   if (der[i++] !== 0x30) throw new Error("Not a SEQUENCE");
   const l1 = readLen(der, i);
@@ -30,11 +33,21 @@ export function parsePkcs1PublicDerToModExp(der: Buffer): { n: Buffer; e: Buffer
 }
 
 export function base64Url(buf: Buffer): string {
-  return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return buf
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
 }
 
 export function rsaPublicDerToJwk(der: Buffer, kid: string) {
   const { n, e } = parsePkcs1PublicDerToModExp(der);
-  return { kty: "RSA", use: "sig", alg: "RS256", kid, n: base64Url(n), e: base64Url(e) };
+  return {
+    kty: "RSA",
+    use: "sig",
+    alg: "RS256",
+    kid,
+    n: base64Url(n),
+    e: base64Url(e),
+  };
 }
-

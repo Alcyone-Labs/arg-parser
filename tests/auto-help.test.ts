@@ -1,5 +1,4 @@
-
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ArgParser } from "../src/core/ArgParser";
 import { autoHelpHandler } from "../src/core/ArgParserBase";
 
@@ -9,19 +8,19 @@ describe("Auto Help Features", () => {
       appName: "test",
       autoExit: false,
     });
-    
+
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     parser.setHandler(async (ctx) => {
       ctx.displayHelp();
     });
-    
+
     await parser.parse([]);
-    
+
     expect(consoleSpy).toHaveBeenCalled();
     const helpOutput = consoleSpy.mock.calls.join("");
     expect(helpOutput).toContain("test Help");
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -31,15 +30,15 @@ describe("Auto Help Features", () => {
       autoExit: false,
       handler: autoHelpHandler,
     });
-    
+
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     await parser.parse([]);
-    
+
     expect(consoleSpy).toHaveBeenCalled();
     const helpOutput = consoleSpy.mock.calls.join("");
     expect(helpOutput).toContain("test Help");
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -49,15 +48,15 @@ describe("Auto Help Features", () => {
       autoExit: false,
       triggerAutoHelpIfNoHandler: true,
     });
-    
+
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     await parser.parse([]);
-    
+
     expect(consoleSpy).toHaveBeenCalled();
     const helpOutput = consoleSpy.mock.calls.join("");
     expect(helpOutput).toContain("test Help");
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -67,25 +66,25 @@ describe("Auto Help Features", () => {
       autoExit: false,
       triggerAutoHelpIfNoHandler: true,
     });
-    
+
     const subParser = new ArgParser({
       appName: "sub",
       // No handler
     });
-    
+
     parser.addSubCommand({
       name: "sub",
       parser: subParser,
     });
-    
+
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     await parser.parse(["sub"]);
-    
+
     expect(consoleSpy).toHaveBeenCalled();
     const helpOutput = consoleSpy.mock.calls.join("");
     expect(helpOutput).toContain("main sub Help");
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -97,16 +96,18 @@ describe("Auto Help Features", () => {
       triggerAutoHelpIfNoHandler: true,
       handler: async (ctx) => {
         handlerSpy();
-      }
+      },
     });
-    
+
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    
+
     await parser.parse([]);
-    
+
     expect(handlerSpy).toHaveBeenCalled();
-    expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining("test Help"));
-    
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("test Help"),
+    );
+
     consoleSpy.mockRestore();
   });
 });

@@ -6,8 +6,8 @@
  */
 
 import {
-  createSignal,
   createContext,
+  createSignal,
   useContext,
   type Accessor,
 } from "solid-js";
@@ -16,7 +16,6 @@ import { createComponent } from "@opentui/solid";
 import type { ToastType } from "./types";
 
 export type { ToastType };
-
 
 /**
  * Internal toast state
@@ -74,7 +73,7 @@ export function ToastProvider(props: { children: JSX.Element }): JSX.Element {
 
     // Auto-hide after duration
     hideTimeout = setTimeout(() => {
-      setState(prev => ({ ...prev, visible: false }));
+      setState((prev) => ({ ...prev, visible: false }));
     }, duration);
   };
 
@@ -83,14 +82,18 @@ export function ToastProvider(props: { children: JSX.Element }): JSX.Element {
       clearTimeout(hideTimeout);
       hideTimeout = null;
     }
-    setState(prev => ({ ...prev, visible: false }));
+    setState((prev) => ({ ...prev, visible: false }));
   };
 
   const value: ToastContextValue = {
-    info: (message, duration = DEFAULT_DURATION) => show(message, "info", duration),
-    success: (message, duration = DEFAULT_DURATION) => show(message, "success", duration),
-    error: (message, duration = DEFAULT_DURATION) => show(message, "error", duration),
-    warning: (message, duration = DEFAULT_DURATION) => show(message, "warning", duration),
+    info: (message, duration = DEFAULT_DURATION) =>
+      show(message, "info", duration),
+    success: (message, duration = DEFAULT_DURATION) =>
+      show(message, "success", duration),
+    error: (message, duration = DEFAULT_DURATION) =>
+      show(message, "error", duration),
+    warning: (message, duration = DEFAULT_DURATION) =>
+      show(message, "warning", duration),
     state,
     hide,
   };

@@ -1,6 +1,6 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { ArgParser } from "../src/core/ArgParser";
-import { sanitizeMcpToolName, isValidMcpToolName } from "../src/mcp/mcp-utils";
+import { isValidMcpToolName, sanitizeMcpToolName } from "../src/mcp/mcp-utils";
 
 describe("MCP Tool Name Sanitization", () => {
   describe("sanitizeMcpToolName utility", () => {
@@ -21,9 +21,15 @@ describe("MCP Tool Name Sanitization", () => {
     });
 
     test("should handle empty or invalid input", () => {
-      expect(() => sanitizeMcpToolName("")).toThrow("Tool name must be a non-empty string");
-      expect(() => sanitizeMcpToolName(null as any)).toThrow("Tool name must be a non-empty string");
-      expect(() => sanitizeMcpToolName(undefined as any)).toThrow("Tool name must be a non-empty string");
+      expect(() => sanitizeMcpToolName("")).toThrow(
+        "Tool name must be a non-empty string",
+      );
+      expect(() => sanitizeMcpToolName(null as any)).toThrow(
+        "Tool name must be a non-empty string",
+      );
+      expect(() => sanitizeMcpToolName(undefined as any)).toThrow(
+        "Tool name must be a non-empty string",
+      );
     });
 
     test("should truncate names longer than 64 characters", () => {
@@ -116,7 +122,9 @@ describe("MCP Tool Name Sanitization", () => {
       // Check that warnings were issued (deprecation + sanitization)
       // Note: In test environments, we might only get the sanitization warning
       expect(warnings.length).toBeGreaterThanOrEqual(1);
-      const sanitizationWarning = warnings.find(w => w.includes("test@tool") && w.includes("test_tool"));
+      const sanitizationWarning = warnings.find(
+        (w) => w.includes("test@tool") && w.includes("test_tool"),
+      );
       expect(sanitizationWarning).toBeDefined();
 
       // Check that the tool was stored with sanitized name
@@ -183,8 +191,8 @@ describe("MCP Tool Name Sanitization", () => {
       console.warn = originalWarn;
 
       const mcpTools = parser.toMcpTools();
-      const testTool = mcpTools.find(t => t.name === "test_tool_name");
-      
+      const testTool = mcpTools.find((t) => t.name === "test_tool_name");
+
       expect(testTool).toBeDefined();
       expect(testTool?.name).toBe("test_tool_name");
       expect(testTool?.description).toBe("A test tool");

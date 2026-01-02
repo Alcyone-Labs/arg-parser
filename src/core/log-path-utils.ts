@@ -89,7 +89,7 @@ export function resolveLogPath(
     // First, substitute any DXT variables in the path
     const pathWithVariables = DxtPathResolver.substituteVariables(
       logPath,
-      DxtPathResolver.detectContext()
+      DxtPathResolver.detectContext(),
     );
     const normalizedPath = normalizePath(pathWithVariables);
 
@@ -123,7 +123,7 @@ export function resolveLogPath(
   // Substitute DXT variables in the path
   const pathWithVariables = DxtPathResolver.substituteVariables(
     logFilePath,
-    DxtPathResolver.detectContext()
+    DxtPathResolver.detectContext(),
   );
   const normalizedPath = normalizePath(pathWithVariables);
 
@@ -133,7 +133,7 @@ export function resolveLogPath(
         // Substitute DXT variables in basePath as well
         const resolvedBasePath = DxtPathResolver.substituteVariables(
           basePath,
-          DxtPathResolver.detectContext()
+          DxtPathResolver.detectContext(),
         );
         return path.resolve(resolvedBasePath, normalizedPath);
       }

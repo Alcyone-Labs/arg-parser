@@ -10,4 +10,3 @@ export MY_JWT_SECRET=change_me
 bun examples/streamable-http/secure-mcp.ts --s-mcp-serve
 bun examples/streamable-http/bearer-mcp.ts --s-mcp-serve
 ```
-

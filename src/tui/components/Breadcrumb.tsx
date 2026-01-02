@@ -1,11 +1,11 @@
 /**
  * Breadcrumb Component
- * 
+ *
  * Displays a navigation path with separator icons.
  */
 
-import type { JSX } from "@opentui/solid";
 import { For } from "solid-js";
+import type { JSX } from "@opentui/solid";
 import { useTheme } from "../themes";
 
 export interface BreadcrumbProps {
@@ -21,7 +21,7 @@ export interface BreadcrumbProps {
 
 /**
  * Breadcrumb navigation component.
- * 
+ *
  * @example
  * ```tsx
  * <Breadcrumb segments={["Home", "Category", selectedItem().name]} />
@@ -30,7 +30,7 @@ export interface BreadcrumbProps {
 export function Breadcrumb(props: BreadcrumbProps): JSX.Element {
   const { current: theme } = useTheme();
   const separator = props.separator ?? "›";
-  
+
   const accentColor = () => props.accentColor ?? theme().colors.accent;
   const mutedColor = () => props.mutedColor ?? theme().colors.muted;
 
@@ -40,7 +40,9 @@ export function Breadcrumb(props: BreadcrumbProps): JSX.Element {
         {(segment, idx) => (
           <>
             {idx() > 0 && <text color={mutedColor()}> {separator} </text>}
-            <text color={accentColor()} bold>{segment}</text>
+            <text color={accentColor()} bold>
+              {segment}
+            </text>
           </>
         )}
       </For>

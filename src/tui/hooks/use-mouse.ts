@@ -1,11 +1,15 @@
 /**
  * Mouse Hook
- * 
+ *
  * Enables mouse wheel detection for TUI applications.
  */
 
-import { onMount, onCleanup } from "solid-js";
-import { enableMouseReporting, disableMouseReporting, parseMouseScroll } from "../tty";
+import { onCleanup, onMount } from "solid-js";
+import {
+  disableMouseReporting,
+  enableMouseReporting,
+  parseMouseScroll,
+} from "../tty";
 
 export interface UseMouseOptions {
   /** Callback when mouse wheel scrolls. Delta is negative for up, positive for down. */
@@ -16,18 +20,18 @@ export interface UseMouseOptions {
 
 /**
  * Enable mouse wheel support in a TUI component.
- * 
+ *
  * Automatically enables mouse reporting on mount and cleans up on unmount.
- * 
+ *
  * @example
  * ```tsx
  * function App() {
  *   const [idx, setIdx] = createSignal(0);
- *   
+ *
  *   useMouse({
  *     onScroll: (delta) => setIdx(i => Math.max(0, i + delta))
  *   });
- *   
+ *
  *   return <box>...</box>;
  * }
  * ```
@@ -44,7 +48,7 @@ export function useMouse(options: UseMouseOptions = {}): void {
 
   onMount(() => {
     enableMouseReporting();
-    
+
     if (process.stdin.isTTY) {
       process.stdin.setRawMode(true);
     }

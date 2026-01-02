@@ -57,7 +57,9 @@ export class ArgParserFuzzyTester {
     const results: TestResult[] = [];
 
     if (this.options.verbose) {
-      this.parser.logger.info(`Discovered ${commandPaths.length} command paths:`);
+      this.parser.logger.info(
+        `Discovered ${commandPaths.length} command paths:`,
+      );
       commandPaths.forEach((path) =>
         this.parser.logger.info(`  ${path.join(" ") || "(root)"}`),
       );
@@ -136,7 +138,9 @@ export class ArgParserFuzzyTester {
     const flags = this.getFlags(targetParser);
 
     if (this.options.verbose) {
-      this.parser.logger.info(`Testing command path: ${commandPath.join(" ") || "(root)"}`);
+      this.parser.logger.info(
+        `Testing command path: ${commandPath.join(" ") || "(root)"}`,
+      );
     }
 
     // Test valid combinations

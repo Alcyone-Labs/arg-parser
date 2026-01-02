@@ -1,12 +1,11 @@
-
-import { Label } from "../src/ui/components/Label";
 import { Button } from "../src/ui/components/Button";
 import { Card } from "../src/ui/components/Card";
+import { Label } from "../src/ui/components/Label";
 import { ThemeManager } from "../src/ui/Theme";
 
 // Mock resize for testing
 function mockResize(comp: any, width: number, height: number) {
-    comp.resize(0, 0, width, height);
+  comp.resize(0, 0, width, height);
 }
 
 console.log("--- Label Verification ---");

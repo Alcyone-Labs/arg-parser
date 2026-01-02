@@ -7,7 +7,6 @@
 
 import type { JSX } from "solid-js";
 
-
 /**
  * Props for MasterDetailLayout
  */
@@ -49,14 +48,16 @@ function parseWidth(width: number | string | undefined): number | string {
  * />
  * ```
  */
-export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element {
+export function MasterDetailLayout(
+  props: MasterDetailLayoutProps,
+): JSX.Element {
   const masterWidth = parseWidth(props.masterWidth);
   const gap = props.gap ?? 1;
   const showDivider = props.showDivider ?? true;
 
   // Build the layout using OpenTUI's box elements with Yoga flexbox
   // This is a conceptual implementation - actual element names depend on @opentui/solid catalog
-  
+
   return {
     type: "box",
     props: {

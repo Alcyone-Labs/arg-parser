@@ -5,12 +5,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { z } from "zod";
 import { ArgParser } from "../../../src/core/ArgParser.js";
-import type {
-  McpResourceConfig,
-} from "../../../src/mcp/mcp-resources.js";
-import type {
-  McpPromptConfig,
-} from "../../../src/mcp/mcp-prompts.js";
+import type { McpPromptConfig } from "../../../src/mcp/mcp-prompts.js";
+import type { McpResourceConfig } from "../../../src/mcp/mcp-resources.js";
 
 describe("ArgParser MCP Integration", () => {
   let parser: ArgParser;
@@ -135,11 +131,17 @@ describe("ArgParser MCP Integration", () => {
         description: "Test prompt for Zod v4 compatibility with MCP SDK",
         argsSchema: z.object({
           message: z.string().describe("Message to process"),
-          format: z.enum(["json", "text", "markdown"]).optional().describe("Output format"),
-          metadata: z.object({
-            author: z.string(),
-            timestamp: z.number().optional(),
-          }).optional().describe("Optional metadata"),
+          format: z
+            .enum(["json", "text", "markdown"])
+            .optional()
+            .describe("Output format"),
+          metadata: z
+            .object({
+              author: z.string(),
+              timestamp: z.number().optional(),
+            })
+            .optional()
+            .describe("Optional metadata"),
         }),
         handler: async (args: any) => ({
           description: `Processing message in ${args.format || "text"} format`,

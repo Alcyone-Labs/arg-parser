@@ -63,6 +63,7 @@ bun index.ts --s-mcp-serve
 ```
 
 The server will be available on:
+
 - **stdio**: Standard input/output transport
 - **SSE**: Server-Sent Events on `http://localhost:3003`
 
@@ -183,7 +184,10 @@ This server can be integrated with Claude Desktop or other MCP clients. Add to y
   "mcpServers": {
     "onnx-entity-detector": {
       "command": "bun",
-      "args": ["path/to/examples/dxt-bundling/onnx/src/index.ts", "--s-mcp-serve"]
+      "args": [
+        "path/to/examples/dxt-bundling/onnx/src/index.ts",
+        "--s-mcp-serve"
+      ]
     }
   }
 }
@@ -191,9 +195,9 @@ This server can be integrated with Claude Desktop or other MCP clients. Add to y
 
 ## Bundling Comparison
 
-| Scenario | Bundle Method | Use Case |
-|----------|---------------|----------|
-| Pure JavaScript | Standard bundling | Web apps, simple Node.js tools |
+| Scenario            | Bundle Method           | Use Case                                   |
+| ------------------- | ----------------------- | ------------------------------------------ |
+| Pure JavaScript     | Standard bundling       | Web apps, simple Node.js tools             |
 | Native Dependencies | `--s-with-node-modules` | ONNX, native modules, complex dependencies |
 
 ## Performance Notes
@@ -208,6 +212,7 @@ This server can be integrated with Claude Desktop or other MCP clients. Add to y
 ### Model Loading Issues
 
 If model loading fails, ensure:
+
 - Internet connection is available for initial download
 - Sufficient disk space for model cache (~100MB)
 - Node.js version is >=18.0.0
@@ -215,6 +220,7 @@ If model loading fails, ensure:
 ### Native Dependency Issues
 
 If you encounter native dependency issues:
+
 - Use `npm install` for clean installation (npm uses flat structure by default)
 - Ensure platform compatibility (x64 architecture recommended)
 - Check that ONNX Runtime supports your platform
@@ -222,6 +228,7 @@ If you encounter native dependency issues:
 ### DXT Building Issues
 
 For DXT bundle creation problems:
+
 - Verify installation: `ls node_modules` (should show flat structure)
 - Ensure `--s-with-node-modules` flag is used
 - Check available disk space for complete node_modules bundling

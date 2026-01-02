@@ -234,18 +234,26 @@ describe("Flag Types (Consolidated)", () => {
 
       // Get JSON schema types for all flags
       const stringLiteralFlag = flags.find((f) => f.name === "stringLiteral")!;
-      const stringConstructorFlag = flags.find((f) => f.name === "stringConstructor")!;
+      const stringConstructorFlag = flags.find(
+        (f) => f.name === "stringConstructor",
+      )!;
       const numberLiteralFlag = flags.find((f) => f.name === "numberLiteral")!;
-      const numberConstructorFlag = flags.find((f) => f.name === "numberConstructor")!;
+      const numberConstructorFlag = flags.find(
+        (f) => f.name === "numberConstructor",
+      )!;
       const customParserFlag = flags.find((f) => f.name === "customParser")!;
 
       // Both string formats should return "string"
       expect(getJsonSchemaTypeFromFlag(stringLiteralFlag.type)).toBe("string");
-      expect(getJsonSchemaTypeFromFlag(stringConstructorFlag.type)).toBe("string");
+      expect(getJsonSchemaTypeFromFlag(stringConstructorFlag.type)).toBe(
+        "string",
+      );
 
       // Both number formats should return "number"
       expect(getJsonSchemaTypeFromFlag(numberLiteralFlag.type)).toBe("number");
-      expect(getJsonSchemaTypeFromFlag(numberConstructorFlag.type)).toBe("number");
+      expect(getJsonSchemaTypeFromFlag(numberConstructorFlag.type)).toBe(
+        "number",
+      );
 
       // Custom parser should default to "string"
       expect(getJsonSchemaTypeFromFlag(customParserFlag.type)).toBe("string");
@@ -356,7 +364,11 @@ describe("Flag Types (Consolidated)", () => {
       expect(schema.required).not.toContain("enumString");
 
       // Check enum handling
-      expect(schema.properties.enumString.enum).toEqual(["option1", "option2", "option3"]);
+      expect(schema.properties.enumString.enum).toEqual([
+        "option1",
+        "option2",
+        "option3",
+      ]);
       expect(schema.properties.enumString.default).toBe("option1");
 
       // Check default values

@@ -5,7 +5,7 @@
 /**
  * Sanitizes a tool name to comply with MCP naming requirements.
  * MCP tool names must match the pattern: ^[a-zA-Z0-9_-]{1,64}$
- * 
+ *
  * @param name The original tool name
  * @returns A sanitized tool name that complies with MCP requirements
  */
@@ -33,7 +33,7 @@ export function sanitizeMcpToolName(name: string): string {
 /**
  * Validates if a tool name complies with MCP naming requirements.
  * MCP tool names must match the pattern: ^[a-zA-Z0-9_-]{1,64}$
- * 
+ *
  * @param name The tool name to validate
  * @returns True if the name is valid, false otherwise
  */
@@ -41,7 +41,7 @@ export function isValidMcpToolName(name: string): boolean {
   if (!name || typeof name !== "string") {
     return false;
   }
-  
+
   const mcpNamePattern = /^[a-zA-Z0-9_-]{1,64}$/;
   return mcpNamePattern.test(name);
 }

@@ -101,8 +101,9 @@ describe("TSDown Detection Integration", () => {
     fs.writeFileSync(path.join(tempDir, "dist-456.js"), "// dist");
 
     // Create mock package.json in current directory for the test
-    const originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
-    if (typeof process !== 'undefined') {
+    const originalCwd =
+      typeof process !== "undefined" ? process.cwd() : "/test";
+    if (typeof process !== "undefined") {
       process.chdir(tempDir);
     }
 
@@ -138,7 +139,7 @@ describe("TSDown Detection Integration", () => {
         "${__dirname}/test-app.js",
       );
     } finally {
-      if (typeof process !== 'undefined') {
+      if (typeof process !== "undefined") {
         process.chdir(originalCwd);
       }
     }
@@ -152,8 +153,9 @@ describe("TSDown Detection Integration", () => {
     // Don't create any JS output files - force fallback
 
     // Create mock package.json
-    const originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
-    if (typeof process !== 'undefined') {
+    const originalCwd =
+      typeof process !== "undefined" ? process.cwd() : "/test";
+    if (typeof process !== "undefined") {
       process.chdir(tempDir);
     }
 
@@ -183,7 +185,7 @@ describe("TSDown Detection Integration", () => {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
       expect(manifest.server.entry_point).toBe("fallback-test.js"); // String replacement fallback
     } finally {
-      if (typeof process !== 'undefined') {
+      if (typeof process !== "undefined") {
         process.chdir(originalCwd);
       }
     }

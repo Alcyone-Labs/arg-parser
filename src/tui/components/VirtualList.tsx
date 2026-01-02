@@ -1,12 +1,12 @@
 /**
  * Virtual List Component
- * 
+ *
  * Renders a scrollable list with virtual rendering for performance.
  * Integrates with the framework's scroll and theme systems.
  */
 
-import type { JSX, Accessor } from "@opentui/solid";
-import { createSignal, createMemo, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import type { Accessor, JSX } from "@opentui/solid";
 import { useTheme } from "../themes";
 
 // ============================================================================
@@ -59,7 +59,7 @@ function unwrap<T>(value: T | Accessor<T>): T {
 
 /**
  * Virtual List component with built-in scrolling.
- * 
+ *
  * @example
  * ```tsx
  * <VirtualList
@@ -132,9 +132,13 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
     const label = props.getLabel ? props.getLabel(item) : String(item);
     const t = theme();
     return (
-      <box height={1} backgroundColor={selected ? t.colors.selection : undefined}>
+      <box
+        height={1}
+        backgroundColor={selected ? t.colors.selection : undefined}
+      >
         <text color={selected ? t.colors.background : t.colors.text}>
-          {showIndicator ? (selected ? "› " : "  ") : ""}{label}
+          {showIndicator ? (selected ? "› " : "  ") : ""}
+          {label}
         </text>
       </box>
     );
@@ -150,7 +154,7 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
         </text>
       </Show>
       <For each={visibleItems()}>
-        {({ item, globalIndex }) => 
+        {({ item, globalIndex }) =>
           renderItem(item, globalIndex, globalIndex === selectedIndex())
         }
       </For>
@@ -165,7 +169,7 @@ export function createVirtualListController<T>(
   items: Accessor<T[]>,
   selectedIndex: Accessor<number>,
   setSelectedIndex: (idx: number) => void,
-  viewportHeight: Accessor<number>
+  viewportHeight: Accessor<number>,
 ): VirtualListResult {
   const [scrollOffset, setScrollOffset] = createSignal(0);
 

@@ -25,16 +25,16 @@ describe("MCP Log Path Configuration", () => {
     for (const server of createdServers) {
       try {
         // Try to close the server if it has a close method
-        if (server && typeof server.close === 'function') {
+        if (server && typeof server.close === "function") {
           await server.close();
         }
         // If it has a lifecycle manager, trigger shutdown
         if (server && server._lifecycleManager) {
-          await server._lifecycleManager.handleShutdown('server_shutdown');
+          await server._lifecycleManager.handleShutdown("server_shutdown");
         }
       } catch (error) {
         // Ignore cleanup errors in tests
-        console.warn('Error cleaning up MCP server:', error);
+        console.warn("Error cleaning up MCP server:", error);
       }
     }
     createdServers.length = 0; // Clear the array
@@ -228,9 +228,8 @@ describe("MCP Log Path Configuration", () => {
       });
 
       // Import the createMcpLogger function to verify it accepts logPath parameter
-      const { createMcpLogger } = await import(
-        "@alcyone-labs/simple-mcp-logger"
-      );
+      const { createMcpLogger } =
+        await import("@alcyone-labs/simple-mcp-logger");
 
       // Verify that createMcpLogger can accept a second parameter for log path
       expect(() => {

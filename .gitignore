@@ -9,6 +9,8 @@ docs/MCP/
 examples/claude/
 #
 docs/@alcyone-labs/
+*.log
+tests/fixtures/
 
 # Keep icons
 !docs/MCP/icons

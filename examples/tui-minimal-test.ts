@@ -1,6 +1,6 @@
 /**
  * Minimal TUI Test
- * 
+ *
  * Simple test to verify OpenTUI rendering works.
  */
 
@@ -25,10 +25,12 @@ render(() => ({
       },
     },
   ],
-})).then(() => {
-  console.log("Render completed");
-}).catch((err) => {
-  console.error("Render error:", err);
-});
+}))
+  .then(() => {
+    console.log("Render completed");
+  })
+  .catch((err) => {
+    console.error("Render error:", err);
+  });
 
 console.log("Script executed");

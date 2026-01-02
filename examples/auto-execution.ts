@@ -3,7 +3,6 @@
  * Example demonstrating the new auto-execution feature
  * This eliminates the need for boilerplate code to check if the script is being run directly
  */
-
 import { ArgParser } from "../src/index.js";
 
 // Create a simple CLI
@@ -36,20 +35,26 @@ const cli = ArgParser.withMcp({
 // with a more robust solution that works in sandboxes and different environments
 
 console.log("📝 This script demonstrates auto-execution:");
-console.log("   - Run directly: bun examples/auto-execution.ts --name Alice --count 3");
+console.log(
+  "   - Run directly: bun examples/auto-execution.ts --name Alice --count 3",
+);
 console.log("   - Import: import('./auto-execution.ts') - won't execute");
 console.log("");
 
 // 🚀 Canonical usage: parse with auto-execution detection via importMetaUrl
-await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
-  console.error(
-    "Fatal error:",
-    error instanceof Error ? error.message : String(error),
-  );
-  process.exit(1);
-});
+await cli
+  .parse(undefined, { importMetaUrl: import.meta.url })
+  .catch((error) => {
+    console.error(
+      "Fatal error:",
+      error instanceof Error ? error.message : String(error),
+    );
+    process.exit(1);
+  });
 
-console.log("✅ Script completed - if you see this, the script was imported, not executed directly");
+console.log(
+  "✅ Script completed - if you see this, the script was imported, not executed directly",
+);
 
 // Export for potential importing
 export { cli };

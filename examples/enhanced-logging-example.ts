@@ -4,16 +4,15 @@
  * Example demonstrating the new enhanced logging configuration options
  * for MCP servers using @alcyone-labs/simple-mcp-logger
  */
-
 import { ArgParser, type McpLoggerOptions } from "@alcyone-labs/arg-parser";
 
 // Example 1: Using the new 'log' property with full options (with type safety)
 // The McpLoggerOptions type ensures compatibility with @alcyone-labs/simple-mcp-logger
 const logConfig: McpLoggerOptions = {
-  level: "debug",        // Captures debug, info, warn, error
+  level: "debug", // Captures debug, info, warn, error
   logToFile: "./examples/logs/enhanced-comprehensive.log",
   prefix: "ComprehensiveServer",
-  mcpMode: true          // MCP compliant (default)
+  mcpMode: true, // MCP compliant (default)
 };
 
 const comprehensiveLoggingParser = ArgParser.withMcp({
@@ -26,7 +25,7 @@ const comprehensiveLoggingParser = ArgParser.withMcp({
     console.debug("This will be captured at debug level");
     console.warn("This is a warning");
     console.error("This is an error");
-    
+
     return {
       success: true,
       message: "Command completed successfully",
@@ -41,13 +40,13 @@ const comprehensiveLoggingParser = ArgParser.withMcp({
     },
     defaultTransport: { type: "stdio" },
     // NEW: Enhanced logging configuration with full options (using type-safe config)
-    log: logConfig
+    log: logConfig,
   },
 });
 
 // Example 2: Using the new 'log' property with simple string (backward compatible)
 const simpleLoggingParser = ArgParser.withMcp({
-  appName: "Simple Logging Example", 
+  appName: "Simple Logging Example",
   appCommandName: "simple-log-example",
   description: "Demonstrates simple string logging configuration",
   handler: async (ctx) => {
@@ -61,14 +60,14 @@ const simpleLoggingParser = ArgParser.withMcp({
     },
     defaultTransport: { type: "stdio" },
     // NEW: Simple string path (equivalent to logPath)
-    log: "./examples/logs/enhanced-simple.log"
+    log: "./examples/logs/enhanced-simple.log",
   },
 });
 
 // Example 3: Legacy logPath still works (backward compatibility)
 const legacyLoggingParser = ArgParser.withMcp({
   appName: "Legacy Logging Example",
-  appCommandName: "legacy-log-example", 
+  appCommandName: "legacy-log-example",
   description: "Demonstrates legacy logPath configuration",
   handler: async (ctx) => {
     console.log("Legacy handler executed:", ctx.args);
@@ -81,7 +80,7 @@ const legacyLoggingParser = ArgParser.withMcp({
     },
     defaultTransport: { type: "stdio" },
     // LEGACY: Still works but deprecated
-    logPath: "./examples/logs/enhanced-legacy.log"
+    logPath: "./examples/logs/enhanced-legacy.log",
   },
 });
 
@@ -102,7 +101,7 @@ const mergedLoggingParser = ArgParser.withMcp({
     defaultTransport: { type: "stdio" },
     // log provides logger configuration
     log: {
-      level: "debug",        // Captures all log levels
+      level: "debug", // Captures all log levels
       prefix: "MergedServer",
       mcpMode: true,
       // No logToFile here - let logPath handle the path
@@ -110,9 +109,9 @@ const mergedLoggingParser = ArgParser.withMcp({
     // logPath provides flexible path resolution
     logPath: {
       path: "./examples/logs/enhanced-merged.log",
-      relativeTo: "entry",   // Relative to entry point
+      relativeTo: "entry", // Relative to entry point
       // Could also use "cwd" or "absolute"
-    }
+    },
   },
 });
 
@@ -134,12 +133,12 @@ const pathPriorityParser = ArgParser.withMcp({
     log: {
       level: "info",
       logToFile: "./examples/logs/will-be-overridden.log", // This path will be overridden
-      prefix: "PathPriorityServer"
+      prefix: "PathPriorityServer",
     },
     logPath: {
       path: "./examples/logs/enhanced-path-priority.log", // This takes precedence
-      relativeTo: "cwd",     // Relative to current working directory
-    }
+      relativeTo: "cwd", // Relative to current working directory
+    },
   },
 });
 
@@ -153,24 +152,24 @@ comprehensiveLoggingParser.addTool({
       options: ["--message", "-m"],
       type: "string",
       description: "Message to log",
-      defaultValue: "Hello, enhanced logging!"
-    }
+      defaultValue: "Hello, enhanced logging!",
+    },
   ],
   handler: async (ctx) => {
     const message = ctx.args.message;
-    
+
     console.debug(`Debug: Processing message: ${message}`);
     console.info(`Info: Tool execution started`);
     console.warn(`Warning: This is a test warning`);
     console.log(`Log: Processing complete`);
-    
+
     return {
       success: true,
       message: `Processed: ${message}`,
       loggingLevels: ["debug", "info", "warn", "log"],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-  }
+  },
 });
 
 // Export the parsers for testing
@@ -179,7 +178,7 @@ export {
   simpleLoggingParser,
   legacyLoggingParser,
   mergedLoggingParser,
-  pathPriorityParser
+  pathPriorityParser,
 };
 
 // If run directly, use the comprehensive logging parser

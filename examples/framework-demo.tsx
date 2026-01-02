@@ -1,29 +1,29 @@
 /**
  * Framework Demo - Simplified TUI using the new framework components
- * 
+ *
  * Demonstrates the power of the integrated framework:
  * - TuiProvider handles mouse/resize/cleanup automatically
  * - VirtualList handles scrolling
  * - MasterDetail provides layout
  * - Theme.from().extend() for custom themes
- * 
+ *
  * Compare this to aquaria-trace-viewer.tsx (~400 lines) - this is ~100 lines!
- * 
+ *
  * Run with: bun examples/framework-demo.tsx
  */
 
-import { render, useKeyboard } from "@opentui/solid";
 import { createSignal, For } from "solid-js";
-import { 
-  TuiProvider,
-  useTui,
-  useTheme,
-  MasterDetail,
-  VirtualList,
-  createVirtualListController,
-  THEMES,
-  Theme,
+import { render, useKeyboard } from "@opentui/solid";
+import {
   cleanupTerminal,
+  createVirtualListController,
+  MasterDetail,
+  Theme,
+  THEMES,
+  TuiProvider,
+  useTheme,
+  useTui,
+  VirtualList,
 } from "../src/tui";
 
 // ============================================================================
@@ -54,12 +54,25 @@ function ItemDetails(props: { item: Item }) {
 
   return (
     <>
-      <text bold color={t().colors.accent}>{props.item.name}</text>
-      <text color={t().colors.muted} marginBottom={1}>ID: {props.item.id}</text>
-      <text color={t().colors.text} marginTop={1}>{props.item.description}</text>
-      <box borderStyle="single" borderColor={t().colors.border} padding={1} marginTop={2}>
+      <text bold color={t().colors.accent}>
+        {props.item.name}
+      </text>
+      <text color={t().colors.muted} marginBottom={1}>
+        ID: {props.item.id}
+      </text>
+      <text color={t().colors.text} marginTop={1}>
+        {props.item.description}
+      </text>
+      <box
+        borderStyle="single"
+        borderColor={t().colors.border}
+        padding={1}
+        marginTop={2}
+      >
         <text color={t().colors.text}>Count: </text>
-        <text bold color={t().colors.accent}>{props.item.count}</text>
+        <text bold color={t().colors.accent}>
+          {props.item.count}
+        </text>
       </box>
     </>
   );
@@ -72,15 +85,15 @@ function ItemDetails(props: { item: Item }) {
 function App() {
   const { viewportHeight, exit } = useTui();
   const { current: theme, cycle: cycleTheme } = useTheme();
-  
+
   const [selectedIdx, setSelectedIdx] = createSignal(0);
-  
+
   // Create list controller for navigation
   const list = createVirtualListController(
     () => ITEMS,
     selectedIdx,
     setSelectedIdx,
-    viewportHeight
+    viewportHeight,
   );
 
   // Keyboard navigation
@@ -109,9 +122,7 @@ function App() {
           getLabel={(item) => item.name}
         />
       }
-      detail={
-        <ItemDetails item={selectedItem()} />
-      }
+      detail={<ItemDetails item={selectedItem()} />}
     />
   );
 }
@@ -133,5 +144,5 @@ render(
       <App />
     </TuiProvider>
   ),
-  { onDestroy: cleanupTerminal }
+  { onDestroy: cleanupTerminal },
 );

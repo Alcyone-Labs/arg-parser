@@ -10,8 +10,8 @@ describe("Working Directory Management", () => {
 
   beforeEach(async () => {
     // Enable optional config plugins (TOML, YAML) for testing
-    await import("../../src/config/plugins/ConfigPluginRegistry.ts").then((mod) =>
-      mod.enableOptionalConfigPluginsAsync(),
+    await import("../../src/config/plugins/ConfigPluginRegistry.ts").then(
+      (mod) => mod.enableOptionalConfigPluginsAsync(),
     );
 
     // Save original cwd
@@ -84,7 +84,7 @@ describe("Working Directory Management", () => {
       // Change to project root first so relative path resolution works from there
       const projectRoot = path.resolve(__dirname, "../..");
       process.chdir(projectRoot);
-      
+
       const parser = new ArgParser({
         appName: "Test CLI",
         handler: (ctx) => ({ cwd: process.cwd() }),
@@ -381,7 +381,7 @@ describe("Working Directory Management", () => {
 
       // Change to testDir so env file is found relative to cwd
       process.chdir(testDir);
-      
+
       const result = await parser.parse([
         "--s-with-env",
         "config.env", // Relative to current cwd

@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { ArgParser } from "../../src/core/ArgParser";
 import { zodDxtOptionsSchema, type IDxtOptions } from "../../src/core/types";
 import { DxtGenerator } from "../../src/dxt/DxtGenerator";
@@ -99,7 +99,7 @@ describe("DXT Options Validation", () => {
       };
 
       expect(() => zodDxtOptionsSchema.parse(invalidOptions)).toThrow(
-        "Invalid dxtOptions: min/max can only be used with type 'number'"
+        "Invalid dxtOptions: min/max can only be used with type 'number'",
       );
     });
 
@@ -111,7 +111,7 @@ describe("DXT Options Validation", () => {
       };
 
       expect(() => zodDxtOptionsSchema.parse(invalidOptions)).toThrow(
-        "min must be <= max"
+        "min must be <= max",
       );
     });
 
@@ -332,7 +332,8 @@ describe("DXT Options Validation", () => {
       expect(userConfig.API_ENDPOINTS).toEqual({
         type: "string",
         title: "API Endpoints",
-        description: "API endpoints to monitor (default: https://api.example.com)",
+        description:
+          "API endpoints to monitor (default: https://api.example.com)",
         required: false,
         sensitive: true,
         multiple: true,

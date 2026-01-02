@@ -6,7 +6,7 @@ export interface ITheme {
   muted: (str: string) => string;
   accent: (str: string) => string;
   highlight: (str: string) => string;
-  
+
   // Status Colors
   success: (str: string) => string;
   warning: (str: string) => string;
@@ -18,11 +18,12 @@ export interface ITheme {
   scrollbarTrack: (str: string) => string;
 }
 
-// Helper to create simple chalk wrapper if needed, 
+// Helper to create simple chalk wrapper if needed,
 // strictly speaking our simple-chalk returns strings directly so we assume these are functions returning strings.
 
 export const Themes: Record<string, ITheme> = {
-  Default: { // Dark Mode
+  Default: {
+    // Dark Mode
     base: chalk.white,
     muted: chalk.gray,
     accent: chalk.cyan,
@@ -34,7 +35,8 @@ export const Themes: Record<string, ITheme> = {
     scrollbarThumb: chalk.white,
     scrollbarTrack: chalk.gray,
   },
-  Light: { // "Ocean" theme (High contrast on dark)
+  Light: {
+    // "Ocean" theme (High contrast on dark)
     base: chalk.white,
     muted: chalk.gray,
     accent: chalk.cyan,
@@ -57,23 +59,23 @@ export const Themes: Record<string, ITheme> = {
     border: chalk.gray,
     scrollbarThumb: chalk.magenta,
     scrollbarTrack: chalk.gray,
-  }
+  },
 };
 
 export class ThemeManager {
-    private static _current: ITheme = Themes["Default"];
+  private static _current: ITheme = Themes["Default"];
 
-    public static get current(): ITheme {
-        return this._current;
-    }
+  public static get current(): ITheme {
+    return this._current;
+  }
 
-    public static setTheme(name: keyof typeof Themes) {
-        if (Themes[name]) {
-            this._current = Themes[name];
-        }
+  public static setTheme(name: keyof typeof Themes) {
+    if (Themes[name]) {
+      this._current = Themes[name];
     }
-    
-    public static setCustomTheme(theme: ITheme) {
-        this._current = theme;
-    }
+  }
+
+  public static setCustomTheme(theme: ITheme) {
+    this._current = theme;
+  }
 }

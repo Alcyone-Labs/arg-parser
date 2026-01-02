@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, expect, test } from "vitest";
 import { ArgParser, type McpLoggerOptions } from "../../src";
 
 describe("Enhanced MCP Logging Configuration", () => {
@@ -76,7 +76,7 @@ describe("Enhanced MCP Logging Configuration", () => {
     const config = parser.getMcpServerConfig();
     expect(config?.log).toBeDefined();
     expect(config?.logPath).toBeDefined(); // Still present but should be ignored
-    
+
     // The log property should take precedence
     if (typeof config?.log === "object") {
       expect(config.log.logToFile).toBe("./logs/priority-log.log");
@@ -103,13 +103,13 @@ describe("Enhanced MCP Logging Configuration", () => {
   test("should handle all supported log levels", () => {
     const levels: Array<McpLoggerOptions["level"]> = [
       "debug",
-      "info", 
+      "info",
       "warn",
       "error",
-      "silent"
+      "silent",
     ];
 
-    levels.forEach(level => {
+    levels.forEach((level) => {
       expect(() => {
         ArgParser.withMcp({
           appName: `Test ${level} Logging`,

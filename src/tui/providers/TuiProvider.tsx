@@ -1,31 +1,38 @@
 /**
  * TUI Provider
- * 
+ *
  * Unified provider for TUI applications that handles:
  * - Theme context
- * - Shortcut bindings  
+ * - Shortcut bindings
  * - Toast notifications
  * - Mouse wheel events
  * - Terminal resize
  * - TTY cleanup on exit
- * 
+ *
  * This is the recommended way to wrap TUI applications.
  */
 
-import { createSignal, createContext, useContext, onMount, onCleanup, type Accessor, type JSX } from "solid-js";
+import {
+  createContext,
+  createSignal,
+  onCleanup,
+  onMount,
+  useContext,
+  type Accessor,
+  type JSX,
+} from "solid-js";
 import { createComponent } from "@opentui/solid";
-import { ThemeProvider, THEMES, type TuiTheme } from "../themes";
 import { ShortcutProvider, type ShortcutBinding } from "../shortcuts";
+import { ThemeProvider, THEMES, type TuiTheme } from "../themes";
 import { ToastProvider } from "../toast";
-import { 
-  enableMouseReporting, 
-  disableMouseReporting, 
-  parseMouseScroll,
+import {
   clearScreen,
+  disableMouseReporting,
+  enableMouseReporting,
+  parseMouseScroll,
   resetAttributes,
   restoreStdin,
 } from "../tty";
-
 
 // ============================================================================
 // Types
@@ -63,7 +70,7 @@ const TuiContext = createContext<TuiContextValue>();
 
 /**
  * Hook to access the TUI context.
- * 
+ *
  * @example
  * ```tsx
  * function MyComponent() {
@@ -86,25 +93,25 @@ export function useTui(): TuiContextValue {
 
 /**
  * Unified TUI Provider.
- * 
+ *
  * Wraps your application with theme, shortcuts, toast, and mouse/resize handling.
  * Automatically cleans up TTY on exit.
- * 
+ *
  * @example
  * ```tsx
  * import { TuiProvider, useTui, useTheme } from "@alcyone-labs/arg-parser/tui";
- * 
+ *
  * function App() {
  *   const { viewportHeight } = useTui();
  *   const { current: theme } = useTheme();
- *   
+ *
  *   return (
  *     <box backgroundColor={theme().colors.background}>
  *       <text>Viewport: {viewportHeight()} rows</text>
  *     </box>
  *   );
  * }
- * 
+ *
  * <TuiProvider
  *   theme="dark"
  *   shortcuts={[{ key: "q", action: () => process.exit(0) }]}
@@ -120,10 +127,10 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
 
   // Viewport dimensions
   const [viewportHeight, setViewportHeight] = createSignal(
-    Math.max(10, (process.stdout.rows || 24) - reservedRows)
+    Math.max(10, (process.stdout.rows || 24) - reservedRows),
   );
   const [viewportWidth, setViewportWidth] = createSignal(
-    process.stdout.columns || 80
+    process.stdout.columns || 80,
   );
 
   // Cleanup function
@@ -159,16 +166,16 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
   onMount(() => {
     // Enable mouse wheel tracking
     enableMouseReporting();
-    
+
     // Set raw mode for input handling
     if (process.stdin.isTTY && process.stdin.setRawMode) {
       process.stdin.setRawMode(true);
     }
-    
+
     // Register event handlers
     process.stdout.on("resize", handleResize);
     process.stdin.on("data", handleInput);
-    
+
     // Handle graceful shutdown signals
     process.on("SIGINT", () => exit(0));
     process.on("SIGTERM", () => exit(0));
@@ -188,7 +195,10 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
   };
 
   // Resolve theme
-  const themeName = typeof props.theme === "string" ? props.theme : (props.theme?.name ?? "dark");
+  const themeName =
+    typeof props.theme === "string"
+      ? props.theme
+      : (props.theme?.name ?? "dark");
 
   // Build the provider tree
   return createComponent(TuiContext.Provider, {

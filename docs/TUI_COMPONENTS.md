@@ -182,12 +182,12 @@ new UI.Label({
 
 ### Properties
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `text` | `string` | Text content |
-| `align` | `string` | Text alignment |
-| `dim` | `boolean` | Muted styling |
-| `onClick` | `function` | Click handler |
+| Property  | Type       | Description    |
+| --------- | ---------- | -------------- |
+| `text`    | `string`   | Text content   |
+| `align`   | `string`   | Text alignment |
+| `dim`     | `boolean`  | Muted styling  |
+| `onClick` | `function` | Click handler  |
 
 ### Usage Example
 
@@ -197,7 +197,7 @@ new UI.Label({
   onClick: () => {
     UI.Clipboard.copy("ID-123");
     app.toast.show("Copied!", "success");
-  }
+  },
 });
 ```
 
@@ -300,13 +300,13 @@ new UI.SplitLayout({
 
 ### Properties
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `direction` | `string` | Layout direction |
+| Property     | Type               | Description                                                        |
+| ------------ | ------------------ | ------------------------------------------------------------------ |
+| `direction`  | `string`           | Layout direction                                                   |
 | `splitRatio` | `number \| "auto"` | Size ratio for first component. "auto" uses `getPreferredWidth()`. |
-| `gap` | `number` | Space between panes |
-| `first` | `UI.Component` | First component |
-| `second` | `UI.Component` | Second component |
+| `gap`        | `number`           | Space between panes                                                |
+| `first`      | `UI.Component`     | First component                                                    |
+| `second`     | `UI.Component`     | Second component                                                   |
 
 ### Usage Example
 
@@ -457,6 +457,7 @@ const styledText = `${t.accent("Important")} ${t.muted("secondary info")}`;
 4. **Performance**: Only call `markDirty()` when state changes
 5. **Accessibility**: Use semantic colors and clear labels
 6. **Error Handling**: Implement proper validation and error states
+
 ---
 
 ## Clipboard Utility
@@ -465,8 +466,8 @@ Cross-platform clipboard helper.
 
 ### Methods
 
-| Method | Signature | Description |
-| --- | --- | --- |
+| Method   | Signature                         | Description            |
+| -------- | --------------------------------- | ---------------------- |
 | `copy()` | `(text: string) => Promise<void>` | Copy text to clipboard |
 
 ### Usage Example

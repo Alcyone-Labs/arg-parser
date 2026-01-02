@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "node:fs";
-import { join } from "node:path";
 import * as os from "node:os";
-import { resolveLogPath } from "../../src/core/log-path-utils";
+import { join } from "node:path";
 import { DxtPathResolver } from "../../src/core/dxt-path-resolver";
+import { resolveLogPath } from "../../src/core/log-path-utils";
 
 describe("DXT Variable Integration", () => {
   let tempDir: string;
@@ -13,13 +13,17 @@ describe("DXT Variable Integration", () => {
   beforeEach(async () => {
     // Clear cached context before each test
     DxtPathResolver.clearCache();
-    
+
     // Save original state
     originalCwd = process.cwd();
     originalEnv = { ...process.env };
-    
+
     // Create temp directory for testing
-    tempDir = join(os.tmpdir(), "dxt-variable-integration-test", Date.now().toString());
+    tempDir = join(
+      os.tmpdir(),
+      "dxt-variable-integration-test",
+      Date.now().toString(),
+    );
     await fs.mkdir(tempDir, { recursive: true });
   });
 
@@ -28,7 +32,7 @@ describe("DXT Variable Integration", () => {
     process.chdir(originalCwd);
     process.env = originalEnv;
     DxtPathResolver.clearCache();
-    
+
     // Clean up temp directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
@@ -41,7 +45,7 @@ describe("DXT Variable Integration", () => {
     it("should substitute DXT variables in string log paths", () => {
       const logPath = "${HOME}/logs/app.log";
       const resolved = resolveLogPath(logPath);
-      
+
       expect(resolved).toBe(join(os.homedir(), "logs", "app.log"));
     });
 
@@ -49,7 +53,7 @@ describe("DXT Variable Integration", () => {
       const logPath = {
         path: "logs/app.log",
         relativeTo: "absolute" as const,
-        basePath: "${HOME}/projects"
+        basePath: "${HOME}/projects",
       };
 
       const resolved = resolveLogPath(logPath);
@@ -62,7 +66,7 @@ describe("DXT Variable Integration", () => {
       const context = DxtPathResolver.detectContext();
       const logPath = "${__dirname}/logs/app.log";
       const resolved = resolveLogPath(logPath);
-      
+
       const expectedDir = context.entryDir || context.cwd || process.cwd();
       expect(resolved).toBe(join(expectedDir, "logs", "app.log"));
     });
@@ -70,17 +74,17 @@ describe("DXT Variable Integration", () => {
     it("should handle pathSeparator variable in log paths", () => {
       const logPath = "${HOME}${pathSeparator}logs${pathSeparator}app.log";
       const resolved = resolveLogPath(logPath);
-      
+
       expect(resolved).toBe(join(os.homedir(), "logs", "app.log"));
     });
 
     it("should work with DXT environment variables", async () => {
       // Set up DXT environment
       process.env.DXT_EXTENSION_DIR = tempDir;
-      
+
       const logPath = "${DXT_DIR}/logs/app.log";
       const resolved = resolveLogPath(logPath);
-      
+
       expect(resolved).toBe(join(tempDir, "logs", "app.log"));
     });
   });
@@ -90,7 +94,13 @@ describe("DXT Variable Integration", () => {
       const logPath = "${HOME}/projects/myapp/logs/app.log";
       const resolved = resolveLogPath(logPath);
 
-      const expected = join(os.homedir(), "projects", "myapp", "logs", "app.log");
+      const expected = join(
+        os.homedir(),
+        "projects",
+        "myapp",
+        "logs",
+        "app.log",
+      );
 
       expect(resolved).toBe(expected);
     });
@@ -106,20 +116,22 @@ describe("DXT Variable Integration", () => {
     it("should work with custom variables through context", () => {
       // Mock the substituteVariables method to test custom variables
       const originalSubstituteVariables = DxtPathResolver.substituteVariables;
-      DxtPathResolver.substituteVariables = vi.fn((inputPath, context, config) => {
-        return originalSubstituteVariables(inputPath, context, {
-          ...config,
-          customVariables: {
-            CUSTOM_DIR: "/custom/path",
-            ...config?.customVariables
-          }
-        });
-      });
+      DxtPathResolver.substituteVariables = vi.fn(
+        (inputPath, context, config) => {
+          return originalSubstituteVariables(inputPath, context, {
+            ...config,
+            customVariables: {
+              CUSTOM_DIR: "/custom/path",
+              ...config?.customVariables,
+            },
+          });
+        },
+      );
 
       try {
         const logPath = "${CUSTOM_DIR}/logs/app.log";
         const resolved = resolveLogPath(logPath);
-        
+
         expect(resolved).toBe("/custom/path/logs/app.log");
       } finally {
         // Restore original method
@@ -131,7 +143,7 @@ describe("DXT Variable Integration", () => {
   describe("Error Handling", () => {
     it("should throw error for undefined variables by default", () => {
       const logPath = "${UNDEFINED_VAR}/logs/app.log";
-      
+
       expect(() => {
         resolveLogPath(logPath);
       }).toThrow("Undefined DXT variable: UNDEFINED_VAR");
@@ -140,14 +152,14 @@ describe("DXT Variable Integration", () => {
     it("should handle malformed variable syntax gracefully", () => {
       const logPath = "${HOME/logs/app.log"; // Missing closing brace
       const resolved = resolveLogPath(logPath);
-      
+
       // Should not substitute the malformed variable
       expect(resolved).toContain("${HOME/logs/app.log");
     });
 
     it("should handle empty variable names", () => {
       const logPath = "${}/logs/app.log";
-      
+
       expect(() => {
         resolveLogPath(logPath);
       }).toThrow("Undefined DXT variable: ");
@@ -158,7 +170,7 @@ describe("DXT Variable Integration", () => {
     it("should use correct path separator for platform", () => {
       const logPath = "${HOME}${pathSeparator}logs${pathSeparator}app.log";
       const resolved = resolveLogPath(logPath);
-      
+
       // Should use the platform-specific path separator
       const expectedSeparator = require("node:path").sep;
       expect(resolved).toContain(expectedSeparator);
@@ -181,27 +193,27 @@ describe("DXT Variable Integration", () => {
   describe("Performance", () => {
     it("should handle many variable substitutions efficiently", () => {
       const start = Date.now();
-      
+
       for (let i = 0; i < 1000; i++) {
         const logPath = `${i % 2 === 0 ? "${HOME}" : "${DOCUMENTS}"}/logs/app-${i}.log`;
         resolveLogPath(logPath);
       }
-      
+
       const duration = Date.now() - start;
       expect(duration).toBeLessThan(1000); // Should complete in less than 1 second
     });
 
     it("should cache context detection for performance", () => {
       const detectContextSpy = vi.spyOn(DxtPathResolver, "detectContext");
-      
+
       // Multiple calls should reuse cached context
       resolveLogPath("${HOME}/logs/app1.log");
       resolveLogPath("${HOME}/logs/app2.log");
       resolveLogPath("${HOME}/logs/app3.log");
-      
+
       // Should only detect context once due to caching
       expect(detectContextSpy).toHaveBeenCalledTimes(3); // Called once per resolveLogPath call
-      
+
       detectContextSpy.mockRestore();
     });
   });
@@ -228,7 +240,7 @@ describe("DXT Variable Integration", () => {
       const dxtDir = join(tempDir, "dxt-extension");
       await fs.mkdir(dxtDir, { recursive: true });
       process.env.DXT_EXTENSION_DIR = dxtDir;
-      
+
       const logPaths = [
         "${DXT_DIR}/logs/app.log",
         "${EXTENSION_DIR}/debug.log",

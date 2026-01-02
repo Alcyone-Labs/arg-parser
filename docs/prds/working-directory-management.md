@@ -41,6 +41,7 @@ This PRD implements working directory control for ArgParser, enabling better mon
 ### Use Cases
 
 **Monorepo Package Management:**
+
 ```bash
 # User wants to work in packages/app-a/
 my-cli --workspace ./packages/app-a build
@@ -49,6 +50,7 @@ my-cli --workspace ./packages/app-a build
 ```
 
 **Environment-Specific Configuration:**
+
 ```bash
 # Auto-discover .env.local in development
 NODE_ENV=development my-cli build
@@ -58,6 +60,7 @@ NODE_ENV=test my-cli test
 ```
 
 **Cross-Package Operations:**
+
 ```bash
 # User at /repo/ wants to reference files from both root and package
 my-cli --workspace ./packages/app-a \
@@ -84,6 +87,7 @@ my-cli --workspace ./packages/app-a \
 ✅ **Decision:** Use `setWorkingDirectory` as primary name, with `chdir` as a supported alias concept
 
 **Rationale:**
+
 - `setWorkingDirectory` is explicit and self-documenting
 - Both terms are familiar to developers
 - Can be referenced by either name in documentation
@@ -92,12 +96,14 @@ my-cli --workspace ./packages/app-a \
 ✅ **Decision:** Auto-discover `.env` files in effective working directory when `--s-with-env` is present without arguments
 
 **Auto-discovery priority order:**
+
 1. `.env.local` (highest priority - dev overrides)
 2. `.env.dev` (when `NODE_ENV=development` or `NODE_ENV=dev`)
 3. `.env.test` (when `NODE_ENV=test`)
 4. `.env` (fallback - base config)
 
 **Rationale:**
+
 - Matches developer expectations (similar to Vite, Next.js, etc.)
 - Provides sensible defaults without requiring explicit paths
 - Can still use explicit `--s-with-env <path>` when needed
@@ -106,6 +112,7 @@ my-cli --workspace ./packages/app-a \
 ✅ **Decision:** Keep `--s-with-env` and upgrade its behavior to support effective working directory
 
 **Backward compatibility strategy:**
+
 - Users without `setWorkingDirectory` flags: behavior unchanged (uses `process.cwd()`)
 - Users with `setWorkingDirectory` flags: `.env` paths resolved relative to effective cwd
 - No breaking changes to existing functionality
@@ -114,6 +121,7 @@ my-cli --workspace ./packages/app-a \
 ✅ **Decision:** Last flag in command chain wins, with a subtle warning
 
 **Example:**
+
 ```bash
 my-cli --workspace ./packages/app-a \
         subcommand --workspace ./packages/app-b
@@ -122,6 +130,7 @@ my-cli --workspace ./packages/app-a \
 ```
 
 **Rationale:**
+
 - Sub-commands in monorepos might have their own workspace flag
 - Last-wins is intuitive (most specific context takes precedence)
 - Warning ensures users are aware of the behavior
@@ -130,12 +139,14 @@ my-cli --workspace ./packages/app-a \
 ✅ **Decision:** Option A - No path translation. Add `rootPath` to handler context instead.
 
 **Rationale:**
+
 - Simpler implementation, fewer edge cases
 - Path translation is complex and error-prone
 - `rootPath` gives users full control
 - Clear separation: effective cwd for ops, root path for user-facing logic
 
 **Path Resolution Behavior:**
+
 ```typescript
 // User at /repo/ runs:
 my-cli --workspace ./packages/app-a --input ./data/file.txt
@@ -158,7 +169,7 @@ my-cli --workspace ./packages/app-a --input ./data/file.txt
 
 **Add to `IFlag` interface:**
 
-```typescript
+````typescript
 export type IFlag = IFlagCore & {
   // ... existing properties
   env?: string | string[];
@@ -185,7 +196,7 @@ export type IFlag = IFlagCore & {
    */
   setWorkingDirectory?: boolean;
 };
-```
+````
 
 **Update `IHandlerContext` interface:**
 
@@ -353,6 +364,7 @@ export type IHandlerContext<
 **Location:** `src/core/ArgParserBase.ts`, modify the existing method
 
 **Changes:**
+
 1. Call `#_resolveWorkingDirectory()` at the beginning of `#_handleGlobalChecks`
 2. Store the result in instance fields
 3. Pass the effective working directory to env loading logic
@@ -425,6 +437,7 @@ public discoverEnvFile(searchDir: string): string | null {
 **Location:** `src/core/ArgParserBase.ts`, modify the existing `--s-with-env` block
 
 **Changes:**
+
 1. Update the help text for `--s-with-env` to mention the new behavior
 2. If no path is specified, auto-discover the `.env` file in the effective cwd
 3. Resolve the env file path relative to the **effective working directory**
@@ -452,8 +465,8 @@ if (withEnvIndex !== -1) {
       if (!envFilePath) {
         console.warn(
           chalk.yellow(
-            `Warning: No .env file found in working directory. Continuing without environment configuration.`
-          )
+            `Warning: No .env file found in working directory. Continuing without environment configuration.`,
+          ),
         );
         // Remove the flag and continue
         processArgs.splice(withEnvIndex, 1);
@@ -467,8 +480,8 @@ if (withEnvIndex !== -1) {
     if (!envFilePath) {
       console.warn(
         chalk.yellow(
-          `Warning: No .env file found in working directory. Continuing without environment configuration.`
-        )
+          `Warning: No .env file found in working directory. Continuing without environment configuration.`,
+        ),
       );
       // Remove the flag and continue
       processArgs.splice(withEnvIndex, 1);
@@ -482,12 +495,7 @@ if (withEnvIndex !== -1) {
       const {
         finalParser: identifiedFinalParser,
         parserChain: identifiedParserChain,
-      } = this.#_identifyCommandChainAndParsers(
-        processArgs,
-        this,
-        [],
-        [this],
-      );
+      } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
       const envConfigArgs =
         identifiedFinalParser.#configurationManager.loadEnvFile(
@@ -545,6 +553,7 @@ if (withEnvIndex !== -1) {
 **Key principle:** Users who don't use `setWorkingDirectory` keep the existing behavior
 
 **Implementation:**
+
 ```typescript
 // In #_resolveWorkingDirectory():
 return {
@@ -562,6 +571,7 @@ const envFilePath = path.resolve(basePath, providedPath);
 ```
 
 **Testing strategy:**
+
 - Test without `setWorkingDirectory` → behavior identical to current
 - Test with `setWorkingDirectory` → uses effective cwd
 - Test `--s-with-env` with both scenarios
@@ -577,6 +587,7 @@ const envFilePath = path.resolve(basePath, providedPath);
 **Find:** Context creation around line 1608
 
 **Update:**
+
 ```typescript
 const handlerContext: IHandlerContext<any, any> = {
   args: currentLevelArgs,
@@ -612,6 +623,7 @@ const handlerContext: IHandlerContext<any, any> = {
 **Location:** In the `helpText()` method or system flag documentation
 
 **New description:**
+
 ```typescript
 {
   name: "s-with-env",
@@ -637,7 +649,7 @@ const handlerContext: IHandlerContext<any, any> = {
 
 **Location:** Add JSDoc to `IFlag` interface
 
-```typescript
+````typescript
 /**
  * @property {boolean} [setWorkingDirectory] - If true, this flag's value becomes the effective
  * working directory for file operations. When set, environment file loading and path resolution
@@ -663,7 +675,7 @@ const handlerContext: IHandlerContext<any, any> = {
  * // All .env files are loaded from: /repo/packages/my-app/
  * ```
  */
-```
+````
 
 ---
 
@@ -676,13 +688,14 @@ const handlerContext: IHandlerContext<any, any> = {
 **Test cases:**
 
 1. **Basic setWorkingDirectory functionality**
+
    ```typescript
    test("should change effective working directory when setWorkingDirectory flag is provided", async () => {
      const parser = new ArgParser({
        appName: "Test CLI",
        handler: (ctx) => ({
          cwd: process.cwd(),
-         rootPath: ctx.rootPath
+         rootPath: ctx.rootPath,
        }),
      }).addFlag({
        name: "workspace",
@@ -698,6 +711,7 @@ const handlerContext: IHandlerContext<any, any> = {
    ```
 
 2. **Auto-discovery of .env files**
+
    ```typescript
    test("should auto-discover .env.local in effective working directory", async () => {
      // Create .env.local file in test directory
@@ -707,20 +721,23 @@ const handlerContext: IHandlerContext<any, any> = {
      const parser = new ArgParser({
        appName: "Test CLI",
        handler: (ctx) => ctx.args,
-     }).addFlag({
-       name: "workspace",
-       options: ["--workspace"],
-       type: "string",
-       setWorkingDirectory: true,
-     }).addFlag({
-       name: "testVar",
-       options: ["--test-var"],
-       type: "string",
-     });
+     })
+       .addFlag({
+         name: "workspace",
+         options: ["--workspace"],
+         type: "string",
+         setWorkingDirectory: true,
+       })
+       .addFlag({
+         name: "testVar",
+         options: ["--test-var"],
+         type: "string",
+       });
 
      const result = await parser.parse([
-       "--workspace", testDir,
-       "--s-with-env"  // No file path - should auto-discover
+       "--workspace",
+       testDir,
+       "--s-with-env", // No file path - should auto-discover
      ]);
 
      expect(result.testVar).toBe("from_local");
@@ -728,38 +745,43 @@ const handlerContext: IHandlerContext<any, any> = {
    ```
 
 3. **Multiple setWorkingDirectory flags (last wins)**
+
    ```typescript
    test("should use last setWorkingDirectory flag in command chain", async () => {
-     const parser1 = new ArgParser({ appName: "Root" })
-       .addFlag({
-         name: "workspace1",
-         options: ["--w1"],
-         type: "string",
-         setWorkingDirectory: true,
-       });
-
-     const subParser = parser1.addSubCommand({
-       name: "sub",
-       description: "Sub command",
-       handler: (ctx) => ({ cwd: process.cwd() }),
-     }).addFlag({
-       name: "workspace2",
-       options: ["--w2"],
+     const parser1 = new ArgParser({ appName: "Root" }).addFlag({
+       name: "workspace1",
+       options: ["--w1"],
        type: "string",
        setWorkingDirectory: true,
      });
 
+     const subParser = parser1
+       .addSubCommand({
+         name: "sub",
+         description: "Sub command",
+         handler: (ctx) => ({ cwd: process.cwd() }),
+       })
+       .addFlag({
+         name: "workspace2",
+         options: ["--w2"],
+         type: "string",
+         setWorkingDirectory: true,
+       });
+
      const result = await parser1.parse([
-       "--w1", testDir1,
+       "--w1",
+       testDir1,
        "sub",
-       "--w2", testDir2,
+       "--w2",
+       testDir2,
      ]);
 
-     expect(result.cwd).toBe(testDir2);  // Last one wins
+     expect(result.cwd).toBe(testDir2); // Last one wins
    });
    ```
 
 4. **Warning for invalid directory**
+
    ```typescript
    test("should warn and use original cwd if setWorkingDirectory path does not exist", async () => {
      const consoleWarnSpy = vi.spyOn(console, "warn");
@@ -777,13 +799,14 @@ const handlerContext: IHandlerContext<any, any> = {
      const result = await parser.parse(["--workspace", "/nonexistent/path"]);
 
      expect(consoleWarnSpy).toHaveBeenCalledWith(
-       expect.stringContaining("does not exist")
+       expect.stringContaining("does not exist"),
      );
      expect(result.cwd).toBe(originalCwd);
    });
    ```
 
 5. **Backward compatibility (no setWorkingDirectory)**
+
    ```typescript
    test("should maintain backward compatibility when no setWorkingDirectory is used", async () => {
      const parser = new ArgParser({
@@ -804,6 +827,7 @@ const handlerContext: IHandlerContext<any, any> = {
    ```
 
 6. **rootPath in handler context**
+
    ```typescript
    test("should provide rootPath in handler context", async () => {
      const parser = new ArgParser({
@@ -822,6 +846,7 @@ const handlerContext: IHandlerContext<any, any> = {
    ```
 
 7. **Priority order: .env.local > .env.dev > .env**
+
    ```typescript
    test("should use .env.local over other .env files", async () => {
      // Create multiple env files
@@ -831,8 +856,9 @@ const handlerContext: IHandlerContext<any, any> = {
 
      // ... parser setup ...
      const result = await parser.parse([
-       "--workspace", testDir,
-       "--s-with-env"
+       "--workspace",
+       testDir,
+       "--s-with-env",
      ]);
 
      expect(result.priority).toBe("local");
@@ -844,6 +870,7 @@ const handlerContext: IHandlerContext<any, any> = {
 **File:** `tests/with-env.test.ts`
 
 **Add test cases:**
+
 - `--s-with-env` with `setWorkingDirectory` flag
 - Auto-discovery with different `NODE_ENV` values
 - Path resolution from effective cwd
@@ -858,7 +885,7 @@ const handlerContext: IHandlerContext<any, any> = {
 
 **Content:**
 
-```markdown
+````markdown
 # Working Directory Management in ArgParser
 
 ArgParser provides flexible working directory management to support monorepo workflows
@@ -880,16 +907,18 @@ the effective working directory for file operations.
 ```typescript
 const parser = new ArgParser({
   appName: "Monorepo CLI",
-  handler: (ctx) => { /* ... */ },
-})
-.addFlag({
+  handler: (ctx) => {
+    /* ... */
+  },
+}).addFlag({
   name: "workspace",
   description: "The workspace directory to operate in",
   options: ["--workspace", "-w"],
   type: "string",
-  setWorkingDirectory: true,  // Makes this the effective working directory
+  setWorkingDirectory: true, // Makes this the effective working directory
 });
 ```
+````
 
 ### How It Works
 
@@ -919,6 +948,7 @@ my-cli --workspace ./packages/app-a --s-with-env
 ```
 
 **Behavior:**
+
 - Effective cwd: `/repo/packages/app-a/`
 - Loads `.env.local` from `/repo/packages/app-a/.env.local` (auto-discovered)
 - Does NOT load `/repo/.env`
@@ -930,6 +960,7 @@ my-cli --workspace ./packages/app-a --s-with-env config/production.env
 ```
 
 **Behavior:**
+
 - Effective cwd: `/repo/packages/app-a/`
 - Loads `/repo/packages/app-a/config/production.env`
 
@@ -941,6 +972,7 @@ working directory from the user's CLI invocation perspective.
 ### When to Use rootPath
 
 Use `rootPath` when you need to:
+
 - Reference paths relative to where the user ran the command
 - Display user-friendly paths in output
 - Resolve user-provided paths that should be relative to their cwd, not the effective cwd
@@ -954,40 +986,42 @@ const parser = new ArgParser({
     const { input, workspace } = ctx.args;
 
     // Effective working directory (changed by --workspace)
-    console.log("Effective cwd:", process.cwd());  // /repo/packages/app-a/
+    console.log("Effective cwd:", process.cwd()); // /repo/packages/app-a/
 
     // Root path (where user ran command)
-    console.log("Root path:", ctx.rootPath);     // /repo/
+    console.log("Root path:", ctx.rootPath); // /repo/
 
     // Resolve input relative to effective cwd (default behavior)
-    const inputFromEffective = path.resolve(input);  // /repo/packages/app-a/data/file.txt
+    const inputFromEffective = path.resolve(input); // /repo/packages/app-a/data/file.txt
 
     // Resolve input relative to user's cwd (using rootPath)
-    const inputFromRoot = path.resolve(ctx.rootPath, input);  // /repo/data/file.txt
+    const inputFromRoot = path.resolve(ctx.rootPath, input); // /repo/data/file.txt
 
     return { inputFromEffective, inputFromRoot };
   },
 })
-.addFlag({
-  name: "workspace",
-  options: ["--workspace", "-w"],
-  type: "string",
-  setWorkingDirectory: true,
-})
-.addFlag({
-  name: "input",
-  options: ["--input", "-i"],
-  type: "string",
-});
+  .addFlag({
+    name: "workspace",
+    options: ["--workspace", "-w"],
+    type: "string",
+    setWorkingDirectory: true,
+  })
+  .addFlag({
+    name: "input",
+    options: ["--input", "-i"],
+    type: "string",
+  });
 ```
 
 **User runs:**
+
 ```bash
 cd /repo/
 my-cli --workspace ./packages/app-a --input ./data/file.txt
 ```
 
 **Results:**
+
 - `inputFromEffective`: `/repo/packages/app-a/data/file.txt`
 - `inputFromRoot`: `/repo/data/file.txt`
 
@@ -1022,6 +1056,7 @@ my-cli --s-with-env config/custom.env
 ## Backward Compatibility
 
 Existing code that doesn't use `setWorkingDirectory` maintains its current behavior:
+
 - `.env` files are loaded from the current working directory
 - Path resolution is unchanged
 - No changes to existing parsing logic
@@ -1049,8 +1084,7 @@ const parser = new ArgParser({
     console.log(`Working in: ${ctx.args.workspace}`);
     console.log(`Root path: ${ctx.rootPath}`);
   },
-})
-.addFlag({
+}).addFlag({
   name: "workspace",
   description: "Target workspace directory",
   options: ["--workspace", "-w"],
@@ -1065,24 +1099,28 @@ const parser = new ArgParser({
 const rootParser = new ArgParser({
   appName: "Monorepo Builder",
 })
-.addFlag({
-  name: "workspace",
-  options: ["--workspace", "-w"],
-  type: "string",
-  setWorkingDirectory: true,
-})
-.addSubCommand({
-  name: "build",
-  description: "Build a package",
-  inheritParentFlags: true,
-  handler: async (ctx) => {
-    const packageJson = await import(path.join(process.cwd(), "package.json"));
-    console.log(`Building: ${packageJson.name}`);
+  .addFlag({
+    name: "workspace",
+    options: ["--workspace", "-w"],
+    type: "string",
+    setWorkingDirectory: true,
+  })
+  .addSubCommand({
+    name: "build",
+    description: "Build a package",
+    inheritParentFlags: true,
+    handler: async (ctx) => {
+      const packageJson = await import(
+        path.join(process.cwd(), "package.json")
+      );
+      console.log(`Building: ${packageJson.name}`);
 
-    // Display user-friendly path
-    console.log(`Package location: ${path.relative(ctx.rootPath, process.cwd())}`);
-  },
-});
+      // Display user-friendly path
+      console.log(
+        `Package location: ${path.relative(ctx.rootPath, process.cwd())}`,
+      );
+    },
+  });
 ```
 
 ## Troubleshooting
@@ -1090,6 +1128,7 @@ const rootParser = new ArgParser({
 ### "No .env file found" warning
 
 If you see this warning:
+
 1. Check that `.env`, `.env.local`, or environment-specific files exist in the effective working directory
 2. Verify that `setWorkingDirectory` flag points to the correct directory
 3. Use `--s-with-env <path>` to specify an explicit file
@@ -1103,10 +1142,12 @@ If you see this warning:
 ### Multiple workspace warnings
 
 If you see "Multiple working directory flags detected":
+
 - Only the last one in the command chain is used
 - This is intentional behavior (last wins)
 - Remove duplicate workspace flags to avoid confusion
-```
+
+````
 
 #### 7.2 Update Existing Documentation
 
@@ -1121,7 +1162,7 @@ If you see "Multiple working directory flags detected":
 For monorepo support, ArgParser allows you to change the effective working directory
 using the `setWorkingDirectory` flag property. See the [Working Directory Guide](docs/WORKING_DIRECTORY.md)
 for details.
-```
+````
 
 ---
 
@@ -1173,6 +1214,7 @@ Add a new flag property to mark path flags for automatic translation:
 ```
 
 When `path: "user-cwd"`:
+
 - Flag values are automatically translated from user cwd → effective cwd
 - Example: `--input ./data/file.txt` (typed at /repo/) → resolves to `/repo/data/file.txt` even when effective cwd is `/repo/packages/app-a/`
 

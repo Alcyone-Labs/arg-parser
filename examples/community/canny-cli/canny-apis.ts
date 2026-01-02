@@ -21,8 +21,8 @@ export async function searchCannyPosts(
           category: null,
           eta: null,
           created: new Date().toISOString(),
-        }
-      ]
+        },
+      ],
     };
   }
 

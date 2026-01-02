@@ -1,14 +1,20 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import { ArgParser } from "../../src";
-import { convertFlagsToJsonSchema, convertFlagsToZodSchema } from "../../src/mcp/mcp-integration";
+import {
+  convertFlagsToJsonSchema,
+  convertFlagsToZodSchema,
+} from "../../src/mcp/mcp-integration";
 
 describe("Zod Schema Flag Support", () => {
   describe("Basic Zod Schema Flags", () => {
     test("should accept Zod schema as flag type", () => {
       const configSchema = z.object({
         apiKey: z.string().describe("API key for authentication"),
-        timeout: z.number().min(1000).describe("Request timeout in milliseconds"),
+        timeout: z
+          .number()
+          .min(1000)
+          .describe("Request timeout in milliseconds"),
         retries: z.number().optional().describe("Number of retry attempts"),
       });
 
@@ -52,7 +58,10 @@ describe("Zod Schema Flag Support", () => {
         retries: 3,
       };
 
-      const result = await parser.parse(["--config", JSON.stringify(validConfig)]);
+      const result = await parser.parse([
+        "--config",
+        JSON.stringify(validConfig),
+      ]);
       expect(result.config).toEqual(validConfig);
     });
 
@@ -82,7 +91,7 @@ describe("Zod Schema Flag Support", () => {
       };
 
       await expect(
-        parser.parse(["--config", JSON.stringify(invalidConfig)])
+        parser.parse(["--config", JSON.stringify(invalidConfig)]),
       ).rejects.toThrow();
     });
 
@@ -104,9 +113,9 @@ describe("Zod Schema Flag Support", () => {
         mandatory: true,
       });
 
-      await expect(
-        parser.parse(["--config", "invalid-json"])
-      ).rejects.toThrow("Invalid JSON");
+      await expect(parser.parse(["--config", "invalid-json"])).rejects.toThrow(
+        "Invalid JSON",
+      );
     });
   });
 
@@ -114,7 +123,10 @@ describe("Zod Schema Flag Support", () => {
     test("should generate proper JSON Schema for Zod schema flags", () => {
       const configSchema = z.object({
         apiKey: z.string().describe("API key for authentication"),
-        timeout: z.number().min(1000).describe("Request timeout in milliseconds"),
+        timeout: z
+          .number()
+          .min(1000)
+          .describe("Request timeout in milliseconds"),
         retries: z.number().optional().describe("Number of retry attempts"),
         endpoints: z.array(z.string().url()).describe("List of API endpoints"),
       });
@@ -173,19 +185,19 @@ describe("Zod Schema Flag Support", () => {
       });
 
       const zodSchema = convertFlagsToZodSchema(parser.flags);
-      
+
       // The generated schema should be a Zod object with the config property
       expect(zodSchema._def.type).toBe("object");
-      
+
       // Test that it can parse valid input
       const validInput = {
-        config: { apiKey: "test", timeout: 2000 }
+        config: { apiKey: "test", timeout: 2000 },
       };
       expect(() => zodSchema.parse(validInput)).not.toThrow();
 
       // Test that it rejects invalid input
       const invalidInput = {
-        config: { apiKey: "test", timeout: 500 }
+        config: { apiKey: "test", timeout: 500 },
       };
       expect(() => zodSchema.parse(invalidInput)).toThrow();
     });
@@ -231,7 +243,10 @@ describe("Zod Schema Flag Support", () => {
         debug: true,
       };
 
-      const result = await parser.parse(["--config", JSON.stringify(validConfig)]);
+      const result = await parser.parse([
+        "--config",
+        JSON.stringify(validConfig),
+      ]);
       expect(result.config).toEqual(validConfig);
     });
 
@@ -261,7 +276,10 @@ describe("Zod Schema Flag Support", () => {
         config: { type: "file", path: "./config.json" },
       };
 
-      const result = await parser.parse(["--config", JSON.stringify(validConfig)]);
+      const result = await parser.parse([
+        "--config",
+        JSON.stringify(validConfig),
+      ]);
       expect(result.config).toEqual(validConfig);
     });
   });

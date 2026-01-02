@@ -1,4 +1,3 @@
-
 import { exec } from "child_process";
 
 export class Clipboard {
@@ -8,10 +7,10 @@ export class Clipboard {
       const proc = exec("pbcopy");
       proc.on("error", (err) => reject(err));
       proc.on("close", () => resolve());
-      
+
       if (proc.stdin) {
-          proc.stdin.write(text);
-          proc.stdin.end();
+        proc.stdin.write(text);
+        proc.stdin.end();
       }
     });
   }

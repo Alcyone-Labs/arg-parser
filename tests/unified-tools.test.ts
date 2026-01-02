@@ -322,7 +322,9 @@ describe("Unified Tool Architecture", () => {
 
       // Add legacy MCP tool (should show deprecation warning)
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const stderrSpy = vi
+        .spyOn(process.stderr, "write")
+        .mockImplementation(() => true);
 
       parser.addMcpTool({
         name: "legacy-tool",
@@ -330,11 +332,11 @@ describe("Unified Tool Architecture", () => {
       });
 
       // Check for deprecation warning in either console.warn or process.stderr.write
-      const hasConsoleWarning = consoleSpy.mock.calls.some(call =>
-        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated")
+      const hasConsoleWarning = consoleSpy.mock.calls.some((call) =>
+        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated"),
       );
-      const hasStderrWarning = stderrSpy.mock.calls.some(call =>
-        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated")
+      const hasStderrWarning = stderrSpy.mock.calls.some((call) =>
+        call[0]?.includes("[DEPRECATED] addMcpTool() is deprecated"),
       );
 
       expect(hasConsoleWarning || hasStderrWarning).toBe(true);

@@ -203,9 +203,8 @@ describe("Canny CLI Integration Tests", () => {
     test("should generate MCP tools with correct schema", async () => {
       // Test the MCP tool generation directly using the library
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import(
-        "../../../src/mcp/mcp-integration"
-      );
+      const { generateMcpToolsFromArgParser } =
+        await import("../../../src/mcp/mcp-integration");
 
       const parser = new ArgParser({
         appName: "Canny Search CLI",
@@ -269,9 +268,8 @@ describe("Canny CLI Integration Tests", () => {
     test("should execute MCP tool correctly", async () => {
       // Test the MCP tool execution directly using the library
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import(
-        "../../../src/mcp/mcp-integration"
-      );
+      const { generateMcpToolsFromArgParser } =
+        await import("../../../src/mcp/mcp-integration");
 
       const mockHandler = vi.fn().mockResolvedValue({
         success: true,
@@ -327,9 +325,8 @@ describe("Canny CLI Integration Tests", () => {
     test("should validate parameters correctly", async () => {
       // Test parameter validation using the library directly
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import(
-        "../../../src/mcp/mcp-integration"
-      );
+      const { generateMcpToolsFromArgParser } =
+        await import("../../../src/mcp/mcp-integration");
 
       const parser = new ArgParser({
         appName: "Canny Search CLI",
@@ -379,9 +376,8 @@ describe("Canny CLI Integration Tests", () => {
     test("should handle API errors gracefully", async () => {
       // Test error handling using the library directly
       const { ArgParser } = await import("../../../src");
-      const { generateMcpToolsFromArgParser } = await import(
-        "../../../src/mcp/mcp-integration"
-      );
+      const { generateMcpToolsFromArgParser } =
+        await import("../../../src/mcp/mcp-integration");
 
       const errorHandler = vi.fn().mockResolvedValue({
         success: false,

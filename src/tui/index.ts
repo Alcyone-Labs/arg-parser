@@ -46,7 +46,12 @@ export type { JSX } from "@opentui/solid";
 export { createTuiApp, type TuiAppConfig } from "./app";
 
 // Unified TUI Provider (recommended)
-export { TuiProvider, useTui, type TuiProviderProps, type TuiContextValue } from "./providers";
+export {
+  TuiProvider,
+  useTui,
+  type TuiProviderProps,
+  type TuiContextValue,
+} from "./providers";
 
 // Theme system with builder
 export {
@@ -76,14 +81,36 @@ export { ToastProvider, useToast, type ToastType } from "./toast";
 
 // New reactive components (v2)
 export { Breadcrumb, type BreadcrumbProps } from "./components/Breadcrumb";
-export { VirtualList, createVirtualListController, type VirtualListProps, type VirtualListResult } from "./components/VirtualList";
-export { MasterDetail, type MasterDetailProps } from "./components/MasterDetailV2";
+export {
+  VirtualList,
+  createVirtualListController,
+  type VirtualListProps,
+  type VirtualListResult,
+} from "./components/VirtualList";
+export {
+  MasterDetail,
+  type MasterDetailProps,
+} from "./components/MasterDetailV2";
 
 // Legacy layout components
-export { MasterDetailLayout, type MasterDetailLayoutProps } from "./components/MasterDetailLayout";
-export { DrillDownNavigator, type DrillDownNavigatorProps } from "./components/DrillDownNavigator";
-export { Card, StatCard, type CardProps, type StatCardProps } from "./components/Card";
-export { MarkdownBlock, type MarkdownBlockProps } from "./components/MarkdownBlock";
+export {
+  MasterDetailLayout,
+  type MasterDetailLayoutProps,
+} from "./components/MasterDetailLayout";
+export {
+  DrillDownNavigator,
+  type DrillDownNavigatorProps,
+} from "./components/DrillDownNavigator";
+export {
+  Card,
+  StatCard,
+  type CardProps,
+  type StatCardProps,
+} from "./components/Card";
+export {
+  MarkdownBlock,
+  type MarkdownBlockProps,
+} from "./components/MarkdownBlock";
 export { Button, type ButtonProps } from "./components/Button";
 
 // Layout templates (from layouts/)

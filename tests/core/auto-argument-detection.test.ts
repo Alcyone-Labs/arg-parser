@@ -9,7 +9,7 @@ describe("Automatic Argument Detection", () => {
   beforeEach(() => {
     // Store original process and process.argv
     originalProcess = globalThis.process;
-    if (typeof process !== 'undefined') {
+    if (typeof process !== "undefined") {
       originalProcessArgv = process.argv;
     } else {
       // Mock process if it doesn't exist
@@ -18,7 +18,7 @@ describe("Automatic Argument Detection", () => {
         env: {},
         stderr: { write: vi.fn() },
         cwd: vi.fn(() => "/test"),
-        chdir: vi.fn()
+        chdir: vi.fn(),
       };
       originalProcessArgv = globalThis.process.argv;
     }
@@ -30,7 +30,7 @@ describe("Automatic Argument Detection", () => {
     // Restore original process.argv and process
     if (originalProcess) {
       globalThis.process = originalProcess;
-    } else if (typeof process !== 'undefined') {
+    } else if (typeof process !== "undefined") {
       process.argv = originalProcessArgv;
     }
     // Restore console.warn

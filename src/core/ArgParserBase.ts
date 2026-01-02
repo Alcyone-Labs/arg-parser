@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
 import { type ZodTypeAny } from "zod";
 import chalk from "@alcyone-labs/simple-chalk";
+import { createMcpLogger, type Logger } from "@alcyone-labs/simple-mcp-logger";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { DxtGenerator } from "../dxt/DxtGenerator";
 import {
@@ -19,7 +20,6 @@ import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
 import { FlagInheritance } from "./types";
-import { type Logger, createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 import type {
   IArgParser,
   IFlag,
@@ -657,7 +657,9 @@ export class ArgParserBase<
           const outputObject = this.#_buildRecursiveJson(this);
           const jsonString = JSON.stringify(outputObject, null, 2);
           fs.writeFileSync(filePath, jsonString);
-          this.#logger.info(`ArgParser configuration JSON dumped to: ${filePath}`);
+          this.#logger.info(
+            `ArgParser configuration JSON dumped to: ${filePath}`,
+          );
         } else {
           const outputString = this.#_buildRecursiveString(this, 0);
           const plainText = outputString.replace(
@@ -665,7 +667,9 @@ export class ArgParserBase<
             "",
           );
           fs.writeFileSync(filePath, plainText);
-          this.#logger.info(`ArgParser configuration text dumped to: ${filePath}`);
+          this.#logger.info(
+            `ArgParser configuration text dumped to: ${filePath}`,
+          );
         }
       } catch (error) {
         this.#logger.error(
@@ -922,7 +926,9 @@ export class ArgParserBase<
         envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
         if (envFilePath) {
-          this.#logger.info(chalk.dim(`Auto-discovered env file: ${envFilePath}`));
+          this.#logger.info(
+            chalk.dim(`Auto-discovered env file: ${envFilePath}`),
+          );
         } else {
           this.#logger.warn(
             chalk.yellow(
@@ -1180,7 +1186,9 @@ export class ArgParserBase<
       );
       this.#logger.info(JSON.stringify(accumulatedArgs, null, 2));
 
-      this.#logger.info(chalk.yellow("\nArguments Remaining After Simulation:"));
+      this.#logger.info(
+        chalk.yellow("\nArguments Remaining After Simulation:"),
+      );
       this.#logger.info(JSON.stringify(remainingArgs, null, 2));
 
       this.#logger.info(
@@ -2491,7 +2499,9 @@ ${descriptionLines
       this.#logger.info(`${subIndent}Flags (${flags.length}):`);
       flags.forEach((flag: ProcessedFlag) => {
         this.#logger.info(`${flagIndent}* ${chalk.green(flag["name"])}:`);
-        this.#logger.info(`${flagIndent}  Options: ${flag["options"].join(", ")}`);
+        this.#logger.info(
+          `${flagIndent}  Options: ${flag["options"].join(", ")}`,
+        );
         this.#logger.info(
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
@@ -2505,12 +2515,18 @@ ${descriptionLines
           `${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`,
         );
         this.#logger.info(`${flagIndent}  Flag Only: ${flag["flagOnly"]}`);
-        this.#logger.info(`${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`);
-        this.#logger.info(`${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`);
+        this.#logger.info(
+          `${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`,
+        );
+        this.#logger.info(
+          `${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`,
+        );
         this.#logger.info(
           `${flagIndent}  Enum: ${flag["enum"] && flag["enum"].length > 0 ? flag["enum"].join(", ") : "none"}`,
         );
-        this.#logger.info(`${flagIndent}  Validator Defined: ${!!flag["validate"]}`);
+        this.#logger.info(
+          `${flagIndent}  Validator Defined: ${!!flag["validate"]}`,
+        );
       });
     } else {
       this.#logger.info(`${subIndent}Flags: ${chalk.dim("none")}`);
@@ -2518,7 +2534,9 @@ ${descriptionLines
 
     const subCommandParsers = Array.from(parser.#subCommands.values());
     if (subCommandParsers.length > 0) {
-      this.#logger.info(`${subIndent}Sub-Commands (${subCommandParsers.length}):`);
+      this.#logger.info(
+        `${subIndent}Sub-Commands (${subCommandParsers.length}):`,
+      );
       subCommandParsers.forEach((subCommand: any) => {
         this.#_printRecursiveToConsole(subCommand.parser, level + 1, visited);
       });

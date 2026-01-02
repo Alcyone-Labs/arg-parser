@@ -181,25 +181,24 @@ describe("MCP Preset Transports Configuration", () => {
   describe("Integration with existing functionality", () => {
     test("should work with complex CLI setup and preset transports", () => {
       const complexParser = ArgParser.withMcp({
-          appName: "Complex CLI with Presets",
-          appCommandName: "complex-preset",
-          description:
-            "A complex CLI with sub-commands and preset MCP transports",
-            mcp: {
-                serverInfo: {
-                    name: "complex-preset-server",
-                    version: "1.0.0",
-                },
-                defaultTransports: [
-                    { type: "stdio" },
-                    { type: "sse", port: 3001, host: "0.0.0.0" },
-                ],
-                toolOptions: {
-                    includeSubCommands: true,
-                },
-            }
+        appName: "Complex CLI with Presets",
+        appCommandName: "complex-preset",
+        description:
+          "A complex CLI with sub-commands and preset MCP transports",
+        mcp: {
+          serverInfo: {
+            name: "complex-preset-server",
+            version: "1.0.0",
+          },
+          defaultTransports: [
+            { type: "stdio" },
+            { type: "sse", port: 3001, host: "0.0.0.0" },
+          ],
+          toolOptions: {
+            includeSubCommands: true,
+          },
         },
-      )
+      })
         .addFlags([
           {
             name: "global",

@@ -2,14 +2,15 @@
 /**
  * Test script to demonstrate that auto-execution doesn't run when the module is imported
  */
-
-console.log("🔍 Testing auto-execution by importing the module...");
-
 // This should NOT trigger the CLI execution
 import { cli } from "./auto-execution.js";
 
+console.log("🔍 Testing auto-execution by importing the module...");
+
 console.log("✅ Import completed successfully!");
-console.log("🎯 The CLI was not executed because it was imported, not run directly");
+console.log(
+  "🎯 The CLI was not executed because it was imported, not run directly",
+);
 console.log("📋 Available CLI instance:", typeof cli);
 
 // We can still manually parse if needed

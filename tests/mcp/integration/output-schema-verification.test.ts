@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { McpStdioClient } from "./mcp-client-utils.js";
 
 describe("Output Schema Verification", () => {
@@ -8,7 +8,13 @@ describe("Output Schema Verification", () => {
     // Start the MCP server using the Canny CLI (which has outputSchema and is proven to work)
     mcpClient = new McpStdioClient(
       "deno",
-      ["run", "--allow-all", "--unstable-sloppy-imports", "examples/community/canny-cli/canny-cli.ts", "--s-mcp-serve"],
+      [
+        "run",
+        "--allow-all",
+        "--unstable-sloppy-imports",
+        "examples/community/canny-cli/canny-cli.ts",
+        "--s-mcp-serve",
+      ],
       {
         timeout: 15000,
         debug: true,
@@ -37,7 +43,9 @@ describe("Output Schema Verification", () => {
     expect(Array.isArray(toolsResponse.tools)).toBe(true);
     expect(toolsResponse.tools.length).toBeGreaterThan(0);
 
-    const searchTool = toolsResponse.tools.find((tool: any) => tool.name === "search");
+    const searchTool = toolsResponse.tools.find(
+      (tool: any) => tool.name === "search",
+    );
     if (!searchTool) {
       throw new Error("Search tool not found");
     }
@@ -51,12 +59,17 @@ describe("Output Schema Verification", () => {
     if (searchTool.outputSchema) {
       console.log("✅ OutputSchema found in tools/list response");
     } else {
-      console.log("ℹ️ OutputSchema not in tools/list response (functionality verified via structuredContent)");
+      console.log(
+        "ℹ️ OutputSchema not in tools/list response (functionality verified via structuredContent)",
+      );
     }
   });
 
   test("should return structuredContent when outputSchema is defined", async () => {
-    const result = await mcpClient.callTool("search", { query: "test", limit: 1 });
+    const result = await mcpClient.callTool("search", {
+      query: "test",
+      limit: 1,
+    });
 
     expect(result).toBeDefined();
     expect(result.content).toBeDefined();
@@ -67,6 +80,9 @@ describe("Output Schema Verification", () => {
     expect(typeof result.structuredContent.query).toBe("string");
     expect(result.structuredContent.query).toBe("test");
 
-    console.log("✅ StructuredContent:", JSON.stringify(result.structuredContent, null, 2));
+    console.log(
+      "✅ StructuredContent:",
+      JSON.stringify(result.structuredContent, null, 2),
+    );
   });
 });

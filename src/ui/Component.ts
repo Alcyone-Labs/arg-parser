@@ -7,8 +7,8 @@ export interface IComponentConfig {
     backgroundColor?: string;
     display?: "block" | "inline"; // Simple layout hint
     hoverStyle?: {
-        color?: string;
-        backgroundColor?: string;
+      color?: string;
+      backgroundColor?: string;
     };
   };
 }
@@ -23,7 +23,8 @@ export abstract class Component {
 
   constructor(config: IComponentConfig = {}) {
     this.config = config;
-    this.id = config.id || `component_${Math.random().toString(36).substr(2, 9)}`;
+    this.id =
+      config.id || `component_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   public resize(x: number, y: number, width: number, height: number): void {
@@ -42,7 +43,7 @@ export abstract class Component {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public handleMouse(_event: any): void {
-      // Override in subclasses
+    // Override in subclasses
   }
 
   public getPreferredWidth(): number | undefined {

@@ -46,6 +46,7 @@ createTuiApp(() => <App />, {
 ## Core Concepts
 
 ### 1. The Application Wrapper
+
 `createTuiApp` initializes the terminal, sets up providers (Theme, Shortcuts, Toast), and renders your root component.
 
 ```typescript
@@ -57,9 +58,11 @@ createTuiApp(() => <Root />, {
 ```
 
 ### 2. Layouts
+
 Use standard Flexbox properties via `box` primitives or high-level layout components.
 
 **Master-Detail Layout**:
+
 ```tsx
 import { MasterDetailLayout } from "@alcyone-labs/arg-parser/tui";
 
@@ -67,10 +70,11 @@ import { MasterDetailLayout } from "@alcyone-labs/arg-parser/tui";
   masterWidth="30%"
   master={<List items={items} />}
   detail={<Details selected={selectedItem} />}
-/>
+/>;
 ```
 
 ### 3. Navigation
+
 Use `DrillDownNavigator` for stack-based navigation (like a mobile app or file browser).
 
 ```tsx
@@ -80,7 +84,7 @@ import { DrillDownNavigator } from "@alcyone-labs/arg-parser/tui";
   {(nav) => (
     <List onSelect={(item) => nav.push(() => <Details item={item} />)} />
   )}
-</DrillDownNavigator>
+</DrillDownNavigator>;
 ```
 
 - `nav.push(Component)`: Go deeper
@@ -90,6 +94,7 @@ import { DrillDownNavigator } from "@alcyone-labs/arg-parser/tui";
 ## Component Library
 
 ### `Card` & `StatCard`
+
 Dashboard-style containers with borders and titles.
 
 ```tsx
@@ -97,28 +102,33 @@ Dashboard-style containers with borders and titles.
   <text>All systems operational.</text>
 </Card>
 
-<StatCard 
-  label="CPU Usage" 
-  value={0.45} 
-  format="percent" 
-  trend="up" 
+<StatCard
+  label="CPU Usage"
+  value={0.45}
+  format="percent"
+  trend="up"
 />
 ```
 
 ### `Button`
+
 Interactive buttons with hover states.
+
 ```tsx
 <Button label="Deploy" variant="primary" onClick={deploy} />
 <Button label="Cancel" variant="danger" onClick={cancel} />
 ```
 
 ### `MarkdownBlock`
+
 Render text content (simple rendering).
+
 ```tsx
 <MarkdownBlock content="# Title\n\nSome text here." />
 ```
 
 ## Theming
+
 Access the current theme or switch themes at runtime.
 
 ```tsx
@@ -126,7 +136,7 @@ import { useTheme } from "@alcyone-labs/arg-parser/tui";
 
 function ThemeSwitcher() {
   const { current, setTheme, cycle } = useTheme();
-  
+
   return (
     <text style={{ fg: current().colors.accent }}>
       Current theme: {current().name}
@@ -136,6 +146,7 @@ function ThemeSwitcher() {
 ```
 
 ## Keyboard Shortcuts
+
 Register shortcuts locally constrained to a component's lifecycle.
 
 ```tsx
@@ -143,13 +154,13 @@ import { useShortcuts } from "@alcyone-labs/arg-parser/tui";
 
 function Editor() {
   const { register } = useShortcuts();
-  
+
   // Register Ctrl+S when this component is mounted
   // Automatically redundant when unmounted
   register({
     key: "ctrl+s",
     action: () => saveFile(),
-    description: "Save File"
+    description: "Save File",
   });
 
   return <text>Press Ctrl+S to save</text>;
@@ -157,15 +168,18 @@ function Editor() {
 ```
 
 ### Chord Shortcuts
+
 Support for key sequences like `Ctrl+K` followed by `V`.
+
 ```typescript
 register({
-  key: "ctrl+k v", 
-  action: () => openVerticalSplit()
+  key: "ctrl+k v",
+  action: () => openVerticalSplit(),
 });
 ```
 
 ## Toast Notifications
+
 Transient messages for user feedback.
 
 ```tsx
@@ -174,23 +188,28 @@ import { useToast } from "@alcyone-labs/arg-parser/tui";
 function CopyButton() {
   const toast = useToast();
   return (
-    <Button label="Copy" onClick={() => {
-      clipboard.write("text");
-      toast.success("Copied to clipboard!");
-    }} />
+    <Button
+      label="Copy"
+      onClick={() => {
+        clipboard.write("text");
+        toast.success("Copied to clipboard!");
+      }}
+    />
   );
 }
 ```
 
 ## Migrating from v1
+
 The old object-oriented API (`UI.App`, `UI.Component`) is **deprecated** and has been removed in favor of the SolidJS-based functional API.
 
-| Old v1 | New v2 |
-|--------|--------|
-| `new UI.App().run()` | `createTuiApp(() => <App />)` |
-| `class MyComp extends UI.Component` | `function MyComp() { return <box>...` |
-| `UI.List` | Build with `<box>` loops or use custom components |
-| `markDirty()` | Automatic Reactivity (Signals) |
+| Old v1                              | New v2                                            |
+| ----------------------------------- | ------------------------------------------------- |
+| `new UI.App().run()`                | `createTuiApp(() => <App />)`                     |
+| `class MyComp extends UI.Component` | `function MyComp() { return <box>...`             |
+| `UI.List`                           | Build with `<box>` loops or use custom components |
+| `markDirty()`                       | Automatic Reactivity (Signals)                    |
 
 ## Example: Trace Viewer
+
 See `examples/tui-demo-v2.tsx` for a full dashboard example.

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-
-import { ArgParser } from "../../src";
 import { z } from "zod";
+import { ArgParser } from "../../src";
 
 // Streamable-HTTP MCP server with CORS + Bearer allowlist + /health route
 const cli = ArgParser.withMcp({
@@ -37,7 +36,7 @@ const cli = ArgParser.withMcp({
     flags: [],
     handler: async () => ({
       ok: true,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }),
   });
 
@@ -46,8 +45,10 @@ export default cli;
 // Execute if run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   cli.parse(process.argv.slice(2)).catch((error) => {
-    console.error("Error:", error instanceof Error ? error.message : String(error));
+    console.error(
+      "Error:",
+      error instanceof Error ? error.message : String(error),
+    );
     process.exit(1);
   });
 }
-

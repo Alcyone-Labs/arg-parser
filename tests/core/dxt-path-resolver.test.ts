@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "node:fs";
-import { join } from "node:path";
 import * as os from "node:os";
-import { DxtPathResolver, type IPathContext } from "../../src/core/dxt-path-resolver";
+import { join } from "node:path";
+import {
+  DxtPathResolver,
+  type IPathContext,
+} from "../../src/core/dxt-path-resolver";
 
 describe("DxtPathResolver", () => {
   let tempDir: string;
@@ -12,13 +15,17 @@ describe("DxtPathResolver", () => {
   beforeEach(async () => {
     // Clear cached context before each test
     DxtPathResolver.clearCache();
-    
+
     // Save original state
     originalCwd = process.cwd();
     originalEnv = { ...process.env };
-    
+
     // Create temp directory for testing
-    tempDir = join(os.tmpdir(), "dxt-path-resolver-test", Date.now().toString());
+    tempDir = join(
+      os.tmpdir(),
+      "dxt-path-resolver-test",
+      Date.now().toString(),
+    );
     await fs.mkdir(tempDir, { recursive: true });
   });
 
@@ -27,7 +34,7 @@ describe("DxtPathResolver", () => {
     process.chdir(originalCwd);
     process.env = originalEnv;
     DxtPathResolver.clearCache();
-    
+
     // Clean up temp directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
@@ -39,7 +46,7 @@ describe("DxtPathResolver", () => {
   describe("Context Detection", () => {
     it("should detect non-DXT environment by default", () => {
       const context = DxtPathResolver.detectContext();
-      
+
       expect(context.isDxt).toBe(false);
       expect(context.userHome).toBe(os.homedir());
       expect(context.cwd).toBe(process.cwd());
@@ -47,9 +54,9 @@ describe("DxtPathResolver", () => {
 
     it("should detect DXT environment from environment variable", () => {
       process.env.DXT_EXTENSION_DIR = "/path/to/extension";
-      
+
       const context = DxtPathResolver.detectContext(true); // Force refresh
-      
+
       expect(context.isDxt).toBe(true);
       expect(context.extensionDir).toBe("/path/to/extension");
     });
@@ -62,15 +69,15 @@ describe("DxtPathResolver", () => {
         name: "Test DXT",
         version: "1.0.0",
         server: { command: "node", args: ["index.js"] },
-        user_config: {}
+        user_config: {},
       };
       await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-      
+
       // Change to temp directory
       process.chdir(tempDir);
-      
+
       const context = DxtPathResolver.detectContext(true);
-      
+
       expect(context.isDxt).toBe(true);
     });
 
@@ -78,25 +85,25 @@ describe("DxtPathResolver", () => {
       // Create an invalid manifest.json
       const manifestPath = join(tempDir, "manifest.json");
       await fs.writeFile(manifestPath, JSON.stringify({ invalid: true }));
-      
+
       process.chdir(tempDir);
-      
+
       const context = DxtPathResolver.detectContext(true);
-      
+
       expect(context.isDxt).toBe(false);
     });
 
     it("should cache context and reuse it", () => {
       const context1 = DxtPathResolver.detectContext();
       const context2 = DxtPathResolver.detectContext();
-      
+
       expect(context1).toBe(context2); // Same object reference
     });
 
     it("should refresh context when forced", () => {
       const context1 = DxtPathResolver.detectContext();
       const context2 = DxtPathResolver.detectContext(true);
-      
+
       expect(context1).not.toBe(context2); // Different object references
     });
   });
@@ -111,10 +118,12 @@ describe("DxtPathResolver", () => {
 
       const result = DxtPathResolver.substituteVariables(
         "${HOME}/documents/${pathSeparator}file.txt",
-        context
+        context,
       );
 
-      expect(result).toBe(`/home/user/documents/${require("node:path").sep}file.txt`);
+      expect(result).toBe(
+        `/home/user/documents/${require("node:path").sep}file.txt`,
+      );
     });
 
     it("should substitute __dirname based on context", () => {
@@ -125,7 +134,10 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables("${__dirname}/config.json", context);
+      const result = DxtPathResolver.substituteVariables(
+        "${__dirname}/config.json",
+        context,
+      );
 
       expect(result).toBe("/extension/dir/config.json");
     });
@@ -138,7 +150,10 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables("${DXT_DIR}/data", context);
+      const result = DxtPathResolver.substituteVariables(
+        "${DXT_DIR}/data",
+        context,
+      );
 
       expect(result).toBe("/extension/dir/data");
     });
@@ -153,7 +168,7 @@ describe("DxtPathResolver", () => {
       const result = DxtPathResolver.substituteVariables(
         "${CUSTOM_VAR}/file.txt",
         context,
-        { customVariables: { CUSTOM_VAR: "/custom/path" } }
+        { customVariables: { CUSTOM_VAR: "/custom/path" } },
       );
 
       expect(result).toBe("/custom/path/file.txt");
@@ -167,7 +182,10 @@ describe("DxtPathResolver", () => {
       };
 
       expect(() => {
-        DxtPathResolver.substituteVariables("${UNDEFINED_VAR}/file.txt", context);
+        DxtPathResolver.substituteVariables(
+          "${UNDEFINED_VAR}/file.txt",
+          context,
+        );
       }).toThrow("Undefined DXT variable: UNDEFINED_VAR");
     });
 
@@ -181,7 +199,7 @@ describe("DxtPathResolver", () => {
       const result = DxtPathResolver.substituteVariables(
         "${UNDEFINED_VAR}/file.txt",
         context,
-        { allowUndefined: true }
+        { allowUndefined: true },
       );
 
       expect(result).toBe("${UNDEFINED_VAR}/file.txt");
@@ -226,7 +244,10 @@ describe("DxtPathResolver", () => {
         entryDir: "/entry/dir",
       };
 
-      const result = DxtPathResolver.resolvePath("${HOME}/documents/file.txt", context);
+      const result = DxtPathResolver.resolvePath(
+        "${HOME}/documents/file.txt",
+        context,
+      );
       expect(result).toBe("/home/user/documents/file.txt");
     });
   });
@@ -241,9 +262,9 @@ describe("DxtPathResolver", () => {
         };
 
         const result = DxtPathResolver.createUserDataPath("data.json", context);
-        
+
         // Should use XDG data directory or fallback
-        const expected = process.env.XDG_DATA_HOME 
+        const expected = process.env.XDG_DATA_HOME
           ? `${process.env.XDG_DATA_HOME}/argparser-app/data.json`
           : "/home/user/.local/share/argparser-app/data.json";
         expect(result).toBe(expected);
@@ -296,8 +317,8 @@ describe("DxtPathResolver", () => {
         };
 
         const result = DxtPathResolver.createConfigPath("config.json", context);
-        
-        const expected = process.env.XDG_CONFIG_HOME 
+
+        const expected = process.env.XDG_CONFIG_HOME
           ? `${process.env.XDG_CONFIG_HOME}/argparser-app/config.json`
           : "/home/user/.config/argparser-app/config.json";
         expect(result).toBe(expected);
@@ -320,11 +341,11 @@ describe("DxtPathResolver", () => {
   describe("Directory Management", () => {
     it("should ensure directory exists", async () => {
       const testDir = join(tempDir, "test", "nested", "dir");
-      
+
       const result = DxtPathResolver.ensureDirectory(testDir);
-      
+
       expect(result).toBe(true);
-      
+
       // Verify directory was created
       const stats = await fs.stat(testDir);
       expect(stats.isDirectory()).toBe(true);
@@ -333,9 +354,9 @@ describe("DxtPathResolver", () => {
     it("should handle existing directory", async () => {
       const testDir = join(tempDir, "existing");
       await fs.mkdir(testDir);
-      
+
       const result = DxtPathResolver.ensureDirectory(testDir);
-      
+
       expect(result).toBe(true);
     });
 
@@ -348,9 +369,9 @@ describe("DxtPathResolver", () => {
       require("node:fs").mkdirSync = mockMkdirSync;
 
       const result = DxtPathResolver.ensureDirectory("/invalid/path");
-      
+
       expect(result).toBe(false);
-      
+
       // Restore original function
       require("node:fs").mkdirSync = originalMkdirSync;
     });
@@ -362,12 +383,12 @@ describe("DxtPathResolver", () => {
       const userDataPath = DxtPathResolver.createUserDataPath("test.json");
       const tempPath = DxtPathResolver.createTempPath("temp.txt");
       const configPath = DxtPathResolver.createConfigPath("config.json");
-      
+
       // All paths should be absolute
       expect(require("node:path").isAbsolute(userDataPath)).toBe(true);
       expect(require("node:path").isAbsolute(tempPath)).toBe(true);
       expect(require("node:path").isAbsolute(configPath)).toBe(true);
-      
+
       // Paths should contain the filename
       expect(userDataPath).toContain("test.json");
       expect(tempPath).toContain("temp.txt");
@@ -382,10 +403,13 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const complexPath = "${DXT_DIR}/data${HOME}/config/${pathSeparator}file.txt";
+      const complexPath =
+        "${DXT_DIR}/data${HOME}/config/${pathSeparator}file.txt";
       const result = DxtPathResolver.resolvePath(complexPath, context);
 
-      expect(result).toBe(`/ext/dir/data/home/user/config/${require("node:path").sep}file.txt`);
+      expect(result).toBe(
+        `/ext/dir/data/home/user/config/${require("node:path").sep}file.txt`,
+      );
     });
   });
 });

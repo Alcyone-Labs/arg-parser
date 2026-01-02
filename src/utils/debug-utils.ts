@@ -1,3 +1,5 @@
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+
 /**
  * Debug utility for conditional logging based on environment variables
  *
@@ -11,14 +13,14 @@
 const isDebugEnabled = (): boolean => {
   try {
     // Safe access to process.env that works in all JavaScript environments
-    return Boolean(typeof process !== 'undefined' && process.env && process.env["DEBUG"]);
+    return Boolean(
+      typeof process !== "undefined" && process.env && process.env["DEBUG"],
+    );
   } catch {
     // Fallback for environments where process is not available
     return false;
   }
 };
-
-import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 
 const logger = createMcpLogger("DEBUG");
 
@@ -32,7 +34,7 @@ export const debug = {
   log: (...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.error(typeof msg === 'string' ? msg : String(msg), ...rest);
+      logger.error(typeof msg === "string" ? msg : String(msg), ...rest);
     }
   },
 
@@ -42,7 +44,7 @@ export const debug = {
   error: (...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.error(typeof msg === 'string' ? msg : String(msg), ...rest);
+      logger.error(typeof msg === "string" ? msg : String(msg), ...rest);
     }
   },
 
@@ -52,7 +54,7 @@ export const debug = {
   warn: (...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.warn(typeof msg === 'string' ? msg : String(msg), ...rest);
+      logger.warn(typeof msg === "string" ? msg : String(msg), ...rest);
     }
   },
 
@@ -62,7 +64,7 @@ export const debug = {
   info: (...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.info(typeof msg === 'string' ? msg : String(msg), ...rest);
+      logger.info(typeof msg === "string" ? msg : String(msg), ...rest);
     }
   },
 
@@ -72,7 +74,10 @@ export const debug = {
   prefixed: (prefix: string, ...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.info(`[${prefix}] ${typeof msg === 'string' ? msg : String(msg)}`, ...rest);
+      logger.info(
+        `[${prefix}] ${typeof msg === "string" ? msg : String(msg)}`,
+        ...rest,
+      );
     }
   },
 
@@ -81,7 +86,7 @@ export const debug = {
    */
   get enabled(): boolean {
     return isDebugEnabled();
-  }
+  },
 };
 
 /**

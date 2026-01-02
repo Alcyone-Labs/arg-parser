@@ -188,9 +188,13 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
 
   // Add null/undefined check at the beginning
   if (!zodSchema) {
-    logger.error("[prepareMcpToolSchema] ERROR: zodSchema is null or undefined!");
+    logger.error(
+      "[prepareMcpToolSchema] ERROR: zodSchema is null or undefined!",
+    );
     logger.error("[prepareMcpToolSchema] Stack trace:", new Error().stack);
-    throw new Error("prepareMcpToolSchema called with null or undefined zodSchema");
+    throw new Error(
+      "prepareMcpToolSchema called with null or undefined zodSchema",
+    );
   }
 
   // Helper to get def property from either _def (v3) or def (v4)
@@ -301,7 +305,9 @@ export function prepareMcpToolSchema(zodSchema: ZodTypeAny): any {
 export function createCleanZodSchema(zodSchema: ZodTypeAny): any {
   if (!zodSchema) {
     if (process.env["MCP_DEBUG"]) {
-      logger.error("[createCleanZodSchema] ERROR: zodSchema is null or undefined!");
+      logger.error(
+        "[createCleanZodSchema] ERROR: zodSchema is null or undefined!",
+      );
     }
     // Return a simple default schema
     return z.object({});
@@ -311,7 +317,7 @@ export function createCleanZodSchema(zodSchema: ZodTypeAny): any {
     logger.error("[createCleanZodSchema] Input schema:");
     logger.error(`  - Type: ${typeof zodSchema}`);
     logger.error(`  - Constructor: ${zodSchema?.constructor?.name}`);
-    logger.error(`  - Has ~standard: ${!!(zodSchema as any)['~standard']}`);
+    logger.error(`  - Has ~standard: ${!!(zodSchema as any)["~standard"]}`);
     logger.error(`  - Has def: ${!!(zodSchema as any).def}`);
     logger.error(`  - Has _def: ${!!(zodSchema as any)._def}`);
   }
@@ -334,7 +340,7 @@ export function createCleanZodSchema(zodSchema: ZodTypeAny): any {
 
   if (process.env["MCP_DEBUG"]) {
     logger.error("[createCleanZodSchema] Clean schema created:");
-    logger.error(`  - Has ~standard: ${!!(cleanSchema as any)['~standard']}`);
+    logger.error(`  - Has ~standard: ${!!(cleanSchema as any)["~standard"]}`);
     logger.error(`  - Has def: ${!!(cleanSchema as any).def}`);
     logger.error(`  - Has _def: ${!!(cleanSchema as any)._def}`);
     logger.error(`  - Has parse: ${typeof cleanSchema.parse}`);
@@ -369,7 +375,7 @@ export function zodToJsonSchema(zodSchema: ZodTypeAny): any {
     const required: string[] = [];
 
     // Get the shape
-    const shape = typeof def.shape === 'function' ? def.shape() : def.shape;
+    const shape = typeof def.shape === "function" ? def.shape() : def.shape;
 
     for (const [key, value] of Object.entries(shape || {})) {
       const fieldDef = (value as any)?._def || (value as any)?.def;
@@ -401,7 +407,10 @@ export function zodToJsonSchema(zodSchema: ZodTypeAny): any {
     };
 
     if (process.env["MCP_DEBUG"]) {
-      logger.error("[zodToJsonSchema] Generated JSON Schema:", JSON.stringify(jsonSchema, null, 2));
+      logger.error(
+        "[zodToJsonSchema] Generated JSON Schema:",
+        JSON.stringify(jsonSchema, null, 2),
+      );
     }
 
     return jsonSchema;

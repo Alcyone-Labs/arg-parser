@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { ArgParser } from "../../src/index";
-import { DxtGenerator } from "../../src/dxt/DxtGenerator";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
+import { DxtGenerator } from "../../src/dxt/DxtGenerator";
+import { ArgParser } from "../../src/index";
 
 describe("DxtOptions Integration Tests", () => {
   let parser: ArgParser;
@@ -12,7 +12,7 @@ describe("DxtOptions Integration Tests", () => {
   beforeEach(async () => {
     parser = new ArgParser("test-app");
     tempDir = join(process.cwd(), "tests", "fixtures", "temp-dxt-integration");
-    
+
     // Ensure temp directory exists
     try {
       await fs.mkdir(tempDir, { recursive: true });
@@ -385,7 +385,9 @@ describe("DxtOptions Integration Tests", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow("Invalid dxtOptions.default for INVALID_VAR: expected number, got string");
+      }).toThrow(
+        "Invalid dxtOptions.default for INVALID_VAR: expected number, got string",
+      );
     });
 
     it("should handle type mismatch errors during DXT generation", async () => {
@@ -407,7 +409,9 @@ describe("DxtOptions Integration Tests", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow("Invalid dxtOptions.default for TYPE_MISMATCH_VAR: expected number, got string");
+      }).toThrow(
+        "Invalid dxtOptions.default for TYPE_MISMATCH_VAR: expected number, got string",
+      );
     });
   });
 });

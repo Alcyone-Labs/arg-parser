@@ -1,5 +1,3 @@
-
-
 export class Terminal {
   private static instance: Terminal;
 
@@ -50,16 +48,16 @@ export class Terminal {
   }
 
   public enableMouse(): void {
-      // Enable mouse reporting
-      // 1000: Click release
-      // 1002: Drag
-      // 1003: Any event (move/hover)
-      // 1006: SGR format (preferred for modern terminals)
-      process.stdout.write("\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h");
+    // Enable mouse reporting
+    // 1000: Click release
+    // 1002: Drag
+    // 1003: Any event (move/hover)
+    // 1006: SGR format (preferred for modern terminals)
+    process.stdout.write("\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h");
   }
 
   public disableMouse(): void {
-      process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l");
+    process.stdout.write("\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l");
   }
 
   public disableRawMode(): void {
@@ -77,13 +75,13 @@ export class Terminal {
         this.cleanup();
         process.exit(0);
       }
-      
+
       // Basic fuzzy key mapping for arrows/common keys
       // Real implementation might need a better key parser
       callback(char, false);
     });
   }
-  
+
   public cleanup(): void {
     this.showCursor();
     this.disableMouse();

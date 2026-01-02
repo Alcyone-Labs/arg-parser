@@ -1,6 +1,6 @@
 /**
  * Master Detail Layout Component
- * 
+ *
  * A slot-based layout with:
  * - Header with title
  * - Breadcrumb navigation
@@ -9,8 +9,8 @@
  * - Footer with shortcuts
  */
 
-import type { JSX } from "@opentui/solid";
 import { Show } from "solid-js";
+import type { JSX } from "@opentui/solid";
 import { useTheme } from "../themes";
 import { Breadcrumb } from "./Breadcrumb";
 
@@ -41,7 +41,7 @@ export interface MasterDetailProps {
 
 /**
  * Master-Detail layout with slot-based panels.
- * 
+ *
  * @example
  * ```tsx
  * <MasterDetail
@@ -68,21 +68,26 @@ export function MasterDetail(props: MasterDetailProps): JSX.Element {
   const masterWidth = props.masterWidth ?? "35%";
 
   return (
-    <box width="100%" height="100%" flexDirection="column" backgroundColor={theme().colors.background}>
-      
+    <box
+      width="100%"
+      height="100%"
+      flexDirection="column"
+      backgroundColor={theme().colors.background}
+    >
       {/* Header */}
-      <box 
-        height={3} 
-        borderStyle="single" 
-        borderColor={theme().colors.accent} 
-        justifyContent="center" 
+      <box
+        height={3}
+        borderStyle="single"
+        borderColor={theme().colors.accent}
+        justifyContent="center"
         alignItems="center"
       >
         <text bold color={theme().colors.accent}>
-          {props.headerIcon ? ` ${props.headerIcon} ` : " "}{props.header}{" "}
+          {props.headerIcon ? ` ${props.headerIcon} ` : " "}
+          {props.header}{" "}
         </text>
       </box>
-      
+
       {/* Breadcrumb */}
       <Show when={props.breadcrumb && props.breadcrumb.length > 0}>
         <Breadcrumb segments={props.breadcrumb!} />
@@ -90,29 +95,27 @@ export function MasterDetail(props: MasterDetailProps): JSX.Element {
 
       {/* Main content area */}
       <box flexGrow={1} flexDirection="row">
-        
         {/* Master Panel (left) */}
-        <box 
-          width={masterWidth} 
-          borderStyle="single" 
-          borderColor={theme().colors.border} 
-          flexDirection="column" 
+        <box
+          width={masterWidth}
+          borderStyle="single"
+          borderColor={theme().colors.border}
+          flexDirection="column"
           padding={1}
         >
           {props.master}
         </box>
 
         {/* Detail Panel (right - slot) */}
-        <box 
-          flexGrow={1} 
-          borderStyle="single" 
-          borderColor={theme().colors.border} 
-          flexDirection="column" 
+        <box
+          flexGrow={1}
+          borderStyle="single"
+          borderColor={theme().colors.border}
+          flexDirection="column"
           padding={2}
         >
           {props.detail}
         </box>
-        
       </box>
 
       {/* Footer */}

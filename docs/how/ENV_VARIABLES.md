@@ -37,26 +37,26 @@ const rootParser = ArgParser.withMcp({
   appName: "My CLI",
   appCommandName: "my-cli",
   mcp: {
-    serverInfo: { name: "my-server", version: "1.0.0" }
-  }
+    serverInfo: { name: "my-server", version: "1.0.0" },
+  },
 })
-.addFlag({
-  name: "database_url",
-  description: "Database connection string",
-  options: ["--db-url"],
-  env: "DATABASE_URL",        // Maps to process.env.DATABASE_URL
-  type: "string",
-  defaultValue: ""
-})
-.addFlag({
-  name: "verbose",
-  description: "Enable verbose logging",
-  options: ["--verbose", "-v"],
-  env: "VERBOSE",
-  type: "boolean",
-  flagOnly: true,
-  defaultValue: false
-});
+  .addFlag({
+    name: "database_url",
+    description: "Database connection string",
+    options: ["--db-url"],
+    env: "DATABASE_URL", // Maps to process.env.DATABASE_URL
+    type: "string",
+    defaultValue: "",
+  })
+  .addFlag({
+    name: "verbose",
+    description: "Enable verbose logging",
+    options: ["--verbose", "-v"],
+    env: "VERBOSE",
+    type: "boolean",
+    flagOnly: true,
+    defaultValue: false,
+  });
 ```
 
 ### 2. Flag Inheritance
@@ -67,18 +67,19 @@ Child parsers inherit parent flags by default (when `inheritParentFlags: true`):
 rootParser.addSubCommand({
   name: "migrate",
   description: "Run database migrations",
-  inheritParentFlags: true,    // Inherits --db-url and --verbose
+  inheritParentFlags: true, // Inherits --db-url and --verbose
   handler: async (ctx) => {
     // ctx.getFlag("database_url") should work here
     const dbUrl = ctx.getFlag("database_url");
     const verbose = ctx.getFlag("verbose");
-  }
+  },
 });
 ```
 
 ### 3. Flag Resolution Priority
 
 The intended priority order is:
+
 1. **CLI Flag**: `--db-url postgresql://...`
 2. **Environment Variable**: `process.env.DATABASE_URL`
 3. **Default Value**: `defaultValue: ""`
@@ -86,6 +87,7 @@ The intended priority order is:
 ### 4. Environment File Loading
 
 ArgParser supports loading environment files via:
+
 - `--s-with-env .env.local` (development)
 - `--s-with-env .env.test` (testing)
 - `--s-with-env .env` (production)
@@ -103,18 +105,21 @@ The flag resolution system is now a core part of `ArgParserBase` and works consi
 ### Environment File Behavior by Context
 
 ### Development (Local) ✅
+
 - Loads `.env.local` automatically via `--s-with-env`
 - `process.env.DATABASE_URL` available
 - CLI flags work correctly
 - Full flag resolution chain functional
 
 ### MCP Inspector (Absolute Path) ✅
+
 - No automatic `.env` loading (by design)
 - Must manually set environment variables in inspector
 - CLI flags now work correctly with implemented solution
 - Flag resolution falls back to defaults when env vars missing
 
 ### DXT/Claude Desktop ✅
+
 - Completely isolated environment (by design)
 - No `.env` file access (security limitation)
 - No parent environment inheritance (security limitation)
@@ -124,6 +129,7 @@ The flag resolution system is now a core part of `ArgParserBase` and works consi
 ### Summary
 
 The implemented solution ensures consistent behavior across all contexts:
+
 - **CLI flags always work** regardless of environment
 - **Environment variables work when available** (local dev, manually set)
 - **Default values provide reliable fallback** in isolated contexts (DXT)

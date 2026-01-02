@@ -1,29 +1,31 @@
 /**
  * OpenTUI v2 Demo Application
- * 
+ *
  * Demonstrates the new TUI framework capabilities including:
  * - Master-Detail Layout
  * - Drill-down Navigation
  * - Custom Themes
  * - Shortcuts
  * - Toast Notifications
- * 
+ *
  * Run with: bun run examples/tui-demo-v2.tsx
  */
 
-import { createSignal, createEffect } from "solid-js";
-import { 
-  createTuiApp, 
-  MasterDetailLayout, 
-  DrillDownNavigator, 
-  Card, 
-  StatCard, 
-  MarkdownBlock,
+import { createEffect, createSignal } from "solid-js";
+import {
   Button,
-  useToast,
+  Card,
+  createTuiApp,
+  DrillDownNavigator,
+  MarkdownBlock,
+  MasterDetailLayout,
+  StatCard,
+  useShortcuts,
   useTheme,
-  useShortcuts
-} from "../src/tui/index"; // Import directly from source for demo
+  useToast,
+} from "../src/tui/index";
+
+// Import directly from source for demo
 
 // -- Mock Data --
 
@@ -48,18 +50,42 @@ const TRACES: Trace[] = [
     name: "User Login Flow",
     timestamp: "2023-10-25 10:30:00",
     steps: [
-      { id: "s1", name: "Auth Check", duration: 150, status: "success", details: "User authenticated via JWT" },
-      { id: "s2", name: "Fetch Profile", duration: 45, status: "success", details: "Retrieved profile data for user_123" },
-    ]
+      {
+        id: "s1",
+        name: "Auth Check",
+        duration: 150,
+        status: "success",
+        details: "User authenticated via JWT",
+      },
+      {
+        id: "s2",
+        name: "Fetch Profile",
+        duration: 45,
+        status: "success",
+        details: "Retrieved profile data for user_123",
+      },
+    ],
   },
   {
     id: "tr_2",
     name: "Payment Processing",
     timestamp: "2023-10-25 10:35:12",
     steps: [
-      { id: "s3", name: "Validate Card", duration: 200, status: "success", details: "Card valid" },
-      { id: "s4", name: "Charge", duration: 1200, status: "error", details: "Gateway timeout" },
-    ]
+      {
+        id: "s3",
+        name: "Validate Card",
+        duration: 200,
+        status: "success",
+        details: "Card valid",
+      },
+      {
+        id: "s4",
+        name: "Charge",
+        duration: 1200,
+        status: "error",
+        details: "Gateway timeout",
+      },
+    ],
   },
   {
     id: "tr_3",
@@ -70,16 +96,16 @@ const TRACES: Trace[] = [
       name: `Process Item ${i}`,
       duration: 10 + Math.random() * 50,
       status: Math.random() > 0.9 ? "error" : "success",
-      details: `Processed item ${i} in batch`
-    }))
-  }
+      details: `Processed item ${i} in batch`,
+    })),
+  },
 ];
 
 // -- Components --
 
 function TraceDetail(props: { trace: Trace }) {
   const toast = useToast();
-  
+
   const handleCopy = () => {
     // In real app, this would use clipboard
     toast.success("Trace ID copied to clipboard!");
@@ -97,22 +123,29 @@ function TraceDetail(props: { trace: Trace }) {
           </box>
         </box>
       </Card>
-      
-      <text style={{ bold: true, underline: true }}>Steps ({props.trace.steps.length})</text>
-      
+
+      <text style={{ bold: true, underline: true }}>
+        Steps ({props.trace.steps.length})
+      </text>
+
       <box flexDirection="column" gap={0} overflow="scroll" flexGrow={1}>
-        {props.trace.steps.map(step => (
-          <box 
-            borderStyle="single" 
+        {props.trace.steps.map((step) => (
+          <box
+            borderStyle="single"
             borderColor={step.status === "error" ? "red" : "green"}
             padding={0}
             flexDirection="column"
           >
             <box flexDirection="row" justifyContent="space-between">
               <text style={{ bold: true }}> {step.name} </text>
-              <text style={{ fg: step.status === "error" ? "red" : "green" }}>{step.status.toUpperCase()} </text>
+              <text style={{ fg: step.status === "error" ? "red" : "green" }}>
+                {step.status.toUpperCase()}{" "}
+              </text>
             </box>
-            <text style={{ fg: "gray" }}> Duration: {Math.floor(step.duration)}ms</text>
+            <text style={{ fg: "gray" }}>
+              {" "}
+              Duration: {Math.floor(step.duration)}ms
+            </text>
             <text> {step.details}</text>
           </box>
         ))}
@@ -128,33 +161,45 @@ function TraceList(props: { onSelect: (trace: Trace) => void }) {
   // Handle keyboard navigation for list
   const handleKey = (e: { key: string }) => {
     if (e.key === "ArrowDown") {
-      setSelectedIndex(prev => Math.min(prev + 1, TRACES.length - 1));
+      setSelectedIndex((prev) => Math.min(prev + 1, TRACES.length - 1));
     } else if (e.key === "ArrowUp") {
-      setSelectedIndex(prev => Math.max(prev - 1, 0));
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
     } else if (e.key === "Enter") {
       props.onSelect(TRACES[selectedIndex()]);
     }
   };
 
   return (
-    <box 
-      flexDirection="column" 
-      width="100%" 
-      height="100%" 
+    <box
+      flexDirection="column"
+      width="100%"
+      height="100%"
       onKeyDown={handleKey}
     >
-      <text style={{ bold: true, bg: current().colors.background, fg: current().colors.accent }}>
-         Available Traces (Use Arrows + Enter) 
+      <text
+        style={{
+          bold: true,
+          bg: current().colors.background,
+          fg: current().colors.accent,
+        }}
+      >
+        Available Traces (Use Arrows + Enter)
       </text>
       {TRACES.map((trace, i) => (
-        <box 
+        <box
           height={1}
-          style={{ 
+          style={{
             bg: i === selectedIndex() ? current().colors.selection : undefined,
-            fg: i === selectedIndex() ? current().colors.text : current().colors.muted
+            fg:
+              i === selectedIndex()
+                ? current().colors.text
+                : current().colors.muted,
           }}
         >
-          <text> {trace.timestamp} - {trace.name} </text>
+          <text>
+            {" "}
+            {trace.timestamp} - {trace.name}{" "}
+          </text>
         </box>
       ))}
     </box>
@@ -174,7 +219,7 @@ function Dashboard() {
         cycle();
         toast.info(`Theme: ${current().name}`);
       },
-      description: "Cycle Theme"
+      description: "Cycle Theme",
     });
   });
 
@@ -183,15 +228,36 @@ function Dashboard() {
       {(nav) => (
         <box flexDirection="column" width="100%" height="100%">
           {/* Header */}
-          <box height={3} borderStyle="single" padding={0} justifyContent="center" alignItems="center">
-             <text style={{ bold: true, fg: current().colors.accent }}> OpenTUI Trace Viewer v2 </text>
+          <box
+            height={3}
+            borderStyle="single"
+            padding={0}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <text style={{ bold: true, fg: current().colors.accent }}>
+              {" "}
+              OpenTUI Trace Viewer v2{" "}
+            </text>
           </box>
 
           {/* Stats Row */}
           <box height={6} flexDirection="row" gap={1}>
             <StatCard label="Total Traces" value={TRACES.length} width="33%" />
-            <StatCard label="Avg Duration" value={145} format="number" width="33%" trend="up" />
-            <StatCard label="Error Rate" value={0.05} format="percent" width="33%" trend="down" />
+            <StatCard
+              label="Avg Duration"
+              value={145}
+              format="number"
+              width="33%"
+              trend="up"
+            />
+            <StatCard
+              label="Error Rate"
+              value={0.05}
+              format="percent"
+              width="33%"
+              trend="down"
+            />
           </box>
 
           {/* Main Content */}
@@ -199,10 +265,12 @@ function Dashboard() {
             <MasterDetailLayout
               masterWidth="40%"
               master={
-                <TraceList onSelect={(trace) => {
-                  // Drill down navigation
-                  nav.push(() => <TraceDetail trace={trace} />);
-                }} />
+                <TraceList
+                  onSelect={(trace) => {
+                    // Drill down navigation
+                    nav.push(() => <TraceDetail trace={trace} />);
+                  }}
+                />
               }
               detail={
                 <box justifyContent="center" alignItems="center" height="100%">
@@ -211,10 +279,10 @@ function Dashboard() {
               }
             />
           </box>
-          
+
           {/* Footer */}
           <box height={1} bg={current().colors.selection}>
-             <text> Ctrl+C: Quit | Ctrl+T: Theme | Arrows: Navigate </text>
+            <text> Ctrl+C: Quit | Ctrl+T: Theme | Arrows: Navigate </text>
           </box>
         </box>
       )}
@@ -226,7 +294,5 @@ function Dashboard() {
 
 createTuiApp(() => <Dashboard />, {
   theme: "dark",
-  shortcuts: [
-    { key: "q", action: () => process.exit(0), description: "Quit" }
-  ]
+  shortcuts: [{ key: "q", action: () => process.exit(0), description: "Quit" }],
 }).catch(console.error);

@@ -1,6 +1,6 @@
 /**
  * TTY Utilities
- * 
+ *
  * Terminal cleanup and mouse support helpers.
  */
 
@@ -51,7 +51,7 @@ export function restoreStdin(): void {
 
 /**
  * Complete terminal cleanup. Use as onDestroy callback.
- * 
+ *
  * @example
  * ```tsx
  * createTuiApp(() => <App />, { onDestroy: cleanupTerminal });
@@ -75,7 +75,7 @@ export function parseMouseScroll(data: Buffer): number {
   if (sgrMatch) {
     const button = parseInt(sgrMatch[1]!, 10);
     if (button === 64) return -1; // Scroll up
-    if (button === 65) return 1;  // Scroll down
+    if (button === 65) return 1; // Scroll down
   }
   return 0;
 }

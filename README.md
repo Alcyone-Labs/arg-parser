@@ -79,6 +79,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.12.0](#v2120)
   - [v2.11.0](#v2110)
   - [v2.10.3](#v2103)
   - [v2.10.2](#v2102)
@@ -2300,6 +2301,10 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.12.0
+
+- Switch back to official @modelcontextprotocol/sdk as it now supports Zod V4, this resolves a security issue from a dependency in MCP SDK @ 1.16.0 branch.
 
 ### v2.11.0
 

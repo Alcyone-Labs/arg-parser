@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { ArgParser } from "../../src/index";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DxtGenerator } from "../../src/dxt/DxtGenerator";
+import { ArgParser } from "../../src/index";
 
 describe("DxtOptions Validation", () => {
   let parser: ArgParser;
@@ -72,7 +72,9 @@ describe("DxtOptions Validation", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow("Invalid dxtOptions.default for PORT_VAR: expected number, got string");
+      }).toThrow(
+        "Invalid dxtOptions.default for PORT_VAR: expected number, got string",
+      );
     });
 
     it("should throw error for boolean type mismatch", () => {
@@ -94,7 +96,9 @@ describe("DxtOptions Validation", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow("Invalid dxtOptions.default for ENABLED_VAR: expected boolean, got string");
+      }).toThrow(
+        "Invalid dxtOptions.default for ENABLED_VAR: expected boolean, got string",
+      );
     });
   });
 
@@ -117,7 +121,7 @@ describe("DxtOptions Validation", () => {
       const result = dxtGenerator.generateEnvAndUserConfig();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "⚠️  Security Warning: API_KEY contains sensitive keyword but dxtOptions.sensitive is false"
+        "⚠️  Security Warning: API_KEY contains sensitive keyword but dxtOptions.sensitive is false",
       );
       expect(result.userConfig.API_KEY).toBeDefined();
     });
@@ -155,13 +159,13 @@ describe("DxtOptions Validation", () => {
 
       expect(consoleSpy).toHaveBeenCalledTimes(3);
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("AUTH_TOKEN contains sensitive keyword")
+        expect.stringContaining("AUTH_TOKEN contains sensitive keyword"),
       );
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("USER_PASSWORD contains sensitive keyword")
+        expect.stringContaining("USER_PASSWORD contains sensitive keyword"),
       );
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("SECRET_VALUE contains sensitive keyword")
+        expect.stringContaining("SECRET_VALUE contains sensitive keyword"),
       );
     });
 
@@ -184,7 +188,7 @@ describe("DxtOptions Validation", () => {
       dxtGenerator.generateEnvAndUserConfig();
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        "⚠️  Security Warning: API_KEY is required and sensitive - consider providing a secure default or making it optional"
+        "⚠️  Security Warning: API_KEY is required and sensitive - consider providing a secure default or making it optional",
       );
     });
   });
@@ -208,7 +212,7 @@ describe("DxtOptions Validation", () => {
       ]);
 
       dxtGenerator = new DxtGenerator(parser);
-      
+
       expect(() => {
         const result = dxtGenerator.generateEnvAndUserConfig();
         expect(result.userConfig.COUNT_VAR).toBeDefined();
@@ -263,7 +267,7 @@ describe("DxtOptions Validation", () => {
       ]);
 
       dxtGenerator = new DxtGenerator(parser);
-      
+
       expect(() => {
         const result = dxtGenerator.generateEnvAndUserConfig();
         expect(Object.keys(result.userConfig)).toHaveLength(5);
@@ -305,7 +309,7 @@ describe("DxtOptions Validation", () => {
       ]);
 
       dxtGenerator = new DxtGenerator(parser);
-      
+
       expect(() => {
         const result = dxtGenerator.generateEnvAndUserConfig();
         expect(result.userConfig.VALUE_VAR).toBeDefined();
@@ -339,7 +343,7 @@ describe("DxtOptions Validation", () => {
       ]);
 
       dxtGenerator = new DxtGenerator(parser);
-      
+
       expect(() => {
         const result = dxtGenerator.generateEnvAndUserConfig();
         expect(result.userConfig.MIN_ONLY_VAR.min).toBe(5);

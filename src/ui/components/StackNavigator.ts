@@ -27,15 +27,20 @@ export class StackNavigator extends Component {
   }
 
   public setRoot(component: Component): void {
-      this.stack = [component];
-      component.resize(this.x, this.y, this.width, this.height);
+    this.stack = [component];
+    component.resize(this.x, this.y, this.width, this.height);
   }
 
   public get currentComponent(): Component {
     return this.stack[this.stack.length - 1];
   }
 
-  public override resize(x: number, y: number, width: number, height: number): void {
+  public override resize(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
     super.resize(x, y, width, height);
     // Resize all components in stack? Or just the active one?
     // Good practice to resize current one. Older ones can retain state or resize on return.
@@ -50,10 +55,10 @@ export class StackNavigator extends Component {
   public override handleInput(key: string): void {
     // 1. Check for Back navigation (Esc or Left Arrow)
     if ((key === "\u001b" || key === "\u001b[D") && this.stack.length > 1) {
-        this.pop();
-        // Resize the restored component to ensure it fits
-        this.currentComponent.resize(this.x, this.y, this.width, this.height);
-        return;
+      this.pop();
+      // Resize the restored component to ensure it fits
+      this.currentComponent.resize(this.x, this.y, this.width, this.height);
+      return;
     }
 
     // 2. Delegate to active component

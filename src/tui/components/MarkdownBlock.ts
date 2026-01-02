@@ -1,6 +1,6 @@
 /**
  * MarkdownBlock Component
- * 
+ *
  * Renders markdown content using simple text formatting.
  * Currently supports basic text rendering with theme colors.
  * Future improvements could add proper markdown parsing and syntax highlighting.
@@ -22,20 +22,20 @@ export interface MarkdownBlockProps {
 
 /**
  * MarkdownBlock - Renders markdown text
- * 
+ *
  * @example
  * ```tsx
- * <MarkdownBlock 
- *   content="# Hello wold\n\nThis is **markdown**." 
+ * <MarkdownBlock
+ *   content="# Hello wold\n\nThis is **markdown**."
  * />
  * ```
  */
 export function MarkdownBlock(props: MarkdownBlockProps): JSX.Element {
   const { current } = useTheme();
-  
+
   // TODO: Add proper markdown parsing integration (e.g. marked-terminal or similar)
   // For now, we simply render the text with the theme's text color.
-  
+
   return {
     type: "box",
     props: {
@@ -49,13 +49,13 @@ export function MarkdownBlock(props: MarkdownBlockProps): JSX.Element {
       {
         type: "text",
         props: {
-          style: { 
-            fg: current().colors.text 
+          style: {
+            fg: current().colors.text,
           },
-          text: props.content
-        }
-      }
-    ]
+          text: props.content,
+        },
+      },
+    ],
   } as unknown as JSX.Element;
 }
 

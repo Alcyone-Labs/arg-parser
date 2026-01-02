@@ -1,35 +1,38 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { ArgParser } from "../../src/index.js";
 import { DxtGenerator } from "../../src/dxt/DxtGenerator.js";
+import { ArgParser } from "../../src/index.js";
 
 describe("DXT Include Functionality", () => {
   let tempDir: string;
   let originalCwd: string;
 
   beforeEach(() => {
-    originalCwd = typeof process !== 'undefined' ? process.cwd() : "/test";
+    originalCwd = typeof process !== "undefined" ? process.cwd() : "/test";
     tempDir = fs.mkdtempSync(path.join(originalCwd, "test-dxt-include-"));
-    if (typeof process !== 'undefined') {
+    if (typeof process !== "undefined") {
       process.chdir(tempDir);
     }
 
     // Create test files and directories
     fs.mkdirSync("migrations", { recursive: true });
-    fs.writeFileSync("migrations/001_init.sql", "CREATE TABLE test (id INTEGER);");
+    fs.writeFileSync(
+      "migrations/001_init.sql",
+      "CREATE TABLE test (id INTEGER);",
+    );
     fs.writeFileSync("migrations/002_data.sql", "INSERT INTO test VALUES (1);");
-    
+
     fs.mkdirSync("config", { recursive: true });
     fs.writeFileSync("config/default.json", '{"database": "test.db"}');
     fs.writeFileSync("config/production.json", '{"database": "prod.db"}');
-    
+
     fs.writeFileSync("README.md", "# Test Project");
     fs.writeFileSync("package.json", '{"name": "test", "version": "1.0.0"}');
   });
 
   afterEach(() => {
-    if (typeof process !== 'undefined') {
+    if (typeof process !== "undefined") {
       process.chdir(originalCwd);
     }
     if (fs.existsSync(tempDir)) {
@@ -50,11 +53,7 @@ describe("DXT Include Functionality", () => {
           description: "Test server",
         },
         dxt: {
-          include: [
-            "migrations",
-            "config/default.json",
-            "README.md",
-          ],
+          include: ["migrations", "config/default.json", "README.md"],
         },
       },
     });
@@ -92,10 +91,16 @@ describe("DXT Include Functionality", () => {
     const mcpConfig = parser.getMcpServerConfig();
     expect(mcpConfig?.dxt?.include).toBeDefined();
     expect(mcpConfig?.dxt?.include).toHaveLength(2);
-    
+
     const includeItems = mcpConfig?.dxt?.include || [];
-    expect(includeItems[0]).toEqual({ from: "config/production.json", to: "config.json" });
-    expect(includeItems[1]).toEqual({ from: "migrations", to: "db/migrations" });
+    expect(includeItems[0]).toEqual({
+      from: "config/production.json",
+      to: "config.json",
+    });
+    expect(includeItems[1]).toEqual({
+      from: "migrations",
+      to: "db/migrations",
+    });
   });
 
   test("should handle mixed string and object include configurations", () => {
@@ -123,10 +128,13 @@ describe("DXT Include Functionality", () => {
     const mcpConfig = parser.getMcpServerConfig();
     expect(mcpConfig?.dxt?.include).toBeDefined();
     expect(mcpConfig?.dxt?.include).toHaveLength(3);
-    
+
     const includeItems = mcpConfig?.dxt?.include || [];
     expect(includeItems[0]).toBe("migrations");
-    expect(includeItems[1]).toEqual({ from: "config/production.json", to: "config.json" });
+    expect(includeItems[1]).toEqual({
+      from: "config/production.json",
+      to: "config.json",
+    });
     expect(includeItems[2]).toBe("README.md");
   });
 

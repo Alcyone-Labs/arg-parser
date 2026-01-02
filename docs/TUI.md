@@ -5,8 +5,14 @@ A reactive TUI framework built on [SolidJS](https://www.solidjs.com/) and [SST's
 ## Quick Start
 
 ```tsx
+import {
+  MasterDetail,
+  TuiProvider,
+  useTheme,
+  useTui,
+  VirtualList,
+} from "@alcyone-labs/arg-parser/tui";
 import { render } from "@opentui/solid";
-import { TuiProvider, MasterDetail, VirtualList, useTui, useTheme } from "@alcyone-labs/arg-parser/tui";
 
 function App() {
   const { viewportHeight, exit } = useTui();
@@ -16,14 +22,16 @@ function App() {
   return (
     <MasterDetail
       header="My App"
-      master={<VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />}
+      master={
+        <VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />
+      }
       detail={<Details item={DATA[idx()]} />}
     />
   );
 }
 
 render(() => (
-  <TuiProvider theme="dark" onScroll={(d) => setIdx(i => i + d)}>
+  <TuiProvider theme="dark" onScroll={(d) => setIdx((i) => i + d)}>
     <App />
   </TuiProvider>
 ));
@@ -75,6 +83,7 @@ The unified provider that handles everything automatically:
 ```
 
 **Features:**
+
 - ✅ Mouse wheel reporting (automatic)
 - ✅ Terminal resize handling
 - ✅ TTY cleanup on exit
@@ -90,7 +99,7 @@ Access TUI context inside components:
 ```tsx
 function MyComponent() {
   const { viewportHeight, viewportWidth, exit } = useTui();
-  
+
   return <text>Height: {viewportHeight()} rows</text>;
 }
 ```
@@ -116,10 +125,10 @@ import { Theme, THEMES } from "@alcyone-labs/arg-parser/tui";
 // Extend existing theme
 const myTheme = Theme.from(THEMES.dark).extend({
   name: "my-dark",
-  colors: { 
+  colors: {
     background: "#1e1e1e",
-    accent: "#ff6b6b" 
-  }
+    accent: "#ff6b6b",
+  },
 });
 
 // Create from scratch
@@ -135,7 +144,7 @@ const custom = Theme.create({
     error: "#ff0000",
     border: "#333333",
     selection: "#0066cc",
-  }
+  },
 });
 ```
 
@@ -144,7 +153,7 @@ const custom = Theme.create({
 ```tsx
 function ThemedComponent() {
   const { current: theme, cycle, setTheme, names } = useTheme();
-  
+
   return (
     <box backgroundColor={theme().colors.background}>
       <text color={theme().colors.accent}>Accent text</text>
@@ -164,13 +173,13 @@ Slot-based two-panel layout:
 
 ```tsx
 <MasterDetail
-  header="App Title"           // Header text
-  headerIcon="📋"              // Optional emoji
+  header="App Title" // Header text
+  headerIcon="📋" // Optional emoji
   breadcrumb={["A", "B", "C"]} // Navigation path
-  footer="q: Quit | t: Theme"  // Shortcuts hint
-  masterWidth="35%"            // Left panel width
-  master={<LeftPanel />}       // Master slot (list)
-  detail={<RightPanel />}      // Detail slot (custom)
+  footer="q: Quit | t: Theme" // Shortcuts hint
+  masterWidth="35%" // Left panel width
+  master={<LeftPanel />} // Master slot (list)
+  detail={<RightPanel />} // Detail slot (custom)
 />
 ```
 
@@ -180,16 +189,18 @@ Virtualized scrollable list:
 
 ```tsx
 <VirtualList
-  items={items}                    // Array or Accessor<Array>
-  selectedIndex={idx()}            // Current selection
-  onSelect={setIdx}                // Selection callback
-  viewportHeight={20}              // Visible rows
-  title="Items"                    // Optional title
-  getLabel={(item) => item.name}   // Label extractor
-  showIndicator={true}             // Show "›" indicator
-  renderItem={(item, idx, sel) =>  // Custom renderer
-    <MyItem item={item} selected={sel} />
-  }
+  items={items} // Array or Accessor<Array>
+  selectedIndex={idx()} // Current selection
+  onSelect={setIdx} // Selection callback
+  viewportHeight={20} // Visible rows
+  title="Items" // Optional title
+  getLabel={(item) => item.name} // Label extractor
+  showIndicator={true} // Show "›" indicator
+  renderItem={(
+    item,
+    idx,
+    sel, // Custom renderer
+  ) => <MyItem item={item} selected={sel} />}
 />
 ```
 
@@ -198,10 +209,7 @@ Virtualized scrollable list:
 Navigation path display:
 
 ```tsx
-<Breadcrumb 
-  segments={["Home", "Category", "Item"]} 
-  separator="›"
-/>
+<Breadcrumb segments={["Home", "Category", "Item"]} separator="›" />
 ```
 
 ### createVirtualListController
@@ -210,10 +218,10 @@ Hook for external navigation control:
 
 ```tsx
 const list = createVirtualListController(
-  () => items,       // Items accessor
-  selectedIdx,       // Selection accessor
-  setSelectedIdx,    // Setter
-  viewportHeight     // Height accessor
+  () => items, // Items accessor
+  selectedIdx, // Selection accessor
+  setSelectedIdx, // Setter
+  viewportHeight, // Height accessor
 );
 
 // Use in keyboard handler
@@ -236,10 +244,10 @@ console.log(list.scrollOffset());
 import { useKeyboard } from "@opentui/solid";
 
 useKeyboard((key) => {
-  console.log(key.name);  // "up", "down", "enter", "q", etc.
-  console.log(key.ctrl);  // true if Ctrl held
+  console.log(key.name); // "up", "down", "enter", "q", etc.
+  console.log(key.ctrl); // true if Ctrl held
   console.log(key.shift); // true if Shift held
-  
+
   if (key.name === "q") exit(0);
   if (key.ctrl && key.name === "c") exit(0);
 });
@@ -262,11 +270,11 @@ useKeyboard((key) => {
 ## TTY Utilities
 
 ```ts
-import { 
-  cleanupTerminal,      // Full cleanup (call on exit)
-  enableMouseReporting, // Enable mouse wheel
-  disableMouseReporting,
+import {
+  cleanupTerminal, // Full cleanup (call on exit)
   clearScreen,
+  disableMouseReporting,
+  enableMouseReporting, // Enable mouse wheel
   resetAttributes,
   restoreStdin,
 } from "@alcyone-labs/arg-parser/tui";
@@ -277,15 +285,23 @@ import {
 ## Complete Example
 
 ```tsx
-import { render, useKeyboard } from "@opentui/solid";
 import { createSignal } from "solid-js";
-import { 
-  TuiProvider, useTui, useTheme,
-  MasterDetail, VirtualList, createVirtualListController,
-  cleanupTerminal 
+import {
+  cleanupTerminal,
+  createVirtualListController,
+  MasterDetail,
+  TuiProvider,
+  useTheme,
+  useTui,
+  VirtualList,
 } from "@alcyone-labs/arg-parser/tui";
+import { render, useKeyboard } from "@opentui/solid";
 
-interface Item { id: string; name: string; value: number }
+interface Item {
+  id: string;
+  name: string;
+  value: number;
+}
 
 const DATA: Item[] = Array.from({ length: 100 }, (_, i) => ({
   id: `item_${i}`,
@@ -297,9 +313,13 @@ function ItemDetails(props: { item: Item }) {
   const { current: theme } = useTheme();
   return (
     <>
-      <text bold color={theme().colors.accent}>{props.item.name}</text>
+      <text bold color={theme().colors.accent}>
+        {props.item.name}
+      </text>
       <text color={theme().colors.muted}>ID: {props.item.id}</text>
-      <text color={theme().colors.text}>Value: {props.item.value.toFixed(2)}</text>
+      <text color={theme().colors.text}>
+        Value: {props.item.value.toFixed(2)}
+      </text>
     </>
   );
 }
@@ -308,8 +328,13 @@ function App() {
   const { viewportHeight, exit } = useTui();
   const { current: theme, cycle } = useTheme();
   const [idx, setIdx] = createSignal(0);
-  
-  const list = createVirtualListController(() => DATA, idx, setIdx, viewportHeight);
+
+  const list = createVirtualListController(
+    () => DATA,
+    idx,
+    setIdx,
+    viewportHeight,
+  );
 
   useKeyboard((key) => {
     if (key.name === "q") exit(0);
@@ -341,14 +366,16 @@ function App() {
 
 render(
   () => (
-    <TuiProvider 
-      theme="dark" 
-      onScroll={(d) => { /* Mouse scroll handled here */ }}
+    <TuiProvider
+      theme="dark"
+      onScroll={(d) => {
+        /* Mouse scroll handled here */
+      }}
     >
       <App />
     </TuiProvider>
   ),
-  { onDestroy: cleanupTerminal }
+  { onDestroy: cleanupTerminal },
 );
 ```
 
@@ -358,17 +385,17 @@ Run: `bun my-app.tsx`
 
 ## API Reference
 
-| Export | Description |
-|--------|-------------|
-| `TuiProvider` | Unified provider for all TUI features |
-| `useTui` | Hook for viewport/exit access |
-| `useTheme` | Hook for theme access |
-| `THEMES` | Built-in theme presets |
-| `Theme` | Theme builder (`.from().extend()`) |
-| `MasterDetail` | Two-panel layout component |
-| `VirtualList` | Virtualized scrollable list |
-| `Breadcrumb` | Navigation path component |
-| `createVirtualListController` | List navigation hook |
-| `cleanupTerminal` | TTY cleanup function |
-| `useKeyboard` | Keyboard input hook (from @opentui/solid) |
-| `render` | Render function (from @opentui/solid) |
+| Export                        | Description                               |
+| ----------------------------- | ----------------------------------------- |
+| `TuiProvider`                 | Unified provider for all TUI features     |
+| `useTui`                      | Hook for viewport/exit access             |
+| `useTheme`                    | Hook for theme access                     |
+| `THEMES`                      | Built-in theme presets                    |
+| `Theme`                       | Theme builder (`.from().extend()`)        |
+| `MasterDetail`                | Two-panel layout component                |
+| `VirtualList`                 | Virtualized scrollable list               |
+| `Breadcrumb`                  | Navigation path component                 |
+| `createVirtualListController` | List navigation hook                      |
+| `cleanupTerminal`             | TTY cleanup function                      |
+| `useKeyboard`                 | Keyboard input hook (from @opentui/solid) |
+| `render`                      | Render function (from @opentui/solid)     |

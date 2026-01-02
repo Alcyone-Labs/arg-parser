@@ -66,7 +66,10 @@ export type AuthOptions = {
   required?: boolean; // default true for MCP endpoint
   scheme?: "bearer" | "jwt";
   allowedTokens?: string[]; // simple bearer allowlist
-  validator?: (req: any, token: string | undefined) => boolean | Promise<boolean>;
+  validator?: (
+    req: any,
+    token: string | undefined,
+  ) => boolean | Promise<boolean>;
   jwt?: JwtVerifyOptions;
   publicPaths?: string[]; // paths that skip auth
   protectedPaths?: string[]; // if provided, only these paths require auth
@@ -300,9 +303,10 @@ export type ToolConfig = {
  *   });
  * ```
  */
-export class ArgParser<
-  THandlerReturn = any,
-> extends ArgParserBase<THandlerReturn> implements IMcpServerMethods {
+export class ArgParser<THandlerReturn = any>
+  extends ArgParserBase<THandlerReturn>
+  implements IMcpServerMethods
+{
   /** Stored MCP server configuration from withMcp() */
   private _mcpServerConfig?: McpServerOptions;
 
@@ -1223,7 +1227,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         let mcpCompatibleSchema;
         try {
           if (process.env["MCP_DEBUG"]) {
-            this.logger.error(`[MCP Debug] Preparing schema for tool ${tool.name}`);
+            this.logger.error(
+              `[MCP Debug] Preparing schema for tool ${tool.name}`,
+            );
             this.logger.error(`[MCP Debug] Input zodSchema:`, zodSchema);
           }
 
@@ -1326,11 +1332,14 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             `[MCP Debug] Schema keys:`,
             Object.keys(mcpCompatibleSchema || {}),
           );
-          this.logger.error(`[MCP Debug] About to call server.registerTool with:`, {
-            name: tool.name,
-            description: tool.description,
-            inputSchema: mcpCompatibleSchema,
-          });
+          this.logger.error(
+            `[MCP Debug] About to call server.registerTool with:`,
+            {
+              name: tool.name,
+              description: tool.description,
+              inputSchema: mcpCompatibleSchema,
+            },
+          );
         }
 
         // Include output schema in MCP tool registration for MCP 2025-06-18+ clients
@@ -1345,21 +1354,21 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           if (process.env["MCP_DEBUG"]) {
             this.logger.error(
               `[MCP Debug] Including outputSchema for tool '${tool.name}':`,
-              typeof tool.outputSchema
+              typeof tool.outputSchema,
             );
             this.logger.error(
               `[MCP Debug] Converted outputSchema constructor:`,
-              convertedOutputSchema?.constructor?.name
+              convertedOutputSchema?.constructor?.name,
             );
             this.logger.error(
               `[MCP Debug] supportsOutputSchemas():`,
-              this.supportsOutputSchemas()
+              this.supportsOutputSchemas(),
             );
           }
         } else if (process.env["MCP_DEBUG"]) {
           this.logger.error(
             `[MCP Debug] NOT including outputSchema for tool '${tool.name}':`,
-            `hasOutputSchema=${!!tool.outputSchema}, supportsOutputSchemas=${this.supportsOutputSchemas()}`
+            `hasOutputSchema=${!!tool.outputSchema}, supportsOutputSchemas=${this.supportsOutputSchemas()}`,
           );
         }
 
@@ -1553,7 +1562,10 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               this.logger.error(
                 `[MCP Debug] Preparing schema for prompt ${prompt.name}`,
               );
-              this.logger.error(`[MCP Debug] Input argsSchema:`, prompt.argsSchema);
+              this.logger.error(
+                `[MCP Debug] Input argsSchema:`,
+                prompt.argsSchema,
+              );
             }
             mcpCompatibleSchema = prompt.argsSchema;
             if (process.env["MCP_DEBUG"]) {
@@ -1884,9 +1896,12 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           // CORS middleware (optional)
           if (transportConfig.cors) {
             const cors = transportConfig.cors;
-            const allowMethods = cors.methods?.join(", ") || "GET,POST,PUT,PATCH,DELETE,OPTIONS";
+            const allowMethods =
+              cors.methods?.join(", ") || "GET,POST,PUT,PATCH,DELETE,OPTIONS";
             const allowHeaders = (req: any) =>
-              cors.headers?.join(", ") || req.headers["access-control-request-headers"] || "Content-Type, Authorization, MCP-Session-Id";
+              cors.headers?.join(", ") ||
+              req.headers["access-control-request-headers"] ||
+              "Content-Type, Authorization, MCP-Session-Id";
             const exposed = cors.exposedHeaders?.join(", ") || undefined;
 
             const resolveOrigin = (req: any): string | undefined => {
@@ -1905,13 +1920,16 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             const applyCorsHeaders = (req: any, res: any) => {
               const origin = resolveOrigin(req);
               if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
-              if (cors.credentials) res.setHeader("Access-Control-Allow-Credentials", "true");
+              if (cors.credentials)
+                res.setHeader("Access-Control-Allow-Credentials", "true");
               res.setHeader("Vary", "Origin");
               res.setHeader("Access-Control-Allow-Methods", allowMethods);
               const hdrs = allowHeaders(req);
               if (hdrs) res.setHeader("Access-Control-Allow-Headers", hdrs);
-              if (exposed) res.setHeader("Access-Control-Expose-Headers", exposed);
-              if (typeof cors.maxAge === "number") res.setHeader("Access-Control-Max-Age", String(cors.maxAge));
+              if (exposed)
+                res.setHeader("Access-Control-Expose-Headers", exposed);
+              if (typeof cors.maxAge === "number")
+                res.setHeader("Access-Control-Max-Age", String(cors.maxAge));
             };
 
             app.options(path, (req: any, res: any) => {
@@ -1943,7 +1961,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           };
 
           // Minimal JWT verifier supporting HS256 and RS256
-          const base64urlDecode = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+          const base64urlDecode = (s: string) =>
+            Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64");
           const verifyJwt = async (token: string): Promise<boolean> => {
             if (!authOpts?.jwt) return false;
             const [h, p, sig] = token.split(".");
@@ -1951,13 +1970,20 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             const header = JSON.parse(base64urlDecode(h).toString("utf8"));
             const payload = JSON.parse(base64urlDecode(p).toString("utf8"));
             const alg = header.alg as "HS256" | "RS256";
-            if (authOpts.jwt.algorithms && !authOpts.jwt.algorithms.includes(alg)) return false;
+            if (
+              authOpts.jwt.algorithms &&
+              !authOpts.jwt.algorithms.includes(alg)
+            )
+              return false;
             const data = Buffer.from(`${h}.${p}`);
             const signature = base64urlDecode(sig);
             if (alg === "HS256") {
               const secret = authOpts.jwt.secret;
               if (!secret) return false;
-              const hmac = (await import("node:crypto")).createHmac("sha256", secret).update(data).digest();
+              const hmac = (await import("node:crypto"))
+                .createHmac("sha256", secret)
+                .update(data)
+                .digest();
               if (!hmac.equals(signature)) return false;
             } else if (alg === "RS256") {
               const crypto = await import("node:crypto");
@@ -1976,11 +2002,15 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
             }
             // Optional audience/issuer checks
             if (authOpts.jwt.audience) {
-              const allowed = Array.isArray(authOpts.jwt.audience) ? authOpts.jwt.audience : [authOpts.jwt.audience];
+              const allowed = Array.isArray(authOpts.jwt.audience)
+                ? authOpts.jwt.audience
+                : [authOpts.jwt.audience];
               if (!allowed.includes(payload.aud)) return false;
             }
             if (authOpts.jwt.issuer) {
-              const allowed = Array.isArray(authOpts.jwt.issuer) ? authOpts.jwt.issuer : [authOpts.jwt.issuer];
+              const allowed = Array.isArray(authOpts.jwt.issuer)
+                ? authOpts.jwt.issuer
+                : [authOpts.jwt.issuer];
               if (!allowed.includes(payload.iss)) return false;
             }
             const nowSec = Math.floor(Date.now() / 1000);
@@ -1993,19 +2023,26 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
           const authenticate = async (req: any): Promise<boolean> => {
             if (!authOpts) return true;
             const authz = req.headers.authorization as string | undefined;
-            const token = authz?.startsWith("Bearer ") ? authz.slice(7) : undefined;
+            const token = authz?.startsWith("Bearer ")
+              ? authz.slice(7)
+              : undefined;
             if (!token) {
               // allow custom validator to decide on missing token
-              if (authOpts.validator) return !!(await authOpts.validator(req, token));
+              if (authOpts.validator)
+                return !!(await authOpts.validator(req, token));
               return false;
             }
             if (authOpts.scheme === "jwt" || authOpts.jwt) {
               const ok = await verifyJwt(token);
               if (!ok) return false;
             } else if (authOpts.scheme === "bearer" || !authOpts.scheme) {
-              if (authOpts.allowedTokens && !authOpts.allowedTokens.includes(token)) {
+              if (
+                authOpts.allowedTokens &&
+                !authOpts.allowedTokens.includes(token)
+              ) {
                 // fall through to validator if provided
-                if (authOpts.validator) return !!(await authOpts.validator(req, token));
+                if (authOpts.validator)
+                  return !!(await authOpts.validator(req, token));
                 return false;
               }
             }
@@ -2027,7 +2064,9 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
               }
             }
 
-            const sessionId = req.headers["mcp-session-id"] as string | undefined;
+            const sessionId = req.headers["mcp-session-id"] as
+              | string
+              | undefined;
             let transport: any;
 
             if (sessionId && transports[sessionId]) {
@@ -2170,7 +2209,7 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
   public async parseIfExecutedDirectly(
     importMetaUrl: string,
     processArgs?: string[],
-    options?: any
+    options?: any,
   ): Promise<any> {
     return this.parse(processArgs, {
       ...options,

@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.11.0",
+  "version": "2.12.0",
   "description": "A robust, type-safe CLI builder with out-of-the-box support for creating MCPs and bundling Claude Desktop's DXT packages",
   "type": "module",
   "main": "dist/index.cjs",
@@ -98,9 +98,9 @@
     "dxt:verify": "npx @anthropic-ai/dxt verify"
   },
   "dependencies": {
-    "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
     "@alcyone-labs/simple-chalk": "^1.0.2",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
+    "@modelcontextprotocol/sdk": "^1.25.1",
     "@opentui/core": "0.1.67",
     "@opentui/solid": "0.1.67",
     "get-tsconfig": "^4.13.0",

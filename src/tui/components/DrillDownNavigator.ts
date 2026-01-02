@@ -7,7 +7,6 @@
 
 import { createSignal, type Accessor, type JSX } from "solid-js";
 
-
 /**
  * Navigation API passed to children
  */
@@ -50,7 +49,9 @@ export interface DrillDownNavigatorProps {
  * </DrillDownNavigator>
  * ```
  */
-export function DrillDownNavigator(props: DrillDownNavigatorProps): JSX.Element {
+export function DrillDownNavigator(
+  props: DrillDownNavigatorProps,
+): JSX.Element {
   const [stack, setStack] = createSignal<Array<() => JSX.Element>>([]);
 
   const push = (view: () => JSX.Element) => {
@@ -107,7 +108,7 @@ export function DrillDownNavigator(props: DrillDownNavigatorProps): JSX.Element 
       height: "100%",
       onKeyDown: (event: { key: string; defaultPrevented?: boolean }) => {
         if (event.defaultPrevented) return;
-        
+
         // Escape or Left Arrow to go back
         if (
           (event.key === "Escape" || event.key === "ArrowLeft") &&

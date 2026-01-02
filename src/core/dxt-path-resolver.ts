@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as os from "node:os";
+import * as path from "node:path";
 import { detectEntryPoint } from "./log-path-utils";
 
 /**
@@ -47,8 +47,11 @@ export class DxtPathResolver {
 
     const context: IPathContext = {
       isDxt: this.isDxtEnvironment(),
-      userHome: typeof os.homedir === 'function' ? os.homedir() : undefined,
-      cwd: typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : undefined,
+      userHome: typeof os.homedir === "function" ? os.homedir() : undefined,
+      cwd:
+        typeof process !== "undefined" && typeof process.cwd === "function"
+          ? process.cwd()
+          : undefined,
     };
 
     // Detect entry point directory
@@ -72,7 +75,7 @@ export class DxtPathResolver {
    */
   public static isDxtEnvironment(): boolean {
     // Check for DXT-specific environment variables
-    if (process.env['DXT_EXTENSION_DIR'] || process.env['CLAUDE_DESKTOP_DXT']) {
+    if (process.env["DXT_EXTENSION_DIR"] || process.env["CLAUDE_DESKTOP_DXT"]) {
       return true;
     }
 
@@ -88,7 +91,9 @@ export class DxtPathResolver {
         // Additional validation for manifest.json to ensure it's a DXT manifest
         if (indicator === "manifest.json") {
           try {
-            const manifest = JSON.parse(fs.readFileSync(indicatorPath, "utf-8"));
+            const manifest = JSON.parse(
+              fs.readFileSync(indicatorPath, "utf-8"),
+            );
             if (manifest.server && manifest.user_config) {
               return true;
             }
@@ -116,13 +121,13 @@ export class DxtPathResolver {
    */
   private static detectDxtExtensionDir(): string | undefined {
     // Check environment variable first
-    if (process.env['DXT_EXTENSION_DIR']) {
-      return process.env['DXT_EXTENSION_DIR'];
+    if (process.env["DXT_EXTENSION_DIR"]) {
+      return process.env["DXT_EXTENSION_DIR"];
     }
 
     // Try to detect from current working directory
     const cwd = process.cwd();
-    
+
     // If we're in a DXT package, the extension dir is typically the parent or current directory
     if (fs.existsSync(path.join(cwd, "manifest.json"))) {
       return cwd;
@@ -130,7 +135,8 @@ export class DxtPathResolver {
 
     // Look for parent directories that might be the extension dir
     let currentDir = cwd;
-    for (let i = 0; i < 3; i++) { // Check up to 3 levels up
+    for (let i = 0; i < 3; i++) {
+      // Check up to 3 levels up
       const parentDir = path.dirname(currentDir);
       if (parentDir === currentDir) break; // Reached root
 
@@ -153,7 +159,7 @@ export class DxtPathResolver {
   public static resolvePath(
     inputPath: string,
     context?: IPathContext,
-    config?: IDxtVariableConfig
+    config?: IDxtVariableConfig,
   ): string {
     const ctx = context || this.detectContext();
     const resolvedPath = this.substituteVariables(inputPath, ctx, config);
@@ -183,9 +189,10 @@ export class DxtPathResolver {
   public static substituteVariables(
     inputPath: string,
     context: IPathContext,
-    config?: IDxtVariableConfig
+    config?: IDxtVariableConfig,
   ): string {
-    const safeHomedir = () => typeof os.homedir === 'function' ? os.homedir() : '/tmp';
+    const safeHomedir = () =>
+      typeof os.homedir === "function" ? os.homedir() : "/tmp";
     const homeDir = context.userHome || safeHomedir();
 
     const variables: Record<string, string> = {
@@ -195,17 +202,19 @@ export class DxtPathResolver {
       DOWNLOADS: path.join(homeDir, "Downloads"),
       DESKTOP: path.join(homeDir, "Desktop"),
       pathSeparator: path.sep,
-      
+
       // Context-specific variables
-      __dirname: context.isDxt && context.extensionDir 
-        ? context.extensionDir 
-        : context.entryDir || context.cwd || process.cwd(),
-      
+      __dirname:
+        context.isDxt && context.extensionDir
+          ? context.extensionDir
+          : context.entryDir || context.cwd || process.cwd(),
+
       // DXT-specific variables
-      ...(context.isDxt && context.extensionDir && {
-        DXT_DIR: context.extensionDir,
-        EXTENSION_DIR: context.extensionDir,
-      }),
+      ...(context.isDxt &&
+        context.extensionDir && {
+          DXT_DIR: context.extensionDir,
+          EXTENSION_DIR: context.extensionDir,
+        }),
 
       // Custom variables override defaults
       ...config?.customVariables,
@@ -219,7 +228,7 @@ export class DxtPathResolver {
           return match;
         }
         throw new Error(
-          `Undefined DXT variable: ${variableName}. Available variables: ${Object.keys(variables).join(", ")}`
+          `Undefined DXT variable: ${variableName}. Available variables: ${Object.keys(variables).join(", ")}`,
         );
       }
 
@@ -234,7 +243,7 @@ export class DxtPathResolver {
       }
 
       throw new Error(
-        `Undefined DXT variable: ${variableName}. Available variables: ${Object.keys(variables).join(", ")}`
+        `Undefined DXT variable: ${variableName}. Available variables: ${Object.keys(variables).join(", ")}`,
       );
     });
   }
@@ -245,16 +254,21 @@ export class DxtPathResolver {
    * @param context - Optional context (will be detected if not provided)
    * @returns Absolute path for user data
    */
-  public static createUserDataPath(filename: string, context?: IPathContext): string {
+  public static createUserDataPath(
+    filename: string,
+    context?: IPathContext,
+  ): string {
     const ctx = context || this.detectContext();
-    
+
     if (ctx.isDxt && ctx.extensionDir) {
       // In DXT environment, store in extension directory
       return path.join(ctx.extensionDir, "data", filename);
     } else {
       // In development, store in user's data directory
-      const safeHomedir = () => typeof os.homedir === 'function' ? os.homedir() : '/tmp';
-      const userDataDir = process.env['XDG_DATA_HOME'] ||
+      const safeHomedir = () =>
+        typeof os.homedir === "function" ? os.homedir() : "/tmp";
+      const userDataDir =
+        process.env["XDG_DATA_HOME"] ||
         path.join(ctx.userHome || safeHomedir(), ".local", "share");
       const appName = this.getAppName(ctx);
       return path.join(userDataDir, appName, filename);
@@ -267,15 +281,19 @@ export class DxtPathResolver {
    * @param context - Optional context (will be detected if not provided)
    * @returns Absolute path for temporary file
    */
-  public static createTempPath(filename: string, context?: IPathContext): string {
+  public static createTempPath(
+    filename: string,
+    context?: IPathContext,
+  ): string {
     const ctx = context || this.detectContext();
-    
+
     if (ctx.isDxt && ctx.extensionDir) {
       // In DXT environment, use extension temp directory
       return path.join(ctx.extensionDir, "temp", filename);
     } else {
       // In development, use system temp directory
-      const safeTmpdir = () => typeof os.tmpdir === 'function' ? os.tmpdir() : '/tmp';
+      const safeTmpdir = () =>
+        typeof os.tmpdir === "function" ? os.tmpdir() : "/tmp";
       const appName = this.getAppName(ctx);
       return path.join(safeTmpdir(), appName, filename);
     }
@@ -287,16 +305,21 @@ export class DxtPathResolver {
    * @param context - Optional context (will be detected if not provided)
    * @returns Absolute path for configuration file
    */
-  public static createConfigPath(filename: string, context?: IPathContext): string {
+  public static createConfigPath(
+    filename: string,
+    context?: IPathContext,
+  ): string {
     const ctx = context || this.detectContext();
-    
+
     if (ctx.isDxt && ctx.extensionDir) {
       // In DXT environment, store in extension directory
       return path.join(ctx.extensionDir, "config", filename);
     } else {
       // In development, store in user's config directory
-      const safeHomedir = () => typeof os.homedir === 'function' ? os.homedir() : '/tmp';
-      const configDir = process.env['XDG_CONFIG_HOME'] ||
+      const safeHomedir = () =>
+        typeof os.homedir === "function" ? os.homedir() : "/tmp";
+      const configDir =
+        process.env["XDG_CONFIG_HOME"] ||
         path.join(ctx.userHome || safeHomedir(), ".config");
       const appName = this.getAppName(ctx);
       return path.join(configDir, appName, filename);
@@ -311,9 +334,14 @@ export class DxtPathResolver {
   private static getAppName(context: IPathContext): string {
     // Try to get app name from package.json
     try {
-      const packageJsonPath = path.join(context.entryDir || context.cwd || process.cwd(), "package.json");
+      const packageJsonPath = path.join(
+        context.entryDir || context.cwd || process.cwd(),
+        "package.json",
+      );
       if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+        const packageJson = JSON.parse(
+          fs.readFileSync(packageJsonPath, "utf-8"),
+        );
         return packageJson.name || "argparser-app";
       }
     } catch {

@@ -1,6 +1,6 @@
 /**
  * OpenTUI v2 Types
- * 
+ *
  * Shared type definitions for the TUI system.
  * These can be safely exported from the main library without
  * importing the TUI runtime (which has bundler requirements).

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { ArgParser } from "../src";
-import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as os from "node:os";
+import * as path from "node:path";
+import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
+import { ArgParser } from "../src";
 
 describe("Data-Safe Logging Integration", () => {
   let stderrSpy: any;
@@ -42,7 +42,7 @@ describe("Data-Safe Logging Integration", () => {
   test("ArgParser should inject logger into handler context", async () => {
     let contextLogger: any;
     const parser = new ArgParser({ appName: "test-app" });
-    
+
     parser.setHandler((ctx) => {
       contextLogger = ctx.logger;
       ctx.logger.error("Hello from context");
@@ -52,10 +52,12 @@ describe("Data-Safe Logging Integration", () => {
 
     expect(contextLogger).toBeDefined();
     expect(contextLogger).toBe(parser.logger);
-    
+
     // Check that info was actually called on stderr (default behavior)
     expect(stderrSpy).toHaveBeenCalled();
-    const stderrOutput = stderrSpy.mock.calls.map(call => String(call[0])).join("");
+    const stderrOutput = stderrSpy.mock.calls
+      .map((call) => String(call[0]))
+      .join("");
     expect(stderrOutput).toContain("Hello from context");
     // Ensure STDOUT is clean
     expect(stdoutSpy).not.toHaveBeenCalled();
@@ -64,10 +66,10 @@ describe("Data-Safe Logging Integration", () => {
   test("MCP mode handles log silencing correctly", async () => {
     // Create a logger that is silent
     const silentLogger = createMcpLogger({ silent: true });
-    
+
     const parser = new ArgParser({
       appName: "silent-app",
-      logger: silentLogger
+      logger: silentLogger,
     });
 
     parser.setHandler((ctx) => {
@@ -83,17 +85,17 @@ describe("Data-Safe Logging Integration", () => {
 
   test("Logger can redirect to file", async () => {
     const tempLogFile = path.join(os.tmpdir(), `test-log-${Date.now()}.log`);
-    
+
     // The option name is logToFile, not logFile
     const fileLogger = createMcpLogger({
       logToFile: tempLogFile,
       prefix: "FILE-TEST",
-      level: "info"
+      level: "info",
     });
 
     const parser = new ArgParser({
       appName: "file-app",
-      logger: fileLogger
+      logger: fileLogger,
     });
 
     parser.setHandler((ctx) => {
@@ -101,7 +103,7 @@ describe("Data-Safe Logging Integration", () => {
     });
 
     await parser.parseAsync([]);
-    
+
     // Close the logger to ensure logs are flushed to disk
     await fileLogger.close();
 
@@ -128,10 +130,10 @@ describe("Data-Safe Logging Integration", () => {
 
     // trigger some error logic
     try {
-        // Try to trigger a real error that goes through handleError logic
-        await parser.parseAsync(["--unknown-flag-xyz"], { handleErrors: true });
+      // Try to trigger a real error that goes through handleError logic
+      await parser.parseAsync(["--unknown-flag-xyz"], { handleErrors: true });
     } catch (e) {
-        // Expected
+      // Expected
     }
 
     expect(errorSpy).toHaveBeenCalled();

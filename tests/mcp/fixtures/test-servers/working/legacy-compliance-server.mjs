@@ -4,7 +4,8 @@ import { ArgParser } from "@alcyone-labs/arg-parser";
 const cli = ArgParser.withMcp({
   appName: "Legacy Compliance Server",
   appCommandName: "legacy-compliance-server",
-  description: "MCP server for protocol compliance testing using legacy patterns",
+  description:
+    "MCP server for protocol compliance testing using legacy patterns",
   mcp: {
     serverInfo: {
       name: "legacy-compliance-test-server",

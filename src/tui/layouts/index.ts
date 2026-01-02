@@ -1,13 +1,13 @@
 /**
  * TUI Layout Components
- * 
+ *
  * Reusable layout templates for TUI applications.
  */
 
-export { 
-  MasterDetailLayout, 
-  MasterPanel, 
-  DetailPanel, 
+export {
+  MasterDetailLayout,
+  MasterPanel,
+  DetailPanel,
   ListItem,
   LAYOUT_THEMES,
   type MasterDetailLayoutProps,

@@ -1,13 +1,13 @@
 /**
  * Master-Detail Layout
- * 
+ *
  * A 3-fold TUI layout template with:
  * - Header (with title)
  * - Breadcrumb navigation
  * - Master panel (left, scrollable list)
  * - Detail panel (right, content area)
  * - Footer (shortcuts hint)
- * 
+ *
  * @example
  * ```tsx
  * <MasterDetailLayout
@@ -36,25 +36,43 @@ import type { TuiTheme } from "../types";
 // ============================================================================
 
 export const LAYOUT_THEMES = {
-  dark: { 
-    bg: "#0d0d0d", fg: "#f5f5f5", accent: "#00d4ff", muted: "#999999", 
-    error: "#ff4444", success: "#44ff44", border: "#444444", 
-    selection: "#00d4ff", selectionFg: "#000000" 
+  dark: {
+    bg: "#0d0d0d",
+    fg: "#f5f5f5",
+    accent: "#00d4ff",
+    muted: "#999999",
+    error: "#ff4444",
+    success: "#44ff44",
+    border: "#444444",
+    selection: "#00d4ff",
+    selectionFg: "#000000",
   },
-  light: { 
-    bg: "#e8e8e8", fg: "#000000", accent: "#0044aa", muted: "#333333", 
-    error: "#880000", success: "#005500", border: "#888888", 
-    selection: "#0044aa", selectionFg: "#ffffff" 
+  light: {
+    bg: "#e8e8e8",
+    fg: "#000000",
+    accent: "#0044aa",
+    muted: "#333333",
+    error: "#880000",
+    success: "#005500",
+    border: "#888888",
+    selection: "#0044aa",
+    selectionFg: "#ffffff",
   },
-  monokai: { 
-    bg: "#272822", fg: "#f8f8f2", accent: "#a6e22e", muted: "#75715e", 
-    error: "#f92672", success: "#a6e22e", border: "#49483e", 
-    selection: "#a6e22e", selectionFg: "#272822" 
+  monokai: {
+    bg: "#272822",
+    fg: "#f8f8f2",
+    accent: "#a6e22e",
+    muted: "#75715e",
+    error: "#f92672",
+    success: "#a6e22e",
+    border: "#49483e",
+    selection: "#a6e22e",
+    selectionFg: "#272822",
   },
 } as const;
 
 export type LayoutThemeName = keyof typeof LAYOUT_THEMES;
-export type LayoutTheme = typeof LAYOUT_THEMES[LayoutThemeName];
+export type LayoutTheme = (typeof LAYOUT_THEMES)[LayoutThemeName];
 
 // ============================================================================
 // Layout Props
@@ -85,7 +103,8 @@ export interface PanelProps {
 
 function resolveTheme(theme?: LayoutTheme | LayoutThemeName): LayoutTheme {
   if (!theme) return LAYOUT_THEMES.dark;
-  if (typeof theme === "string") return LAYOUT_THEMES[theme] ?? LAYOUT_THEMES.dark;
+  if (typeof theme === "string")
+    return LAYOUT_THEMES[theme] ?? LAYOUT_THEMES.dark;
   return theme;
 }
 
@@ -96,15 +115,31 @@ function resolveTheme(theme?: LayoutTheme | LayoutThemeName): LayoutTheme {
 /**
  * Main layout wrapper.
  */
-export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element {
+export function MasterDetailLayout(
+  props: MasterDetailLayoutProps,
+): JSX.Element {
   const t = resolveTheme(props.theme);
   const masterWidth = props.masterWidth ?? "35%";
 
   return (
-    <box width="100%" height="100%" flexDirection="column" backgroundColor={t.bg}>
+    <box
+      width="100%"
+      height="100%"
+      flexDirection="column"
+      backgroundColor={t.bg}
+    >
       {/* Header */}
-      <box height={3} borderStyle="single" borderColor={t.accent} justifyContent="center" alignItems="center">
-        <text bold color={t.accent}> {props.header} </text>
+      <box
+        height={3}
+        borderStyle="single"
+        borderColor={t.accent}
+        justifyContent="center"
+        alignItems="center"
+      >
+        <text bold color={t.accent}>
+          {" "}
+          {props.header}{" "}
+        </text>
       </box>
 
       {/* Breadcrumb */}
@@ -113,7 +148,9 @@ export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element 
           {props.breadcrumb.map((segment, idx) => (
             <>
               {idx > 0 && <text color={t.muted}> › </text>}
-              <text color={t.accent} bold>{segment}</text>
+              <text color={t.accent} bold>
+                {segment}
+              </text>
             </>
           ))}
         </box>
@@ -137,17 +174,19 @@ export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element 
 /**
  * Left panel for the master list.
  */
-export function MasterPanel(props: PanelProps & { 
-  theme?: LayoutTheme | LayoutThemeName;
-  width?: string;
-}): JSX.Element {
+export function MasterPanel(
+  props: PanelProps & {
+    theme?: LayoutTheme | LayoutThemeName;
+    width?: string;
+  },
+): JSX.Element {
   const t = resolveTheme(props.theme);
   return (
-    <box 
-      width={props.width ?? "35%"} 
-      borderStyle="single" 
-      borderColor={t.border} 
-      flexDirection="column" 
+    <box
+      width={props.width ?? "35%"}
+      borderStyle="single"
+      borderColor={t.border}
+      flexDirection="column"
       padding={1}
     >
       {props.children}
@@ -158,16 +197,18 @@ export function MasterPanel(props: PanelProps & {
 /**
  * Right panel for detail content.
  */
-export function DetailPanel(props: PanelProps & { 
-  theme?: LayoutTheme | LayoutThemeName;
-}): JSX.Element {
+export function DetailPanel(
+  props: PanelProps & {
+    theme?: LayoutTheme | LayoutThemeName;
+  },
+): JSX.Element {
   const t = resolveTheme(props.theme);
   return (
-    <box 
-      flexGrow={1} 
-      borderStyle="single" 
-      borderColor={t.border} 
-      flexDirection="column" 
+    <box
+      flexGrow={1}
+      borderStyle="single"
+      borderColor={t.border}
+      flexDirection="column"
       padding={2}
     >
       {props.children}
@@ -187,7 +228,8 @@ export function ListItem(props: {
   return (
     <box height={1} backgroundColor={props.selected ? t.selection : undefined}>
       <text color={props.selected ? t.selectionFg : t.fg}>
-        {props.selected ? "› " : "  "}{props.label}
+        {props.selected ? "› " : "  "}
+        {props.label}
       </text>
     </box>
   );

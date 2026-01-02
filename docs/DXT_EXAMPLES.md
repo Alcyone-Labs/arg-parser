@@ -16,13 +16,13 @@ This document provides real-world examples demonstrating different DXT types, pa
 ### Image Converter
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "image-converter",
     version: "1.0.0",
-    logPath: "${HOME}/logs/image-converter.log"
+    logPath: "${HOME}/logs/image-converter.log",
   })
   .addFlag({
     name: "input",
@@ -31,8 +31,8 @@ const parser = new ArgParser()
     mandatory: true,
     dxtOptions: {
       type: "file",
-      title: "Select Image File"
-    }
+      title: "Select Image File",
+    },
   })
   .addFlag({
     name: "output-dir",
@@ -41,8 +41,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "directory",
       localDefault: "${DOCUMENTS}/converted-images",
-      title: "Output Directory"
-    }
+      title: "Output Directory",
+    },
   })
   .addFlag({
     name: "quality",
@@ -53,8 +53,8 @@ const parser = new ArgParser()
       min: 1,
       max: 100,
       localDefault: 85,
-      title: "Quality (%)"
-    }
+      title: "Quality (%)",
+    },
   })
   .addFlag({
     name: "format",
@@ -63,41 +63,41 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: "jpg",
-      title: "Output Format"
-    }
+      title: "Output Format",
+    },
   })
   .addTool({
     name: "convert",
     description: "Convert image to specified format",
     handler: async (args) => {
       const outputPath = DxtPathResolver.resolvePath(
-        `${args.outputDir}/converted.${args.format}`
+        `${args.outputDir}/converted.${args.format}`,
       );
-      
+
       console.log(`Converting ${args.input} to ${outputPath}`);
       console.log(`Quality: ${args.quality}%`);
-      
+
       // Image conversion logic here...
-      
+
       return {
         success: true,
         outputPath,
-        quality: args.quality
+        quality: args.quality,
       };
-    }
+    },
   });
 ```
 
 ### Batch File Processor
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "batch-processor",
     version: "2.1.0",
-    logPath: "${HOME}/logs/batch-processor.log"
+    logPath: "${HOME}/logs/batch-processor.log",
   })
   .addFlag({
     name: "input-files",
@@ -107,8 +107,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "file",
       multiple: true,
-      title: "Select Files to Process"
-    }
+      title: "Select Files to Process",
+    },
   })
   .addFlag({
     name: "output-dir",
@@ -116,8 +116,8 @@ const parser = new ArgParser()
     type: "string",
     dxtOptions: {
       type: "directory",
-      localDefault: "${DOCUMENTS}/batch-output"
-    }
+      localDefault: "${DOCUMENTS}/batch-output",
+    },
   })
   .addFlag({
     name: "parallel",
@@ -126,8 +126,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: true,
-      title: "Parallel Processing"
-    }
+      title: "Parallel Processing",
+    },
   })
   .addFlag({
     name: "max-workers",
@@ -137,8 +137,8 @@ const parser = new ArgParser()
       type: "number",
       min: 1,
       max: 16,
-      localDefault: 4
-    }
+      localDefault: 4,
+    },
   })
   .addTool({
     name: "process",
@@ -146,21 +146,21 @@ const parser = new ArgParser()
     handler: async (args) => {
       const outputDir = DxtPathResolver.resolvePath(args.outputDir);
       await DxtPathResolver.ensureDirectory(outputDir);
-      
+
       const results = [];
       for (const file of args.inputFiles) {
         console.log(`Processing: ${file}`);
         // Processing logic...
         results.push({ file, status: "completed" });
       }
-      
+
       return {
         success: true,
         processed: results.length,
         outputDir,
-        parallel: args.parallel
+        parallel: args.parallel,
       };
-    }
+    },
   });
 ```
 
@@ -169,13 +169,13 @@ const parser = new ArgParser()
 ### Development Server
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "dev-server",
     version: "1.5.0",
-    logPath: "${HOME}/logs/dev-server.log"
+    logPath: "${HOME}/logs/dev-server.log",
   })
   .addFlag({
     name: "port",
@@ -186,8 +186,8 @@ const parser = new ArgParser()
       min: 1024,
       max: 65535,
       localDefault: 3000,
-      title: "Port"
-    }
+      title: "Port",
+    },
   })
   .addFlag({
     name: "host",
@@ -196,8 +196,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: "localhost",
-      title: "Hostname"
-    }
+      title: "Hostname",
+    },
   })
   .addFlag({
     name: "static-dir",
@@ -206,8 +206,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "directory",
       localDefault: "${__dirname}/public",
-      title: "Static Files Directory"
-    }
+      title: "Static Files Directory",
+    },
   })
   .addFlag({
     name: "ssl-cert",
@@ -215,8 +215,8 @@ const parser = new ArgParser()
     type: "string",
     dxtOptions: {
       type: "file",
-      title: "SSL Certificate"
-    }
+      title: "SSL Certificate",
+    },
   })
   .addFlag({
     name: "ssl-key",
@@ -225,8 +225,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "file",
       sensitive: true,
-      title: "SSL Private Key"
-    }
+      title: "SSL Private Key",
+    },
   })
   .addFlag({
     name: "debug",
@@ -235,31 +235,31 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: false,
-      title: "Debug Mode"
-    }
+      title: "Debug Mode",
+    },
   })
   .addTool({
     name: "start",
     description: "Start the development server",
     handler: async (args) => {
       const staticDir = DxtPathResolver.resolvePath(args.staticDir);
-      
+
       console.log(`Starting server on ${args.host}:${args.port}`);
       console.log(`Static files: ${staticDir}`);
-      
+
       if (args.sslCert && args.sslKey) {
         console.log("SSL enabled");
       }
-      
+
       // Server startup logic...
-      
+
       return {
         success: true,
-        url: `http${args.sslCert ? 's' : ''}://${args.host}:${args.port}`,
+        url: `http${args.sslCert ? "s" : ""}://${args.host}:${args.port}`,
         staticDir,
-        debug: args.debug
+        debug: args.debug,
       };
-    }
+    },
   });
 ```
 
@@ -268,13 +268,13 @@ const parser = new ArgParser()
 ### CSV Analyzer
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "csv-analyzer",
     version: "1.2.0",
-    logPath: "${HOME}/logs/csv-analyzer.log"
+    logPath: "${HOME}/logs/csv-analyzer.log",
   })
   .addFlag({
     name: "input-csv",
@@ -283,8 +283,8 @@ const parser = new ArgParser()
     mandatory: true,
     dxtOptions: {
       type: "file",
-      title: "Select CSV File"
-    }
+      title: "Select CSV File",
+    },
   })
   .addFlag({
     name: "output-report",
@@ -293,8 +293,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "file",
       localDefault: "${DOCUMENTS}/analysis-report.html",
-      title: "Report Output File"
-    }
+      title: "Report Output File",
+    },
   })
   .addFlag({
     name: "delimiter",
@@ -303,8 +303,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: ",",
-      title: "Delimiter"
-    }
+      title: "Delimiter",
+    },
   })
   .addFlag({
     name: "sample-size",
@@ -315,8 +315,8 @@ const parser = new ArgParser()
       min: 100,
       max: 1000000,
       localDefault: 10000,
-      title: "Sample Size"
-    }
+      title: "Sample Size",
+    },
   })
   .addFlag({
     name: "include-charts",
@@ -325,8 +325,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: true,
-      title: "Include Charts"
-    }
+      title: "Include Charts",
+    },
   })
   .addTool({
     name: "analyze",
@@ -334,20 +334,20 @@ const parser = new ArgParser()
     handler: async (args) => {
       const reportPath = DxtPathResolver.resolvePath(args.outputReport);
       await DxtPathResolver.ensureDirectory(reportPath);
-      
+
       console.log(`Analyzing ${args.inputCsv}`);
       console.log(`Sample size: ${args.sampleSize} rows`);
       console.log(`Report will be saved to: ${reportPath}`);
-      
+
       // Analysis logic...
-      
+
       return {
         success: true,
         reportPath,
         rowsAnalyzed: args.sampleSize,
-        chartsIncluded: args.includeCharts
+        chartsIncluded: args.includeCharts,
       };
-    }
+    },
   });
 ```
 
@@ -356,13 +356,13 @@ const parser = new ArgParser()
 ### Code Generator
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "code-generator",
     version: "2.0.0",
-    logPath: "${HOME}/logs/code-generator.log"
+    logPath: "${HOME}/logs/code-generator.log",
   })
   .addFlag({
     name: "template-dir",
@@ -371,8 +371,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "directory",
       localDefault: "${__dirname}/templates",
-      title: "Templates Directory"
-    }
+      title: "Templates Directory",
+    },
   })
   .addFlag({
     name: "output-dir",
@@ -381,8 +381,8 @@ const parser = new ArgParser()
     mandatory: true,
     dxtOptions: {
       type: "directory",
-      title: "Output Directory"
-    }
+      title: "Output Directory",
+    },
   })
   .addFlag({
     name: "config-file",
@@ -390,8 +390,8 @@ const parser = new ArgParser()
     type: "string",
     dxtOptions: {
       type: "file",
-      localDefault: "${__dirname}/codegen.config.json"
-    }
+      localDefault: "${__dirname}/codegen.config.json",
+    },
   })
   .addFlag({
     name: "language",
@@ -400,8 +400,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: "typescript",
-      title: "Programming Language"
-    }
+      title: "Programming Language",
+    },
   })
   .addFlag({
     name: "overwrite",
@@ -410,8 +410,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: false,
-      title: "Overwrite Existing Files"
-    }
+      title: "Overwrite Existing Files",
+    },
   })
   .addTool({
     name: "generate",
@@ -420,23 +420,23 @@ const parser = new ArgParser()
       const templateDir = DxtPathResolver.resolvePath(args.templateDir);
       const outputDir = DxtPathResolver.resolvePath(args.outputDir);
       const configPath = DxtPathResolver.resolvePath(args.configFile);
-      
+
       await DxtPathResolver.ensureDirectory(outputDir);
-      
+
       console.log(`Generating ${args.language} code`);
       console.log(`Templates: ${templateDir}`);
       console.log(`Output: ${outputDir}`);
-      
+
       // Code generation logic...
-      
+
       return {
         success: true,
         language: args.language,
         outputDir,
         filesGenerated: 5,
-        overwrite: args.overwrite
+        overwrite: args.overwrite,
       };
-    }
+    },
   });
 ```
 
@@ -445,13 +445,13 @@ const parser = new ArgParser()
 ### Documentation Builder
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "docs-builder",
     version: "1.3.0",
-    logPath: "${HOME}/logs/docs-builder.log"
+    logPath: "${HOME}/logs/docs-builder.log",
   })
   .addFlag({
     name: "source-dir",
@@ -460,8 +460,8 @@ const parser = new ArgParser()
     mandatory: true,
     dxtOptions: {
       type: "directory",
-      title: "Documentation Source"
-    }
+      title: "Documentation Source",
+    },
   })
   .addFlag({
     name: "output-dir",
@@ -470,8 +470,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "directory",
       localDefault: "${DOCUMENTS}/built-docs",
-      title: "Output Directory"
-    }
+      title: "Output Directory",
+    },
   })
   .addFlag({
     name: "theme",
@@ -480,8 +480,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: "default",
-      title: "Theme"
-    }
+      title: "Theme",
+    },
   })
   .addFlag({
     name: "base-url",
@@ -490,8 +490,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "string",
       localDefault: "/",
-      title: "Base URL"
-    }
+      title: "Base URL",
+    },
   })
   .addFlag({
     name: "watch",
@@ -500,8 +500,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: false,
-      title: "Watch Mode"
-    }
+      title: "Watch Mode",
+    },
   })
   .addFlag({
     name: "minify",
@@ -510,8 +510,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: true,
-      title: "Minify Output"
-    }
+      title: "Minify Output",
+    },
   })
   .addTool({
     name: "build",
@@ -519,24 +519,24 @@ const parser = new ArgParser()
     handler: async (args) => {
       const sourceDir = DxtPathResolver.resolvePath(args.sourceDir);
       const outputDir = DxtPathResolver.resolvePath(args.outputDir);
-      
+
       await DxtPathResolver.ensureDirectory(outputDir);
-      
+
       console.log(`Building documentation from ${sourceDir}`);
       console.log(`Output: ${outputDir}`);
       console.log(`Theme: ${args.theme}`);
-      
+
       // Documentation building logic...
-      
+
       return {
         success: true,
         sourceDir,
         outputDir,
         theme: args.theme,
         pagesBuilt: 25,
-        minified: args.minify
+        minified: args.minify,
       };
-    }
+    },
   });
 ```
 
@@ -545,13 +545,13 @@ const parser = new ArgParser()
 ### Log Analyzer
 
 ```typescript
-import { ArgParser, DxtPathResolver } from '@alcyone-labs/arg-parser';
+import { ArgParser, DxtPathResolver } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser()
   .withMcp({
     name: "log-analyzer",
     version: "1.4.0",
-    logPath: "${HOME}/logs/log-analyzer.log"
+    logPath: "${HOME}/logs/log-analyzer.log",
   })
   .addFlag({
     name: "log-files",
@@ -561,8 +561,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "file",
       multiple: true,
-      title: "Select Log Files"
-    }
+      title: "Select Log Files",
+    },
   })
   .addFlag({
     name: "output-report",
@@ -571,8 +571,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "file",
       localDefault: "${DOCUMENTS}/log-analysis-report.json",
-      title: "Report File"
-    }
+      title: "Report File",
+    },
   })
   .addFlag({
     name: "time-range",
@@ -583,8 +583,8 @@ const parser = new ArgParser()
       min: 1,
       max: 8760, // 1 year
       localDefault: 24,
-      title: "Time Range (hours)"
-    }
+      title: "Time Range (hours)",
+    },
   })
   .addFlag({
     name: "error-threshold",
@@ -595,8 +595,8 @@ const parser = new ArgParser()
       min: 1,
       max: 10000,
       localDefault: 100,
-      title: "Error Threshold"
-    }
+      title: "Error Threshold",
+    },
   })
   .addFlag({
     name: "include-debug",
@@ -605,8 +605,8 @@ const parser = new ArgParser()
     dxtOptions: {
       type: "boolean",
       localDefault: false,
-      title: "Include Debug Logs"
-    }
+      title: "Include Debug Logs",
+    },
   })
   .addTool({
     name: "analyze",
@@ -614,28 +614,29 @@ const parser = new ArgParser()
     handler: async (args) => {
       const reportPath = DxtPathResolver.resolvePath(args.outputReport);
       await DxtPathResolver.ensureDirectory(reportPath);
-      
+
       console.log(`Analyzing ${args.logFiles.length} log files`);
       console.log(`Time range: ${args.timeRange} hours`);
       console.log(`Error threshold: ${args.errorThreshold}`);
-      
+
       // Log analysis logic...
-      
+
       return {
         success: true,
         filesAnalyzed: args.logFiles.length,
         reportPath,
         errorsFound: 45,
         warningsFound: 123,
-        timeRange: args.timeRange
+        timeRange: args.timeRange,
       };
-    }
+    },
   });
 ```
 
 ## Common Patterns Summary
 
 ### File Input/Output Pattern
+
 ```typescript
 // Input file selection
 dxtOptions: {
@@ -645,12 +646,13 @@ dxtOptions: {
 
 // Output directory with smart default
 dxtOptions: {
-  type: "directory", 
+  type: "directory",
   localDefault: "${DOCUMENTS}/app-output"
 }
 ```
 
 ### Server Configuration Pattern
+
 ```typescript
 // Port with validation
 dxtOptions: {
@@ -668,6 +670,7 @@ dxtOptions: {
 ```
 
 ### Security Pattern
+
 ```typescript
 // Sensitive data handling
 dxtOptions: {
@@ -677,6 +680,7 @@ dxtOptions: {
 ```
 
 ### Multi-value Pattern
+
 ```typescript
 // Multiple file selection
 dxtOptions: {
