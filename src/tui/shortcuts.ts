@@ -7,8 +7,8 @@
  */
 
 import {
-  createSignal,
   createContext,
+  createSignal,
   useContext,
   type Accessor,
 } from "solid-js";
@@ -17,7 +17,6 @@ import { createComponent } from "@opentui/solid";
 import type { ShortcutBinding } from "./types";
 
 export type { ShortcutBinding };
-
 
 /**
  * Shortcut context value interface
@@ -56,11 +55,14 @@ function normalizeKey(key: string): string {
 /**
  * Check if a key event matches a key pattern
  */
-function matchesKey(event: { key: string; ctrl?: boolean; alt?: boolean; shift?: boolean }, pattern: string): boolean {
+function matchesKey(
+  event: { key: string; ctrl?: boolean; alt?: boolean; shift?: boolean },
+  pattern: string,
+): boolean {
   const normalized = normalizeKey(pattern);
   const parts = normalized.split("+");
-  
-  const key = parts.filter(p => !["ctrl", "alt", "shift"].includes(p))[0];
+
+  const key = parts.filter((p) => !["ctrl", "alt", "shift"].includes(p))[0];
   const needsCtrl = parts.includes("ctrl");
   const needsAlt = parts.includes("alt");
   const needsShift = parts.includes("shift");
@@ -81,21 +83,25 @@ export function ShortcutProvider(props: {
   bindings?: ShortcutBinding[];
   children: JSX.Element;
 }): JSX.Element {
-  const [registeredBindings, setRegisteredBindings] = createSignal<ShortcutBinding[]>(
-    props.bindings ?? []
-  );
+  const [registeredBindings, setRegisteredBindings] = createSignal<
+    ShortcutBinding[]
+  >(props.bindings ?? []);
   const [pending, setPending] = createSignal<string | null>(null);
   let chordTimeout: ReturnType<typeof setTimeout> | null = null;
 
   const register = (binding: ShortcutBinding): (() => void) => {
-    setRegisteredBindings(prev => [...prev, binding]);
+    setRegisteredBindings((prev) => [...prev, binding]);
     return () => {
-      setRegisteredBindings(prev => prev.filter(b => b !== binding));
+      setRegisteredBindings((prev) => prev.filter((b) => b !== binding));
     };
   };
   // Exposed for testing or external integration
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _handleKeyEvent = (event: { key: string; ctrl?: boolean; alt?: boolean; shift?: boolean }) => {
+  const _handleKeyEvent_ = (event: {
+    key: string;
+    ctrl?: boolean;
+    alt?: boolean;
+    shift?: boolean;
+  }) => {
     const bindings = registeredBindings();
     const currentPending = pending();
 
@@ -108,7 +114,7 @@ export function ShortcutProvider(props: {
     // If we have a pending chord, look for the second part
     if (currentPending) {
       const fullChord = `${currentPending} ${event.key.toLowerCase()}`;
-      const matchedBinding = bindings.find(b => {
+      const matchedBinding = bindings.find((b) => {
         const parts = b.key.toLowerCase().split(" ");
         return parts.length === 2 && parts.join(" ") === fullChord;
       });

@@ -5,13 +5,17 @@
  * support for custom theme registration.
  */
 
-import { createSignal, createContext, useContext, type Accessor } from "solid-js";
+import {
+  createContext,
+  createSignal,
+  useContext,
+  type Accessor,
+} from "solid-js";
 import type { JSX } from "@opentui/solid";
 import { createComponent } from "@opentui/solid";
 import type { TuiTheme } from "./types";
 
 export type { TuiTheme };
-
 
 /**
  * Built-in theme definitions
@@ -34,13 +38,13 @@ export const TuiThemes: Record<string, TuiTheme> = {
   light: {
     name: "light",
     colors: {
-      text: "#000000",       // Black text for readability
-      muted: "#333333",      // Dark gray muted
+      text: "#000000", // Black text for readability
+      muted: "#333333", // Dark gray muted
       background: "#e8e8e8", // Light gray background
-      accent: "#0044aa",     // Deep blue accent
-      success: "#005500",    // Dark green
-      warning: "#885500",    // Dark orange
-      error: "#880000",      // Dark red
+      accent: "#0044aa", // Deep blue accent
+      success: "#005500", // Dark green
+      warning: "#885500", // Dark orange
+      error: "#880000", // Dark red
       border: "#888888",
       selection: "#0044aa",
     },
@@ -108,7 +112,7 @@ export const THEMES = TuiThemes;
 
 /**
  * Theme builder for creating custom themes by extending built-in presets.
- * 
+ *
  * @example
  * ```ts
  * // Extend dark theme with custom background
@@ -116,7 +120,7 @@ export const THEMES = TuiThemes;
  *   name: "my-dark",
  *   colors: { background: "#1e1e1e" }
  * });
- * 
+ *
  * // Or create from scratch
  * const custom = Theme.create({
  *   name: "custom",
@@ -133,7 +137,10 @@ export const Theme = {
      * Extend the base theme with overrides.
      * Color overrides are shallow-merged with the base colors.
      */
-    extend: (overrides: { name?: string; colors?: Partial<TuiTheme["colors"]> }): TuiTheme => ({
+    extend: (overrides: {
+      name?: string;
+      colors?: Partial<TuiTheme["colors"]>;
+    }): TuiTheme => ({
       name: overrides.name ?? `${base.name}-extended`,
       colors: { ...base.colors, ...overrides.colors },
     }),
@@ -152,9 +159,8 @@ export const Theme = {
   /**
    * Get a theme by name, with fallback to dark theme.
    */
-  get: (name: string): TuiTheme => TuiThemes[name] ?? TuiThemes.dark,
+  get: (name: string): TuiTheme => TuiThemes[name] ?? TuiThemes["dark"],
 };
-
 
 /**
  * Theme context value interface

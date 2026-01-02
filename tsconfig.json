@@ -5,7 +5,9 @@
     "./tests/**/*.ts",
     "./script/**/*.ts",
     "./examples/**/*.ts",
-    "./dist/**/*"
+    "./dist/**/*",
+    "./src/tui/**/*",
+    "./src/ui/**/*"
   ],
   "compilerOptions": {
     "rootDir": "./src",
@@ -19,6 +21,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@opentui/solid",
 
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

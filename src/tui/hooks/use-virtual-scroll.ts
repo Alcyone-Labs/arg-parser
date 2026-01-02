@@ -1,10 +1,10 @@
 /**
  * Virtual Scroll Hook
- * 
+ *
  * Manages a virtualized list with a fixed viewport height.
  */
 
-import { createSignal, createMemo, type Accessor } from "solid-js";
+import { createMemo, createSignal, type Accessor } from "solid-js";
 
 export interface VirtualScrollResult<T> {
   /** Items currently visible in the viewport */
@@ -19,12 +19,12 @@ export interface VirtualScrollResult<T> {
 
 /**
  * Create a virtual scroll controller for a list.
- * 
+ *
  * @param items - Accessor returning the full list of items
  * @param selectedIdx - Accessor returning the currently selected index
  * @param viewportHeight - Accessor returning the viewport height in rows
  * @returns VirtualScrollResult with visible items and scroll controls
- * 
+ *
  * @example
  * ```tsx
  * const scroll = useVirtualScroll(
@@ -32,7 +32,7 @@ export interface VirtualScrollResult<T> {
  *   selectedIdx,
  *   () => Math.max(10, process.stdout.rows - 8)
  * );
- * 
+ *
  * <For each={scroll.visibleItems()}>
  *   {({ item, globalIndex }) => ...}
  * </For>
@@ -40,8 +40,8 @@ export interface VirtualScrollResult<T> {
  */
 export function useVirtualScroll<T>(
   items: Accessor<T[]>,
-  selectedIdx: Accessor<number>,
-  viewportHeight: Accessor<number>
+  _selectedIdx: Accessor<number>,
+  viewportHeight: Accessor<number>,
 ): VirtualScrollResult<T> {
   const [scrollOffset, setScrollOffset] = createSignal(0);
 
@@ -76,7 +76,7 @@ export function useVirtualScroll<T>(
 
 /**
  * Get dynamic viewport height based on terminal size.
- * 
+ *
  * @param reservedRows - Number of rows reserved for header/footer/etc (default: 8)
  * @param minHeight - Minimum viewport height (default: 10)
  */

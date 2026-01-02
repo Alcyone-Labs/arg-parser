@@ -34,8 +34,7 @@ export interface CardProps {
  * Box drawing characters for different border styles
  * @internal Reserved for future use with custom border rendering
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const _BorderChars = {
+const _BorderChars_ = {
   single: { tl: "┌", tr: "┐", bl: "└", br: "┘", h: "─", v: "│" },
   double: { tl: "╔", tr: "╗", bl: "╚", br: "╝", h: "═", v: "║" },
   rounded: { tl: "╭", tr: "╮", bl: "╰", br: "╯", h: "─", v: "│" },
@@ -128,13 +127,14 @@ export interface StatCardProps {
 function formatValue(
   value: number | string,
   format: StatCardProps["format"],
-  currency?: string
+  currency?: string,
 ): string {
   if (typeof value === "string") return value;
 
   switch (format) {
     case "compact":
-      if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
+      if (value >= 1_000_000_000)
+        return `${(value / 1_000_000_000).toFixed(1)}B`;
       if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
       if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
       return value.toString();
@@ -156,9 +156,10 @@ function formatValue(
 /**
  * Get trend emoji and color
  */
-function getTrendIndicator(
-  trend: StatCardProps["trend"]
-): { symbol: string; color: string } {
+function getTrendIndicator(trend: StatCardProps["trend"]): {
+  symbol: string;
+  color: string;
+} {
   switch (trend) {
     case "up":
       return { symbol: "▲", color: "#00ff88" };
@@ -188,7 +189,7 @@ export function StatCard(props: StatCardProps): JSX.Element {
   const formattedValue = formatValue(
     props.value,
     props.format ?? "number",
-    props.currency
+    props.currency,
   );
 
   const trendIndicator = props.trend ? getTrendIndicator(props.trend) : null;

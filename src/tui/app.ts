@@ -5,15 +5,14 @@
  * with theme, shortcut, and toast support pre-configured.
  */
 
-import { render, createComponent } from "@opentui/solid";
+import { createComponent, render } from "@opentui/solid";
 import type { JSX } from "@opentui/solid";
-import { ThemeProvider } from "./themes";
 import { ShortcutProvider } from "./shortcuts";
-import type { ShortcutBinding, TuiAppConfig, TuiTheme } from "./types";
+import { ThemeProvider } from "./themes";
 import { ToastProvider } from "./toast";
+import type { TuiAppConfig, TuiTheme } from "./types";
 
 export type { TuiAppConfig, TuiTheme };
-
 
 /**
  * Creates and renders a TUI application with all providers configured.
@@ -45,7 +44,7 @@ export type { TuiAppConfig, TuiTheme };
  */
 export function createTuiApp(
   App: () => JSX.Element,
-  config: TuiAppConfig = {}
+  config: TuiAppConfig = {},
 ): Promise<void> {
   const { theme = "dark", shortcuts = [], onDestroy } = config;
 
@@ -70,6 +69,6 @@ export function createTuiApp(
           });
         },
       }),
-    { onDestroy }
+    { onDestroy },
   );
 }
