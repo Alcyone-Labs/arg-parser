@@ -2,7 +2,7 @@ import { z, type ZodTypeAny } from "zod";
 
 // Forward declaration for ArgParser to avoid circular dependency in HandlerContext
 // This will be replaced or refined once ArgParser.ts is updated to use these types.
-export type ArgParserInstance = IArgParser; 
+export type ArgParserInstance = IArgParser;
 
 /**
  * Interface defining the MCP server methods expected by ArgParserBase.
@@ -14,22 +14,22 @@ export interface IMcpServerMethods {
     toolOptions?: any,
     logPath?: any,
   ): Promise<any>;
-  
+
   startMcpServerWithTransport(
     serverInfo: any,
     transportType: string,
     transportOptions: any,
     toolOptions: any,
-    logPath?: string
+    logPath?: string,
   ): Promise<void>;
 
   startMcpServerWithMultipleTransports(
     serverInfo: any,
     transports: any[],
     toolOptions: any,
-    logPath?: string
+    logPath?: string,
   ): Promise<void>;
-  
+
   getMcpServerConfig(): any;
 }
 
@@ -46,7 +46,7 @@ export interface IArgParser<THandlerReturn = any> {
   getHandler(): ((ctx: IHandlerContext) => void) | undefined;
   getSubCommands(): Map<string, ISubCommand>;
   get logger(): any;
-  
+
   // Flag methods
   get flags(): ProcessedFlag[];
   get flagNames(): string[];
@@ -54,22 +54,26 @@ export interface IArgParser<THandlerReturn = any> {
   addFlags(flags: readonly IFlag[]): this;
   hasFlag(name: string): boolean;
   getFlagDefinition(name: string): ProcessedFlag | undefined;
-  
+
   // Subcommand methods
   addSubCommand(subCommandConfig: ISubCommand): this;
   getSubCommand(name: string): ISubCommand | undefined;
-  
+
   // Parsing methods
   parse(processArgs?: string[], options?: any): Promise<any>;
-  
+
   // Configuration methods
-  setHandler(handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>): this;
-  
+  setHandler(
+    handler: (
+      ctx: IHandlerContext<any, any>,
+    ) => THandlerReturn | Promise<THandlerReturn>,
+  ): this;
+
   // Help
   helpText(): string;
   printAll(filePath?: string): void;
   getCommandChain(): string[];
-  
+
   // MCP methods (optional or requires casting)
   addMcpResource(config: any): this;
   removeMcpResource(name: string): this;
@@ -77,34 +81,10 @@ export interface IArgParser<THandlerReturn = any> {
   addMcpPrompt(config: any): this;
   removeMcpPrompt(name: string): this;
   getMcpPrompts(): any[];
-  
+
   // MCP methods from ArgParser subclass (optional in interface but present at runtime)
   getMcpServerConfig?(): any;
 }
-
-/**
- * Defines the behavior for flag inheritance in sub-commands.
- */
-export const FlagInheritance = {
-  /**
-   * No flags are inherited from the parent.
-   */
-  NONE: "none",
-  /**
-   * Inherits flags only from the direct parent at the time of attachment (Snapshot behavior).
-   * Equivalent to `true` in legacy boolean config.
-   */
-  DirectParentOnly: "direct-parent-only",
-  /**
-   * Inherits flags from the entire parent chain, ensuring grandchildren receive root flags
-   * even in bottom-up construction scenarios.
-   */
-  AllParents: "all-parents",
-} as const;
-
-export type TFlagInheritance =
-  | (typeof FlagInheritance)[keyof typeof FlagInheritance]
-  | boolean;
 
 /**
  * Defines the behavior for flag inheritance in sub-commands.

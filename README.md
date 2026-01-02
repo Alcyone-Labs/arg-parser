@@ -79,6 +79,8 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.11.0](#v2110)
+  - [v2.10.3](#v2103)
   - [v2.10.2](#v2102)
   - [v2.10.1](#v2101)
   - [v2.10.0](#v2100)
@@ -139,22 +141,31 @@ ArgParser includes **OpenTUI v2**, a reactive TUI framework built on SolidJS for
 ### Quick Start
 
 ```tsx
-import { render, useKeyboard } from "@opentui/solid";
 import { createSignal } from "solid-js";
-import { 
-  TuiProvider, useTui, useTheme, 
-  MasterDetail, VirtualList, createVirtualListController,
-  cleanupTerminal 
+import {
+  cleanupTerminal,
+  createVirtualListController,
+  MasterDetail,
+  TuiProvider,
+  useTheme,
+  useTui,
+  VirtualList,
 } from "@alcyone-labs/arg-parser/tui";
+import { render, useKeyboard } from "@opentui/solid";
 
-const DATA = [{ id: "1", name: "Item 1" }, /* ... */];
+const DATA = [{ id: "1", name: "Item 1" } /* ... */];
 
 function App() {
   const { viewportHeight, exit } = useTui();
   const { current: theme, cycle } = useTheme();
   const [idx, setIdx] = createSignal(0);
-  
-  const list = createVirtualListController(() => DATA, idx, setIdx, viewportHeight);
+
+  const list = createVirtualListController(
+    () => DATA,
+    idx,
+    setIdx,
+    viewportHeight,
+  );
 
   useKeyboard((key) => {
     if (key.name === "q") exit(0);
@@ -182,8 +193,12 @@ function App() {
 }
 
 render(
-  () => <TuiProvider theme="dark"><App /></TuiProvider>,
-  { onDestroy: cleanupTerminal }
+  () => (
+    <TuiProvider theme="dark">
+      <App />
+    </TuiProvider>
+  ),
+  { onDestroy: cleanupTerminal },
 );
 ```
 
@@ -195,7 +210,7 @@ import { Theme, THEMES } from "@alcyone-labs/arg-parser/tui";
 // Built-in: dark, light, monokai, dracula, nord, solarized
 const custom = Theme.from(THEMES.dark).extend({
   name: "my-theme",
-  colors: { background: "#1e1e1e", accent: "#ff6b6b" }
+  colors: { background: "#1e1e1e", accent: "#ff6b6b" },
 });
 ```
 
@@ -205,7 +220,6 @@ const custom = Theme.from(THEMES.dark).extend({
 bun examples/framework-demo.tsx    # Simplified demo
 bun examples/aquaria-trace-viewer.tsx  # Full-featured demo
 ```
-
 
 ## Installation
 
@@ -2286,6 +2300,87 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.11.0
+
+Working Directory Management & OpenTUI v2 Framework
+
+#### Working Directory Management (chdir)
+
+A major new capability for monorepo support and complex project structures:
+
+- **`setWorkingDirectory` Flag Property**: Designate any flag's value as the effective working directory. When used, `.env` file loading and relative path operations automatically resolve from this directory.
+- **`rootPath` in Handler Context**: Access the original working directory (where the user ran the command) via `ctx.rootPath`. Perfect for displaying user-friendly paths or resolving user-provided files relative to their PWD.
+- **Smart `.env` Auto-Discovery**: When used with `--s-with-env`, automatically discovers `.env.local`, `.env.dev`, `.env.test`, or `.env` in the effective working directory (priority order).
+- **Protected Validation**: Warnings for invalid paths (nonexistent, not a directory) and multiple workspace flags.
+
+```typescript
+const parser = new ArgParser({
+  appName: "Monorepo CLI",
+  handler: async (ctx) => {
+    console.log("Effective cwd:", process.cwd()); // Changed by --workspace
+    console.log("User's cwd:", ctx.rootPath); // Original location
+  },
+}).addFlag({
+  name: "workspace",
+  options: ["--workspace", "-w"],
+  type: "string",
+  setWorkingDirectory: true, // Makes this flag control the working directory
+});
+```
+
+See [Working Directory Documentation](./docs/WORKING_DIRECTORY.md) for complete examples.
+
+#### OpenTUI v2 - Complete TUI Rewrite
+
+The TUI framework has been completely rewritten using **SolidJS** and **SST's OpenTUI** for a reactive, component-based architecture:
+
+- **Reactive Components**: `TuiProvider`, `VirtualList`, `MasterDetail`, `Breadcrumb` built on SolidJS signals.
+- **Unified Provider**: `TuiProvider` handles mouse wheel reporting, terminal resize, TTY cleanup, and theme/shortcut contexts automatically.
+- **Rich Theme System**: 6 built-in themes (`dark`, `light`, `monokai`, `dracula`, `nord`, `solarized`) with `Theme.from().extend()` for custom themes.
+- **VirtualList**: Efficient virtualized scrolling with `createVirtualListController` for navigation control.
+- **Slot-Based Layouts**: `MasterDetail` component with header, breadcrumb, footer, and customizable panel widths.
+- **Hooks**: `useTui()` for viewport/exit, `useTheme()` for theming, plus mouse and virtual scroll hooks.
+- **TTY Utilities**: Exported `cleanupTerminal`, `enableMouseReporting`, etc. for custom terminal control.
+
+```tsx
+import {
+  MasterDetail,
+  TuiProvider,
+  useTui,
+  VirtualList,
+} from "@alcyone-labs/arg-parser/tui";
+import { render } from "@opentui/solid";
+
+function App() {
+  const { viewportHeight, exit } = useTui();
+  const [idx, setIdx] = createSignal(0);
+
+  return (
+    <MasterDetail
+      header="My App"
+      master={
+        <VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />
+      }
+      detail={<Details item={DATA[idx()]} />}
+    />
+  );
+}
+
+render(() => (
+  <TuiProvider theme="dark" onScroll={(d) => setIdx((i) => i + d)}>
+    <App />
+  </TuiProvider>
+));
+```
+
+See [TUI Documentation](./docs/TUI.md) for complete API reference and examples.
+
+#### Other Improvements
+
+- **Data-Safe Logging**: Integrated `@alcyone-labs/simple-mcp-logger` for STDOUT-safe logging.
+- **Bun Configuration**: Added `bunfig.toml` with OpenTUI preload for native JSX support.
+- **New Examples**: `aquaria-trace-viewer.tsx`, `framework-demo.tsx`, `template-demo.tsx`, `tui-demo-v2.tsx`.
 
 ### v2.10.3
 
