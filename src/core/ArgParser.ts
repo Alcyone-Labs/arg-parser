@@ -1,3 +1,4 @@
+import type { Application as ExpressApplication } from "express";
 import { z, type ZodTypeAny } from "zod";
 import {
   createMcpLogger,
@@ -25,16 +26,14 @@ import {
 } from "../mcp/zod-compatibility";
 import { debug } from "../utils/debug-utils";
 import { ArgParserBase, type IArgParserParams } from "./ArgParserBase";
-import { type IMcpServerMethods } from "./types";
 import { resolveLogPath, type LogPath } from "./log-path-utils";
+import { createOutputSchema, type IMcpServerMethods } from "./types";
 import type {
   IFlag,
   IHandlerContext,
   OutputSchemaConfig,
   ParseResult,
 } from "./types";
-import { createOutputSchema } from "./types";
-import type { Application as ExpressApplication } from "express";
 
 export type { Application as ExpressApplication } from "express";
 
@@ -1075,17 +1074,15 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       );
 
       // Dynamic import to avoid circular dependencies and support ES modules
-      const { McpServer, ResourceTemplate } = await import(
-        "@alcyone-labs/modelcontextprotocol-sdk/server/mcp.js"
-      );
+      const { McpServer, ResourceTemplate } =
+        await import("@modelcontextprotocol/sdk/server/mcp.js");
       logger.mcpError(
         "Successfully imported McpServer and ResourceTemplate from SDK",
       );
 
       const server = new McpServer({
-        id: effectiveServerInfo.name,
-        version: effectiveServerInfo.version,
         name: effectiveServerInfo.name,
+        version: effectiveServerInfo.version,
         description: effectiveServerInfo.description,
       });
 
@@ -1816,9 +1813,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
       switch (transportConfig.type) {
         case "stdio": {
           logger.mcpError("Importing StdioServerTransport from SDK");
-          const { StdioServerTransport } = await import(
-            "@alcyone-labs/modelcontextprotocol-sdk/server/stdio.js"
-          );
+          const { StdioServerTransport } =
+            await import("@modelcontextprotocol/sdk/server/stdio.js");
           logger.mcpError("Creating StdioServerTransport instance");
           const transport = new StdioServerTransport();
           logger.mcpError("Connecting server to stdio transport");
@@ -1828,9 +1824,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         }
 
         case "sse": {
-          const { SSEServerTransport } = await import(
-            "@alcyone-labs/modelcontextprotocol-sdk/server/sse.js"
-          );
+          const { SSEServerTransport } =
+            await import("@modelcontextprotocol/sdk/server/sse.js");
           const express = (await import("express")).default;
 
           const app = express();
@@ -1856,9 +1851,8 @@ Migration guide: https://github.com/alcyone-labs/arg-parser/blob/main/docs/MCP-M
         }
 
         case "streamable-http": {
-          const { StreamableHTTPServerTransport } = await import(
-            "@alcyone-labs/modelcontextprotocol-sdk/server/streamableHttp.js"
-          );
+          const { StreamableHTTPServerTransport } =
+            await import("@modelcontextprotocol/sdk/server/streamableHttp.js");
           const express = (await import("express")).default;
 
           const app = express();
