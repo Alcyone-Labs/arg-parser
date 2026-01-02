@@ -135,6 +135,11 @@ export default defineConfig(({ command, mode }) => {
         teardownTimeout: 3000, // Reduced teardown timeout
         // Retry failed tests once in case of flaky issues
         retry: 1,
+        // Handle @opentui packages (they have .scm tree-sitter files that Node.js can't load)
+        deps: {
+          // Process @opentui packages as ESM with special handling
+          inline: [/@opentui\/.*/],
+        },
         ...(process.env.VITEST_INCLUDE_INTEGRATION
           ? {
               poolOptions: {

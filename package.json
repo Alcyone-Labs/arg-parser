@@ -38,7 +38,7 @@
   },
   "pnpm": {
     "overrides": {
-      "zod": "^4.1.13"
+      "zod": "^4.3.4"
     }
   },
   "keywords": [
@@ -99,33 +99,37 @@
   },
   "dependencies": {
     "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
-    "@alcyone-labs/simple-chalk": "^1.0.1",
+    "@alcyone-labs/simple-chalk": "^1.0.2",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
+    "@opentui/core": "0.1.67",
+    "@opentui/solid": "0.1.67",
     "get-tsconfig": "^4.13.0",
     "magic-regexp": "^0.10.0",
-    "zod": "^4.1.13"
+    "solid-js": "1.9.9",
+    "zod": "^4.3.4"
   },
   "optionalDependencies": {
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "js-yaml": "^4.1.1",
-    "smol-toml": "^1.5.2",
-    "tsdown": "^0.16.8"
+    "smol-toml": "^1.6.0",
+    "tsdown": "^0.18.4"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.0",
     "@types/adm-zip": "^0.5.7",
     "@types/express": "^5.0.6",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.19.1",
+    "@types/node": "^25.0.3",
     "cross-env": "^10.1.0",
     "madge": "^8.0.0",
     "prettier": "^3.7.4",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^7.2.6",
-    "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.15"
+    "vite": "^7.3.0",
+    "vite-plugin-solid": "2.11.6",
+    "vite-tsconfig-paths": "^6.0.3",
+    "vitest": "^4.0.16"
   }
 }

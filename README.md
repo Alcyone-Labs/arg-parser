@@ -121,100 +121,91 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
 
 ## OpenTUI: Reactive Rich Terminal Interfaces
 
-ArgParser includes **OpenTUI**, a standardized framework for building deep, multi-layered terminal applications with minimal boilerplate. It features a stack-based navigation system (`StackNavigator`), mouse wheel support, and a reactive theming engine.
+ArgParser includes **OpenTUI v2**, a reactive TUI framework built on SolidJS for building rich terminal applications with minimal boilerplate.
 
-### Core TUI Features
+> 📖 **Full Documentation**: [docs/TUI.md](./docs/TUI.md)
 
 - **Standardized Navigation**: `Enter` / `Right` to dive into details, `Esc` / `Left` to go back.
 - **Reactive Theming**: Cycle through built-in themes (`Default`, `Ocean`, `Monokai`) or create your own.
 - **Mouse & Scroll Performance**: Built-in SGR mouse reporting support with smooth scrolling and high-performance rendering.
 - **New Components**: `Label` (Text), `Button` (Interactive), `Card` (Container), `Toast` (Notification).
 - **Component Based**: Reusable `List`, `ScrollArea`, `Input`, and `SplitLayout` components.
+- **TuiProvider**: Unified provider handling mouse, resize, cleanup, themes, and shortcuts
+- **Virtual Scrolling**: Efficient list rendering with `VirtualList`
+- **Theme System**: 6 built-in themes + `Theme.from().extend()` for custom themes
+- **Slot-based Layouts**: `MasterDetail` with customizable panels
+- **Keyboard + Mouse**: Built-in navigation with useKeyboard and mouse wheel
 
-### Component Reference
+### Quick Start
 
-#### `App`
+```tsx
+import { render, useKeyboard } from "@opentui/solid";
+import { createSignal } from "solid-js";
+import { 
+  TuiProvider, useTui, useTheme, 
+  MasterDetail, VirtualList, createVirtualListController,
+  cleanupTerminal 
+} from "@alcyone-labs/arg-parser/tui";
 
-The main entry point for TUI applications. It handles TTY raw mode, mouse reporting, and ensures clean terminal restoration on exit or crash.
+const DATA = [{ id: "1", name: "Item 1" }, /* ... */];
 
-```typescript
-const app = new UI.App();
-app.run(rootComponent);
-// Exit manually
-app.stop();
+function App() {
+  const { viewportHeight, exit } = useTui();
+  const { current: theme, cycle } = useTheme();
+  const [idx, setIdx] = createSignal(0);
+  
+  const list = createVirtualListController(() => DATA, idx, setIdx, viewportHeight);
+
+  useKeyboard((key) => {
+    if (key.name === "q") exit(0);
+    if (key.name === "t") cycle();
+    if (key.name === "down") list.selectNext();
+    if (key.name === "up") list.selectPrevious();
+  });
+
+  return (
+    <MasterDetail
+      header="My App"
+      breadcrumb={["Items", DATA[idx()]!.name]}
+      footer={`↑↓: Navigate | t: Theme (${theme().name}) | q: Quit`}
+      master={
+        <VirtualList
+          items={DATA}
+          selectedIndex={idx()}
+          viewportHeight={viewportHeight()}
+          getLabel={(item) => item.name}
+        />
+      }
+      detail={<text>Selected: {DATA[idx()]!.name}</text>}
+    />
+  );
+}
+
+render(
+  () => <TuiProvider theme="dark"><App /></TuiProvider>,
+  { onDestroy: cleanupTerminal }
+);
 ```
 
-#### `ScrollArea`
+### Theme Builder
 
-A container for long text blocks with automatic scrollbars and mouse-wheel support.
+```ts
+import { Theme, THEMES } from "@alcyone-labs/arg-parser/tui";
 
-- `content`: The text to display (supports ANSI colors).
-- `wrapText`: (New in v2.10.2) If true, automatically wraps long lines to fit the area width.
-
-```typescript
-const details = new UI.ScrollArea({
-  content: "Long text...",
-  wrapText: true,
+// Built-in: dark, light, monokai, dracula, nord, solarized
+const custom = Theme.from(THEMES.dark).extend({
+  name: "my-theme",
+  colors: { background: "#1e1e1e", accent: "#ff6b6b" }
 });
 ```
 
-#### `StackNavigator`
+### Run Examples
 
-Manages a stack of components, perfect for "Drill-down" interfaces.
-
-- Handles `Esc` and `Left Arrow` automatically to return to the previous view.
-- Resizes restore components to the correct dimensions.
-
-```typescript
-const nav = new UI.StackNavigator({ initialComponent: homeList });
-nav.push(detailsView); // Drill down
+```bash
+bun examples/framework-demo.tsx    # Simplified demo
+bun examples/aquaria-trace-viewer.tsx  # Full-featured demo
 ```
 
-#### `ThemeManager`
-
-Allows real-time theme switching without affecting application logic.
-
-```typescript
-UI.ThemeManager.setTheme("Ocean");
-const t = UI.ThemeManager.current;
-console.log(t.accent("Statically colored text"));
-```
-
-### Quick TUI Example
-
-```typescript
-import { UI } from "@alcyone-labs/arg-parser";
-
-const app = new UI.App();
-
-// Create components
-const list = new UI.List({
-  items: [
-    { label: "Help", value: "help" },
-    { label: "Exit", value: "exit" },
-  ],
-  onSubmit: (item) => {
-    if (item.value === "exit") app.stop();
-  },
-});
-
-const details = new UI.ScrollArea({
-  content: "Select an item to see more...",
-  wrapText: true,
-});
-
-// Build layout
-const layout = new UI.SplitLayout({
-  direction: "horizontal",
-  first: list,
-  second: details,
-  splitRatio: 0.3,
-});
-
-app.run(layout);
-```
-
-For a comprehensive implementation, check out `examples/complex-tui-demo.ts`.
 
 ## Installation
 

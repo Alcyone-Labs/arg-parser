@@ -1,0 +1,4 @@
+# Bun configuration for OpenTUI examples
+# This preload script is required for @opentui/solid to work correctly
+
+preload = ["@opentui/solid/preload"]

@@ -1840,7 +1840,6 @@ export class ArgParserBase<
 
       let handlerToExecute: RecursiveParseResult["handlerToExecute"] =
         undefined;
-
       // Create context with displayHelp implementation
       const handlerContext: IHandlerContext<any, any> = {
         args: currentLevelArgs,

@@ -7,12 +7,15 @@ This document provides detailed reference information for all TUI components ava
 - [Input Component](#input-component)
 - [List Component](#list-component)
 - [ScrollArea Component](#scrollarea-component)
+- [Label Component](#label-component)
 - [Button Component](#button-component)
-- [ProgressBar Component](#progressbar-component)
+- [Card Component](#card-component)
+- [Toast Component](#toast-component)
 - [SplitLayout Component](#splitlayout-component)
 - [StackNavigator Component](#stacknavigator-component)
 - [App Component](#app-component)
 - [Theme System](#theme-system)
+- [Clipboard Utility](#clipboard-utility)
 
 ---
 
@@ -161,6 +164,45 @@ scrollArea.setContent("New content...");
 
 ---
 
+## Label Component
+
+A flexible text component with alignment and basic styling.
+
+### Constructor
+
+```typescript
+new UI.Label({
+  text: string,
+  align?: "left" | "center" | "right",
+  dim?: boolean,
+  onClick?: () => void,
+  style?: IComponentStyle
+})
+```
+
+### Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `text` | `string` | Text content |
+| `align` | `string` | Text alignment |
+| `dim` | `boolean` | Muted styling |
+| `onClick` | `function` | Click handler |
+
+### Usage Example
+
+```typescript
+new UI.Label({
+  text: "Click to Copy ID",
+  onClick: () => {
+    UI.Clipboard.copy("ID-123");
+    app.toast.show("Copied!", "success");
+  }
+});
+```
+
+---
+
 ## Button Component
 
 A clickable button with customizable styling.
@@ -249,7 +291,8 @@ Divides space into two regions with configurable ratio and direction.
 ```typescript
 new UI.SplitLayout({
   direction: "horizontal" | "vertical",
-  splitRatio: number, // 0.0 to 1.0
+  splitRatio: number | "auto", // 0.0 to 1.0 or "auto" (v2.10.4)
+  gap?: number, // column gap between panes (v2.10.4)
   first: UI.Component,
   second: UI.Component,
 });
@@ -257,12 +300,13 @@ new UI.SplitLayout({
 
 ### Properties
 
-| Property     | Type           | Description                    |
-| ------------ | -------------- | ------------------------------ |
-| `direction`  | `string`       | Layout direction               |
-| `splitRatio` | `number`       | Size ratio for first component |
-| `first`      | `UI.Component` | First component                |
-| `second`     | `UI.Component` | Second component               |
+| Property | Type | Description |
+| --- | --- | --- |
+| `direction` | `string` | Layout direction |
+| `splitRatio` | `number \| "auto"` | Size ratio for first component. "auto" uses `getPreferredWidth()`. |
+| `gap` | `number` | Space between panes |
+| `first` | `UI.Component` | First component |
+| `second` | `UI.Component` | Second component |
 
 ### Usage Example
 
@@ -413,3 +457,20 @@ const styledText = `${t.accent("Important")} ${t.muted("secondary info")}`;
 4. **Performance**: Only call `markDirty()` when state changes
 5. **Accessibility**: Use semantic colors and clear labels
 6. **Error Handling**: Implement proper validation and error states
+---
+
+## Clipboard Utility
+
+Cross-platform clipboard helper.
+
+### Methods
+
+| Method | Signature | Description |
+| --- | --- | --- |
+| `copy()` | `(text: string) => Promise<void>` | Copy text to clipboard |
+
+### Usage Example
+
+```typescript
+await UI.Clipboard.copy("Hello World");
+```

@@ -139,5 +139,8 @@ export {
   type LoggerConfig,
 } from "@alcyone-labs/simple-mcp-logger";
 
-// TUI System exports
-export * as UI from "./ui";
+// TUI System exports (OpenTUI v2 with SolidJS)
+// NOTE: TUI runtime (createTuiApp) is available via separate import: "@alcyone-labs/arg-parser/tui"
+// This avoids loading @opentui/core during normal arg-parser usage.
+export type { TuiAppConfig, TuiTheme, ShortcutBinding, ToastType } from "./tui/types";
+
