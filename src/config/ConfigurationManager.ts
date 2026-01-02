@@ -418,14 +418,31 @@ export class ConfigurationManager {
       allFlags.push(...parser.flags);
     }
 
+    /**
+     * Normalizes a key for comparison by converting to lowercase and removing underscores/hyphens.
+     * This allows matching between SCREAMING_SNAKE_CASE (env vars) and camelCase (flag names).
+     * E.g., "TEST_VAR" -> "testvar", "testVar" -> "testvar", "test-var" -> "testvar"
+     */
+    const normalizeKey = (key: string): string => {
+      return key.toLowerCase().replace(/[-_]/g, "");
+    };
+
     // Convert each config value to the appropriate flag type
     for (const [key, value] of Object.entries(rawConfig)) {
-      // Try exact match first, then case-insensitive match
+      // Try exact match first
       let flag = allFlags.find((f) => f["name"] === key);
+
+      // Try case-insensitive match
       if (!flag) {
         flag = allFlags.find(
           (f) => f["name"].toLowerCase() === key.toLowerCase(),
         );
+      }
+
+      // Try normalized match (handles SCREAMING_SNAKE_CASE to camelCase)
+      if (!flag) {
+        const normalizedKey = normalizeKey(key);
+        flag = allFlags.find((f) => normalizeKey(f["name"]) === normalizedKey);
       }
 
       if (flag) {
@@ -546,26 +563,63 @@ export class ConfigurationManager {
   public mergeEnvConfigWithArgs(
     envConfig: Record<string, any>,
     processArgs: string[],
+    parserChain?: any[],
   ): string[] {
     const mergedArgs = [...processArgs];
 
+    // Collect all flags from the parser chain for option lookup
+    const allFlags: ProcessedFlag[] = [];
+    if (parserChain) {
+      for (const parser of parserChain) {
+        allFlags.push(...parser.flags);
+      }
+    }
+
+    // Helper to get the primary flag option (e.g., "--test-var") for a flag name (e.g., "testVar")
+    const getFlagOption = (flagName: string): string => {
+      const flag = allFlags.find((f) => f["name"] === flagName);
+      if (
+        flag &&
+        Array.isArray(flag["options"]) &&
+        flag["options"].length > 0
+      ) {
+        // Get the first option that starts with "--" (prefer long form)
+        const longOption = flag["options"].find((opt: string) =>
+          opt.startsWith("--"),
+        );
+        return longOption || flag["options"][0];
+      }
+      // Fallback to default format if flag not found
+      return `--${flagName}`;
+    };
+
     // Add environment config values as flags if they're not already present
     for (const [key, value] of Object.entries(envConfig)) {
-      const flagPattern = new RegExp(`^--${key}(=|$)`);
-      const hasFlag = mergedArgs.some((arg) => flagPattern.test(arg));
+      const flagOption = getFlagOption(key);
+
+      // Check if this flag is already present in the args
+      // Check both the flag option and variations (e.g., --test-var and --testVar)
+      const flagOptionWithoutDashes = flagOption.replace(/^--?/, "");
+      const hasFlag = mergedArgs.some((arg) => {
+        const argWithoutDashes = arg.replace(/^--?/, "").split("=")[0];
+        return (
+          argWithoutDashes === flagOptionWithoutDashes ||
+          argWithoutDashes === key
+        );
+      });
 
       if (!hasFlag) {
         if (typeof value === "boolean") {
           if (value) {
-            mergedArgs.push(`--${key}`);
+            mergedArgs.push(flagOption);
           }
         } else if (Array.isArray(value)) {
           // For table/array values, add multiple flags
           for (const item of value) {
-            mergedArgs.push(`--${key}`, String(item));
+            mergedArgs.push(flagOption, String(item));
           }
         } else {
-          mergedArgs.push(`--${key}`, String(value));
+          mergedArgs.push(flagOption, String(value));
         }
       }
     }

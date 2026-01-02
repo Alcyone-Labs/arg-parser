@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { anyOf, char, createRegExp, oneOrMore } from "magic-regexp";
 import { type ZodTypeAny } from "zod";
 import chalk from "@alcyone-labs/simple-chalk";
@@ -903,47 +904,37 @@ export class ArgParserBase<
           // Use effective working directory (or current cwd if not set)
           const basePath = this.#effectiveWorkingDirectory || process.cwd();
           envFilePath = path.resolve(basePath, providedPath);
-        } else {
-          // No file path provided - auto-discover
+        } else if (shouldAutoDiscover) {
+          // No file path provided, but shouldAutoDiscover is true
           const basePath = this.#effectiveWorkingDirectory || process.cwd();
           envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
           if (!envFilePath) {
-            this.#logger.warn(
-              chalk.yellow(
-                "Warning: No .env file found in working directory. Continuing without environment configuration.",
-              ),
+            console.warn(
+              "Warning: No .env file found in working directory. Continuing without environment configuration.",
             );
             // Remove flag and continue
             processArgs.splice(withEnvIndex, 1);
           }
         }
-      }
-
-      // Auto-discovery: If no file path provided, check if we should auto-discover
-      if (shouldAutoDiscover) {
+      } else if (shouldAutoDiscover) {
+        // --s-with-env is NOT provided, but setWorkingDirectory is set
         const basePath = this.#effectiveWorkingDirectory || process.cwd();
         envFilePath = this.#configurationManager.discoverEnvFile(basePath);
 
         if (envFilePath) {
-          this.#logger.info(
-            chalk.dim(`Auto-discovered env file: ${envFilePath}`),
-          );
+          console.warn(`Auto-discovered env file: ${envFilePath}`);
         } else {
-          this.#logger.warn(
-            chalk.yellow(
-              "Warning: No .env file found in working directory. Continuing without environment configuration.",
-            ),
+          console.warn(
+            "Warning: No .env file found in working directory. Continuing without environment configuration.",
           );
-          // Remove flag and continue
-          processArgs.splice(withEnvIndex, 1);
         }
       }
 
-      // Load env file if found
+      // Load env file if found (this processes both explicit and auto-discovered files)
       if (envFilePath) {
         try {
-          // Identify the final parser and parser chain for loading configuration
+          // Identify to final parser and parser chain for loading configuration
           const {
             finalParser: identifiedFinalParser,
             parserChain: identifiedParserChain,
@@ -966,28 +957,89 @@ export class ArgParserBase<
               identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
                 envConfigArgs,
                 processArgs,
+                identifiedParserChain,
               );
 
-            // Replace the original processArgs array contents
+            // Replace to original processArgs array contents
             processArgs.length = 0;
             processArgs.push(...mergedArgs);
           }
 
-          // Remove the --s-with-env flag and its file path argument from processArgs
-          // This must be done after merging to avoid interfering with the merge process
+          // Remove to --s-with-env flag and its file path argument from processArgs
+          // This must be done after merging to avoid interfering with to merge process
           const finalWithEnvIndex = processArgs.findIndex(
             (arg) => arg === "--s-with-env",
           );
           if (finalWithEnvIndex !== -1) {
-            // Check if there's a file path argument after the flag
+            // Check if there's a file path argument after to flag
             if (
               finalWithEnvIndex + 1 < processArgs.length &&
               !processArgs[finalWithEnvIndex + 1].startsWith("-")
             ) {
-              processArgs.splice(finalWithEnvIndex, 2); // Remove both flag and the file path
+              processArgs.splice(finalWithEnvIndex, 2); // Remove both flag and file path
             } else {
-              processArgs.splice(finalWithEnvIndex, 1); // Remove only the flag
+              processArgs.splice(finalWithEnvIndex, 1); // Remove only to flag
             }
+          }
+        } catch (error) {
+          console.error(
+            `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return this._handleExit(
+            1,
+            `Error loading environment file: ${error instanceof Error ? error.message : String(error)}`,
+            "error",
+          );
+        }
+      }
+
+      // Auto-discovery: If no file path provided, check if we should auto-discover
+      if (shouldAutoDiscover) {
+        // No file path provided, but shouldAutoDiscover is true
+        const basePath = this.#effectiveWorkingDirectory || process.cwd();
+        envFilePath = this.#configurationManager.discoverEnvFile(basePath);
+
+        if (envFilePath) {
+          console.warn(`Auto-discovered env file: ${envFilePath}`);
+        } else {
+          console.warn(
+            "Warning: No .env file found in working directory. Continuing without environment configuration.",
+          );
+        }
+      }
+
+      // Load env file if found (this processes both explicit and auto-discovered files)
+      if (envFilePath) {
+        try {
+          // Identify to final parser and parser chain for loading configuration
+          const {
+            finalParser: identifiedFinalParser,
+            parserChain: identifiedParserChain,
+          } = this.#_identifyCommandChainAndParsers(
+            processArgs,
+            this,
+            [],
+            [this],
+          );
+
+          const envConfigArgs =
+            identifiedFinalParser.#configurationManager.loadEnvFile(
+              envFilePath,
+              identifiedParserChain,
+            );
+          if (envConfigArgs) {
+            // Merge environment configuration with process args
+            // CLI args take precedence over file configuration
+            const mergedArgs =
+              identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
+                envConfigArgs,
+                processArgs,
+                identifiedParserChain,
+              );
+
+            // Replace to original processArgs array contents
+            processArgs.length = 0;
+            processArgs.push(...mergedArgs);
           }
         } catch (error) {
           console.error(
@@ -1024,6 +1076,66 @@ export class ArgParserBase<
         // Remove --s-with-env flag if no env file was found
         if (!envFilePath) {
           processArgs.splice(withEnvIndex, 1);
+        }
+      }
+    }
+
+    // Auto-discovery: When setWorkingDirectory flag was used (cwd changed) but --s-with-env was NOT provided,
+    // automatically discover and load .env files from the new working directory
+    const withEnvWasProvided = processArgs.some(
+      (arg) => arg === "--s-with-env",
+    );
+    const shouldAutoDiscoverWithoutFlag =
+      this.#workingDirectoryResolved &&
+      this.#effectiveWorkingDirectory !== this.#rootPath &&
+      !withEnvWasProvided;
+
+    if (shouldAutoDiscoverWithoutFlag) {
+      const basePath = this.#effectiveWorkingDirectory || process.cwd();
+      const autoDiscoveredEnvFile =
+        this.#configurationManager.discoverEnvFile(basePath);
+
+      if (autoDiscoveredEnvFile) {
+        console.warn(`Auto-discovered env file: ${autoDiscoveredEnvFile}`);
+
+        // Load env file into process.env using dotenv (dotenv-style behavior)
+        dotenv.config({ path: autoDiscoveredEnvFile, quiet: true });
+
+        try {
+          // Identify the final parser and parser chain for loading configuration
+          const { finalParser: envFinalParser, parserChain: envParserChain } =
+            this.#_identifyCommandChainAndParsers(
+              processArgs,
+              this,
+              [],
+              [this],
+            );
+
+          const envConfigArgs =
+            envFinalParser.#configurationManager.loadEnvFile(
+              autoDiscoveredEnvFile,
+              envParserChain,
+            );
+
+          if (envConfigArgs) {
+            // Merge environment configuration with process args
+            // CLI args take precedence over file configuration
+            const mergedArgs =
+              envFinalParser.#configurationManager.mergeEnvConfigWithArgs(
+                envConfigArgs,
+                processArgs,
+                envParserChain,
+              );
+
+            // Replace the original processArgs array contents
+            processArgs.length = 0;
+            processArgs.push(...mergedArgs);
+          }
+        } catch (error) {
+          console.error(
+            `Error loading auto-discovered environment file: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          // Don't exit on auto-discovery errors, just warn and continue
         }
       }
     }

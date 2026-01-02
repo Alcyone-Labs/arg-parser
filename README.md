@@ -79,6 +79,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.12.2](#v2122)
   - [v2.12.0](#v2120)
   - [v2.11.0](#v2110)
   - [v2.10.3](#v2103)
@@ -2301,6 +2302,16 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.12.2
+
+**Fixes**
+
+- Fix env config matching and improve working directory integration
+
+Explicitly call dotenv.config when an env file is auto-discovered
+to populate process.env. This ensures flags with the 'env' property
+can bind values from the discovered file.
 
 ### v2.12.0
 
