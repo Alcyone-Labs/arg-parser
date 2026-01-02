@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "include": [
+    "./examples/**/*.ts",
+    "./examples/**/*.tsx",
+    "./src/**/*.ts"
+  ],
+  "exclude": [
+    "./dist/**/*"
+  ],
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "jsx": "preserve",
+    "jsxImportSource": "@opentui/solid",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  }
+}
