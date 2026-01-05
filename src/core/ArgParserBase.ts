@@ -1099,7 +1099,7 @@ export class ArgParserBase<
         console.warn(`Auto-discovered env file: ${autoDiscoveredEnvFile}`);
 
         // Load env file into process.env using dotenv (dotenv-style behavior)
-        dotenv.config({ path: autoDiscoveredEnvFile, quiet: true });
+        dotenv.config({ path: autoDiscoveredEnvFile, quiet: true, override: true });
 
         try {
           // Identify the final parser and parser chain for loading configuration
@@ -2274,7 +2274,14 @@ export class ArgParserBase<
             return `${indent()}${green(name.padEnd(20))} [Error: Subcommand '${name}' has an invalid parser configuration]`;
           }
 
-          let subHelp = `${indent()}${green(name.padEnd(20))} ${white(actualSubParserInstance.#description || "")}`;
+          // Build sub-command help with description on its own line for better visibility
+          let subHelp = `${indent()}${green(name)}`;
+          
+          // Show description on a dedicated line if present
+          const subDescription = actualSubParserInstance.#description;
+          if (subDescription) {
+            subHelp += `\n${indent(2)}${white(subDescription)}`;
+          }
 
           const flagsFromSubManager =
             actualSubParserInstance && actualSubParserInstance.#flagManager
