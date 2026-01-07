@@ -360,6 +360,64 @@ describe("ArgParser", () => {
 
       mockConsoleLog.mockRestore();
     });
+
+    test("should show subcommand description in help text", () => {
+      const subParser = new ArgParser({
+        appName: "Sub Command",
+      }).addFlag({
+        name: "subflag",
+        description: "Sub flag",
+        options: ["--subflag"],
+        type: "string",
+      });
+
+      const helpParser = new ArgParser({
+        appName: "Help CLI",
+        appCommandName: testCommandName,
+        autoExit: false,
+      }).addSubCommand({
+        name: "sub",
+        description: "Sub command description",
+        parser: subParser,
+      });
+
+      const helpText = helpParser.helpText();
+      expect(helpText).toContain("Sub command description");
+    });
+
+    test("should show subcommand description when invoking --help on subcommand", async () => {
+      const mockConsoleLog = vi
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      const subParser = new ArgParser({
+        appName: "Sub Command",
+      }).addFlag({
+        name: "subflag",
+        description: "Sub flag",
+        options: ["--subflag"],
+        type: "string",
+      });
+
+      const helpParser = new ArgParser({
+        appName: "Help CLI",
+        appCommandName: testCommandName,
+        autoExit: false,
+      }).addSubCommand({
+        name: "sub",
+        description: "Bootstrap Cloudflare integration",
+        parser: subParser,
+      });
+
+      await helpParser.parse(["sub", "--help"]);
+
+      expect(mockConsoleLog).toHaveBeenCalled();
+      const calls = mockConsoleLog.mock.calls;
+      const allOutput = calls.map((call) => call.join(" ")).join("\n");
+      expect(allOutput).toContain("Bootstrap Cloudflare integration");
+
+      mockConsoleLog.mockRestore();
+    });
   });
 
   describe("Flag Inheritance", () => {

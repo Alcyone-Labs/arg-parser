@@ -7,7 +7,7 @@
  */
 
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { render, useKeyboard } from "@opentui/solid";
+import { render, useKeyboard, useRenderer } from "@opentui/solid";
 import {
   cleanupTerminal,
   getViewportHeight,
@@ -41,6 +41,7 @@ const ITEMS: Item[] = Array.from({ length: 50 }, (_, i) => ({
 // ============================================================================
 
 function App() {
+  const renderer = useRenderer();
   const THEME_NAMES = Object.keys(LAYOUT_THEMES) as LayoutThemeName[];
   const [themeIdx, setThemeIdx] = createSignal(0);
   const [selectedIdx, setSelectedIdx] = createSignal(0);
@@ -66,8 +67,8 @@ function App() {
   // Keyboard navigation
   useKeyboard((key) => {
     if (key.name === "q" || (key.ctrl && key.name === "c")) {
-      cleanupTerminal();
-      process.exit(0);
+      process.exitCode = 0;
+      renderer.destroy();
     }
     if (key.name === "t") {
       setThemeIdx((i) => (i + 1) % THEME_NAMES.length);

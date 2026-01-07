@@ -7,6 +7,7 @@
 
 import { createComponent, render } from "@opentui/solid";
 import type { JSX } from "@opentui/solid";
+import { ExitGuard } from "./runtime/ExitGuard";
 import { ShortcutProvider } from "./shortcuts";
 import { ThemeProvider } from "./themes";
 import { ToastProvider } from "./toast";
@@ -50,19 +51,23 @@ export function createTuiApp(
 
   return render(
     () =>
-      createComponent(ThemeProvider, {
-        get initial() {
-          return theme;
-        },
+      createComponent(ExitGuard, {
         get children() {
-          return createComponent(ShortcutProvider, {
-            get bindings() {
-              return shortcuts;
+          return createComponent(ThemeProvider, {
+            get initial() {
+              return theme;
             },
             get children() {
-              return createComponent(ToastProvider, {
+              return createComponent(ShortcutProvider, {
+                get bindings() {
+                  return shortcuts;
+                },
                 get children() {
-                  return createComponent(App, {});
+                  return createComponent(ToastProvider, {
+                    get children() {
+                      return createComponent(App, {});
+                    },
+                  });
                 },
               });
             },

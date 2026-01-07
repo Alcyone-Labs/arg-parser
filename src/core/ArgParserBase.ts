@@ -559,6 +559,11 @@ export class ArgParserBase<
       subParser.#appCommandName = this.#appCommandName;
     }
 
+    // Copy description from config to sub-parser if provided
+    if (subCommandConfig.description) {
+      subParser.#description = subCommandConfig.description;
+    }
+
     // Inherit autoExit setting from parent to ensure consistent error handling
     // across the parser hierarchy. Child parsers should follow parent's exit behavior.
     subParser.#autoExit = this.#autoExit;

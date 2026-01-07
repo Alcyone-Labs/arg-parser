@@ -21,18 +21,12 @@ import {
   type Accessor,
   type JSX,
 } from "solid-js";
-import { createComponent } from "@opentui/solid";
+import type { MouseEvent } from "@opentui/core";
+import { createComponent, useRenderer } from "@opentui/solid";
+import { ExitGuard } from "../runtime/ExitGuard";
 import { ShortcutProvider, type ShortcutBinding } from "../shortcuts";
-import { ThemeProvider, THEMES, type TuiTheme } from "../themes";
+import { ThemeProvider, type TuiTheme } from "../themes";
 import { ToastProvider } from "../toast";
-import {
-  clearScreen,
-  disableMouseReporting,
-  enableMouseReporting,
-  parseMouseScroll,
-  resetAttributes,
-  restoreStdin,
-} from "../tty";
 
 // ============================================================================
 // Types
@@ -122,69 +116,53 @@ export function useTui(): TuiContextValue {
  * ```
  */
 export function TuiProvider(props: TuiProviderProps): JSX.Element {
+  const renderer = useRenderer();
   const reservedRows = props.reservedRows ?? 8;
   const scrollSpeed = props.scrollSpeed ?? 3;
 
   // Viewport dimensions
   const [viewportHeight, setViewportHeight] = createSignal(
-    Math.max(10, (process.stdout.rows || 24) - reservedRows),
+    Math.max(10, renderer.height - reservedRows),
   );
-  const [viewportWidth, setViewportWidth] = createSignal(
-    process.stdout.columns || 80,
-  );
-
-  // Cleanup function
-  const cleanup = () => {
-    disableMouseReporting();
-    clearScreen();
-    resetAttributes();
-    restoreStdin();
-  };
+  const [viewportWidth, setViewportWidth] = createSignal(renderer.width);
 
   // Graceful exit
   const exit = (code = 0) => {
-    cleanup();
-    process.exit(code);
-  };
-
-  // Mouse input handler
-  const handleInput = (data: Buffer) => {
-    if (props.onScroll) {
-      const scrollDir = parseMouseScroll(data);
-      if (scrollDir !== 0) {
-        props.onScroll(scrollDir * scrollSpeed);
-      }
-    }
+    process.exitCode = code;
+    renderer.destroy();
   };
 
   // Resize handler
-  const handleResize = () => {
-    setViewportHeight(Math.max(10, (process.stdout.rows || 24) - reservedRows));
-    setViewportWidth(process.stdout.columns || 80);
+  const handleResize = (width: number, height: number) => {
+    setViewportHeight(Math.max(10, height - reservedRows));
+    setViewportWidth(width);
+  };
+
+  const handleMouseScroll = (event: MouseEvent) => {
+    if (!props.onScroll || !event.scroll) {
+      return;
+    }
+
+    const sign =
+      event.scroll.direction === "up"
+        ? -1
+        : event.scroll.direction === "down"
+          ? 1
+          : 0;
+    if (sign === 0) {
+      return;
+    }
+
+    const delta = event.scroll.delta || 1;
+    props.onScroll(sign * delta * scrollSpeed);
   };
 
   onMount(() => {
-    // Enable mouse wheel tracking
-    enableMouseReporting();
-
-    // Set raw mode for input handling
-    if (process.stdin.isTTY && process.stdin.setRawMode) {
-      process.stdin.setRawMode(true);
-    }
-
-    // Register event handlers
-    process.stdout.on("resize", handleResize);
-    process.stdin.on("data", handleInput);
-
-    // Handle graceful shutdown signals
-    process.on("SIGINT", () => exit(0));
-    process.on("SIGTERM", () => exit(0));
+    renderer.on("resize", handleResize);
   });
 
   onCleanup(() => {
-    cleanup();
-    process.stdout.off("resize", handleResize);
-    process.stdin.off("data", handleInput);
+    renderer.off("resize", handleResize);
   });
 
   // Context value
@@ -201,20 +179,32 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
       : (props.theme?.name ?? "dark");
 
   // Build the provider tree
-  return createComponent(TuiContext.Provider, {
-    value: contextValue,
+  return createComponent(ExitGuard, {
     get children() {
-      return createComponent(ThemeProvider, {
-        initial: themeName,
+      return createComponent(TuiContext.Provider, {
+        value: contextValue,
         get children() {
-          return createComponent(ShortcutProvider, {
-            get bindings() {
-              return props.shortcuts ?? [];
-            },
+          return createComponent(ThemeProvider, {
+            initial: themeName,
             get children() {
-              return createComponent(ToastProvider, {
+              return createComponent(ShortcutProvider, {
+                get bindings() {
+                  return props.shortcuts ?? [];
+                },
                 get children() {
-                  return props.children;
+                  return createComponent(ToastProvider, {
+                    get children() {
+                      return (
+                        <box
+                          width="100%"
+                          height="100%"
+                          onMouseScroll={handleMouseScroll}
+                        >
+                          {props.children}
+                        </box>
+                      );
+                    },
+                  });
                 },
               });
             },

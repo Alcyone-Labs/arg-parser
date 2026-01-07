@@ -6,6 +6,7 @@
  * Run with: bun examples/aquaria-trace-viewer.tsx
  */
 
+import type { Buffer } from "node:buffer";
 import {
   createMemo,
   createSignal,
@@ -14,13 +15,30 @@ import {
   onMount,
   Show,
 } from "solid-js";
-import { render, useKeyboard } from "@opentui/solid";
+import { render, useKeyboard, useRenderer } from "@opentui/solid";
 
 // ============================================================================
 // TTY Cleanup - Essential for proper terminal restore
 // ============================================================================
 
+let isCleanupCalled = false;
+
 function cleanupTerminal() {
+  // Prevent double cleanup
+  if (isCleanupCalled) return;
+  isCleanupCalled = true;
+
+  // Restore normal stdin mode FIRST (to stop processing input)
+  if (process.stdin.isTTY && process.stdin.setRawMode) {
+    try {
+      process.stdin.setRawMode(false);
+    } catch {
+      // Ignore errors if already in normal mode
+    }
+  }
+
+  // Switch back to main screen buffer (restore original terminal content)
+  process.stdout.write("\x1b[?1049l");
   // Disable mouse reporting modes
   process.stdout.write("\x1b[?1000l"); // Disable X10 mouse mode
   process.stdout.write("\x1b[?1006l"); // Disable SGR extended mode
@@ -28,16 +46,6 @@ function cleanupTerminal() {
   process.stdout.write("\x1b[2J\x1b[3J\x1b[H");
   // Reset all attributes
   process.stdout.write("\x1b[0m");
-  // Restore normal stdin mode
-  if (process.stdin.isTTY && process.stdin.setRawMode) {
-    process.stdin.setRawMode(false);
-  }
-}
-
-// Graceful exit wrapper
-function gracefulExit(code = 0) {
-  cleanupTerminal();
-  process.exit(code);
 }
 
 // ============================================================================
@@ -294,6 +302,7 @@ function useVirtualScroll<T>(
 // ============================================================================
 
 function App() {
+  const renderer = useRenderer();
   const [theme, setTheme] = createSignal<ThemeName>("dark");
   const [level, setLevel] = createSignal<1 | 2 | 3>(1);
   const [selectedDbIdx, setSelectedDbIdx] = createSignal(0);
@@ -336,10 +345,6 @@ function App() {
       process.stdin.setRawMode(true);
     }
     process.stdin.on("data", handleInput);
-
-    // Handle SIGINT (Ctrl+C) gracefully
-    process.on("SIGINT", () => gracefulExit(0));
-    process.on("SIGTERM", () => gracefulExit(0));
 
     onCleanup(() => {
       cleanupTerminal();
@@ -392,8 +397,12 @@ function App() {
   useKeyboard((key) => {
     const keyName = key.name;
 
-    // Use gracefulExit for proper cleanup
-    if (keyName === "q" || (key.ctrl && keyName === "c")) gracefulExit(0);
+    if (keyName === "q" || (key.ctrl && keyName === "c")) {
+      process.exitCode = 0;
+      renderer.destroy();
+      return;
+    }
+
     if (keyName === "t") cycleTheme();
 
     if (keyName === "escape" || keyName === "left" || keyName === "h") {

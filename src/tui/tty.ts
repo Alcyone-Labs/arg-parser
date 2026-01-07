@@ -4,6 +4,8 @@
  * Terminal cleanup and mouse support helpers.
  */
 
+import type { Buffer } from "node:buffer";
+
 /**
  * Enable mouse wheel reporting in the terminal.
  * Call this in onMount().
@@ -19,7 +21,10 @@ export function enableMouseReporting(): void {
  */
 export function disableMouseReporting(): void {
   process.stdout.write("\x1b[?1000l"); // Disable X10 mouse mode
+  process.stdout.write("\x1b[?1002l"); // Disable button-event tracking
+  process.stdout.write("\x1b[?1003l"); // Disable any-event tracking (mouse move)
   process.stdout.write("\x1b[?1006l"); // Disable SGR extended mode
+  process.stdout.write("\x1b[?1015l"); // Disable urxvt extended mode
 }
 
 /**
@@ -50,6 +55,22 @@ export function restoreStdin(): void {
 }
 
 /**
+ * Switch to alternate screen buffer.
+ * Creates a new buffer for TUI applications.
+ */
+export function switchToAlternateScreen(): void {
+  process.stdout.write("\x1b[?1049h");
+}
+
+/**
+ * Switch back to main screen buffer.
+ * Restores the terminal's original content.
+ */
+export function switchToMainScreen(): void {
+  process.stdout.write("\x1b[?1049l");
+}
+
+/**
  * Complete terminal cleanup. Use as onDestroy callback.
  *
  * @example
@@ -58,6 +79,7 @@ export function restoreStdin(): void {
  * ```
  */
 export function cleanupTerminal(): void {
+  switchToMainScreen();
   disableMouseReporting();
   clearScreen();
   resetAttributes();

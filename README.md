@@ -36,7 +36,6 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Dynamic Flags (`dynamicRegister`)](#dynamic-flags-dynamicregister)
   - [Positional Arguments](#positional-arguments)
   - [Automatic Help Display](#automatic-help-display)
-
 - [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
   - [Output Schema Support](#output-schema-support)
     - [Basic Usage](#basic-usage)
@@ -80,6 +79,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.13.1](#v2131)
   - [v2.13.0](#v2130)
   - [v2.12.3](#v2123)
   - [v2.12.2](#v2122)
@@ -1206,11 +1206,13 @@ Notes:
 ArgParser supports positional (trailing) arguments for a more natural CLI syntax. Instead of requiring flags for every value, you can capture trailing arguments by position.
 
 **Before:**
+
 ```bash
 workflow show --id 8fadf090-xxx
 ```
 
 **After:**
+
 ```bash
 workflow show 8fadf090-xxx
 ```
@@ -1225,10 +1227,10 @@ const cli = new ArgParser()
     name: "id",
     type: "string",
     mandatory: true,
-    options: ["--id"],      // Fallback syntax: --id <value>
-    positional: 1,          // Primary: captures first trailing arg
+    options: ["--id"], // Fallback syntax: --id <value>
+    positional: 1, // Primary: captures first trailing arg
     description: "Resource ID to show",
-    valueHint: "ID",        // Used in help text: <ID>
+    valueHint: "ID", // Used in help text: <ID>
   })
   .setHandler((ctx) => {
     console.log(`Showing: ${ctx.args.id}`);
@@ -1250,7 +1252,7 @@ const cli = new ArgParser().addFlags([
     type: "string",
     mandatory: true,
     options: ["--source", "-s"],
-    positional: 1,  // First trailing arg
+    positional: 1, // First trailing arg
     valueHint: "SOURCE",
   },
   {
@@ -1258,7 +1260,7 @@ const cli = new ArgParser().addFlags([
     type: "string",
     mandatory: true,
     options: ["--dest", "-d"],
-    positional: 2,  // Second trailing arg
+    positional: 2, // Second trailing arg
     valueHint: "DEST",
   },
 ]);
@@ -2396,6 +2398,13 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 
 ## Changelog
 
+### v2.13.1
+
+**Fixes**
+
+- OpenTUI implementation now properly exits and cleans the context
+- Sub-command description now properly displays in displayHelp() screen
+
 ### v2.13.0
 
 **New Feature: Positional Arguments**
@@ -2424,6 +2433,7 @@ Flags can now specify `positional: N` (1-indexed) to capture trailing arguments:
 ```
 
 Key features:
+
 - **Dual syntax**: Both `--flag value` and positional work interchangeably
 - **Precedence**: Flag syntax takes priority if both provided
 - **Multiple positional args**: Use `positional: 1`, `positional: 2`, etc.
