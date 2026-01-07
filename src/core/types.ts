@@ -307,6 +307,15 @@ export const zodFlagSchema = z
       .describe(
         "If true, this flag's value becomes the effective working directory for file operations.",
       ),
+    positional: z
+      .number()
+      .int()
+      .positive("Positional index must be a positive integer (1, 2, 3...)")
+      .optional()
+      .describe(
+        "If set, this flag captures the Nth trailing positional argument (1-indexed). " +
+          "Multiple flags can have different positional values to capture multiple trailing args in order.",
+      ),
   })
   // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
@@ -435,6 +444,29 @@ export type IFlag = IFlagCore & {
    * ```
    */
   setWorkingDirectory?: boolean;
+  /**
+   * Captures the Nth trailing positional argument (1-indexed).
+   *
+   * - `positional: 1` captures the first trailing arg
+   * - `positional: 2` captures the second trailing arg
+   * - etc.
+   *
+   * Positional args are assigned AFTER all flags and subcommands are parsed.
+   * The flag's `options` array still works as a fallback (e.g., `--id xxx`).
+   *
+   * @example
+   * ```typescript
+   * .addFlag({
+   *   name: "id",
+   *   type: "string",
+   *   mandatory: true,
+   *   options: ["--id"],      // Fallback: --id xxx
+   *   positional: 1,          // Primary: workflow show xxx
+   *   description: "Workflow ID to show",
+   * })
+   * ```
+   */
+  positional?: number;
 };
 
 /**
@@ -474,6 +506,7 @@ export type ProcessedFlag = Omit<
   mandatory?: boolean | ((parsedArgs: TParsedArgs<ProcessedFlag[]>) => boolean);
   env?: string | string[]; // Environment variables for DXT packages
   dynamicRegister?: DynamicRegisterFn;
+  positional?: number; // Captures Nth trailing positional argument (1-indexed)
 };
 
 /**

@@ -34,6 +34,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
     - [MCP Exposure Control](#mcp-exposure-control)
   - [Flag Inheritance (`inheritParentFlags`)](#flag-inheritance-inheritparentflags)
   - [Dynamic Flags (`dynamicRegister`)](#dynamic-flags-dynamicregister)
+  - [Positional Arguments](#positional-arguments)
   - [Automatic Help Display](#automatic-help-display)
 
 - [MCP & Claude Desktop Integration](#mcp--claude-desktop-integration)
@@ -79,6 +80,7 @@ A modern, type-safe command line argument parser with built-in MCP (Model Contex
   - [Typical Errors](#typical-errors)
 - [System Flags & Configuration](#system-flags--configuration)
 - [Changelog](#changelog)
+  - [v2.13.0](#v2130)
   - [v2.12.3](#v2123)
   - [v2.12.2](#v2122)
   - [v2.12.0](#v2120)
@@ -682,6 +684,7 @@ interface IFlag {
   validate?: (value: any, parsedArgs?: any) => boolean | string | void; // Custom validation function
   allowMultiple?: boolean; // Allow the flag to be provided multiple times
   env?: string | string[]; // Maps flag to environment variable(s). Logic: Fallback (Env -> Flag) and Sync (Flag -> Env). Precedence: Flag > Env > Default.
+  positional?: number; // Captures Nth trailing positional argument (1-indexed). See Positional Arguments section.
   dxtOptions?: DxtOptions; // Customizes how this flag appears in DXT package user_config
 }
 
@@ -1197,6 +1200,95 @@ Notes:
 
 - Inherited behavior works normally: if loader lives on a parent parser and children use `inheritParentFlags`, dynamic flags will be visible to children
 - For heavy loaders, implement app-level caching inside your `dynamicRegister` (e.g., memoize by absolute path + mtime); library-level caching may be added later
+
+### Positional Arguments
+
+ArgParser supports positional (trailing) arguments for a more natural CLI syntax. Instead of requiring flags for every value, you can capture trailing arguments by position.
+
+**Before:**
+```bash
+workflow show --id 8fadf090-xxx
+```
+
+**After:**
+```bash
+workflow show 8fadf090-xxx
+```
+
+#### Basic Usage
+
+Add the `positional` property to a flag definition. The value is 1-indexed (first trailing arg = 1, second = 2, etc.):
+
+```typescript
+const cli = new ArgParser()
+  .addFlag({
+    name: "id",
+    type: "string",
+    mandatory: true,
+    options: ["--id"],      // Fallback syntax: --id <value>
+    positional: 1,          // Primary: captures first trailing arg
+    description: "Resource ID to show",
+    valueHint: "ID",        // Used in help text: <ID>
+  })
+  .setHandler((ctx) => {
+    console.log(`Showing: ${ctx.args.id}`);
+  });
+
+// Both work:
+// cli.parse(["abc123"])           → id = "abc123"
+// cli.parse(["--id", "abc123"])   → id = "abc123"
+```
+
+#### Multiple Positional Arguments
+
+Capture multiple trailing arguments using different positional indices:
+
+```typescript
+const cli = new ArgParser().addFlags([
+  {
+    name: "source",
+    type: "string",
+    mandatory: true,
+    options: ["--source", "-s"],
+    positional: 1,  // First trailing arg
+    valueHint: "SOURCE",
+  },
+  {
+    name: "dest",
+    type: "string",
+    mandatory: true,
+    options: ["--dest", "-d"],
+    positional: 2,  // Second trailing arg
+    valueHint: "DEST",
+  },
+]);
+
+// Usage: copy file.txt backup/
+// Result: source = "file.txt", dest = "backup/"
+```
+
+#### Precedence Rules
+
+- **Flag syntax takes priority**: If both `--flag value` AND a positional arg are provided, the flag value is used
+- **Either satisfies mandatory**: A mandatory flag is satisfied by EITHER positional or flag syntax
+- **Order matters**: Positional args are assigned in index order (1, 2, 3...)
+- **Type coercion applies**: Positional values go through the same type coercion as flag values
+
+#### Help Text
+
+When positional arguments are defined, help text automatically shows a usage pattern:
+
+```
+Usage: workflow show [OPTIONS] <ID>
+
+Flags:
+  --id       Resource ID to show
+               Type: string
+               Example: --id value
+               Positional argument #1
+```
+
+Mandatory positional args appear as `<NAME>`, optional as `[NAME]`.
 
 ### Automatic Help Display
 
@@ -2303,6 +2395,42 @@ ArgParser includes built-in `--s-*` flags for development, debugging, and config
 ---
 
 ## Changelog
+
+### v2.13.0
+
+**New Feature: Positional Arguments**
+
+Added support for positional (trailing) arguments, enabling more natural CLI syntax:
+
+```bash
+# Before: flags required
+workflow show --id 8fadf090-xxx
+
+# After: positional syntax works too!
+workflow show 8fadf090-xxx
+```
+
+Flags can now specify `positional: N` (1-indexed) to capture trailing arguments:
+
+```typescript
+.addFlag({
+  name: "id",
+  type: "string",
+  mandatory: true,
+  options: ["--id"],      // Still works as fallback
+  positional: 1,          // Captures first trailing arg
+  description: "Resource ID",
+})
+```
+
+Key features:
+- **Dual syntax**: Both `--flag value` and positional work interchangeably
+- **Precedence**: Flag syntax takes priority if both provided
+- **Multiple positional args**: Use `positional: 1`, `positional: 2`, etc.
+- **Help text enhancement**: Shows usage pattern like `Usage: cmd [OPTIONS] <ID>`
+- **Full validation**: Works with `mandatory`, type coercion, and enum validation
+
+See [Positional Arguments](#positional-arguments) for complete documentation.
 
 ### v2.12.3
 

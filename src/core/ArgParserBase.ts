@@ -1099,7 +1099,11 @@ export class ArgParserBase<
         console.warn(`Auto-discovered env file: ${autoDiscoveredEnvFile}`);
 
         // Load env file into process.env using dotenv (dotenv-style behavior)
-        dotenv.config({ path: autoDiscoveredEnvFile, quiet: true, override: true });
+        dotenv.config({
+          path: autoDiscoveredEnvFile,
+          quiet: true,
+          override: true,
+        });
 
         try {
           // Identify the final parser and parser chain for loading configuration
@@ -2214,6 +2218,51 @@ export class ArgParserBase<
       }
     }
 
+    // === POSITIONAL ARGUMENT ASSIGNMENT ===
+    // Collect unconsumed trailing args (not starting with "-")
+    const trailingArgs: { index: number; value: string }[] = [];
+    for (let i = 0; i < args.length; i++) {
+      if (!consumedIndices.has(i)) {
+        const arg = args[i];
+        // Only capture non-flag values as positional
+        if (!arg.startsWith("-")) {
+          trailingArgs.push({ index: i, value: arg });
+        }
+      }
+    }
+
+    // Get flags with positional property, sorted by positional index
+    const positionalFlags = flags
+      .filter(
+        (f: ProcessedFlag) =>
+          typeof f["positional"] === "number" && f["positional"] > 0,
+      )
+      .sort(
+        (a: ProcessedFlag, b: ProcessedFlag) =>
+          (a["positional"] as number) - (b["positional"] as number),
+      );
+
+    // Assign trailing args to positional flags
+    for (const posFlag of positionalFlags) {
+      const posIndex = (posFlag["positional"] as number) - 1; // 0-indexed
+
+      // Skip if this flag already has a value (from --flag syntax)
+      const existingValue = (output as any)[posFlag["name"]];
+      const hasExistingValue = posFlag["allowMultiple"]
+        ? Array.isArray(existingValue) && existingValue.length > 0
+        : existingValue !== undefined;
+
+      if (hasExistingValue) continue;
+
+      // Assign the trailing arg at this position
+      if (posIndex < trailingArgs.length) {
+        const trailing = trailingArgs[posIndex];
+        await this._addToOutput(posFlag, trailing.value, output, options);
+        consumedIndices.add(trailing.index);
+      }
+    }
+
+    // Calculate firstUnconsumedIndex (after positional assignment)
     let firstUnconsumedIndex = args.length;
     for (let i = 0; i < args.length; i++) {
       if (!consumedIndices.has(i)) {
@@ -2259,6 +2308,32 @@ export class ArgParserBase<
 
     const indent = (level: number = 1) => "  ".repeat(level);
 
+    // Build usage pattern with positional args
+    const positionalFlagsForUsage = this.#flagManager.flags
+      .filter(
+        (f: ProcessedFlag) =>
+          typeof f["positional"] === "number" && f["positional"] > 0,
+      )
+      .sort(
+        (a: ProcessedFlag, b: ProcessedFlag) =>
+          (a["positional"] as number) - (b["positional"] as number),
+      );
+
+    if (positionalFlagsForUsage.length > 0) {
+      const commandName =
+        this.#subCommandName || this.#appCommandName || this.#appName;
+      const posArgs = positionalFlagsForUsage
+        .map((f: ProcessedFlag) => {
+          const isMandatory =
+            typeof f["mandatory"] === "function" ? true : f["mandatory"];
+          const argName = (f as any)["valueHint"] || f["name"].toUpperCase();
+          return isMandatory ? `<${argName}>` : `[${argName}]`;
+        })
+        .join(" ");
+
+      help += `${cyan("Usage:")} ${commandName} [OPTIONS] ${posArgs}\n\n`;
+    }
+
     if (this.#subCommands.size > 0) {
       // Use Map.size
       help += `${cyan("Available sub-commands:")}\n`;
@@ -2276,7 +2351,7 @@ export class ArgParserBase<
 
           // Build sub-command help with description on its own line for better visibility
           let subHelp = `${indent()}${green(name)}`;
-          
+
           // Show description on a dedicated line if present
           const subDescription = actualSubParserInstance.#description;
           if (subDescription) {
@@ -2463,6 +2538,13 @@ export class ArgParserBase<
             metaLines.push(
               `Allowed values: ${flag["enum"].map((v: any) => `'${v}'`).join(", ")}`,
             );
+          }
+          // Add positional indicator
+          if (
+            typeof flag["positional"] === "number" &&
+            flag["positional"] > 0
+          ) {
+            metaLines.push(`Positional argument #${flag["positional"]}`);
           }
 
           const maxOptionLength = Math.max(
