@@ -11,15 +11,24 @@ export default defineConfig(({ command, mode }) => {
 
     const buildFormat = process.env.VITE_BUILD_FORMAT || "es"; // Expect 'es' or 'cjs'
     const minifyBuild = process.env.VITE_MINIFY_BUILD === "true";
+    const buildEntry = process.env.VITE_BUILD_ENTRY || "index"; // "index" or "tui"
+
+    // Determine entry point
+    const entryPath = buildEntry === "tui" ? "src/tui/index.ts" : "src/index.ts";
+    const libraryName = buildEntry === "tui" ? "ArgParserTui" : "ArgParser";
 
     let libFileName: string;
 
     if (buildFormat === "es") {
-      libFileName = minifyBuild ? "index.min.mjs" : "index.mjs";
+      if (buildEntry === "tui") {
+        libFileName = "tui.mjs";
+      } else {
+        libFileName = minifyBuild ? "index.min.mjs" : "index.mjs";
+      }
     } else if (buildFormat === "cjs") {
       // Typically, CJS builds for libraries are not minified.
       // The VITE_MINIFY_BUILD flag will be ignored for CJS.
-      libFileName = "index.cjs";
+      libFileName = buildEntry === "tui" ? "tui.cjs" : "index.cjs";
     } else {
       throw new Error(
         `Unsupported VITE_BUILD_FORMAT: ${buildFormat}. Expected 'es' or 'cjs'.`,
@@ -49,8 +58,8 @@ export default defineConfig(({ command, mode }) => {
         emptyOutDir: false,
         sourcemap: true,
         lib: {
-          entry: "src/index.ts",
-          name: "ArgParser", // A global variable name for UMD/IIFE, not critical for ESM/CJS
+          entry: entryPath,
+          name: libraryName, // A global variable name for UMD/IIFE, not critical for ESM/CJS
           formats: [buildFormat as "es" | "cjs"],
           fileName: () => libFileName,
         },
@@ -72,6 +81,9 @@ export default defineConfig(({ command, mode }) => {
             "tsdown",
             "get-tsconfig",
             "@alcyone-labs/simple-mcp-logger",
+            // TUI dependencies - externalize to avoid bundling WASM
+            /^@opentui\//,
+            /^solid-js/,
             // Node.js built-in modules
             "node:fs",
             "node:path",
@@ -83,8 +95,15 @@ export default defineConfig(({ command, mode }) => {
             "node:net",
             "node:zlib",
             "node:stream",
+            "node:os",
+            "node:readline",
+            "node:tty",
             "http2",
             "path",
+            "fs",
+            "os",
+            "tty",
+            "readline",
             "crypto",
             "process",
             "events",

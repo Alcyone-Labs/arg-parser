@@ -1,5 +1,9 @@
 ## Changelog
 
+### V2.13.3
+
+- Fixing bundling issues
+
 ### v2.13.2
 
 **Documentation Refactor**

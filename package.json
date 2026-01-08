@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.13.2",
+  "version": "2.13.3",
   "description": "A robust, type-safe CLI builder with out-of-the-box support for creating MCPs and bundling Claude Desktop's DXT packages",
   "type": "module",
   "main": "dist/index.cjs",
@@ -15,6 +15,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./tui": {
+      "types": "./dist/tui/index.d.ts",
+      "import": "./dist/tui.mjs",
+      "require": "./dist/tui.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -26,6 +31,10 @@
     "dist/index.min.mjs.map",
     "dist/index.d.ts",
     "dist/index.d.ts.map",
+    "dist/tui.cjs",
+    "dist/tui.cjs.map",
+    "dist/tui.mjs",
+    "dist/tui.mjs.map",
     "dist/**/*.d.ts",
     "dist/**/*.d.ts.map",
     "dist/assets/**/*",
@@ -58,11 +67,14 @@
   "scripts": {
     "clean": "rm -rf dist dist-examples",
     "build:types": "tsc --project tsconfig.json --emitDeclarationOnly",
+    "build:types:tui": "tsc --project tsconfig.tui-types.json",
     "build:cjs": "cross-env VITE_BUILD_FORMAT=cjs vite build",
     "build:esm": "cross-env VITE_BUILD_FORMAT=es VITE_MINIFY_BUILD=false vite build",
     "build:min": "cross-env VITE_BUILD_FORMAT=es VITE_MINIFY_BUILD=true vite build",
-    "build": "pnpm clean && pnpm run build:types && pnpm run build:cjs && pnpm run build:esm && pnpm run build:min && pnpm run build:assets",
-    "build:assets": "mkdir -p dist/assets && cp docs/MCP/icons/logo_1_small.jpg dist/assets/ && cp .dxtignore.template dist/assets/",
+    "build:tui:cjs": "cross-env VITE_BUILD_FORMAT=cjs VITE_BUILD_ENTRY=tui vite build",
+    "build:tui:esm": "cross-env VITE_BUILD_FORMAT=es VITE_BUILD_ENTRY=tui vite build",
+    "build": "pnpm clean && pnpm run build:types && pnpm run build:cjs && pnpm run build:esm && pnpm run build:min && pnpm run build:tui:cjs && pnpm run build:tui:esm && pnpm run build:assets",
+    "build:assets": "mkdir -p dist/assets dist/tui && cp docs/MCP/icons/logo_1_small.jpg dist/assets/ && cp .dxtignore.template dist/assets/ && cp src/tui/index.d.ts dist/tui/index.d.ts",
     "build:watch": "tsc --watch",
     "bump": "tsx scripts/bump-version.ts",
     "build:examples": "tsc --project tsconfig.examples.json",
