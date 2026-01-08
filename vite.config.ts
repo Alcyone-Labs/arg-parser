@@ -1,5 +1,6 @@
 /// <reference types="vitest" />
 import { defineConfig, type UserConfig } from "vite";
+import solid from "vite-plugin-solid";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig as defineTestConfig } from "vitest/config";
 
@@ -46,11 +47,18 @@ export default defineConfig(({ command, mode }) => {
           }
         : undefined;
 
+    // Use vite-plugin-solid for TUI builds to properly compile SolidJS JSX
+    const plugins =
+      buildEntry === "tui"
+        ? [
+            solid({ solid: { generate: "ssr", hydratable: false } }),
+            tsconfigPaths({ projects: ["./tsconfig.json"] }),
+          ]
+        : [tsconfigPaths({ projects: ["./tsconfig.json"] })];
+
     const buildConfig: UserConfig = {
       root,
-      plugins: [
-        tsconfigPaths({ projects: ["./tsconfig.json"] }), // Use main tsconfig.json for builds
-      ],
+      plugins,
       build: {
         outDir: "dist",
         // Set to false because we run `pnpm clean` first, and then multiple vite build commands.

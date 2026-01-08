@@ -1,6 +1,10 @@
 ## Changelog
 
-### V2.13.3
+### v2.13.4
+
+- Fixing OpenTUI compilation & bundling issues
+
+### v2.13.3
 
 - Fixing bundling issues
 

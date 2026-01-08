@@ -37,7 +37,7 @@ export interface TuiAppConfig {
 export declare function createTuiApp(
   App: () => JSX.Element,
   config?: TuiAppConfig
-): void;
+): Promise<void>;
 
 // =============================================================================
 // TUI Provider
