@@ -17,13 +17,13 @@ The TUI SDK is included in `@alcyone-labs/arg-parser`, but requires specific pee
 npm install @opentui/solid @opentui/core solid-js
 ```
 
+
 ## Quick Start
 
-The TUI module is available via a **separate entry point** to ensure compatibility with all Node.js environments.
+The TUI module is available via the `@alcyone-labs/arg-parser/tui` entry point. The recommended way to start an application is using `createTuiApp`, which handles terminal initialization and provides core context (Theme, Shortcuts, Toast).
 
 ```typescript
-import { createTuiApp } from "@alcyone-labs/arg-parser/tui";
-import { Card, Button } from "@alcyone-labs/arg-parser/tui";
+import { createTuiApp, Card, Button } from "@alcyone-labs/arg-parser/tui";
 
 function App() {
   return (

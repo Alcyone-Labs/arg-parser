@@ -14,7 +14,7 @@ This guide helps you migrate existing ArgParser applications to use the new DXT 
 
 ## Migration Overview
 
-### What's New in v2.5.0
+### What's New in v2.13.1
 
 - **🎨 dxtOptions** - Rich UI types for DXT package generation
 - **🔀 DXT Variables** - Dynamic path resolution with `${VARIABLE}` syntax

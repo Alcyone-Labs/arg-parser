@@ -37,6 +37,7 @@ export {
   spread,
   mergeProps,
   useKeyboard,
+  useRenderer,
 } from "@opentui/solid";
 
 // Re-export JSX types for TypeScript support

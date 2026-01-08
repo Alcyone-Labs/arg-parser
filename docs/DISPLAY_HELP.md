@@ -80,8 +80,30 @@ cli.addSubCommand({
 });
 ```
 
+
 ### Key Benefits of `triggerAutoHelpIfNoHandler`:
 
 1.  **Cleaner Code**: You don't need to manually check for empty arguments or assign `autoHelpHandler` to every container command.
 2.  **Inheritance**: The setting is automatically inherited by sub-parsers added via `addSubCommand`, ensuring consistent behavior across your entire CLI hierarchy.
 3.  **Improved DX**: Users are never met with silence when they miss a required sub-command or argument; they are immediately shown how to use the tool.
+
+---
+
+## Improved Help Rendering (v2.11+)
+
+ArgParser v2.11 introduced a significantly improved help rendering engine that provides better clarity for complex CLI structures.
+
+### Subcommand Descriptions
+Subcommands now display their descriptions on a dedicated line in the "Available sub-commands" section, making them much easier to scan.
+
+### Flag Previews
+The help output now includes a summary of available flags for each subcommand, so users can see what options are available without having to run `--help` on every subcommand.
+
+### Positional Arguments
+If a command uses positional arguments (via the `positional` property on a flag), they are automatically included in the `Usage:` hint:
+
+```bash
+Usage: my-tool [OPTIONS] <INPUT_FILE> [OUTPUT_FILE]
+```
+
+Mandatory positional arguments are enclosed in `<>`, while optional ones use `[]`.

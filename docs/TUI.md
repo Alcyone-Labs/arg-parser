@@ -7,12 +7,12 @@ A reactive TUI framework built on [SolidJS](https://www.solidjs.com/) and [SST's
 ```tsx
 import {
   MasterDetail,
+  render,
   TuiProvider,
   useTheme,
   useTui,
   VirtualList,
 } from "@alcyone-labs/arg-parser/tui";
-import { render } from "@opentui/solid";
 
 function App() {
   const { viewportHeight, exit } = useTui();
@@ -241,7 +241,7 @@ console.log(list.scrollOffset());
 ### useKeyboard
 
 ```tsx
-import { useKeyboard } from "@opentui/solid";
+import { useKeyboard } from "@alcyone-labs/arg-parser/tui";
 
 useKeyboard((key) => {
   console.log(key.name); // "up", "down", "enter", "q", etc.
@@ -290,12 +290,13 @@ import {
   cleanupTerminal,
   createVirtualListController,
   MasterDetail,
+  render,
   TuiProvider,
   useTheme,
   useTui,
+  useKeyboard,
   VirtualList,
 } from "@alcyone-labs/arg-parser/tui";
-import { render, useKeyboard } from "@opentui/solid";
 
 interface Item {
   id: string;
@@ -397,5 +398,5 @@ Run: `bun my-app.tsx`
 | `Breadcrumb`                  | Navigation path component                 |
 | `createVirtualListController` | List navigation hook                      |
 | `cleanupTerminal`             | TTY cleanup function                      |
-| `useKeyboard`                 | Keyboard input hook (from @opentui/solid) |
-| `render`                      | Render function (from @opentui/solid)     |
+| `useKeyboard`                 | Keyboard input hook (re-exported)         |
+| `render`                      | Render function (re-exported)             |
