@@ -117,7 +117,7 @@
     "@opentui/solid": "0.1.67",
     "get-tsconfig": "^4.13.0",
     "magic-regexp": "^0.10.0",
-    "solid-js": "1.9.9",
+    "solid-js": "1.9.10",
     "zod": "^4.3.4"
   },
   "optionalDependencies": {
