@@ -1,5 +1,30 @@
 ## Changelog
 
+### v2.13.5
+
+**OpenTUI TUI Display Fixes**
+
+Fixed critical issues where TUI applications would not display properly in remote projects after pulling from NPM registry:
+
+- **Automatic Terminal Setup**: `createTuiApp()` and `TuiProvider` now automatically:
+  - Call `switchToAlternateScreen()` and `enableMouseReporting()` on mount
+  - Call `cleanupTerminal()` on component destroy/exit
+  - This ensures the terminal is properly configured before rendering and cleaned up on exit
+
+- **Peer Dependencies**: Moved `@opentui/core` and `@opentui/solid` to `peerDependencies` to make OpenTUI requirements explicit for consumers. Users must install these packages when using TUI features.
+
+- **Runtime Documentation**: Added Bun runtime requirement warning to README. OpenTUI requires Bun, not Node.js. Remote projects running on Node.js will experience issues.
+
+- **New TUI Tests**: Added comprehensive test suite (`tests/tui/tui.test.ts`) with 20 tests covering:
+  - Terminal utility function exports and behavior
+  - Terminal setup/cleanup sequences
+  - Theme system exports and Theme builder functionality
+  - All provider, component, and hook exports
+  - Mouse event parsing
+  - Peer dependencies verification
+
+- **Exports**: Added `switchToAlternateScreen()` and `switchToMainScreen()` to TUI exports for advanced use cases.
+
 ### v2.13.4
 
 - Fixing OpenTUI compilation & bundling issues

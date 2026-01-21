@@ -91,17 +91,62 @@ ArgParser includes **OpenTUI v2**, a reactive TUI framework built on SolidJS.
 
 > 📖 **Full Documentation**: [docs/TUI.md](./docs/TUI.md) | [Component Reference](./docs/TUI_COMPONENTS.md)
 
+### Runtime Requirements
+
+> ⚠️ **Important**: OpenTUI requires **Bun** to run, not Node.js.
+
+When building TUI applications with OpenTUI, ensure your project uses Bun:
+
+```bash
+# Install dependencies with Bun
+bun install
+
+# Run your TUI application with Bun
+bun run src/index.ts
+```
+
+Node.js does not support OpenTUI's terminal rendering capabilities. Most CI environments and remote containers use Node.js by default - configure them to use Bun instead.
+
+### Quick TUI Example
+
+```typescript
+import { createTuiApp } from "@alcyone-labs/arg-parser/tui";
+import { TuiProvider } from "@alcyone-labs/arg-parser/tui";
+
+function App() {
+  return (
+    <box border padding={2}>
+      <text>Hello from OpenTUI!</text>
+    </box>
+  );
+}
+
+createTuiApp(() => (
+  <TuiProvider theme="dark">
+    <App />
+  </TuiProvider>
+));
+```
+
+### Peer Dependencies
+
+When using OpenTUI features, install the peer dependencies:
+
+```bash
+bun add @opentui/core @opentui/solid solid-js
+```
+
 ## System Flags & Configuration
 
 ArgParser includes built-in `--s-*` flags for development and debugging.
 
-| Flag                        | Description                                                                 |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `--s-mcp-serve`             | Starts the application in MCP server mode.                                  |
-| `--s-build-dxt [dir]`       | Generates a DXT package for Claude Desktop.                                 |
-| `--s-with-env <file>`       | Loads configuration from a file (`.env`, `.json`, etc.).                    |
-| `--s-save-to-env <file>`    | Saves current arguments to a configuration file.                            |
-| `--s-debug`                 | Prints a detailed log of the argument parsing process.                      |
+| Flag                     | Description                                              |
+| ------------------------ | -------------------------------------------------------- |
+| `--s-mcp-serve`          | Starts the application in MCP server mode.               |
+| `--s-build-dxt [dir]`    | Generates a DXT package for Claude Desktop.              |
+| `--s-with-env <file>`    | Loads configuration from a file (`.env`, `.json`, etc.). |
+| `--s-save-to-env <file>` | Saves current arguments to a configuration file.         |
+| `--s-debug`              | Prints a detailed log of the argument parsing process.   |
 
 ## Links
 

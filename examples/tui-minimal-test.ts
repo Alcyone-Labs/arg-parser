@@ -2,11 +2,21 @@
  * Minimal TUI Test
  *
  * Simple test to verify OpenTUI rendering works.
+ * IMPORTANT: Requires Bun, not Node.js
  */
 
+import {
+  cleanupTerminal,
+  enableMouseReporting,
+  switchToAlternateScreen,
+} from "@alcyone-labs/arg-parser/tui";
 import { render } from "@opentui/solid";
 
 console.log("Starting TUI test...");
+
+// Setup terminal for TUI
+switchToAlternateScreen();
+enableMouseReporting();
 
 // Minimal render test
 render(() => ({
@@ -31,6 +41,7 @@ render(() => ({
   })
   .catch((err) => {
     console.error("Render error:", err);
+    cleanupTerminal();
   });
 
 console.log("Script executed");

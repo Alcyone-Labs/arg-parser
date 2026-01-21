@@ -148,5 +148,7 @@ export {
   clearScreen,
   resetAttributes,
   restoreStdin,
+  switchToAlternateScreen,
+  switchToMainScreen,
   parseMouseScroll,
 } from "./tty";

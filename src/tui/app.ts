@@ -11,6 +11,11 @@ import { ExitGuard } from "./runtime/ExitGuard";
 import { ShortcutProvider } from "./shortcuts";
 import { ThemeProvider } from "./themes";
 import { ToastProvider } from "./toast";
+import {
+  cleanupTerminal,
+  enableMouseReporting,
+  switchToAlternateScreen,
+} from "./tty";
 import type { TuiAppConfig, TuiTheme } from "./types";
 
 export type { TuiAppConfig, TuiTheme };
@@ -49,6 +54,9 @@ export function createTuiApp(
 ): Promise<void> {
   const { theme = "dark", shortcuts = [], onDestroy } = config;
 
+  switchToAlternateScreen();
+  enableMouseReporting();
+
   return render(
     () =>
       createComponent(ExitGuard, {
@@ -74,6 +82,11 @@ export function createTuiApp(
           });
         },
       }),
-    { onDestroy },
+    {
+      onDestroy: () => {
+        cleanupTerminal();
+        onDestroy?.();
+      },
+    },
   );
 }

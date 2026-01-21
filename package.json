@@ -1,6 +1,6 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "2.13.4",
+  "version": "2.13.5",
   "description": "A robust, type-safe CLI builder with out-of-the-box support for creating MCPs and bundling Claude Desktop's DXT packages",
   "type": "module",
   "main": "dist/index.cjs",
@@ -113,12 +113,14 @@
     "@alcyone-labs/simple-chalk": "^1.0.2",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
     "@modelcontextprotocol/sdk": "^1.25.1",
-    "@opentui/core": "0.1.67",
-    "@opentui/solid": "0.1.67",
     "get-tsconfig": "^4.13.0",
     "magic-regexp": "^0.10.0",
-    "solid-js": "1.9.9",
+    "solid-js": "^1.9.0",
     "zod": "^4.3.4"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.1.67",
+    "@opentui/solid": ">=0.1.67"
   },
   "optionalDependencies": {
     "dotenv": "^17.2.3",

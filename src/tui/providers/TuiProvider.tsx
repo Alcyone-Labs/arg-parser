@@ -27,6 +27,11 @@ import { ExitGuard } from "../runtime/ExitGuard";
 import { ShortcutProvider, type ShortcutBinding } from "../shortcuts";
 import { ThemeProvider, type TuiTheme } from "../themes";
 import { ToastProvider } from "../toast";
+import {
+  cleanupTerminal,
+  enableMouseReporting,
+  switchToAlternateScreen,
+} from "../tty";
 
 // ============================================================================
 // Types
@@ -158,11 +163,14 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
   };
 
   onMount(() => {
+    switchToAlternateScreen();
+    enableMouseReporting();
     renderer.on("resize", handleResize);
   });
 
   onCleanup(() => {
     renderer.off("resize", handleResize);
+    cleanupTerminal();
   });
 
   // Context value
