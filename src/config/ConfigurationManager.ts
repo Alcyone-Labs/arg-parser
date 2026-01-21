@@ -426,6 +426,14 @@ export class ConfigurationManager {
         flag = allFlags.find((f) => normalizeKey(f["name"]) === normalizedKey);
       }
 
+      // Try matching via 'env' property
+      if (!flag) {
+        flag = allFlags.find((f) => {
+          const envs = Array.isArray(f["env"]) ? f["env"] : f["env"] ? [f["env"]] : [];
+          return envs.includes(key);
+        });
+      }
+
       if (flag) {
         try {
           // Use the actual flag name (not the config key) for consistency
@@ -540,7 +548,17 @@ export class ConfigurationManager {
 
     // Helper to get the primary flag option (e.g., "--test-var") for a flag name (e.g., "testVar")
     const getFlagOption = (flagName: string): string => {
-      const flag = allFlags.find((f) => f["name"] === flagName);
+      // Check for exact name match
+      let flag = allFlags.find((f) => f["name"] === flagName);
+
+      // If not found by name, check for env property match
+      if (!flag) {
+        flag = allFlags.find((f) => {
+          const envs = Array.isArray(f["env"]) ? f["env"] : f["env"] ? [f["env"]] : [];
+          return envs.includes(flagName);
+        });
+      }
+
       if (flag && Array.isArray(flag["options"]) && flag["options"].length > 0) {
         // Get the first option that starts with "--" (prefer long form)
         const longOption = flag["options"].find((opt: string) => opt.startsWith("--"));

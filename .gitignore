@@ -14,3 +14,7 @@ tests/fixtures/
 
 # Keep icons
 !docs/MCP/icons
+
+.gemini
+.opencode
+.factory

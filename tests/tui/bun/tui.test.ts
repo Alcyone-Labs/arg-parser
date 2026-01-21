@@ -7,9 +7,13 @@
  * - Theme system
  * - Toast notifications
  * - Shortcut handling
+ *
+ * NOTE: These tests use Bun's test runner because @opentui/core uses Bun's
+ * `with { type: "file" }` import assertions for .scm (tree-sitter grammar) files,
+ * which Vitest/esbuild doesn't support.
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "bun:test";
 import { Buffer } from "node:buffer";
 import * as tui from "@alcyone-labs/arg-parser/tui";
 
@@ -234,7 +238,7 @@ describe("TUI Module", () => {
 
   describe("Peer Dependencies Documentation", () => {
     test("package.json should have correct peerDependencies", () => {
-      const packageJson = require("../../package.json");
+      const packageJson = require("../../../package.json");
 
       expect(packageJson.peerDependencies).toBeDefined();
       expect(packageJson.peerDependencies["@opentui/core"]).toBeDefined();

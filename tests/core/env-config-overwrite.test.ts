@@ -7,8 +7,11 @@ import { ArgParser } from "../../src/core/ArgParser";
 describe("Environment Variable Overwrite Integration", () => {
   let tempDir: string;
   let originalEnv: NodeJS.ProcessEnv;
+  let originalCwd: string;
 
   beforeEach(() => {
+    // Save original CWD
+    originalCwd = process.cwd();
     // Create a unique temporary directory for each test
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "arg-parser-env-test-"));
     // Save original env
@@ -16,6 +19,8 @@ describe("Environment Variable Overwrite Integration", () => {
   });
 
   afterEach(() => {
+    // Restore CWD first
+    process.chdir(originalCwd);
     // Clean up
     fs.rmSync(tempDir, { recursive: true, force: true });
     // Restore env
@@ -42,6 +47,13 @@ describe("Environment Variable Overwrite Integration", () => {
       description: "Set working directory",
       setWorkingDirectory: true,
       options: ["--cwd"], // Added missing options
+    });
+
+    parser.addFlag({
+      name: "testOverwriteVar",
+      type: "string",
+      env: "TEST_OVERWRITE_VAR",
+      options: ["--test-overwrite-var"],
     });
 
     // 4. Run parser pointing to the temp directory

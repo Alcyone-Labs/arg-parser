@@ -136,7 +136,8 @@ export default defineConfig(({ command, mode }) => {
     return buildConfig;
   } else {
     // Configuration for Vitest (`vitest` or `vite serve` in test mode)
-    const vitestSpecificConfig = defineTestConfig({
+    // Non-interactive mode by default: no watch, no UI, exit after completion
+    const vitestConfig = defineTestConfig({
       plugins: [tsconfigPaths({ projects: ["./tsconfig.dev.json"] })],
       test: {
         globals: true,
@@ -155,15 +156,10 @@ export default defineConfig(({ command, mode }) => {
           return base;
         })(),
         name: "Alcyone Labs ArgParser",
-        // Add teardown timeout to ensure processes are cleaned up
-        teardownTimeout: 3000, // Reduced teardown timeout
-        // Retry failed tests once in case of flaky issues
+        teardownTimeout: 3000,
         retry: 1,
-        // Handle @opentui packages (they have .scm tree-sitter files that Node.js can't load)
-        deps: {
-          // Process @opentui packages as ESM with special handling
-          inline: [/@opentui\/.*/],
-        },
+        // Non-interactive: disabled by default
+        watch: false,
         ...(process.env.VITEST_INCLUDE_INTEGRATION
           ? {
               poolOptions: {
@@ -174,13 +170,11 @@ export default defineConfig(({ command, mode }) => {
             }
           : {}),
       },
+      deps: {
+        exclude: ["@opentui/core"],
+      },
     });
 
-    const mergedTestConfig: UserConfig = {
-      root,
-      plugins: vitestSpecificConfig.plugins,
-      test: vitestSpecificConfig.test,
-    };
-    return mergedTestConfig;
+    return vitestConfig;
   }
 });

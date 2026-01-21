@@ -15,13 +15,12 @@
 
 ### Test
 
-- `vitest run` - Run all tests (excludes integration by default)
+- `pnpm test` - Run tests non-interactively (default, excludes integration, exits after completion)
+- `pnpm test:all` - Run all tests including integration tests (slower)
 - `vitest run <file-path>` - Run specific test file: `vitest run tests/core/flag-types-consolidated.test.ts`
 - `vitest run --reporter=verbose <pattern>` - Run tests matching pattern with verbose output
-- `pnpm test:fast` - Run fast tests (excludes integration)
-- `pnpm test:integration` - Run integration tests (slower, requires VITEST_INCLUDE_INTEGRATION=1)
-- `pnpm test:watch` - Watch mode for tests
-- `pnpm test:ui` - Run Vitest UI
+- `pnpm test:watch` - Watch mode for tests (interactive, watches for file changes)
+- `pnpm test:ui` - Run Vitest UI (interactive, serves web interface)
 - `vitest --run --reporter=verbose tests/core/` - Run tests in specific directory
 
 ### Pre-publish

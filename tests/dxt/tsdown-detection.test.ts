@@ -221,15 +221,15 @@ describe("TSDown Output Detection", () => {
       fs.writeFileSync(path.join(tempDir, "chunk-123.js"), "chunk");
 
       // Mock package.json in temp directory
-      const originalCwd = process.cwd();
-      process.chdir(tempDir);
-
       const packageJson = {
         name: "test-package",
         version: "1.0.0",
         description: "Test package",
       };
-      fs.writeFileSync("package.json", JSON.stringify(packageJson, null, 2));
+      fs.writeFileSync(path.join(tempDir, "package.json"), JSON.stringify(packageJson, null, 2));
+
+      // Mock process.cwd() to return tempDir so DxtGenerator looks for package.json there
+      const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tempDir);
 
       try {
         await (dxtGenerator as any).setupDxtPackageFiles(mockEntryFile, tempDir, "test-entry.js");
@@ -242,7 +242,7 @@ describe("TSDown Output Detection", () => {
         expect(manifest.server.mcp_config.args).toContain("${__dirname}/test-entry.js");
       } finally {
         // Cleanup
-        process.chdir(originalCwd);
+        cwdSpy.mockRestore();
       }
     });
 
@@ -250,15 +250,15 @@ describe("TSDown Output Detection", () => {
       // Don't create any JS files - detection should fail
 
       // Mock package.json in temp directory
-      const originalCwd = process.cwd();
-      process.chdir(tempDir);
-
       const packageJson = {
         name: "test-package",
         version: "1.0.0",
         description: "Test package",
       };
-      fs.writeFileSync("package.json", JSON.stringify(packageJson, null, 2));
+      fs.writeFileSync(path.join(tempDir, "package.json"), JSON.stringify(packageJson, null, 2));
+
+      // Mock process.cwd() to return tempDir so DxtGenerator looks for package.json there
+      const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(tempDir);
 
       try {
         await (dxtGenerator as any).setupDxtPackageFiles(mockEntryFile, tempDir);
@@ -271,7 +271,7 @@ describe("TSDown Output Detection", () => {
         expect(manifest.server.mcp_config.args).toContain("${__dirname}/test-entry.js");
       } finally {
         // Cleanup
-        process.chdir(originalCwd);
+        cwdSpy.mockRestore();
       }
     });
   });
