@@ -214,18 +214,14 @@ async function runFuzzyTestExample() {
   );
 
   console.log("\nCommand Path Coverage:");
-  for (const [path, coverage] of Object.entries(
-    report.summary.coverageByPath,
-  )) {
+  for (const [path, coverage] of Object.entries(report.summary.coverageByPath)) {
     const rate = ((coverage.passed / coverage.total) * 100).toFixed(1);
     console.log(`  ${path}: ${coverage.passed}/${coverage.total} (${rate}%)`);
   }
 
   if (Object.keys(report.summary.errorTypes).length > 0) {
     console.log("\nError Types:");
-    for (const [errorType, count] of Object.entries(
-      report.summary.errorTypes,
-    )) {
+    for (const [errorType, count] of Object.entries(report.summary.errorTypes)) {
       console.log(`  ${errorType}: ${count}`);
     }
   }
@@ -243,16 +239,11 @@ async function runFuzzyTestExample() {
   }
 
   // Performance analysis
-  const testsWithTiming = report.results.filter(
-    (r) => r.executionTime !== undefined,
-  );
+  const testsWithTiming = report.results.filter((r) => r.executionTime !== undefined);
   if (testsWithTiming.length > 0) {
     const avgTime =
-      testsWithTiming.reduce((sum, r) => sum + (r.executionTime || 0), 0) /
-      testsWithTiming.length;
-    const maxTime = Math.max(
-      ...testsWithTiming.map((r) => r.executionTime || 0),
-    );
+      testsWithTiming.reduce((sum, r) => sum + (r.executionTime || 0), 0) / testsWithTiming.length;
+    const maxTime = Math.max(...testsWithTiming.map((r) => r.executionTime || 0));
     console.log(`\nPerformance Analysis:`);
     console.log(`  Average execution time: ${avgTime.toFixed(2)}ms`);
     console.log(`  Maximum execution time: ${maxTime}ms`);

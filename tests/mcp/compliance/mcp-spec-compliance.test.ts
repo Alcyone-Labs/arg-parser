@@ -22,10 +22,7 @@ import {
   negotiateProtocolVersion,
   VERSION_TEST_DATA,
 } from "../../../src/mcp/mcp-protocol-versions";
-import {
-  DEFAULT_COMPLIANCE_CONFIG,
-  McpComplianceValidator,
-} from "./mcp-compliance-framework";
+import { DEFAULT_COMPLIANCE_CONFIG, McpComplianceValidator } from "./mcp-compliance-framework";
 
 interface McpMessage {
   jsonrpc: string;
@@ -234,9 +231,7 @@ describe("MCP Specification Compliance", () => {
       const UNSUPPORTED_VERSIONS = VERSION_TEST_DATA.unsupportedVersions;
 
       // Test 1: Server behavior with all supported MCP versions
-      console.log(
-        `\nTesting all ${ALL_SUPPORTED_VERSIONS.length} supported MCP versions:`,
-      );
+      console.log(`\nTesting all ${ALL_SUPPORTED_VERSIONS.length} supported MCP versions:`);
       for (const mcpVersion of ALL_SUPPORTED_VERSIONS) {
         try {
           const response = await client.sendRequest("initialize", {
@@ -252,15 +247,11 @@ describe("MCP Specification Compliance", () => {
               console.log(`✅ ${mcpVersion}: Server returned same version`);
               expect(returnedVersion).toBe(mcpVersion);
             } else if (isAnyMcpVersion(returnedVersion)) {
-              console.log(
-                `🔄 ${mcpVersion}: Server negotiated to ${returnedVersion}`,
-              );
+              console.log(`🔄 ${mcpVersion}: Server negotiated to ${returnedVersion}`);
               expect(returnedVersion).toBeDefined();
               expect(isAnyMcpVersion(returnedVersion)).toBe(true);
             } else {
-              console.log(
-                `❌ ${mcpVersion}: Server returned invalid version ${returnedVersion}`,
-              );
+              console.log(`❌ ${mcpVersion}: Server returned invalid version ${returnedVersion}`);
               expect(isAnyMcpVersion(returnedVersion)).toBe(true);
             }
           }
@@ -303,10 +294,7 @@ describe("MCP Specification Compliance", () => {
 
     it("should support all available MCP protocol versions", async () => {
       const versionInfo = getVersionCompatibilityInfo();
-      console.log(
-        "\nMCP Version Compatibility Info:",
-        JSON.stringify(versionInfo, null, 2),
-      );
+      console.log("\nMCP Version Compatibility Info:", JSON.stringify(versionInfo, null, 2));
 
       // Test each stable version
       console.log("\n=== Testing Stable Versions ===");
@@ -318,14 +306,10 @@ describe("MCP Specification Compliance", () => {
         });
 
         expect(response.result.protocolVersion).toBeDefined();
-        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(
-          true,
-        );
+        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(true);
 
         const status =
-          versionInfo.versionStatus[
-            stableVersion as keyof typeof versionInfo.versionStatus
-          ];
+          versionInfo.versionStatus[stableVersion as keyof typeof versionInfo.versionStatus];
         console.log(
           `✅ ${stableVersion} (${status}): Server responded with ${response.result.protocolVersion}`,
         );
@@ -341,14 +325,10 @@ describe("MCP Specification Compliance", () => {
         });
 
         expect(response.result.protocolVersion).toBeDefined();
-        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(
-          true,
-        );
+        expect(isValidMcpVersionFormat(response.result.protocolVersion)).toBe(true);
 
         const status =
-          versionInfo.versionStatus[
-            draftVersion as keyof typeof versionInfo.versionStatus
-          ];
+          versionInfo.versionStatus[draftVersion as keyof typeof versionInfo.versionStatus];
         console.log(
           `🚧 ${draftVersion} (${status}): Server responded with ${response.result.protocolVersion}`,
         );
@@ -368,9 +348,7 @@ describe("MCP Specification Compliance", () => {
       );
 
       // The server should ideally support the current version
-      if (
-        currentResponse.result.protocolVersion === versionInfo.currentVersion
-      ) {
+      if (currentResponse.result.protocolVersion === versionInfo.currentVersion) {
         console.log("✅ Server fully supports current MCP protocol version");
       } else {
         console.log(
@@ -396,15 +374,11 @@ describe("MCP Specification Compliance", () => {
           if (response.result) {
             expect(response.result.protocolVersion).toBeDefined();
             // Returned version should be valid YYYY-MM-DD format
-            expect(response.result.protocolVersion).toMatch(
-              /^\d{4}-\d{2}-\d{2}$/,
-            );
+            expect(response.result.protocolVersion).toMatch(/^\d{4}-\d{2}-\d{2}$/);
           }
         } catch (error) {
           // Server rejecting malformed versions is also acceptable
-          console.log(
-            `Server rejected malformed version ${malformedVersion}: ${error}`,
-          );
+          console.log(`Server rejected malformed version ${malformedVersion}: ${error}`);
         }
       }
     });
@@ -575,9 +549,7 @@ describe("MCP Specification Compliance", () => {
         });
 
         // Should return success or method not found
-        expect(
-          response.result !== undefined || response.error !== undefined,
-        ).toBe(true);
+        expect(response.result !== undefined || response.error !== undefined).toBe(true);
 
         if (response.error) {
           // Method not found is acceptable if logging not supported
@@ -597,9 +569,7 @@ describe("MCP Specification Compliance", () => {
 
       // Check if any log notifications were sent
       const notifications = client.getNotifications();
-      const logNotifications = notifications.filter(
-        (n) => n.method === "notifications/message",
-      );
+      const logNotifications = notifications.filter((n) => n.method === "notifications/message");
 
       for (const logNotif of logNotifications) {
         expect(logNotif.params).toBeDefined();
@@ -761,8 +731,7 @@ describe("MCP Specification Compliance", () => {
       });
 
       // Validate using the compliance framework
-      const validationResults =
-        validator.validateInitializationResponse(initResponse);
+      const validationResults = validator.validateInitializationResponse(initResponse);
 
       // Log all results for debugging
       validationResults.forEach((result) => {
@@ -776,9 +745,7 @@ describe("MCP Specification Compliance", () => {
       });
 
       // All error-level validations must pass
-      const errors = validationResults.filter(
-        (r) => r.severity === "error" && !r.passed,
-      );
+      const errors = validationResults.filter((r) => r.severity === "error" && !r.passed);
       expect(errors).toHaveLength(0);
 
       // Get summary
@@ -830,9 +797,7 @@ describe("MCP Specification Compliance", () => {
         });
 
         // No errors should occur in version negotiation
-        const errors = negotiationResults.filter(
-          (r) => r.severity === "error" && !r.passed,
-        );
+        const errors = negotiationResults.filter((r) => r.severity === "error" && !r.passed);
         expect(errors).toHaveLength(0);
       }
     });
@@ -865,9 +830,7 @@ describe("MCP Specification Compliance", () => {
       });
 
       // All error-level validations must pass
-      const errors = toolsResults.filter(
-        (r) => r.severity === "error" && !r.passed,
-      );
+      const errors = toolsResults.filter((r) => r.severity === "error" && !r.passed);
       expect(errors).toHaveLength(0);
 
       const summary = validator.getSummary();

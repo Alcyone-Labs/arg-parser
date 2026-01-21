@@ -110,9 +110,7 @@ describe("DXT Options Validation", () => {
         max: 50,
       };
 
-      expect(() => zodDxtOptionsSchema.parse(invalidOptions)).toThrow(
-        "min must be <= max",
-      );
+      expect(() => zodDxtOptionsSchema.parse(invalidOptions)).toThrow("min must be <= max");
     });
 
     test("should reject invalid DXT types", () => {
@@ -332,8 +330,7 @@ describe("DXT Options Validation", () => {
       expect(userConfig.API_ENDPOINTS).toEqual({
         type: "string",
         title: "API Endpoints",
-        description:
-          "API endpoints to monitor (default: https://api.example.com)",
+        description: "API endpoints to monitor (default: https://api.example.com)",
         required: false,
         sensitive: true,
         multiple: true,

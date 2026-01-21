@@ -36,10 +36,7 @@ export class ConfigurationManager {
     // Convert to a safe filename format (PascalCase for .env files)
     baseName = baseName
       .split(/[\s\-_]+/)
-      .map(
-        (word: string) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-      )
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join("");
 
     return `${baseName}.env`;
@@ -48,13 +45,8 @@ export class ConfigurationManager {
   /**
    * Handles the --s-save-to-env system flag at the final parser level
    */
-  public handleSaveToEnvFlag(
-    processArgs: string[],
-    parserChain: any[],
-  ): boolean {
-    const saveToEnvIndex = processArgs.findIndex(
-      (arg) => arg === "--s-save-to-env",
-    );
+  public handleSaveToEnvFlag(processArgs: string[], parserChain: any[]): boolean {
+    const saveToEnvIndex = processArgs.findIndex((arg) => arg === "--s-save-to-env");
     if (saveToEnvIndex !== -1) {
       let filePath: string;
 
@@ -81,11 +73,7 @@ export class ConfigurationManager {
   /**
    * Saves current configuration to an environment file
    */
-  public saveToEnvFile(
-    filePath: string,
-    _processArgs: string[],
-    parserChain: any[],
-  ): void {
+  public saveToEnvFile(filePath: string, _processArgs: string[], parserChain: any[]): void {
     try {
       // Parse the current arguments to get the values
       const finalParser = parserChain[parserChain.length - 1];
@@ -139,9 +127,7 @@ export class ConfigurationManager {
 
       console.log(chalk.green(`✅ Configuration saved to: ${filePath}`));
       console.log(chalk.gray(`Format: ${ext || ".env"}`));
-      console.log(
-        chalk.gray(`Flags saved: ${Object.keys(parsedArgs.data).length}`),
-      );
+      console.log(chalk.gray(`Flags saved: ${Object.keys(parsedArgs.data).length}`));
     } catch (error) {
       console.error(
         chalk.red(
@@ -157,10 +143,7 @@ export class ConfigurationManager {
   /**
    * Loads configuration from an environment file
    */
-  public loadEnvFile(
-    filePath: string,
-    parserChain: any[],
-  ): Record<string, any> {
+  public loadEnvFile(filePath: string, parserChain: any[]): Record<string, any> {
     try {
       if (!fs.existsSync(filePath)) {
         throw new Error(`Configuration file not found: ${filePath}`);
@@ -434,9 +417,7 @@ export class ConfigurationManager {
 
       // Try case-insensitive match
       if (!flag) {
-        flag = allFlags.find(
-          (f) => f["name"].toLowerCase() === key.toLowerCase(),
-        );
+        flag = allFlags.find((f) => f["name"].toLowerCase() === key.toLowerCase());
       }
 
       // Try normalized match (handles SCREAMING_SNAKE_CASE to camelCase)
@@ -500,33 +481,17 @@ export class ConfigurationManager {
       }
       const num = Number(value);
       if (isNaN(num)) {
-        throw new Error(
-          `Cannot convert '${value}' to number for flag '${flag["name"]}'`,
-        );
+        throw new Error(`Cannot convert '${value}' to number for flag '${flag["name"]}'`);
       }
       return num;
     } else if (isBooleanType) {
       if (typeof value === "boolean") return value;
       if (typeof value === "string") {
         const lower = value.toLowerCase();
-        if (
-          lower === "true" ||
-          lower === "1" ||
-          lower === "yes" ||
-          lower === "on"
-        )
-          return true;
-        if (
-          lower === "false" ||
-          lower === "0" ||
-          lower === "no" ||
-          lower === "off"
-        )
-          return false;
+        if (lower === "true" || lower === "1" || lower === "yes" || lower === "on") return true;
+        if (lower === "false" || lower === "0" || lower === "no" || lower === "off") return false;
       }
-      throw new Error(
-        `Cannot convert '${value}' to boolean for flag '${flag["name"]}'`,
-      );
+      throw new Error(`Cannot convert '${value}' to boolean for flag '${flag["name"]}'`);
     } else if (flagType === "table") {
       if (Array.isArray(value)) return value;
       if (typeof value === "string") {
@@ -539,9 +504,7 @@ export class ConfigurationManager {
           return value.split(",").map((v) => v.trim());
         }
       }
-      throw new Error(
-        `Cannot convert '${value}' to table for flag '${flag["name"]}'`,
-      );
+      throw new Error(`Cannot convert '${value}' to table for flag '${flag["name"]}'`);
     } else {
       // Handle custom type functions or fallback to string
       if (typeof flagType === "function") {
@@ -578,15 +541,9 @@ export class ConfigurationManager {
     // Helper to get the primary flag option (e.g., "--test-var") for a flag name (e.g., "testVar")
     const getFlagOption = (flagName: string): string => {
       const flag = allFlags.find((f) => f["name"] === flagName);
-      if (
-        flag &&
-        Array.isArray(flag["options"]) &&
-        flag["options"].length > 0
-      ) {
+      if (flag && Array.isArray(flag["options"]) && flag["options"].length > 0) {
         // Get the first option that starts with "--" (prefer long form)
-        const longOption = flag["options"].find((opt: string) =>
-          opt.startsWith("--"),
-        );
+        const longOption = flag["options"].find((opt: string) => opt.startsWith("--"));
         return longOption || flag["options"][0];
       }
       // Fallback to default format if flag not found
@@ -602,10 +559,7 @@ export class ConfigurationManager {
       const flagOptionWithoutDashes = flagOption.replace(/^--?/, "");
       const hasFlag = mergedArgs.some((arg) => {
         const argWithoutDashes = arg.replace(/^--?/, "").split("=")[0];
-        return (
-          argWithoutDashes === flagOptionWithoutDashes ||
-          argWithoutDashes === key
-        );
+        return argWithoutDashes === flagOptionWithoutDashes || argWithoutDashes === key;
       });
 
       if (!hasFlag) {
@@ -630,10 +584,7 @@ export class ConfigurationManager {
   /**
    * Generates environment file format
    */
-  public generateEnvFormat(
-    flags: ProcessedFlag[],
-    parsedArgs: TParsedArgs<any>,
-  ): string {
+  public generateEnvFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
     const lines: string[] = [];
     lines.push("# Environment configuration file");
     lines.push(`# Generated on ${new Date().toISOString()}`);
@@ -662,10 +613,7 @@ export class ConfigurationManager {
   /**
    * Generates YAML file format (legacy method - now uses plugin system)
    */
-  public generateYamlFormat(
-    flags: ProcessedFlag[],
-    parsedArgs: TParsedArgs<any>,
-  ): string {
+  public generateYamlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".yaml");
     if (plugin) {
       // Plugin expects raw data object, not TParsedArgs
@@ -706,10 +654,7 @@ export class ConfigurationManager {
   /**
    * Generates JSON file format
    */
-  public generateJsonFormat(
-    flags: ProcessedFlag[],
-    parsedArgs: TParsedArgs<any>,
-  ): string {
+  public generateJsonFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
     const config: Record<string, any> = {};
 
     for (const flag of flags) {
@@ -725,10 +670,7 @@ export class ConfigurationManager {
   /**
    * Generates TOML file format (legacy method - now uses plugin system)
    */
-  public generateTomlFormat(
-    flags: ProcessedFlag[],
-    parsedArgs: TParsedArgs<any>,
-  ): string {
+  public generateTomlFormat(flags: ProcessedFlag[], parsedArgs: TParsedArgs<any>): string {
     const plugin = globalConfigPluginRegistry.getPluginByExtension(".toml");
     if (plugin) {
       // Plugin expects raw data object, not TParsedArgs
@@ -749,9 +691,7 @@ export class ConfigurationManager {
 
         if (Array.isArray(value)) {
           const arrayStr = value
-            .map((item) =>
-              typeof item === "string" ? `"${item}"` : String(item),
-            )
+            .map((item) => (typeof item === "string" ? `"${item}"` : String(item)))
             .join(", ");
           lines.push(`${flag["name"]} = [${arrayStr}]`);
         } else if (typeof value === "string") {

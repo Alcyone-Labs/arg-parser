@@ -94,18 +94,13 @@ const cli = ArgParser.withMcp({
         )
         .describe("Array of matching Canny posts"),
       total: z.number().describe("Total number of results returned"),
-      timestamp: z
-        .string()
-        .describe("When the search was performed (ISO 8601)"),
+      timestamp: z.string().describe("When the search was performed (ISO 8601)"),
     }) as any,
     handler: async (ctx) => {
       const args = ctx.args;
 
       if (process.env["MCP_DEBUG"]) {
-        console.error(
-          `[Canny Debug] Handler called with args:`,
-          JSON.stringify(args, null, 2),
-        );
+        console.error(`[Canny Debug] Handler called with args:`, JSON.stringify(args, null, 2));
       }
 
       // Get API key from args or environment variable
@@ -117,24 +112,14 @@ const cli = ArgParser.withMcp({
         );
       }
 
-      console.log(
-        chalk.bold.cyan(`🔍 Searching Canny for: "${args["query"]}"`),
-      );
+      console.log(chalk.bold.cyan(`🔍 Searching Canny for: "${args["query"]}"`));
       console.log(chalk.gray("━".repeat(50)));
 
       try {
-        const results = await searchCannyPosts(
-          apiKey,
-          args["query"],
-          args["limit"],
-        );
+        const results = await searchCannyPosts(apiKey, args["query"], args["limit"]);
 
         if ((results as any).posts && (results as any).posts.length > 0) {
-          console.log(
-            chalk.green(
-              `\n✅ Found ${(results as any).posts.length} results:\n`,
-            ),
-          );
+          console.log(chalk.green(`\n✅ Found ${(results as any).posts.length} results:\n`));
 
           (results as any).posts.forEach((post: any, index: number) => {
             console.log(chalk.bold.white(`${index + 1}. ${post.title}`));
@@ -146,9 +131,7 @@ const cli = ArgParser.withMcp({
             console.log(chalk.blue(`   URL: ${post.url}`));
             if (post.details) {
               const truncatedDetails =
-                post.details.length > 100
-                  ? post.details.substring(0, 100) + "..."
-                  : post.details;
+                post.details.length > 100 ? post.details.substring(0, 100) + "..." : post.details;
               console.log(chalk.gray(`   ${truncatedDetails}`));
             }
             console.log();
@@ -188,25 +171,17 @@ const cli = ArgParser.withMcp({
     ],
     // 🎉 NEW: Output schema for boards listing
     outputSchema: z.object({
-      success: z
-        .boolean()
-        .describe("Whether the boards listing was successful"),
+      success: z.boolean().describe("Whether the boards listing was successful"),
       boards: z
         .array(
           z.object({
             id: z.string().describe("Unique board ID"),
             name: z.string().describe("Board name"),
             description: z.string().optional().describe("Board description"),
-            postCount: z
-              .number()
-              .optional()
-              .describe("Number of posts in this board"),
+            postCount: z.number().optional().describe("Number of posts in this board"),
             url: z.string().optional().describe("Board URL"),
             created: z.string().optional().describe("Board creation timestamp"),
-            isPrivate: z
-              .boolean()
-              .optional()
-              .describe("Whether the board is private"),
+            isPrivate: z.boolean().optional().describe("Whether the board is private"),
           }),
         )
         .describe("Array of available Canny boards"),
@@ -246,12 +221,7 @@ async function main() {
     const result = await cli.parse(process.argv.slice(2));
 
     // Handle ParseResult objects when autoExit is false
-    if (
-      result &&
-      typeof result === "object" &&
-      "success" in result &&
-      "exitCode" in result
-    ) {
+    if (result && typeof result === "object" && "success" in result && "exitCode" in result) {
       const parseResult = result;
       if (parseResult.shouldExit) {
         process.exit(parseResult.exitCode);

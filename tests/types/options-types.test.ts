@@ -65,9 +65,7 @@ describe("Options Types", () => {
     // Should be assignable to WithMcpOptions
     const withMcpOptions: WithMcpOptions = mcpOptions;
 
-    expect(withMcpOptions.mcp?.serverInfo?.logo).toBe(
-      "https://example.com/logo.png",
-    );
+    expect(withMcpOptions.mcp?.serverInfo?.logo).toBe("https://example.com/logo.png");
   });
 
   test("DxtServerInfo should support logo property", () => {
@@ -105,8 +103,6 @@ describe("Options Types", () => {
 
     expect(parser).toBeInstanceOf(ArgParser);
     // The parser should have stored the MCP config internally
-    expect(parser.getMcpServerConfig()?.serverInfo?.logo).toBe(
-      "./test-logo.png",
-    );
+    expect(parser.getMcpServerConfig()?.serverInfo?.logo).toBe("./test-logo.png");
   });
 });

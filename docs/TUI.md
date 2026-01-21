@@ -22,9 +22,7 @@ function App() {
   return (
     <MasterDetail
       header="My App"
-      master={
-        <VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />
-      }
+      master={<VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />}
       detail={<Details item={DATA[idx()]} />}
     />
   );
@@ -318,9 +316,7 @@ function ItemDetails(props: { item: Item }) {
         {props.item.name}
       </text>
       <text color={theme().colors.muted}>ID: {props.item.id}</text>
-      <text color={theme().colors.text}>
-        Value: {props.item.value.toFixed(2)}
-      </text>
+      <text color={theme().colors.text}>Value: {props.item.value.toFixed(2)}</text>
     </>
   );
 }
@@ -330,12 +326,7 @@ function App() {
   const { current: theme, cycle } = useTheme();
   const [idx, setIdx] = createSignal(0);
 
-  const list = createVirtualListController(
-    () => DATA,
-    idx,
-    setIdx,
-    viewportHeight,
-  );
+  const list = createVirtualListController(() => DATA, idx, setIdx, viewportHeight);
 
   useKeyboard((key) => {
     if (key.name === "q") exit(0);
@@ -386,17 +377,17 @@ Run: `bun my-app.tsx`
 
 ## API Reference
 
-| Export                        | Description                               |
-| ----------------------------- | ----------------------------------------- |
-| `TuiProvider`                 | Unified provider for all TUI features     |
-| `useTui`                      | Hook for viewport/exit access             |
-| `useTheme`                    | Hook for theme access                     |
-| `THEMES`                      | Built-in theme presets                    |
-| `Theme`                       | Theme builder (`.from().extend()`)        |
-| `MasterDetail`                | Two-panel layout component                |
-| `VirtualList`                 | Virtualized scrollable list               |
-| `Breadcrumb`                  | Navigation path component                 |
-| `createVirtualListController` | List navigation hook                      |
-| `cleanupTerminal`             | TTY cleanup function                      |
-| `useKeyboard`                 | Keyboard input hook (re-exported)         |
-| `render`                      | Render function (re-exported)             |
+| Export                        | Description                           |
+| ----------------------------- | ------------------------------------- |
+| `TuiProvider`                 | Unified provider for all TUI features |
+| `useTui`                      | Hook for viewport/exit access         |
+| `useTheme`                    | Hook for theme access                 |
+| `THEMES`                      | Built-in theme presets                |
+| `Theme`                       | Theme builder (`.from().extend()`)    |
+| `MasterDetail`                | Two-panel layout component            |
+| `VirtualList`                 | Virtualized scrollable list           |
+| `Breadcrumb`                  | Navigation path component             |
+| `createVirtualListController` | List navigation hook                  |
+| `cleanupTerminal`             | TTY cleanup function                  |
+| `useKeyboard`                 | Keyboard input hook (re-exported)     |
+| `render`                      | Render function (re-exported)         |

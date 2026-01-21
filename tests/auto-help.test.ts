@@ -104,9 +104,7 @@ describe("Auto Help Features", () => {
     await parser.parse([]);
 
     expect(handlerSpy).toHaveBeenCalled();
-    expect(consoleSpy).not.toHaveBeenCalledWith(
-      expect.stringContaining("test Help"),
-    );
+    expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining("test Help"));
 
     consoleSpy.mockRestore();
   });

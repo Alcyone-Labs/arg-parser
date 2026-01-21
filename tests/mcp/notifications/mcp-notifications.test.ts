@@ -10,10 +10,7 @@ import {
   globalNotificationsManager,
   McpNotificationsManager,
 } from "../../../src/mcp/mcp-notifications.js";
-import type {
-  McpChangeEvent,
-  McpChangeListener,
-} from "../../../src/mcp/mcp-notifications.js";
+import type { McpChangeEvent, McpChangeListener } from "../../../src/mcp/mcp-notifications.js";
 
 describe("McpNotificationsManager", () => {
   let manager: McpNotificationsManager;
@@ -303,9 +300,8 @@ describe("Utility Functions", () => {
   describe("createFilteredListener", () => {
     test("should filter notifications by type", () => {
       let receivedEvents: McpChangeEvent[] = [];
-      const filteredListener = createFilteredListener(
-        ["tools", "resources"],
-        (event) => receivedEvents.push(event),
+      const filteredListener = createFilteredListener(["tools", "resources"], (event) =>
+        receivedEvents.push(event),
       );
 
       filteredListener({

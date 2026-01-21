@@ -101,14 +101,8 @@ describe("Working Directory Management - setWorkingDirectory Integration", () =>
         setWorkingDirectory: true,
       });
 
-      const result = await parser.parse([
-        "--workspace",
-        "temp-workdir-integration",
-      ]);
-      const expectedPath = path.resolve(
-        originalCwd,
-        "temp-workdir-integration",
-      );
+      const result = await parser.parse(["--workspace", "temp-workdir-integration"]);
+      const expectedPath = path.resolve(originalCwd, "temp-workdir-integration");
       expect(result.cwd).toBe(expectedPath);
     });
   });
@@ -207,10 +201,7 @@ describe("Working Directory Management - setWorkingDirectory Integration", () =>
       fs.writeFileSync(envPath, "TEST_VAR=from_cwd\n");
 
       // Create .env.local in testDir (should NOT be loaded)
-      fs.writeFileSync(
-        path.join(testDir, ".env.local"),
-        "TEST_VAR=from_test_dir\n",
-      );
+      fs.writeFileSync(path.join(testDir, ".env.local"), "TEST_VAR=from_test_dir\n");
 
       const parser = new ArgParser({
         appName: "Test CLI",
@@ -249,9 +240,7 @@ describe("Working Directory Management - setWorkingDirectory Integration", () =>
 
       const result = await parser.parse(["--workspace", "/nonexistent/path"]);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("does not exist"),
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("does not exist"));
       expect(result.cwd).toBe(originalCwd); // Falls back to original cwd
       consoleWarnSpy.mockRestore();
     });
@@ -275,9 +264,7 @@ describe("Working Directory Management - setWorkingDirectory Integration", () =>
 
       const result = await parser.parse(["--workspace", filePath]);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("is not a directory"),
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("is not a directory"));
       expect(result.cwd).toBe(originalCwd); // Falls back to original cwd
       consoleWarnSpy.mockRestore();
     });

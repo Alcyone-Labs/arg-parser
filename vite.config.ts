@@ -31,9 +31,7 @@ export default defineConfig(({ command, mode }) => {
       // The VITE_MINIFY_BUILD flag will be ignored for CJS.
       libFileName = buildEntry === "tui" ? "tui.cjs" : "index.cjs";
     } else {
-      throw new Error(
-        `Unsupported VITE_BUILD_FORMAT: ${buildFormat}. Expected 'es' or 'cjs'.`,
-      );
+      throw new Error(`Unsupported VITE_BUILD_FORMAT: ${buildFormat}. Expected 'es' or 'cjs'.`);
     }
 
     const esbuildMinifyOptions =
@@ -151,15 +149,9 @@ export default defineConfig(({ command, mode }) => {
         vmMemoryLimit: "300Mb",
         include: ["./tests/**/*.test.ts"],
         exclude: (() => {
-          const base = [
-            "**/node_modules/**",
-            "**/dist/**",
-            "**/examples/**",
-            "**/fixtures/**",
-          ];
+          const base = ["**/node_modules/**", "**/dist/**", "**/examples/**", "**/fixtures/**"];
           // Exclude slow integration tests by default unless explicitly enabled
-          if (!process.env.VITEST_INCLUDE_INTEGRATION)
-            base.push("**/integration/**");
+          if (!process.env.VITEST_INCLUDE_INTEGRATION) base.push("**/integration/**");
           return base;
         })(),
         name: "Alcyone Labs ArgParser",

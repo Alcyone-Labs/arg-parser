@@ -20,11 +20,7 @@ export class Toast extends Component {
     super(config);
   }
 
-  public show(
-    message: string,
-    type: ToastType = "info",
-    duration: number = 3000,
-  ) {
+  public show(message: string, type: ToastType = "info", duration: number = 3000) {
     this.message = message;
     this.type = type;
     this.isVisible = true;

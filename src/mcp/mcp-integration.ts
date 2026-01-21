@@ -2,17 +2,9 @@ import { z } from "zod";
 import type { ZodRawShape, ZodTypeAny } from "zod";
 import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 import { ArgParserBase } from "../core/ArgParserBase";
-import type {
-  IFlag,
-  IHandlerContext,
-  ProcessedFlag,
-  TParsedArgs,
-} from "../core/types";
+import type { IFlag, IHandlerContext, ProcessedFlag, TParsedArgs } from "../core/types";
 // Import the centralized utility functions
-import {
-  createOutputSchema,
-  getJsonSchemaTypeFromFlag,
-} from "../core/types.js";
+import { createOutputSchema, getJsonSchemaTypeFromFlag } from "../core/types.js";
 import { sanitizeMcpToolName } from "./mcp-utils";
 
 const logger = createMcpLogger("MCP Integration");
@@ -86,10 +78,7 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
       return { property, isRequired };
     } catch (error) {
       // Fallback if JSON Schema conversion fails
-      logger.error(
-        `Failed to convert Zod schema to JSON Schema for flag '${flag.name}':`,
-        error,
-      );
+      logger.error(`Failed to convert Zod schema to JSON Schema for flag '${flag.name}':`, error);
       const property = {
         type: "object" as const,
         description: flag.description || `${flag.name} parameter (Zod schema)`,
@@ -113,10 +102,7 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
   const defaultValue = (flag as any).defaultValue || (flag as any).default;
   if (defaultValue !== undefined) {
     property.default = defaultValue;
-  } else if (
-    flag.flagOnly &&
-    getJsonSchemaTypeFromFlag(flag.type) === "boolean"
-  ) {
+  } else if (flag.flagOnly && getJsonSchemaTypeFromFlag(flag.type) === "boolean") {
     // For flagOnly boolean flags, default to false when not explicitly set
     property.default = false;
   }
@@ -137,9 +123,7 @@ export function convertFlagToJsonSchemaProperty(flag: IFlag | ProcessedFlag): {
 /**
  * Convert ArgParser flags to MCP JSON Schema
  */
-export function convertFlagsToJsonSchema(
-  flags: readonly (IFlag | ProcessedFlag)[],
-): {
+export function convertFlagsToJsonSchema(flags: readonly (IFlag | ProcessedFlag)[]): {
   type: "object";
   properties: Record<string, any>;
   required: string[];
@@ -171,9 +155,7 @@ export function convertFlagsToJsonSchema(
 /**
  * Convert ArgParser flags to Zod schema for MCP tools
  */
-export function convertFlagsToZodSchema(
-  flags: readonly (IFlag | ProcessedFlag)[],
-): ZodTypeAny {
+export function convertFlagsToZodSchema(flags: readonly (IFlag | ProcessedFlag)[]): ZodTypeAny {
   const zodProperties: Record<string, ZodTypeAny> = {};
 
   for (const flag of flags) {
@@ -203,15 +185,9 @@ export interface SimplifiedToolResponse {
 /**
  * Extract simplified response from MCP protocol response
  */
-export function extractSimplifiedResponse(
-  mcpResponse: any,
-): SimplifiedToolResponse {
+export function extractSimplifiedResponse(mcpResponse: any): SimplifiedToolResponse {
   // Handle responses that are already in simplified format
-  if (
-    typeof mcpResponse === "object" &&
-    mcpResponse !== null &&
-    "success" in mcpResponse
-  ) {
+  if (typeof mcpResponse === "object" && mcpResponse !== null && "success" in mcpResponse) {
     return {
       success: mcpResponse.success,
       data: mcpResponse.data,
@@ -313,11 +289,7 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
           itemSchema = literalSchemas[0];
         } else {
           itemSchema = z.union(
-            literalSchemas as unknown as [
-              ZodTypeAny,
-              ZodTypeAny,
-              ...ZodTypeAny[],
-            ],
+            literalSchemas as unknown as [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]],
           );
         }
       } else {
@@ -363,11 +335,7 @@ function mapArgParserFlagToZodSchema(flag: IFlag | ProcessedFlag): ZodTypeAny {
             zodSchema = literalSchemas[0];
           } else if (literalSchemas.length >= 2) {
             zodSchema = z.union(
-              literalSchemas as unknown as [
-                ZodTypeAny,
-                ZodTypeAny,
-                ...ZodTypeAny[],
-              ],
+              literalSchemas as unknown as [ZodTypeAny, ZodTypeAny, ...ZodTypeAny[]],
             );
           } else {
             zodSchema = z.number();
@@ -421,9 +389,7 @@ export interface GenerateMcpToolsOptions {
   outputSchemaMap?: Record<string, ZodTypeAny>;
   defaultOutputSchema?: ZodTypeAny;
   /** Automatically generate output schemas for tools that don't have explicit schemas */
-  autoGenerateOutputSchema?:
-    | boolean
-    | keyof typeof import("../core/types").OutputSchemaPatterns;
+  autoGenerateOutputSchema?: boolean | keyof typeof import("../core/types").OutputSchemaPatterns;
   generateToolName?: (commandPath: string[], appName?: string) => string;
   includeSubCommands?: boolean;
   toolNamePrefix?: string;
@@ -435,8 +401,7 @@ interface ISpecialParseResultProps {
   $error?: { type: string; message: string; details?: any };
   handlerResponse?: any;
 }
-export type IParseExecutionResult = TParsedArgs<ProcessedFlag[]> &
-  ISpecialParseResultProps;
+export type IParseExecutionResult = TParsedArgs<ProcessedFlag[]> & ISpecialParseResultProps;
 
 export function generateMcpToolsFromArgParser(
   rootParser: ArgParserBase,
@@ -445,10 +410,7 @@ export function generateMcpToolsFromArgParser(
   const tools: IMcpToolStructure[] = [];
   const visitedParsers = new Set<ArgParserBase>();
 
-  function buildToolsRecursively(
-    currentParser: ArgParserBase,
-    commandPathParts: string[],
-  ) {
+  function buildToolsRecursively(currentParser: ArgParserBase, commandPathParts: string[]) {
     if (visitedParsers.has(currentParser)) return;
     visitedParsers.add(currentParser);
 
@@ -466,17 +428,12 @@ export function generateMcpToolsFromArgParser(
       : typedCurrentParser["#handler"];
 
     // ArgParser.ts (line 196) has a public getter `get flags()`
-    const currentParserFlags = typedCurrentParser.flags as (
-      | IFlag
-      | ProcessedFlag
-    )[];
+    const currentParserFlags = typedCurrentParser.flags as (IFlag | ProcessedFlag)[];
 
     const subCommandsMap = typedCurrentParser.getSubCommands
       ? typedCurrentParser.getSubCommands()
       : typedCurrentParser["#subCommands"];
-    const currentParserSubCommands = subCommandsMap
-      ? Array.from(subCommandsMap.values())
-      : [];
+    const currentParserSubCommands = subCommandsMap ? Array.from(subCommandsMap.values()) : [];
 
     let currentParserCommandName = typedCurrentParser.getAppCommandName
       ? typedCurrentParser.getAppCommandName()
@@ -491,14 +448,11 @@ export function generateMcpToolsFromArgParser(
     if (currentParser !== rootParser && commandPathParts.length > 0) {
       currentParserCommandName = commandPathParts[commandPathParts.length - 1];
     }
-    const currentParserCommandNameOrAppName =
-      currentParserCommandName || appName;
+    const currentParserCommandNameOrAppName = currentParserCommandName || appName;
 
     const effectiveCommandName =
       currentParserCommandName ||
-      (commandPathParts.length > 0
-        ? commandPathParts[commandPathParts.length - 1]
-        : appName);
+      (commandPathParts.length > 0 ? commandPathParts[commandPathParts.length - 1] : appName);
 
     let toolName: string;
     if (options?.generateToolName) {
@@ -515,8 +469,7 @@ export function generateMcpToolsFromArgParser(
       // Clean up the tool name for MCP compatibility
       toolName = sanitizeMcpToolName(toolName);
     }
-    if (!toolName)
-      toolName = currentParser === rootParser && appName ? appName : "cmd";
+    if (!toolName) toolName = currentParser === rootParser && appName ? appName : "cmd";
 
     // Apply prefix and suffix if provided
     if (options?.toolNamePrefix) {
@@ -553,9 +506,7 @@ export function generateMcpToolsFromArgParser(
       if (options?.outputSchemaMap && options.outputSchemaMap[toolName]) {
         const customSchema = options.outputSchemaMap[toolName];
         outputSchema =
-          typeof customSchema === "object" &&
-          customSchema !== null &&
-          !customSchema._def
+          typeof customSchema === "object" && customSchema !== null && !customSchema._def
             ? z.object(customSchema as unknown as ZodRawShape)
             : customSchema;
       } else if (options?.defaultOutputSchema) {
@@ -573,19 +524,13 @@ export function generateMcpToolsFromArgParser(
 
       const tool: IMcpToolStructure = {
         name: toolName,
-        description:
-          currentParserDescription || `Executes the ${toolName} command.`,
+        description: currentParserDescription || `Executes the ${toolName} command.`,
         inputSchema: inputSchema,
         outputSchema: outputSchema,
         async execute(mcpInputArgs: Record<string, any>) {
           if (process.env["MCP_DEBUG"]) {
-            logger.error(
-              `[MCP Execute] Starting execution for tool '${toolName}'`,
-            );
-            logger.error(
-              `[MCP Execute] Input args:`,
-              JSON.stringify(mcpInputArgs, null, 2),
-            );
+            logger.error(`[MCP Execute] Starting execution for tool '${toolName}'`);
+            logger.error(`[MCP Execute] Input args:`, JSON.stringify(mcpInputArgs, null, 2));
           }
 
           // Check if help is requested first, before any other processing
@@ -652,10 +597,8 @@ export function generateMcpToolsFromArgParser(
               argv.push(flagOptions[0]);
 
               if (flagTypeName === "boolean") {
-                if (value === true && isFlagOnly === false)
-                  argv.push(String(value));
-                else if (value === false && isFlagOnly === false)
-                  argv.push(String(value));
+                if (value === true && isFlagOnly === false) argv.push(String(value));
+                else if (value === false && isFlagOnly === false) argv.push(String(value));
               } else if (flagTypeName === "array") {
                 if (Array.isArray(value)) {
                   if (allowMultiple) {
@@ -664,26 +607,20 @@ export function generateMcpToolsFromArgParser(
                       argv.push(flagOptions[0]);
                       argv.push(String(item));
                     });
-                    if (
-                      value.length > 0 &&
-                      argv[originalArgvLength - 1] === flagOptions[0]
-                    ) {
+                    if (value.length > 0 && argv[originalArgvLength - 1] === flagOptions[0]) {
                       argv.splice(originalArgvLength - 1, 1);
                     }
                   } else {
                     argv.push(value.join(","));
                   }
                 } else if (value != null) argv.push(String(value));
-              } else if (value !== null && value !== undefined)
-                argv.push(String(value));
+              } else if (value !== null && value !== undefined) argv.push(String(value));
             }
           }
 
           try {
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Execute] Starting try block for tool '${toolName}'`,
-              );
+              logger.error(`[MCP Execute] Starting try block for tool '${toolName}'`);
             }
 
             // Check if this is a unified tool - if so, handle it directly without recursive parsing
@@ -692,9 +629,7 @@ export function generateMcpToolsFromArgParser(
             const isUnifiedTool = unifiedTools && unifiedTools.has(toolName);
 
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Tool Debug] Checking tool '${toolName}' for unified execution`,
-              );
+              logger.error(`[MCP Tool Debug] Checking tool '${toolName}' for unified execution`);
               logger.error(`[MCP Tool Debug] Has _tools:`, !!unifiedTools);
               logger.error(
                 `[MCP Tool Debug] Available tools:`,
@@ -709,14 +644,8 @@ export function generateMcpToolsFromArgParser(
               // For unified tools, bypass the recursive parse call and execute directly
               const toolConfig = unifiedTools.get(toolName);
               if (process.env["MCP_DEBUG"]) {
-                logger.error(
-                  `[MCP Tool Debug] Found unified tool config:`,
-                  !!toolConfig,
-                );
-                logger.error(
-                  `[MCP Tool Debug] Has handler:`,
-                  !!(toolConfig && toolConfig.handler),
-                );
+                logger.error(`[MCP Tool Debug] Found unified tool config:`, !!toolConfig);
+                logger.error(`[MCP Tool Debug] Has handler:`, !!(toolConfig && toolConfig.handler));
               }
               if (toolConfig && toolConfig.handler) {
                 try {
@@ -739,9 +668,7 @@ export function generateMcpToolsFromArgParser(
                       if (flagDef) {
                         const envVar = flagDef["env"];
                         if (envVar) {
-                          const envKey = Array.isArray(envVar)
-                            ? envVar[0]
-                            : envVar;
+                          const envKey = Array.isArray(envVar) ? envVar[0] : envVar;
                           if (envKey && process.env[envKey]) {
                             return process.env[envKey];
                           }
@@ -762,14 +689,11 @@ export function generateMcpToolsFromArgParser(
                     getFlag,
                     logger, // Add logger to context
                     displayHelp: () => {
-                      logger.error(
-                        "Help display is not supported in MCP mode.",
-                      );
+                      logger.error("Help display is not supported in MCP mode.");
                     },
                   };
 
-                  const handlerResult =
-                    await toolConfig.handler(handlerContext);
+                  const handlerResult = await toolConfig.handler(handlerContext);
 
                   // Create a mock parse result that mimics successful execution
                   if (process.env["MCP_DEBUG"]) {
@@ -786,18 +710,13 @@ export function generateMcpToolsFromArgParser(
                 } catch (handlerError: any) {
                   // Create error parse result
                   if (process.env["MCP_DEBUG"]) {
-                    logger.error(
-                      `[MCP Tool Debug] Handler error:`,
-                      handlerError,
-                    );
+                    logger.error(`[MCP Tool Debug] Handler error:`, handlerError);
                   }
                   parseResult = {
                     $error: {
                       type: "handler_error",
                       message:
-                        handlerError instanceof Error
-                          ? handlerError.message
-                          : String(handlerError),
+                        handlerError instanceof Error ? handlerError.message : String(handlerError),
                       details: handlerError,
                     },
                     ...mcpInputArgs,
@@ -818,17 +737,10 @@ export function generateMcpToolsFromArgParser(
               // For CLI-generated tools, use the original parse approach
               // ArgParser instance (rootParser) should be configured with handleErrors: false in its constructor.
               if (process.env["MCP_DEBUG"]) {
-                logger.error(
-                  `[MCP Tool Debug] Using CLI-generated tool parsing for '${toolName}'`,
-                );
-                logger.error(
-                  `[MCP Tool Debug] Parse argv:`,
-                  JSON.stringify(argv, null, 2),
-                );
+                logger.error(`[MCP Tool Debug] Using CLI-generated tool parsing for '${toolName}'`);
+                logger.error(`[MCP Tool Debug] Parse argv:`, JSON.stringify(argv, null, 2));
               }
-              parseResult = (await rootParser.parse(
-                argv,
-              )) as IParseExecutionResult;
+              parseResult = (await rootParser.parse(argv)) as IParseExecutionResult;
             }
 
             if (parseResult["$error"]) {
@@ -869,16 +781,11 @@ export function generateMcpToolsFromArgParser(
                       const shapeGetter = zodSchema._def?.shape;
                       if (shapeGetter) {
                         const shape =
-                          typeof shapeGetter === "function"
-                            ? shapeGetter()
-                            : shapeGetter;
+                          typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;
 
                         if (shape && typeof shape === "object") {
                           if (process.env["MCP_DEBUG"]) {
-                            logger.error(
-                              `[MCP Debug] Schema shape keys:`,
-                              Object.keys(shape),
-                            );
+                            logger.error(`[MCP Debug] Schema shape keys:`, Object.keys(shape));
                           }
 
                           // Provide default values for required fields
@@ -886,10 +793,7 @@ export function generateMcpToolsFromArgParser(
                             if (!(key in structuredError)) {
                               const fieldSchema = shape[key];
                               if (fieldSchema && fieldSchema._def) {
-                                switch (
-                                  fieldSchema._def.typeName ||
-                                  fieldSchema._def.type
-                                ) {
+                                switch (fieldSchema._def.typeName || fieldSchema._def.type) {
                                   case "ZodString":
                                   case "string":
                                     structuredError[key] = "";
@@ -986,14 +890,12 @@ export function generateMcpToolsFromArgParser(
             }
 
             const needsHandlerExecution =
-              handlerResponse === undefined ||
-              (handlerResponse !== undefined && commandChain);
+              handlerResponse === undefined || (handlerResponse !== undefined && commandChain);
 
             if (needsHandlerExecution && commandChain) {
               let finalParser: ArgParserBase | undefined = rootParser;
               let currentArgs: Record<string, any> = { ...parseResult };
-              let resolvedParentArgs: Record<string, any> | undefined =
-                undefined;
+              let resolvedParentArgs: Record<string, any> | undefined = undefined;
               const chain = commandChain;
 
               // Clean up special properties from currentArgs
@@ -1081,9 +983,7 @@ export function generateMcpToolsFromArgParser(
                     if (flagDef) {
                       const envVar = flagDef["env"];
                       if (envVar) {
-                        const envKey = Array.isArray(envVar)
-                          ? envVar[0]
-                          : envVar;
+                        const envKey = Array.isArray(envVar) ? envVar[0] : envVar;
                         if (envKey && process.env[envKey]) {
                           return process.env[envKey];
                         }
@@ -1118,9 +1018,7 @@ export function generateMcpToolsFromArgParser(
 
             // Automatically format response for MCP
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Execute] Formatting response for tool '${toolName}'`,
-              );
+              logger.error(`[MCP Execute] Formatting response for tool '${toolName}'`);
               logger.error(
                 `[MCP Execute] Handler response:`,
                 JSON.stringify(handlerResponse, null, 2),
@@ -1135,19 +1033,14 @@ export function generateMcpToolsFromArgParser(
                 );
               } catch (e) {} // Ignore errors during debug logging
               // If handler already returned MCP format with content field, use it
-              if (
-                handlerResponse.content &&
-                Array.isArray(handlerResponse.content)
-              ) {
+              if (handlerResponse.content && Array.isArray(handlerResponse.content)) {
                 // If tool has output schema, ensure structuredContent is present
                 if (outputSchema && !handlerResponse.structuredContent) {
                   handlerResponse.structuredContent = handlerResponse;
                 }
 
                 if (process.env["MCP_DEBUG"]) {
-                  logger.error(
-                    `[MCP Execute] Returning MCP format response for '${toolName}'`,
-                  );
+                  logger.error(`[MCP Execute] Returning MCP format response for '${toolName}'`);
                 }
                 return handlerResponse;
               } else {
@@ -1181,9 +1074,7 @@ export function generateMcpToolsFromArgParser(
             const defaultResponse = handlerResponse || { success: true };
 
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Execute] Using default response for tool '${toolName}'`,
-              );
+              logger.error(`[MCP Execute] Using default response for tool '${toolName}'`);
               logger.error(
                 `[MCP Execute] Default response:`,
                 JSON.stringify(defaultResponse, null, 2),
@@ -1215,17 +1106,12 @@ export function generateMcpToolsFromArgParser(
             }
 
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Execute] Returning success response for '${toolName}'`,
-              );
+              logger.error(`[MCP Execute] Returning success response for '${toolName}'`);
             }
             return createMcpSuccessResponse(defaultResponse);
           } catch (e: any) {
             if (process.env["MCP_DEBUG"]) {
-              logger.error(
-                `[MCP Execute] Exception caught in tool '${toolName}':`,
-                e,
-              );
+              logger.error(`[MCP Execute] Exception caught in tool '${toolName}':`, e);
             }
 
             // Check if this is a handler error that was thrown due to handleErrors: false
@@ -1265,10 +1151,7 @@ export function generateMcpToolsFromArgParser(
                   ) {
                     const shapeGetter = zodSchema._def?.shape;
                     if (shapeGetter) {
-                      const shape =
-                        typeof shapeGetter === "function"
-                          ? shapeGetter()
-                          : shapeGetter;
+                      const shape = typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;
 
                       if (shape && typeof shape === "object") {
                         // Provide default values for required fields
@@ -1276,9 +1159,7 @@ export function generateMcpToolsFromArgParser(
                           if (!(key in structuredError)) {
                             const fieldSchema = shape[key];
                             if (fieldSchema && fieldSchema._def) {
-                              const typeName =
-                                fieldSchema._def.typeName ||
-                                fieldSchema._def.type;
+                              const typeName = fieldSchema._def.typeName || fieldSchema._def.type;
 
                               switch (typeName) {
                                 case "ZodString":

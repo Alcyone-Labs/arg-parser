@@ -54,9 +54,7 @@ describe("MCP Protocol Compliance Tests", () => {
 
       // Verify tool structure
       expect(tool.name).toBe("compliance-server");
-      expect(tool.description).toBe(
-        "MCP server for protocol compliance testing",
-      );
+      expect(tool.description).toBe("MCP server for protocol compliance testing");
       expect(tool.inputSchema).toBeDefined();
       expect(tool.execute).toBeDefined();
 
@@ -188,9 +186,7 @@ describe("MCP Protocol Compliance Tests", () => {
     });
 
     test("should handle handler execution errors properly", async () => {
-      const errorHandler = vi
-        .fn()
-        .mockRejectedValue(new Error("Handler execution failed"));
+      const errorHandler = vi.fn().mockRejectedValue(new Error("Handler execution failed"));
 
       const parser = new ArgParser({
         appName: "Handler Error Test",
@@ -266,9 +262,7 @@ describe("MCP Protocol Compliance Tests", () => {
 
     test("should execute sub-command tools with proper context", async () => {
       const mainHandler = vi.fn();
-      const subHandler = vi
-        .fn()
-        .mockResolvedValue({ processed: true, input: "test data" });
+      const subHandler = vi.fn().mockResolvedValue({ processed: true, input: "test data" });
 
       const mainParser = new ArgParser({
         appName: "Context Test CLI",

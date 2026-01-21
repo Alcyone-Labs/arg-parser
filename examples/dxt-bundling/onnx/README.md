@@ -184,10 +184,7 @@ This server can be integrated with Claude Desktop or other MCP clients. Add to y
   "mcpServers": {
     "onnx-entity-detector": {
       "command": "bun",
-      "args": [
-        "path/to/examples/dxt-bundling/onnx/src/index.ts",
-        "--s-mcp-serve"
-      ]
+      "args": ["path/to/examples/dxt-bundling/onnx/src/index.ts", "--s-mcp-serve"]
     }
   }
 }

@@ -16,8 +16,7 @@ import { ArgParser } from "../src";
 const cli = new ArgParser({
   appName: "Traditional CLI Demo",
   appCommandName: "traditional-demo",
-  description:
-    "Demonstrates that traditional ArgParser syntax still works in v2.0.0",
+  description: "Demonstrates that traditional ArgParser syntax still works in v2.0.0",
   handler: async (ctx) => {
     console.log("🔄 Processing with traditional ArgParser syntax");
     console.log(`   File: ${ctx.args["file"]}`);
@@ -65,9 +64,7 @@ const cli = new ArgParser({
       console.log("🔧 Processing data with subcommand");
       console.log(`   Input: ${ctx.args["input"]}`);
       console.log(`   Output: ${ctx.args["output"]}`);
-      console.log(
-        `   Compress: ${ctx.args["compress"] ? "enabled" : "disabled"}`,
-      );
+      console.log(`   Compress: ${ctx.args["compress"] ? "enabled" : "disabled"}`);
 
       return {
         action: "process",
@@ -165,9 +162,7 @@ const cli = new ArgParser({
 // Traditional parsing - works exactly as before
 async function main() {
   try {
-    console.log(
-      "🎯 Traditional ArgParser Syntax Demo (v2.0.0 Backward Compatibility)",
-    );
+    console.log("🎯 Traditional ArgParser Syntax Demo (v2.0.0 Backward Compatibility)");
     console.log("=".repeat(70));
 
     const result = await cli.parse(process.argv.slice(2));

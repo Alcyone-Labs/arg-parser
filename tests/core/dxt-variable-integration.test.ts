@@ -19,11 +19,7 @@ describe("DXT Variable Integration", () => {
     originalEnv = { ...process.env };
 
     // Create temp directory for testing
-    tempDir = join(
-      os.tmpdir(),
-      "dxt-variable-integration-test",
-      Date.now().toString(),
-    );
+    tempDir = join(os.tmpdir(), "dxt-variable-integration-test", Date.now().toString());
     await fs.mkdir(tempDir, { recursive: true });
   });
 
@@ -94,13 +90,7 @@ describe("DXT Variable Integration", () => {
       const logPath = "${HOME}/projects/myapp/logs/app.log";
       const resolved = resolveLogPath(logPath);
 
-      const expected = join(
-        os.homedir(),
-        "projects",
-        "myapp",
-        "logs",
-        "app.log",
-      );
+      const expected = join(os.homedir(), "projects", "myapp", "logs", "app.log");
 
       expect(resolved).toBe(expected);
     });
@@ -116,17 +106,15 @@ describe("DXT Variable Integration", () => {
     it("should work with custom variables through context", () => {
       // Mock the substituteVariables method to test custom variables
       const originalSubstituteVariables = DxtPathResolver.substituteVariables;
-      DxtPathResolver.substituteVariables = vi.fn(
-        (inputPath, context, config) => {
-          return originalSubstituteVariables(inputPath, context, {
-            ...config,
-            customVariables: {
-              CUSTOM_DIR: "/custom/path",
-              ...config?.customVariables,
-            },
-          });
-        },
-      );
+      DxtPathResolver.substituteVariables = vi.fn((inputPath, context, config) => {
+        return originalSubstituteVariables(inputPath, context, {
+          ...config,
+          customVariables: {
+            CUSTOM_DIR: "/custom/path",
+            ...config?.customVariables,
+          },
+        });
+      });
 
       try {
         const logPath = "${CUSTOM_DIR}/logs/app.log";

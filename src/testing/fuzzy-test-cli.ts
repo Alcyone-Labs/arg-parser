@@ -2,11 +2,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ArgParser } from "../core/ArgParser";
-import {
-  ArgParserFuzzyTester,
-  type FuzzyTestOptions,
-  type FuzzyTestReport,
-} from "./fuzzy-tester";
+import { ArgParserFuzzyTester, type FuzzyTestOptions, type FuzzyTestReport } from "./fuzzy-tester";
 
 interface FuzzyTestCliArgs {
   file: string;
@@ -22,8 +18,7 @@ interface FuzzyTestCliArgs {
 const fuzzyTestCli = new ArgParser<void>({
   appName: "ArgParser Fuzzy Tester",
   appCommandName: "fuzzy-test",
-  description:
-    "Comprehensive fuzzy testing utility for ArgParser configurations",
+  description: "Comprehensive fuzzy testing utility for ArgParser configurations",
   handler: async (ctx) => {
     const args = ctx.args as FuzzyTestCliArgs;
     await runFuzzyTest(args);
@@ -31,8 +26,7 @@ const fuzzyTestCli = new ArgParser<void>({
 }).addFlags([
   {
     name: "file",
-    description:
-      "Path to the TypeScript/JavaScript file containing the ArgParser instance",
+    description: "Path to the TypeScript/JavaScript file containing the ArgParser instance",
     options: ["--file", "-f"],
     type: "string",
     mandatory: true,
@@ -125,10 +119,7 @@ async function runFuzzyTest(args: FuzzyTestCliArgs): Promise<void> {
     const report = await tester.runFuzzyTest();
 
     // Format and output results
-    const formattedOutput = formatReport(
-      report,
-      args.format as "json" | "text" | "markdown",
-    );
+    const formattedOutput = formatReport(report, args.format as "json" | "text" | "markdown");
 
     if (args.output) {
       await fs.promises.writeFile(args.output, formattedOutput, "utf-8");
@@ -140,9 +131,7 @@ async function runFuzzyTest(args: FuzzyTestCliArgs): Promise<void> {
     // Exit with appropriate code
     const successRate = report.successfulTests / report.totalTests;
     if (successRate < 0.8) {
-      console.error(
-        `\nWarning: Low success rate (${(successRate * 100).toFixed(1)}%)`,
-      );
+      console.error(`\nWarning: Low success rate (${(successRate * 100).toFixed(1)}%)`);
       process.exit(1);
     }
   } catch (error) {
@@ -172,13 +161,7 @@ async function loadArgParserFromFile(filePath: string): Promise<ArgParser> {
     delete process.env["ARGPARSER_FUZZY_MODE"];
 
     // Look for exported ArgParser instances
-    const possibleExports = [
-      "default",
-      "parser",
-      "cli",
-      "argParser",
-      "mainParser",
-    ];
+    const possibleExports = ["default", "parser", "cli", "argParser", "mainParser"];
 
     for (const exportName of possibleExports) {
       const exported = module[exportName];
@@ -210,10 +193,7 @@ async function loadArgParserFromFile(filePath: string): Promise<ArgParser> {
   }
 }
 
-function formatReport(
-  report: FuzzyTestReport,
-  format: "json" | "text" | "markdown",
-): string {
+function formatReport(report: FuzzyTestReport, format: "json" | "text" | "markdown"): string {
   switch (format) {
     case "json":
       return JSON.stringify(report, null, 2);
@@ -258,9 +238,7 @@ function formatTextReport(report: FuzzyTestReport): string {
   // Error types
   if (Object.keys(report.summary.errorTypes).length > 0) {
     lines.push("ERROR TYPES:");
-    for (const [errorType, count] of Object.entries(
-      report.summary.errorTypes,
-    )) {
+    for (const [errorType, count] of Object.entries(report.summary.errorTypes)) {
       lines.push(`  ${errorType}: ${count}`);
     }
     lines.push("");
@@ -310,9 +288,7 @@ function formatMarkdownReport(report: FuzzyTestReport): string {
     const pathStr = path.join(" ") || "(root)";
     const coverage = report.summary.coverageByPath[pathStr];
     const rate = ((coverage.passed / coverage.total) * 100).toFixed(1);
-    lines.push(
-      `| \`${pathStr}\` | ${coverage.passed} | ${coverage.total} | ${rate}% |`,
-    );
+    lines.push(`| \`${pathStr}\` | ${coverage.passed} | ${coverage.total} | ${rate}% |`);
   }
   lines.push("");
 
@@ -323,9 +299,7 @@ function formatMarkdownReport(report: FuzzyTestReport): string {
     lines.push("| Error Type | Count |");
     lines.push("|------------|-------|");
 
-    for (const [errorType, count] of Object.entries(
-      report.summary.errorTypes,
-    )) {
+    for (const [errorType, count] of Object.entries(report.summary.errorTypes)) {
       lines.push(`| ${errorType} | ${count} |`);
     }
     lines.push("");
@@ -352,10 +326,7 @@ function formatMarkdownReport(report: FuzzyTestReport): string {
 
 // Run the CLI if this file is executed directly
 // The --s-enable-fuzzy system flag automatically prevents execution during fuzzy testing
-if (
-  typeof process !== "undefined" &&
-  process.argv[1]?.endsWith("fuzzy-test-cli.ts")
-) {
+if (typeof process !== "undefined" && process.argv[1]?.endsWith("fuzzy-test-cli.ts")) {
   fuzzyTestCli.parse(process.argv.slice(2));
 }
 

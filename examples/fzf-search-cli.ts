@@ -50,16 +50,9 @@ async function fzfSearchCommandHandler(
     findArgs.push("-type", "f");
   }
 
-  const fzfCliArgs: string[] = [
-    `--filter=${query}`,
-    "--height=1%",
-    "--no-sort",
-  ];
+  const fzfCliArgs: string[] = [`--filter=${query}`, "--height=1%", "--no-sort"];
 
-  const commandToLogParts = [
-    `find ${findArgs.join(" ")}`,
-    `fzf ${fzfCliArgs.join(" ")}`,
-  ];
+  const commandToLogParts = [`find ${findArgs.join(" ")}`, `fzf ${fzfCliArgs.join(" ")}`];
   if (maxResults > 0) {
     commandToLogParts.push(`head -n ${maxResults}`);
   }
@@ -82,11 +75,7 @@ async function fzfSearchCommandHandler(
       if (findProcess && !findProcess.killed) findProcess.kill(signal);
     };
 
-    const handleProcessError = (
-      processName: string,
-      err: Error,
-      isSpawnError = false,
-    ) => {
+    const handleProcessError = (processName: string, err: Error, isSpawnError = false) => {
       if (criticalErrorResolved) return;
       criticalErrorResolved = true;
       killProcesses();
@@ -120,9 +109,7 @@ async function fzfSearchCommandHandler(
 
     if (findProcess.stdout && fzfProcess.stdin) {
       findProcess.stdout.pipe(fzfProcess.stdin);
-      findProcess.stdout.on("error", (err) =>
-        handleProcessError("find (stdout piping)", err),
-      );
+      findProcess.stdout.on("error", (err) => handleProcessError("find (stdout piping)", err));
       fzfProcess.stdin.on("error", (err) => {
         if ((err as any).code === "EPIPE") {
           if (!findProcess?.killed) findProcess.kill();
@@ -201,10 +188,7 @@ async function fzfSearchCommandHandler(
           .map((f) =>
             f.startsWith(resolvedDirectory)
               ? f
-              : path.join(
-                  resolvedDirectory,
-                  f.replace(`${resolvedDirectory}${path.sep}`, ""),
-                ),
+              : path.join(resolvedDirectory, f.replace(`${resolvedDirectory}${path.sep}`, "")),
           )
           .map((f) => f.trim())
           .filter((f) => f.length > 0);
@@ -219,12 +203,7 @@ async function fzfSearchCommandHandler(
 
     findProcess.on("exit", (code, signal) => {
       findExited = true;
-      if (
-        code !== 0 &&
-        code !== null &&
-        signal !== "SIGPIPE" &&
-        !criticalErrorResolved
-      ) {
+      if (code !== 0 && code !== null && signal !== "SIGPIPE" && !criticalErrorResolved) {
       }
       tryResolve();
     });
@@ -281,8 +260,7 @@ const fzfSearchFlags: IFlag[] = [
   },
   {
     name: "directory",
-    description:
-      "The base directory to search within. Defaults to current directory.",
+    description: "The base directory to search within. Defaults to current directory.",
     options: ["--directory", "-d"],
     type: "string",
     defaultValue: ".",
@@ -297,8 +275,7 @@ const fzfSearchFlags: IFlag[] = [
   },
   {
     name: "maxResults",
-    description:
-      "Maximum number of results to return. Set to 0 for unlimited (fzf default).",
+    description: "Maximum number of results to return. Set to 0 for unlimited (fzf default).",
     options: ["--max-results", "-m"],
     type: "number",
     defaultValue: 20,
@@ -341,9 +318,7 @@ async function main() {
   const rawArgs = process.argv.slice(2);
 
   try {
-    const parsed = (await mainParser.parse(
-      rawArgs,
-    )) as IParseExecutionResult & {
+    const parsed = (await mainParser.parse(rawArgs)) as IParseExecutionResult & {
       $commandChain?: string[];
       handlerResponse?: IFzfSearchResult;
     };
@@ -376,9 +351,7 @@ async function main() {
         console.error("No files found matching your query.");
       }
     } else if (!parsed.$commandChain && !parsed["help"] && !parsed.$error) {
-      console.error(
-        "No command executed or no output. Use 'fzf-search --help' for usage.",
-      );
+      console.error("No command executed or no output. Use 'fzf-search --help' for usage.");
     }
   } catch (error: any) {
     console.error(`CLI Execution Failed: ${error.message}`);

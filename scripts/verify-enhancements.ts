@@ -27,10 +27,7 @@ const clipCheck = async () => {
     await Clipboard.copy("test");
     console.log("Clipboard copy logic executed");
   } catch (e) {
-    console.log(
-      "Clipboard copy failed (expected if no clipboard access in shell)",
-      e,
-    );
+    console.log("Clipboard copy failed (expected if no clipboard access in shell)", e);
   }
 };
 clipCheck();

@@ -84,12 +84,8 @@ export class McpComplianceValidator {
   public getSummary() {
     const total = this.results.length;
     const passed = this.results.filter((r) => r.passed).length;
-    const errors = this.results.filter(
-      (r) => r.severity === "error" && !r.passed,
-    ).length;
-    const warnings = this.results.filter(
-      (r) => r.severity === "warning" && !r.passed,
-    ).length;
+    const errors = this.results.filter((r) => r.severity === "error" && !r.passed).length;
+    const warnings = this.results.filter((r) => r.severity === "warning" && !r.passed).length;
 
     return {
       total,
@@ -285,8 +281,7 @@ export class McpComplianceValidator {
       if (responseVersion === requestedVersion) {
         results.push({
           passed: true,
-          message:
-            "Server correctly returned same version for known MCP version request",
+          message: "Server correctly returned same version for known MCP version request",
           details: { version: responseVersion },
           severity: "info",
         });
@@ -317,8 +312,7 @@ export class McpComplianceValidator {
       } else if (isAnyMcpVersion(responseVersion)) {
         results.push({
           passed: true,
-          message:
-            "Server correctly negotiated to supported version for invalid request",
+          message: "Server correctly negotiated to supported version for invalid request",
           details: { requested: requestedVersion, negotiated: responseVersion },
           severity: "info",
         });
@@ -416,10 +410,7 @@ export class McpComplianceValidator {
   /**
    * Validate individual tool definition
    */
-  private validateToolDefinition(
-    tool: any,
-    index: number,
-  ): McpComplianceResult[] {
+  private validateToolDefinition(tool: any, index: number): McpComplianceResult[] {
     const results: McpComplianceResult[] = [];
     const toolId = tool.name || `tool[${index}]`;
 

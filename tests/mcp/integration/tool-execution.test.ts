@@ -179,9 +179,7 @@ describe("MCP Tool Execution Integration Tests", () => {
 
   describe("Error Handling", () => {
     test("should handle execution errors gracefully", async () => {
-      const errorHandler = vi
-        .fn()
-        .mockRejectedValue(new Error("Execution failed"));
+      const errorHandler = vi.fn().mockRejectedValue(new Error("Execution failed"));
 
       const parser = new ArgParser({
         appName: "Error Test Server",

@@ -57,24 +57,14 @@ console.log("1. Normal execution (handlers will execute):");
 console.log("   Command: demo --input test.txt process --algorithm accurate\n");
 
 try {
-  demoParser.parse([
-    "--input",
-    "test.txt",
-    "process",
-    "--algorithm",
-    "accurate",
-  ]);
+  demoParser.parse(["--input", "test.txt", "process", "--algorithm", "accurate"]);
 } catch (error) {
-  console.log(
-    `   Error: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log("\n" + "=".repeat(60));
 console.log("2. With --s-enable-fuzzy (dry-run mode):");
-console.log(
-  "   Command: demo --s-enable-fuzzy --input test.txt process --algorithm accurate\n",
-);
+console.log("   Command: demo --s-enable-fuzzy --input test.txt process --algorithm accurate\n");
 
 try {
   demoParser.parse([
@@ -86,9 +76,7 @@ try {
     "accurate",
   ]);
 } catch (error) {
-  console.log(
-    `   Error: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log("\n" + "=".repeat(60));
@@ -98,20 +86,14 @@ console.log("   Command: demo --s-enable-fuzzy process\n");
 try {
   demoParser.parse(["--s-enable-fuzzy", "process"]);
 } catch (error) {
-  console.log(
-    `   Error: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log("\n🎉 Demo completed!");
 console.log("\nKey observations:");
 console.log("• Normal mode: Handlers execute and perform actions");
-console.log(
-  "• Fuzzy mode: Handlers are skipped but we see what args they would receive",
-);
-console.log(
-  "• Fuzzy mode: Mandatory flags are optional for comprehensive testing",
-);
+console.log("• Fuzzy mode: Handlers are skipped but we see what args they would receive");
+console.log("• Fuzzy mode: Mandatory flags are optional for comprehensive testing");
 console.log("• Fuzzy mode: Perfect for testing without side effects");
 
 export default demoParser;

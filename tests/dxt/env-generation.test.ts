@@ -186,10 +186,7 @@ describe("DXT Environment Variable Generation", () => {
 
     // Should have all three unique env vars
     expect(Object.keys(envVars)).toHaveLength(3);
-    expect(envVars).toHaveProperty(
-      "MAIN_API_KEY",
-      "${user_config.MAIN_API_KEY}",
-    );
+    expect(envVars).toHaveProperty("MAIN_API_KEY", "${user_config.MAIN_API_KEY}");
     expect(envVars).toHaveProperty("SHARED_VAR", "${user_config.SHARED_VAR}");
     expect(envVars).toHaveProperty("TOOL_SECRET", "${user_config.TOOL_SECRET}");
 
@@ -519,10 +516,7 @@ describe("DXT Environment Variable Generation", () => {
     // Should only have one entry for the shared env var
     expect(Object.keys(envVars)).toHaveLength(1);
     expect(Object.keys(userConfig)).toHaveLength(1);
-    expect(envVars).toHaveProperty(
-      "SHARED_API_KEY",
-      "${user_config.SHARED_API_KEY}",
-    );
+    expect(envVars).toHaveProperty("SHARED_API_KEY", "${user_config.SHARED_API_KEY}");
 
     // First tool's description should be used (first wins)
     expect(userConfig.SHARED_API_KEY).toEqual({
@@ -580,18 +574,9 @@ describe("DXT Environment Variable Generation", () => {
     expect(userConfig.BOOLEAN_ENV).toHaveProperty("type", "boolean");
 
     // All should have proper descriptions
-    expect(userConfig.STRING_ENV).toHaveProperty(
-      "description",
-      "String flag with env",
-    );
-    expect(userConfig.NUMBER_ENV).toHaveProperty(
-      "description",
-      "Number flag with env",
-    );
-    expect(userConfig.BOOLEAN_ENV).toHaveProperty(
-      "description",
-      "Boolean flag with env",
-    );
+    expect(userConfig.STRING_ENV).toHaveProperty("description", "String flag with env");
+    expect(userConfig.NUMBER_ENV).toHaveProperty("description", "Number flag with env");
+    expect(userConfig.BOOLEAN_ENV).toHaveProperty("description", "Boolean flag with env");
   });
 
   test("should handle empty parser with no flags or tools", () => {
@@ -687,22 +672,10 @@ describe("DXT Environment Variable Generation", () => {
 
     // Should have 4 env vars (only flags with env property)
     expect(Object.keys(envVars)).toHaveLength(4);
-    expect(envVars).toHaveProperty(
-      "OPTIONAL_ENV_VAR",
-      "${user_config.OPTIONAL_ENV_VAR}",
-    );
-    expect(envVars).toHaveProperty(
-      "MANDATORY_ENV_VAR",
-      "${user_config.MANDATORY_ENV_VAR}",
-    );
-    expect(envVars).toHaveProperty(
-      "TOOL_OPTIONAL_ENV",
-      "${user_config.TOOL_OPTIONAL_ENV}",
-    );
-    expect(envVars).toHaveProperty(
-      "TOOL_MANDATORY_ENV",
-      "${user_config.TOOL_MANDATORY_ENV}",
-    );
+    expect(envVars).toHaveProperty("OPTIONAL_ENV_VAR", "${user_config.OPTIONAL_ENV_VAR}");
+    expect(envVars).toHaveProperty("MANDATORY_ENV_VAR", "${user_config.MANDATORY_ENV_VAR}");
+    expect(envVars).toHaveProperty("TOOL_OPTIONAL_ENV", "${user_config.TOOL_OPTIONAL_ENV}");
+    expect(envVars).toHaveProperty("TOOL_MANDATORY_ENV", "${user_config.TOOL_MANDATORY_ENV}");
 
     // Should have 4 user config entries (only flags with env property)
     expect(Object.keys(userConfig)).toHaveLength(4);
@@ -771,8 +744,7 @@ describe("DXT Environment Variable Generation", () => {
       })
       .addFlag({
         name: "memory_threshold_seconds",
-        description:
-          "Time threshold in seconds after which memories trigger notifications",
+        description: "Time threshold in seconds after which memories trigger notifications",
         options: ["--memory-threshold"],
         env: "MEMORY_THRESHOLD_SECONDS",
         type: "number",
@@ -785,10 +757,7 @@ describe("DXT Environment Variable Generation", () => {
 
     // Should have 2 env vars
     expect(Object.keys(envVars)).toHaveLength(2);
-    expect(envVars).toHaveProperty(
-      "DATABASE_URL",
-      "${user_config.DATABASE_URL}",
-    );
+    expect(envVars).toHaveProperty("DATABASE_URL", "${user_config.DATABASE_URL}");
     expect(envVars).toHaveProperty(
       "MEMORY_THRESHOLD_SECONDS",
       "${user_config.MEMORY_THRESHOLD_SECONDS}",

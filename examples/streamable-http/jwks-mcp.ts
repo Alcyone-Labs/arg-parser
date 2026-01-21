@@ -35,11 +35,7 @@ function jwkRsaToPkcs1Pem(n_b64u: string, e_b64u: string): string {
   const n = base64urlToBuffer(n_b64u);
   const e = base64urlToBuffer(e_b64u);
   const seq = Buffer.concat([encodeDerInteger(n), encodeDerInteger(e)]);
-  const der = Buffer.concat([
-    Buffer.from([0x30]),
-    encodeDerLength(seq.length),
-    seq,
-  ]);
+  const der = Buffer.concat([Buffer.from([0x30]), encodeDerLength(seq.length), seq]);
   const b64 = der.toString("base64").replace(/(.{64})/g, "$1\n");
   return `-----BEGIN RSA PUBLIC KEY-----\n${b64}\n-----END RSA PUBLIC KEY-----`;
 }
@@ -64,13 +60,11 @@ const cli = ArgParser.withMcp({
               const kid = header["kid"] as string | undefined;
               if (!process.env.JWKS_URL) throw new Error("JWKS_URL not set");
               const res = await fetch(process.env.JWKS_URL);
-              if (!res.ok)
-                throw new Error(`Failed to fetch JWKS: ${res.status}`);
+              if (!res.ok) throw new Error(`Failed to fetch JWKS: ${res.status}`);
               const data = await res.json();
               const keys: any[] = data.keys || [];
               const jwk = kid ? keys.find((k) => k.kid === kid) : keys[0];
-              if (!jwk || jwk.kty !== "RSA")
-                throw new Error("JWKS key not found or not RSA");
+              if (!jwk || jwk.kty !== "RSA") throw new Error("JWKS key not found or not RSA");
               return jwkRsaToPkcs1Pem(jwk.n, jwk.e);
             },
           },
@@ -94,12 +88,7 @@ const cli = ArgParser.withMcp({
 export default cli;
 
 // Auto-execute only when run directly
-await cli
-  .parse(undefined, { importMetaUrl: import.meta.url })
-  .catch((error) => {
-    console.error(
-      "Error:",
-      error instanceof Error ? error.message : String(error),
-    );
-    process.exit(1);
-  });
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

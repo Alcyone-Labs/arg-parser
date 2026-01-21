@@ -55,9 +55,7 @@ describe("Data-Safe Logging Integration", () => {
 
     // Check that info was actually called on stderr (default behavior)
     expect(stderrSpy).toHaveBeenCalled();
-    const stderrOutput = stderrSpy.mock.calls
-      .map((call) => String(call[0]))
-      .join("");
+    const stderrOutput = stderrSpy.mock.calls.map((call) => String(call[0])).join("");
     expect(stderrOutput).toContain("Hello from context");
     // Ensure STDOUT is clean
     expect(stdoutSpy).not.toHaveBeenCalled();

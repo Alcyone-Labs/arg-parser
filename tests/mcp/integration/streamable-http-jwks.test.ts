@@ -37,11 +37,7 @@ function httpRequest(
 }
 
 function b64u(buf: Buffer) {
-  return buf
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+  return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 function rsaPublicToJwk(n: Buffer, e: Buffer, kid: string) {
@@ -59,12 +55,8 @@ describe("streamable-http JWKS", () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
       modulusLength: 2048,
     });
-    privateKeyPem = privateKey
-      .export({ type: "pkcs1", format: "pem" })
-      .toString();
-    const publicPem = publicKey
-      .export({ type: "pkcs1", format: "pem" })
-      .toString();
+    privateKeyPem = privateKey.export({ type: "pkcs1", format: "pem" }).toString();
+    const publicPem = publicKey.export({ type: "pkcs1", format: "pem" }).toString();
     // Extract DER between PEM headers
     const b64 = publicPem.replace(
       /-----BEGIN RSA PUBLIC KEY-----|-----END RSA PUBLIC KEY-----|\n|\r/g,

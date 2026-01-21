@@ -22,18 +22,12 @@ export class ScrollArea extends Component {
   }
 
   public setContent(content: string): void {
-    this.content =
-      typeof content === "string" ? content : String(content || "");
+    this.content = typeof content === "string" ? content : String(content || "");
     this.scrollOffset = 0; // Reset scroll position on content change
     this.updateContentLines();
   }
 
-  public override resize(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
+  public override resize(x: number, y: number, width: number, height: number): void {
     super.resize(x, y, width, height);
     if (this.wrapText) {
       this.updateContentLines();
@@ -69,8 +63,7 @@ export class ScrollArea extends Component {
       scrollbarHeight = Math.max(1, Math.floor(this.height * ratio));
 
       // Position percentage
-      const scrollPercent =
-        this.scrollOffset / (this.contentLines.length - this.height);
+      const scrollPercent = this.scrollOffset / (this.contentLines.length - this.height);
       const maxTop = this.height - scrollbarHeight;
       scrollbarTop = Math.floor(scrollPercent * maxTop);
     }
@@ -82,9 +75,7 @@ export class ScrollArea extends Component {
       if (showScrollbar) {
         const isThumb = i >= scrollbarTop && i < scrollbarTop + scrollbarHeight;
         const theme = ThemeManager.current;
-        prefix = isThumb
-          ? theme.scrollbarThumb("█")
-          : theme.scrollbarTrack("│");
+        prefix = isThumb ? theme.scrollbarThumb("█") : theme.scrollbarTrack("│");
         // Add a small margin
         prefix += " ";
       }
@@ -102,10 +93,7 @@ export class ScrollArea extends Component {
 
       let renderedContent = "";
       if (visibleLength > visibleWidth) {
-        renderedContent = lineContent.substring(
-          0,
-          visibleWidth + invisibleLength,
-        );
+        renderedContent = lineContent.substring(0, visibleWidth + invisibleLength);
       } else {
         const padding = Math.max(0, visibleWidth - visibleLength);
         renderedContent = lineContent + " ".repeat(padding);

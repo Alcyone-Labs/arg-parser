@@ -255,9 +255,7 @@ export class McpResourcesManager {
 /**
  * Helper function to create common resource configurations
  */
-export const createFileResource = (
-  basePath: string = "",
-): McpResourceConfig => ({
+export const createFileResource = (basePath: string = ""): McpResourceConfig => ({
   name: "file-content",
   uriTemplate: "file://{path}",
   title: "File Content",
@@ -289,10 +287,7 @@ export const createFileResource = (
 /**
  * Helper function to create JSON data resource
  */
-export const createJsonResource = (
-  name: string,
-  data: any,
-): McpResourceConfig => ({
+export const createJsonResource = (name: string, data: any): McpResourceConfig => ({
   name,
   uriTemplate: `${name}://data`,
   title: `${name} Data`,

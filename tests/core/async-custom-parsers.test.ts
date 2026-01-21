@@ -53,12 +53,7 @@ describe("Async Custom Parser Functions", () => {
         },
       ]);
 
-      const result = await parser.parse([
-        "--sync",
-        "hello",
-        "--async",
-        "WORLD",
-      ]);
+      const result = await parser.parse(["--sync", "hello", "--async", "WORLD"]);
       expect(result.syncValue).toBe("HELLO");
       expect(result.asyncValue).toBe("world");
     });
@@ -81,14 +76,7 @@ describe("Async Custom Parser Functions", () => {
         allowMultiple: true,
       });
 
-      const result = await parser.parse([
-        "--number",
-        "1",
-        "--number",
-        "2",
-        "--number",
-        "3",
-      ]);
+      const result = await parser.parse(["--number", "1", "--number", "2", "--number", "3"]);
       expect(result.numbers).toEqual([11, 12, 13]);
     });
   });
@@ -143,9 +131,7 @@ describe("Async Custom Parser Functions", () => {
         type: fileParser,
       });
 
-      await expect(
-        parser.parse(["--config", "nonexistent-file.json"]),
-      ).rejects.toThrow();
+      await expect(parser.parse(["--config", "nonexistent-file.json"])).rejects.toThrow();
     });
   });
 
@@ -209,9 +195,7 @@ describe("Async Custom Parser Functions", () => {
         type: userParser,
       });
 
-      await expect(parser.parse(["--user", "404"])).rejects.toThrow(
-        "User not found: 404",
-      );
+      await expect(parser.parse(["--user", "404"])).rejects.toThrow("User not found: 404");
     });
   });
 
@@ -300,9 +284,7 @@ describe("Async Custom Parser Functions", () => {
         type: errorParser,
       });
 
-      await expect(parser.parse(["--error", "test"])).rejects.toThrow(
-        "Custom async error: test",
-      );
+      await expect(parser.parse(["--error", "test"])).rejects.toThrow("Custom async error: test");
     });
 
     test("should handle async parser timeout scenarios", async () => {

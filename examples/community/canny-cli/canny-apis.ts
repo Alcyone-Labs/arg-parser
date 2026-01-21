@@ -1,10 +1,6 @@
 import { chalk } from "@alcyone-labs/simple-chalk";
 
-export async function searchCannyPosts(
-  apiKey: string,
-  query: string,
-  limit = 10,
-) {
+export async function searchCannyPosts(apiKey: string, query: string, limit = 10) {
   // Mock for testing
   if (apiKey === "test") {
     return {
@@ -41,9 +37,7 @@ export async function searchCannyPosts(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Canny API error: ${response.status} ${response.statusText}`,
-    );
+    throw new Error(`Canny API error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
@@ -64,23 +58,17 @@ export async function searchCannyBoards(apiKey: string) {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Canny API error: ${response.status} ${response.statusText}`,
-      );
+      throw new Error(`Canny API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
 
     if ((data as any).boards && (data as any).boards.length > 0) {
-      console.log(
-        chalk.green(`\n✅ Found ${(data as any).boards.length} boards:\n`),
-      );
+      console.log(chalk.green(`\n✅ Found ${(data as any).boards.length} boards:\n`));
 
       (data as any).boards.forEach((board: any, index: number) => {
         console.log(chalk.bold.white(`${index + 1}. ${board.name}`));
-        console.log(
-          chalk.gray(`   ID: ${board.id} | Posts: ${board.postCount || 0}`),
-        );
+        console.log(chalk.gray(`   ID: ${board.id} | Posts: ${board.postCount || 0}`));
         if (board.description) {
           console.log(chalk.gray(`   ${board.description}`));
         }
@@ -98,11 +86,7 @@ export async function searchCannyBoards(apiKey: string) {
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error(
-      chalk.red(
-        `❌ Error: ${error instanceof Error ? error.message : String(error)}`,
-      ),
-    );
+    console.error(chalk.red(`❌ Error: ${error instanceof Error ? error.message : String(error)}`));
     throw error;
   }
 }

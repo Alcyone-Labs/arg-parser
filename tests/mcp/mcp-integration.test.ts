@@ -360,9 +360,7 @@ describe("MCP Integration", () => {
     });
 
     test("should handle tool execution errors", async () => {
-      const mockHandler = vi
-        .fn()
-        .mockRejectedValue(new Error("Handler failed"));
+      const mockHandler = vi.fn().mockRejectedValue(new Error("Handler failed"));
 
       const parser = new ArgParser({
         appName: "Error Test CLI",
@@ -400,9 +398,7 @@ describe("MCP Integration", () => {
     });
 
     test("should handle custom output schema with errors", async () => {
-      const mockHandler = vi
-        .fn()
-        .mockRejectedValue(new Error("Processing failed"));
+      const mockHandler = vi.fn().mockRejectedValue(new Error("Processing failed"));
 
       const parser = new ArgParser({
         appName: "Custom Schema Error Test",

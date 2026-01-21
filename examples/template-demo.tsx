@@ -55,10 +55,7 @@ function App() {
   // Mouse scroll moves selection
   useMouse({
     onScroll: (delta) => {
-      const newIdx = Math.max(
-        0,
-        Math.min(ITEMS.length - 1, selectedIdx() + delta),
-      );
+      const newIdx = Math.max(0, Math.min(ITEMS.length - 1, selectedIdx() + delta));
       setSelectedIdx(newIdx);
       scroll.adjustScroll(newIdx);
     },
@@ -95,12 +92,7 @@ function App() {
   const selectedItem = () => ITEMS[selectedIdx()]!;
 
   return (
-    <box
-      width="100%"
-      height="100%"
-      flexDirection="column"
-      backgroundColor={t().bg}
-    >
+    <box width="100%" height="100%" flexDirection="column" backgroundColor={t().bg}>
       {/* Header */}
       <box
         height={3}
@@ -142,15 +134,9 @@ function App() {
             {({ item, globalIndex }) => (
               <box
                 height={1}
-                backgroundColor={
-                  globalIndex === selectedIdx() ? t().selection : undefined
-                }
+                backgroundColor={globalIndex === selectedIdx() ? t().selection : undefined}
               >
-                <text
-                  color={
-                    globalIndex === selectedIdx() ? t().selectionFg : t().fg
-                  }
-                >
+                <text color={globalIndex === selectedIdx() ? t().selectionFg : t().fg}>
                   {globalIndex === selectedIdx() ? "› " : "  "}
                   {item.name}
                 </text>
@@ -176,12 +162,7 @@ function App() {
           <text color={t().fg} marginTop={1}>
             {selectedItem().description}
           </text>
-          <box
-            borderStyle="single"
-            borderColor={t().border}
-            padding={1}
-            marginTop={2}
-          >
+          <box borderStyle="single" borderColor={t().border} padding={1} marginTop={2}>
             <text color={t().fg}>Count: </text>
             <text bold color={t().accent}>
               {selectedItem().count}

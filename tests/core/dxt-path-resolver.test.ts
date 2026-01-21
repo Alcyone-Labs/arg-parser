@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import {
-  DxtPathResolver,
-  type IPathContext,
-} from "../../src/core/dxt-path-resolver";
+import { DxtPathResolver, type IPathContext } from "../../src/core/dxt-path-resolver";
 
 describe("DxtPathResolver", () => {
   let tempDir: string;
@@ -21,11 +18,7 @@ describe("DxtPathResolver", () => {
     originalEnv = { ...process.env };
 
     // Create temp directory for testing
-    tempDir = join(
-      os.tmpdir(),
-      "dxt-path-resolver-test",
-      Date.now().toString(),
-    );
+    tempDir = join(os.tmpdir(), "dxt-path-resolver-test", Date.now().toString());
     await fs.mkdir(tempDir, { recursive: true });
   });
 
@@ -121,9 +114,7 @@ describe("DxtPathResolver", () => {
         context,
       );
 
-      expect(result).toBe(
-        `/home/user/documents/${require("node:path").sep}file.txt`,
-      );
+      expect(result).toBe(`/home/user/documents/${require("node:path").sep}file.txt`);
     });
 
     it("should substitute __dirname based on context", () => {
@@ -134,10 +125,7 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables(
-        "${__dirname}/config.json",
-        context,
-      );
+      const result = DxtPathResolver.substituteVariables("${__dirname}/config.json", context);
 
       expect(result).toBe("/extension/dir/config.json");
     });
@@ -150,10 +138,7 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables(
-        "${DXT_DIR}/data",
-        context,
-      );
+      const result = DxtPathResolver.substituteVariables("${DXT_DIR}/data", context);
 
       expect(result).toBe("/extension/dir/data");
     });
@@ -165,11 +150,9 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables(
-        "${CUSTOM_VAR}/file.txt",
-        context,
-        { customVariables: { CUSTOM_VAR: "/custom/path" } },
-      );
+      const result = DxtPathResolver.substituteVariables("${CUSTOM_VAR}/file.txt", context, {
+        customVariables: { CUSTOM_VAR: "/custom/path" },
+      });
 
       expect(result).toBe("/custom/path/file.txt");
     });
@@ -182,10 +165,7 @@ describe("DxtPathResolver", () => {
       };
 
       expect(() => {
-        DxtPathResolver.substituteVariables(
-          "${UNDEFINED_VAR}/file.txt",
-          context,
-        );
+        DxtPathResolver.substituteVariables("${UNDEFINED_VAR}/file.txt", context);
       }).toThrow("Undefined DXT variable: UNDEFINED_VAR");
     });
 
@@ -196,11 +176,9 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const result = DxtPathResolver.substituteVariables(
-        "${UNDEFINED_VAR}/file.txt",
-        context,
-        { allowUndefined: true },
-      );
+      const result = DxtPathResolver.substituteVariables("${UNDEFINED_VAR}/file.txt", context, {
+        allowUndefined: true,
+      });
 
       expect(result).toBe("${UNDEFINED_VAR}/file.txt");
     });
@@ -244,10 +222,7 @@ describe("DxtPathResolver", () => {
         entryDir: "/entry/dir",
       };
 
-      const result = DxtPathResolver.resolvePath(
-        "${HOME}/documents/file.txt",
-        context,
-      );
+      const result = DxtPathResolver.resolvePath("${HOME}/documents/file.txt", context);
       expect(result).toBe("/home/user/documents/file.txt");
     });
   });
@@ -403,13 +378,10 @@ describe("DxtPathResolver", () => {
         cwd: "/current/dir",
       };
 
-      const complexPath =
-        "${DXT_DIR}/data${HOME}/config/${pathSeparator}file.txt";
+      const complexPath = "${DXT_DIR}/data${HOME}/config/${pathSeparator}file.txt";
       const result = DxtPathResolver.resolvePath(complexPath, context);
 
-      expect(result).toBe(
-        `/ext/dir/data/home/user/config/${require("node:path").sep}file.txt`,
-      );
+      expect(result).toBe(`/ext/dir/data/home/user/config/${require("node:path").sep}file.txt`);
     });
   });
 });

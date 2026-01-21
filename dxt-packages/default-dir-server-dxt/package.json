@@ -2,6 +2,6 @@
   "name": "default-dir-server",
   "version": "1.0.0",
   "description": "Server for default directory test",
-  "main": "index.mjs",
-  "type": "module"
+  "type": "module",
+  "main": "index.mjs"
 }

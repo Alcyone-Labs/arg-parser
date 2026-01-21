@@ -20,9 +20,7 @@ const parser = new ArgParser({
     }
 
     if ((major && minor) || (major && patch) || (minor && patch)) {
-      console.error(
-        "Error: Please specify only one of --major, --minor, or --patch",
-      );
+      console.error("Error: Please specify only one of --major, --minor, or --patch");
       process.exit(1);
     }
 
@@ -55,9 +53,7 @@ const parser = new ArgParser({
     }
 
     if (dryRun) {
-      console.log(
-        `[Dry Run] Would update version from ${currentVersion} to ${newVersion}`,
-      );
+      console.log(`[Dry Run] Would update version from ${currentVersion} to ${newVersion}`);
       return { newVersion };
     }
 

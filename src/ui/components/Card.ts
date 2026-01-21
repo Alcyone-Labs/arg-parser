@@ -33,12 +33,7 @@ export class Card extends Component {
     this.resize(this.x, this.y, this.width, this.height);
   }
 
-  public override resize(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
+  public override resize(x: number, y: number, width: number, height: number): void {
     super.resize(x, y, width, height);
 
     if (this.content) {
@@ -65,10 +60,7 @@ export class Card extends Component {
     const mx = event.x;
     const my = event.y;
     const isInside =
-      mx >= this.x &&
-      mx < this.x + this.width &&
-      my >= this.y &&
-      my < this.y + this.height;
+      mx >= this.x && mx < this.x + this.width && my >= this.y && my < this.y + this.height;
 
     if (isInside) {
       if (!this.isHovered) {
@@ -120,8 +112,7 @@ export class Card extends Component {
         const titleText = ` ${this.title} `;
         if (width > titleText.length + 4) {
           const remLen = width - 2 - titleText.length;
-          top =
-            t("┌") + theme.highlight(titleText) + t("─".repeat(remLen) + "┐");
+          top = t("┌") + theme.highlight(titleText) + t("─".repeat(remLen) + "┐");
         }
       }
       if (bgColor) top = bgApplier(top);

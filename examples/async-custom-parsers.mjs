@@ -25,7 +25,9 @@ const parser = new ArgParser({
         console.log(`✅ Config loaded: ${Object.keys(config).length} keys`);
         return config;
       } catch (error) {
-        throw new Error(`Failed to load config: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(
+          `Failed to load config: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     },
   },
@@ -90,13 +92,10 @@ const sampleConfig = {
 };
 
 try {
-  await fs.writeFile(
-    "sample-config.json",
-    JSON.stringify(sampleConfig, null, 2),
-  );
+  await fs.writeFile("sample-config.json", JSON.stringify(sampleConfig, null, 2));
   console.log("📝 Created sample-config.json for testing");
 } catch (error) {
-  console.warn("⚠️  Could not create sample config file:", (error as Error).message);
+  console.warn("⚠️  Could not create sample config file:", error.message);
 }
 
 console.log(`

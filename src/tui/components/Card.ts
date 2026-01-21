@@ -133,8 +133,7 @@ function formatValue(
 
   switch (format) {
     case "compact":
-      if (value >= 1_000_000_000)
-        return `${(value / 1_000_000_000).toFixed(1)}B`;
+      if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
       if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
       if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
       return value.toString();
@@ -186,11 +185,7 @@ function getTrendIndicator(trend: StatCardProps["trend"]): {
  * ```
  */
 export function StatCard(props: StatCardProps): JSX.Element {
-  const formattedValue = formatValue(
-    props.value,
-    props.format ?? "number",
-    props.currency,
-  );
+  const formattedValue = formatValue(props.value, props.format ?? "number", props.currency);
 
   const trendIndicator = props.trend ? getTrendIndicator(props.trend) : null;
 

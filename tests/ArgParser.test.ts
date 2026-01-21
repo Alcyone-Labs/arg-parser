@@ -77,14 +77,7 @@ describe("ArgParser", () => {
 
   describe("Basic Flag Parsing", () => {
     test("should parse basic flags", async () => {
-      const result = await parser.parse([
-        "--phase",
-        "pairing",
-        "-b",
-        "42",
-        "-t",
-        "chunks",
-      ]);
+      const result = await parser.parse(["--phase", "pairing", "-b", "42", "-t", "chunks"]);
       expect(result).toMatchObject({
         phase: "pairing",
         batch: 42,
@@ -108,23 +101,12 @@ describe("ArgParser", () => {
     });
 
     test("should apply default values", async () => {
-      const result = await parser.parse([
-        "--phase",
-        "analysis",
-        "-t",
-        "metadata",
-      ]);
+      const result = await parser.parse(["--phase", "analysis", "-t", "metadata"]);
       expect(result.verbose).toBe(false);
     });
 
     test("should handle flag-only parameters", async () => {
-      const result = await parser.parse([
-        "--phase",
-        "analysis",
-        "-t",
-        "metadata",
-        "-v",
-      ]);
+      const result = await parser.parse(["--phase", "analysis", "-t", "metadata", "-v"]);
       expect(result.verbose).toBe(true);
     });
 
@@ -156,9 +138,9 @@ describe("ArgParser", () => {
     });
 
     test("should return error result on invalid enum value", async () => {
-      await expect(() =>
-        parser.parse(["--phase", "invalid", "-t", "metadata"]),
-      ).rejects.toThrow("process.exit called");
+      await expect(() => parser.parse(["--phase", "invalid", "-t", "metadata"])).rejects.toThrow(
+        "process.exit called",
+      );
       expect(mockConsoleError).toHaveBeenCalledWith(
         expect.stringMatching(flexibleErrorRegex("Invalid value")),
       );
@@ -167,17 +149,10 @@ describe("ArgParser", () => {
     test("should return error result on conditional mandatory flags", async () => {
       const errorParser = createParser(false);
 
-      const result = await errorParser.parse([
-        "--phase",
-        "chunking",
-        "-t",
-        "metadata",
-      ]);
+      const result = await errorParser.parse(["--phase", "chunking", "-t", "metadata"]);
       expect(result).toHaveProperty("success", false);
       expect(result).toHaveProperty("exitCode", 1);
-      expect(result.message).toMatch(
-        flexibleErrorRegex("Missing mandatory flags: batch"),
-      );
+      expect(result.message).toMatch(flexibleErrorRegex("Missing mandatory flags: batch"));
     });
 
     test("should throw ArgParserError when handleErrors is false", async () => {
@@ -187,9 +162,7 @@ describe("ArgParser", () => {
         handleErrors: false,
       }).addFlags(flags);
 
-      await expect(optOutParser.parse(["--phase", "chunking"])).rejects.toThrow(
-        ArgParserError,
-      );
+      await expect(optOutParser.parse(["--phase", "chunking"])).rejects.toThrow(ArgParserError);
       expect(mockConsoleError).not.toHaveBeenCalled();
     });
   });
@@ -210,12 +183,7 @@ describe("ArgParser", () => {
 
     test("should return error result on invalid table values", async () => {
       const errorParser = createParser(false);
-      const result = await errorParser.parse([
-        "--table",
-        "invalid",
-        "--phase",
-        "analysis",
-      ]);
+      const result = await errorParser.parse(["--table", "invalid", "--phase", "analysis"]);
 
       expect(result).toHaveProperty("success", false);
       expect(result).toHaveProperty("exitCode", 1);
@@ -312,9 +280,7 @@ describe("ArgParser", () => {
     });
 
     test("should show help on --help flag", async () => {
-      const mockConsoleLog = vi
-        .spyOn(console, "log")
-        .mockImplementation(() => {});
+      const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 
       const helpParser = new ArgParser({
         appName: "Help CLI",
@@ -331,9 +297,7 @@ describe("ArgParser", () => {
     });
 
     test("should show subcommand help", async () => {
-      const mockConsoleLog = vi
-        .spyOn(console, "log")
-        .mockImplementation(() => {});
+      const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 
       const subParser = new ArgParser({
         appName: "Sub Command",
@@ -386,9 +350,7 @@ describe("ArgParser", () => {
     });
 
     test("should show subcommand description when invoking --help on subcommand", async () => {
-      const mockConsoleLog = vi
-        .spyOn(console, "log")
-        .mockImplementation(() => {});
+      const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 
       const subParser = new ArgParser({
         appName: "Sub Command",
@@ -452,13 +414,7 @@ describe("ArgParser", () => {
         parser: childParser,
       });
 
-      const result = await parentParser.parse([
-        "child",
-        "--global",
-        "test",
-        "--local",
-        "value",
-      ]);
+      const result = await parentParser.parse(["child", "--global", "test", "--local", "value"]);
 
       expect(result.result.global).toBe("test");
       expect(result.result.local).toBe("value");
@@ -546,9 +502,7 @@ describe("ArgParser", () => {
 
   describe("Automatic Help on Empty Invocation", () => {
     test("should display help and exit(0) if conditions met", async () => {
-      const mockConsoleLog = vi
-        .spyOn(console, "log")
-        .mockImplementation(() => {});
+      const mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 
       const autoHelpParser = new ArgParser({
         appName: "Auto Help CLI",

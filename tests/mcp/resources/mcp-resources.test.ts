@@ -71,9 +71,7 @@ describe("McpResourcesManager", () => {
     });
 
     test("should validate resource configuration", () => {
-      expect(() => manager.addResource({} as any)).toThrow(
-        "Resource name is required",
-      );
+      expect(() => manager.addResource({} as any)).toThrow("Resource name is required");
 
       expect(() =>
         manager.addResource({
@@ -262,9 +260,7 @@ describe("ResourceTemplateParser", () => {
   });
 
   test("should parse complex URI template", () => {
-    const parser = new ResourceTemplateParser(
-      "users://{userId}/posts/{postId}",
-    );
+    const parser = new ResourceTemplateParser("users://{userId}/posts/{postId}");
     const params = parser.parse("users://123/posts/456");
     expect(params).toEqual({ userId: "123", postId: "456" });
   });

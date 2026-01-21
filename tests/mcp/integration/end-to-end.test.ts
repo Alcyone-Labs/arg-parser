@@ -82,9 +82,7 @@ describe("MCP End-to-End Integration Tests", () => {
       // Find the main tool
       const mainTool = tools.find((t) => t.name === "test-server");
       expect(mainTool).toBeDefined();
-      expect(mainTool?.description).toBe(
-        "A test MCP server for integration testing",
-      );
+      expect(mainTool?.description).toBe("A test MCP server for integration testing");
       expect(mainTool?.inputSchema).toBeDefined();
     });
 
@@ -218,9 +216,7 @@ describe("MCP End-to-End Integration Tests", () => {
     });
 
     test("should handle tool execution errors gracefully", async () => {
-      const errorHandler = vi
-        .fn()
-        .mockRejectedValue(new Error("Processing failed"));
+      const errorHandler = vi.fn().mockRejectedValue(new Error("Processing failed"));
 
       const parser = new ArgParser({
         appName: "Error Test Server",
@@ -391,10 +387,7 @@ describe("MCP End-to-End Integration Tests", () => {
   });
 
   describe("Real-World Canny CLI MCP Server Integration", () => {
-    const cannyCliPath = resolve(
-      __dirname,
-      "../../../examples/community/canny-cli/canny-cli.ts",
-    );
+    const cannyCliPath = resolve(__dirname, "../../../examples/community/canny-cli/canny-cli.ts");
     let client: McpStdioClient;
 
     beforeAll(() => {
@@ -419,13 +412,7 @@ describe("MCP End-to-End Integration Tests", () => {
 
       client = new McpStdioClient(
         "deno",
-        [
-          "run",
-          "--allow-all",
-          "--unstable-sloppy-imports",
-          cannyCliPath,
-          "--s-mcp-serve",
-        ],
+        ["run", "--allow-all", "--unstable-sloppy-imports", cannyCliPath, "--s-mcp-serve"],
         {
           timeout: 15000,
           debug: true,
@@ -458,13 +445,9 @@ describe("MCP End-to-End Integration Tests", () => {
       expect(toolsResponse.tools).toBeDefined();
       expect(toolsResponse.tools.length).toBeGreaterThan(0);
 
-      const cannyTool = toolsResponse.tools.find(
-        (tool) => tool.name === "search",
-      );
+      const cannyTool = toolsResponse.tools.find((tool) => tool.name === "search");
       expect(cannyTool).toBeDefined();
-      expect(cannyTool?.description).toContain(
-        "Search Canny for relevant feature requests",
-      );
+      expect(cannyTool?.description).toContain("Search Canny for relevant feature requests");
       expect(cannyTool?.inputSchema).toBeDefined();
 
       expect(cannyTool?.inputSchema.properties).toHaveProperty("query");
@@ -546,9 +529,7 @@ describe("MCP End-to-End Integration Tests", () => {
       } catch (error: any) {
         // Also accept MCP errors as valid error handling
         expect(error).toBeDefined();
-        expect(error.message).toMatch(
-          /Missing mandatory flags|MCP Error|Process exited/,
-        );
+        expect(error.message).toMatch(/Missing mandatory flags|MCP Error|Process exited/);
       }
     }, 15000);
 

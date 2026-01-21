@@ -111,10 +111,7 @@ async function main() {
       console.log("Result:", JSON.stringify(result, null, 2));
     }
   } catch (error) {
-    console.error(
-      "❌ Error:",
-      error instanceof Error ? error.message : String(error),
-    );
+    console.error("❌ Error:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -134,9 +131,7 @@ if (isMcpMode) {
     console.log("   Priority: CLI flag > programmatic config > default");
   } else {
     console.log("🔧 MCP Server Mode");
-    console.log(
-      "   Log path: ./examples/logs/programmatic-mcp.log (programmatic config)",
-    );
+    console.log("   Log path: ./examples/logs/programmatic-mcp.log (programmatic config)");
     console.log("   Configured via: mcp.logPath in withMcp()");
   }
   console.log("   MCP server starting with configured log path...\n");

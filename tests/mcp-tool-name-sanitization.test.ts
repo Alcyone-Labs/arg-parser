@@ -21,9 +21,7 @@ describe("MCP Tool Name Sanitization", () => {
     });
 
     test("should handle empty or invalid input", () => {
-      expect(() => sanitizeMcpToolName("")).toThrow(
-        "Tool name must be a non-empty string",
-      );
+      expect(() => sanitizeMcpToolName("")).toThrow("Tool name must be a non-empty string");
       expect(() => sanitizeMcpToolName(null as any)).toThrow(
         "Tool name must be a non-empty string",
       );

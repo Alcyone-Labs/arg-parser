@@ -37,11 +37,7 @@ export function detectEntryPoint(): string | null {
     // Note: This also needs to be handled by the caller since __filename is not available in ES modules
 
     // Method 4: Try to find main module from require.main (CommonJS)
-    if (
-      typeof require !== "undefined" &&
-      require.main &&
-      require.main.filename
-    ) {
+    if (typeof require !== "undefined" && require.main && require.main.filename) {
       return require.main.filename;
     }
 
@@ -80,10 +76,7 @@ function normalizePath(path: string): string {
  * @param fallbackEntryPoint Optional fallback entry point if detection fails
  * @returns Absolute path to the log file
  */
-export function resolveLogPath(
-  logPath: LogPath,
-  fallbackEntryPoint?: string,
-): string {
+export function resolveLogPath(logPath: LogPath, fallbackEntryPoint?: string): string {
   // Handle string inputs
   if (typeof logPath === "string") {
     // First, substitute any DXT variables in the path

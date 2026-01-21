@@ -44,12 +44,7 @@ const cli = ArgParser.withMcp({
 export default cli;
 
 // Auto-execute only when run directly
-await cli
-  .parse(undefined, { importMetaUrl: import.meta.url })
-  .catch((error) => {
-    console.error(
-      "Error:",
-      error instanceof Error ? error.message : String(error),
-    );
-    process.exit(1);
-  });
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

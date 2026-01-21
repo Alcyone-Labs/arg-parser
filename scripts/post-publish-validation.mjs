@@ -61,9 +61,7 @@ async function runCommand(command, cwd = tempDir, options = {}) {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(
-          new Error(`Command failed with code ${code}: ${stderr || stdout}`),
-        );
+        reject(new Error(`Command failed with code ${code}: ${stderr || stdout}`));
       }
     });
 
@@ -99,10 +97,7 @@ async function main() {
         type: "module",
         dependencies: {},
       };
-      fs.writeFileSync(
-        join(tempDir, "package.json"),
-        JSON.stringify(packageJson, null, 2),
-      );
+      fs.writeFileSync(join(tempDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
       // Install the package
       await runCommand(`npm install ${PACKAGE_NAME}@latest`, tempDir, {
@@ -115,11 +110,7 @@ async function main() {
         "node_modules",
         PACKAGE_NAME.replace("@", "").replace("/", "-"),
       );
-      if (
-        !fs.existsSync(
-          join(tempDir, "node_modules", "@alcyone-labs", "arg-parser"),
-        )
-      ) {
+      if (!fs.existsSync(join(tempDir, "node_modules", "@alcyone-labs", "arg-parser"))) {
         throw new Error("Package not installed correctly");
       }
     })
@@ -131,19 +122,15 @@ async function main() {
   totalTests++;
   if (
     await test("Verifying package size is reasonable", async () => {
-      const result = await runCommand(
-        `npm list ${PACKAGE_NAME} --depth=0 --json`,
-        tempDir,
-        { silent: true },
-      );
+      const result = await runCommand(`npm list ${PACKAGE_NAME} --depth=0 --json`, tempDir, {
+        silent: true,
+      });
       const packageInfo = JSON.parse(result.stdout);
 
       // Get package tarball info
-      const infoResult = await runCommand(
-        `npm info ${PACKAGE_NAME} --json`,
-        tempDir,
-        { silent: true },
-      );
+      const infoResult = await runCommand(`npm info ${PACKAGE_NAME} --json`, tempDir, {
+        silent: true,
+      });
       const info = JSON.parse(infoResult.stdout);
 
       const unpackedSize = info.dist?.unpackedSize || 0;
@@ -300,10 +287,7 @@ console.log('TypeScript compilation successful');
           skipLibCheck: true,
         },
       };
-      fs.writeFileSync(
-        join(tempDir, "tsconfig.json"),
-        JSON.stringify(tsConfig, null, 2),
-      );
+      fs.writeFileSync(join(tempDir, "tsconfig.json"), JSON.stringify(tsConfig, null, 2));
 
       // Compile TypeScript
       await runCommand("npx tsc --noEmit test-types.ts", tempDir, {
@@ -363,9 +347,7 @@ console.log(JSON.stringify({ success: hasAddMcpSubCommand }));
   console.log(`✅ Passed: ${passedTests}/${totalTests} tests`);
 
   if (passedTests === totalTests) {
-    console.log(
-      "\n🎉 All validation tests passed! The published package is working correctly.",
-    );
+    console.log("\n🎉 All validation tests passed! The published package is working correctly.");
     process.exit(0);
   } else {
     console.log(

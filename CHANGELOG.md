@@ -164,12 +164,7 @@ The TUI framework has been completely rewritten using **SolidJS** and **SST's Op
 - **TTY Utilities**: Exported `cleanupTerminal`, `enableMouseReporting`, etc. for custom terminal control.
 
 ```tsx
-import {
-  MasterDetail,
-  TuiProvider,
-  useTui,
-  VirtualList,
-} from "@alcyone-labs/arg-parser/tui";
+import { MasterDetail, TuiProvider, useTui, VirtualList } from "@alcyone-labs/arg-parser/tui";
 import { render } from "@opentui/solid";
 
 function App() {
@@ -179,9 +174,7 @@ function App() {
   return (
     <MasterDetail
       header="My App"
-      master={
-        <VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />
-      }
+      master={<VirtualList items={DATA} selectedIndex={idx()} onSelect={setIdx} />}
       detail={<Details item={DATA[idx()]} />}
     />
   );

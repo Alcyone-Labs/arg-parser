@@ -48,10 +48,7 @@ export class List extends Component {
       this.scrollOffset = this.selectedIndex - visibleCount + 1;
     }
 
-    const visibleItems = this.items.slice(
-      this.scrollOffset,
-      this.scrollOffset + visibleCount,
-    );
+    const visibleItems = this.items.slice(this.scrollOffset, this.scrollOffset + visibleCount);
 
     for (let i = 0; i < this.height; i++) {
       const itemIndex = this.scrollOffset + i;
@@ -104,10 +101,7 @@ export class List extends Component {
       if (this.onSelect) this.onSelect(this.items[this.selectedIndex]);
     } else if (key === "\u001b[B") {
       // Down
-      this.selectedIndex = Math.min(
-        this.items.length - 1,
-        this.selectedIndex + 1,
-      );
+      this.selectedIndex = Math.min(this.items.length - 1, this.selectedIndex + 1);
       if (this.onSelect) this.onSelect(this.items[this.selectedIndex]);
     } else if (key === "\r" || key === "\u001b[C") {
       // Enter or Right Arrow

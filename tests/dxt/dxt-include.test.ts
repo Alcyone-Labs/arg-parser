@@ -17,10 +17,7 @@ describe("DXT Include Functionality", () => {
 
     // Create test files and directories
     fs.mkdirSync("migrations", { recursive: true });
-    fs.writeFileSync(
-      "migrations/001_init.sql",
-      "CREATE TABLE test (id INTEGER);",
-    );
+    fs.writeFileSync("migrations/001_init.sql", "CREATE TABLE test (id INTEGER);");
     fs.writeFileSync("migrations/002_data.sql", "INSERT INTO test VALUES (1);");
 
     fs.mkdirSync("config", { recursive: true });

@@ -237,9 +237,7 @@ describe("ArgParser", () => {
       expect(subCommands.has("start-server")).toBe(true);
 
       const serverCommand = subCommands.get("start-server");
-      expect(serverCommand?.description).toBe(
-        "Start custom-mcp-server as an MCP server",
-      );
+      expect(serverCommand?.description).toBe("Start custom-mcp-server as an MCP server");
     });
   });
 
@@ -506,9 +504,7 @@ describe("ArgParser", () => {
       const conflictTool = tools.find((t) => t.name === "conflict-cli");
 
       expect(conflictTool).toBeDefined();
-      expect(conflictTool?.description).toBe(
-        "Manual tool with conflicting name",
-      );
+      expect(conflictTool?.description).toBe("Manual tool with conflicting name");
     });
   });
 

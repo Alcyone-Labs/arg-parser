@@ -7,15 +7,9 @@ import chalk from "@alcyone-labs/simple-chalk";
 import { createMcpLogger, type Logger } from "@alcyone-labs/simple-mcp-logger";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { DxtGenerator } from "../dxt/DxtGenerator";
-import {
-  McpNotificationsManager,
-  type McpChangeType,
-} from "../mcp/mcp-notifications.js";
+import { McpNotificationsManager, type McpChangeType } from "../mcp/mcp-notifications.js";
 import { McpPromptsManager, type McpPromptConfig } from "../mcp/mcp-prompts.js";
-import {
-  McpResourcesManager,
-  type McpResourceConfig,
-} from "../mcp/mcp-resources.js";
+import { McpResourcesManager, type McpResourceConfig } from "../mcp/mcp-resources.js";
 import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
 import { resolveLogPath } from "./log-path-utils";
@@ -50,9 +44,7 @@ export interface IArgParserParams<THandlerReturn = any> {
    */
   appName?: string;
   subCommands?: ISubCommand[];
-  handler?: (
-    ctx: IHandlerContext<any, any>,
-  ) => THandlerReturn | Promise<THandlerReturn>;
+  handler?: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>;
 
   /**
    * Add an extra new line between each flag group,
@@ -188,9 +180,7 @@ type RecursiveParseResult = {
   handlerToExecute?: { handler: Function; context: IHandlerContext };
 };
 
-export class ArgParserBase<
-  THandlerReturn = any,
-> implements IArgParser<THandlerReturn> {
+export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerReturn> {
   #appName: string = "Argument Parser";
   #appCommandName?: string;
   #subCommandName: string = "";
@@ -222,8 +212,7 @@ export class ArgParserBase<
   // MCP-related managers
   #mcpResourcesManager: McpResourcesManager = new McpResourcesManager();
   #mcpPromptsManager: McpPromptsManager = new McpPromptsManager();
-  #mcpNotificationsManager: McpNotificationsManager =
-    new McpNotificationsManager();
+  #mcpNotificationsManager: McpNotificationsManager = new McpNotificationsManager();
 
   // Working directory management
   /** The effective working directory for this parser instance */
@@ -235,10 +224,7 @@ export class ArgParserBase<
   /** Tracks if effective working directory has been resolved */
   #workingDirectoryResolved = false;
 
-  constructor(
-    options: IArgParserParams<THandlerReturn> = {},
-    initialFlags?: readonly IFlag[],
-  ) {
+  constructor(options: IArgParserParams<THandlerReturn> = {}, initialFlags?: readonly IFlag[]) {
     this.#appName = options.appName || "app";
     if (
       options.blankSpaceWidth &&
@@ -273,8 +259,7 @@ export class ArgParserBase<
     this.#handleErrors = options.handleErrors ?? true;
     this.#autoExit = options.autoExit ?? true;
     this.#inheritParentFlags = options.inheritParentFlags ?? false;
-    this.#triggerAutoHelpIfNoHandler =
-      options.triggerAutoHelpIfNoHandler ?? false;
+    this.#triggerAutoHelpIfNoHandler = options.triggerAutoHelpIfNoHandler ?? false;
     this.#description = options.description;
     this.#handler = options.handler;
     this.#appCommandName = options.appCommandName;
@@ -367,11 +352,7 @@ export class ArgParserBase<
       data,
     };
 
-    if (
-      this.#autoExit &&
-      typeof process === "object" &&
-      typeof process.exit === "function"
-    ) {
+    if (this.#autoExit && typeof process === "object" && typeof process.exit === "function") {
       process.exit(exitCode as never);
     }
 
@@ -405,27 +386,20 @@ export class ArgParserBase<
     } else if (typeof flag["type"] === "function") {
       const result = (flag["type"] as Function)(value as string);
       // Handle both sync and async custom parser functions
-      value =
-        result && typeof result.then === "function" ? await result : result;
+      value = result && typeof result.then === "function" ? await result : result;
     } else if (typeof flag["type"] === "object") {
       // Check if it's a Zod schema
       if (flag["type"] && (flag["type"] as ZodTypeAny)._def) {
         // It's a Zod schema - parse JSON and validate
         try {
-          const parsedJson =
-            typeof value === "string" ? JSON.parse(value as string) : value;
+          const parsedJson = typeof value === "string" ? JSON.parse(value as string) : value;
           value = (flag["type"] as ZodTypeAny).parse(parsedJson);
         } catch (error) {
           if (error instanceof SyntaxError) {
-            throw new Error(
-              `Invalid JSON for flag '${flag["name"]}': ${error.message}`,
-            );
+            throw new Error(`Invalid JSON for flag '${flag["name"]}': ${error.message}`);
           } else {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            throw new Error(
-              `Validation failed for flag '${flag["name"]}': ${errorMessage}`,
-            );
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Validation failed for flag '${flag["name"]}': ${errorMessage}`);
           }
         }
       } else {
@@ -508,8 +482,7 @@ export class ArgParserBase<
         }
       }
 
-      const segment =
-        subIndex === -1 ? remaining : remaining.slice(0, subIndex);
+      const segment = subIndex === -1 ? remaining : remaining.slice(0, subIndex);
       try {
         await currentParser.#parseFlags(segment, {
           skipHelpHandling: true,
@@ -608,8 +581,7 @@ export class ArgParserBase<
       if (!(childParser instanceof ArgParserBase)) continue;
 
       // Check if child wants multiple levels of inheritance
-      const isAllParents =
-        childParser.#inheritParentFlags === FlagInheritance.AllParents;
+      const isAllParents = childParser.#inheritParentFlags === FlagInheritance.AllParents;
 
       if (isAllParents) {
         // Copy flags from 'parser' (which is the parent of childParser) to 'childParser'
@@ -618,9 +590,7 @@ export class ArgParserBase<
 
         for (const parentFlag of parentFlags) {
           if (!childParser.#flagManager.hasFlag(parentFlag["name"])) {
-            childParser.#flagManager._setProcessedFlagForInheritance(
-              parentFlag,
-            );
+            childParser.#flagManager._setProcessedFlagForInheritance(parentFlag);
             flagsAdded = true;
           }
         }
@@ -642,9 +612,7 @@ export class ArgParserBase<
    * @returns The ArgParser instance for chaining.
    */
   setHandler(
-    handler: (
-      ctx: IHandlerContext<any, any>,
-    ) => THandlerReturn | Promise<THandlerReturn>,
+    handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>,
   ): this {
     this.#handler = handler;
     return this;
@@ -662,9 +630,7 @@ export class ArgParserBase<
           const outputObject = this.#_buildRecursiveJson(this);
           const jsonString = JSON.stringify(outputObject, null, 2);
           fs.writeFileSync(filePath, jsonString);
-          this.#logger.info(
-            `ArgParser configuration JSON dumped to: ${filePath}`,
-          );
+          this.#logger.info(`ArgParser configuration JSON dumped to: ${filePath}`);
         } else {
           const outputString = this.#_buildRecursiveString(this, 0);
           const plainText = outputString.replace(
@@ -672,15 +638,10 @@ export class ArgParserBase<
             "",
           );
           fs.writeFileSync(filePath, plainText);
-          this.#logger.info(
-            `ArgParser configuration text dumped to: ${filePath}`,
-          );
+          this.#logger.info(`ArgParser configuration text dumped to: ${filePath}`);
         }
       } catch (error) {
-        this.#logger.error(
-          `Error writing ArgParser configuration to file '${filePath}':`,
-          error,
-        );
+        this.#logger.error(`Error writing ArgParser configuration to file '${filePath}':`, error);
       }
     } else {
       this.#logger.info("\n--- ArgParser Configuration Dump ---");
@@ -722,10 +683,7 @@ export class ArgParserBase<
     }
 
     const subCommandConfig = currentParser.#subCommands.get(subCommandName);
-    if (
-      !subCommandConfig ||
-      !(subCommandConfig.parser instanceof ArgParserBase)
-    ) {
+    if (!subCommandConfig || !(subCommandConfig.parser instanceof ArgParserBase)) {
       throw new Error(
         `Internal error: Subcommand '${subCommandName!}' configuration is invalid or parser is missing.`,
       );
@@ -808,10 +766,7 @@ export class ArgParserBase<
             for (let j = 0; j < processArgs.length; j++) {
               for (const p of parserChain) {
                 for (const f of p.#flagManager.flags) {
-                  if (
-                    f["setWorkingDirectory"] &&
-                    f["options"].includes(processArgs[j])
-                  ) {
+                  if (f["setWorkingDirectory"] && f["options"].includes(processArgs[j])) {
                     allChdirIndices.push({ index: j, flag: processArgs[j] });
                   }
                 }
@@ -848,8 +803,12 @@ export class ArgParserBase<
     options?: IParseOptions,
   ): Promise<boolean | ParseResult> {
     // Resolve working directory FIRST
-    const { finalParser: parserChainParser } =
-      this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+    const { finalParser: parserChainParser } = this.#_identifyCommandChainAndParsers(
+      processArgs,
+      this,
+      [],
+      [this],
+    );
 
     const { effectiveCwd, rootPath } = this.#_resolveWorkingDirectory(
       processArgs,
@@ -893,8 +852,7 @@ export class ArgParserBase<
     // Auto-discovery: Check if we should auto-discover .env files
     // Auto-discover when setWorkingDirectory is set (even without --s-with-env)
     const shouldAutoDiscover =
-      this.#workingDirectoryResolved &&
-      this.#effectiveWorkingDirectory !== this.#rootPath;
+      this.#workingDirectoryResolved && this.#effectiveWorkingDirectory !== this.#rootPath;
 
     if (shouldAutoDiscover) {
       // Auto-discover env file from effective working directory
@@ -924,30 +882,21 @@ export class ArgParserBase<
     if (envFilePath) {
       try {
         // Identify to final parser and parser chain for loading configuration
-        const {
-          finalParser: identifiedFinalParser,
-          parserChain: identifiedParserChain,
-        } = this.#_identifyCommandChainAndParsers(
-          processArgs,
-          this,
-          [],
-          [this],
-        );
+        const { finalParser: identifiedFinalParser, parserChain: identifiedParserChain } =
+          this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
-        const envConfigArgs =
-          identifiedFinalParser.#configurationManager.loadEnvFile(
-            envFilePath,
-            identifiedParserChain,
-          );
+        const envConfigArgs = identifiedFinalParser.#configurationManager.loadEnvFile(
+          envFilePath,
+          identifiedParserChain,
+        );
         if (envConfigArgs) {
           // Merge environment configuration with process args
           // CLI args take precedence over file configuration
-          const mergedArgs =
-            identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
-              envConfigArgs,
-              processArgs,
-              identifiedParserChain,
-            );
+          const mergedArgs = identifiedFinalParser.#configurationManager.mergeEnvConfigWithArgs(
+            envConfigArgs,
+            processArgs,
+            identifiedParserChain,
+          );
 
           // Replace to original processArgs array contents
           processArgs.length = 0;
@@ -963,9 +912,7 @@ export class ArgParserBase<
 
     // Remove --s-with-env flag and its file path argument from processArgs
     // This must be done after merging to avoid interfering with to merge process
-    const finalWithEnvIndex = processArgs.findIndex(
-      (arg) => arg === "--s-with-env",
-    );
+    const finalWithEnvIndex = processArgs.findIndex((arg) => arg === "--s-with-env");
     if (finalWithEnvIndex !== -1) {
       // Check if there's a file path argument after to flag
       if (
@@ -978,17 +925,18 @@ export class ArgParserBase<
       }
     }
 
-    const { finalParser: identifiedFinalParser } =
-      this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+    const { finalParser: identifiedFinalParser } = this.#_identifyCommandChainAndParsers(
+      processArgs,
+      this,
+      [],
+      [this],
+    );
 
     const buildDxtIndex = processArgs.findIndex(
       (arg) => (arg ?? "").toLowerCase() === "--s-build-dxt",
     );
     if (buildDxtIndex !== -1) {
-      const dxtResult = await this.#_handleBuildDxtFlag(
-        processArgs,
-        buildDxtIndex,
-      );
+      const dxtResult = await this.#_handleBuildDxtFlag(processArgs, buildDxtIndex);
       if (dxtResult !== false) {
         return dxtResult === true ? true : dxtResult;
       }
@@ -996,16 +944,11 @@ export class ArgParserBase<
 
     // Handle --s-mcp-serve system flag to start all MCP servers
     debug.log("Checking for --s-mcp-serve flag in args:", processArgs);
-    const mcpServeIndex = processArgs.findIndex(
-      (arg) => arg === "--s-mcp-serve",
-    );
+    const mcpServeIndex = processArgs.findIndex((arg) => arg === "--s-mcp-serve");
     debug.log("mcpServeIndex:", mcpServeIndex);
     if (mcpServeIndex !== -1) {
       debug.log("Found --s-mcp-serve flag, calling handler");
-      const mcpServeResult = await this.#_handleMcpServeFlag(
-        processArgs,
-        mcpServeIndex,
-      );
+      const mcpServeResult = await this.#_handleMcpServeFlag(processArgs, mcpServeIndex);
       debug.log("MCP serve handler returned:", typeof mcpServeResult);
       if (mcpServeResult !== false) {
         return mcpServeResult === true ? true : mcpServeResult;
@@ -1013,14 +956,10 @@ export class ArgParserBase<
     }
 
     if (processArgs.includes("--s-debug")) {
-      console.log(
-        chalk.yellow.bold("\n--- ArgParser --s-debug Runtime Context ---"),
-      );
+      console.log(chalk.yellow.bold("\n--- ArgParser --s-debug Runtime Context ---"));
 
-      const {
-        commandChain: identifiedCommandChain,
-        parserChain: _identifiedParserChain,
-      } = this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
+      const { commandChain: identifiedCommandChain, parserChain: _identifiedParserChain } =
+        this.#_identifyCommandChainAndParsers(processArgs, this, [], [this]);
 
       console.log(
         `Identified Command Chain: ${chalk.cyan(identifiedCommandChain.join(" -> ") || "(root)")}`,
@@ -1043,24 +982,18 @@ export class ArgParserBase<
         currentParser.#subCommands.has(arg),
       );
       const rootArgsSlice =
-        rootSubCommandIndex === -1
-          ? remainingArgs
-          : remainingArgs.slice(0, rootSubCommandIndex);
+        rootSubCommandIndex === -1 ? remainingArgs : remainingArgs.slice(0, rootSubCommandIndex);
       parsingSteps.push({ level: "(root)", argsSlice: rootArgsSlice });
       try {
-        const { parsedArgs: rootParsedArgs } = await currentParser.#parseFlags(
-          rootArgsSlice,
-          { skipHelpHandling: true },
-        );
+        const { parsedArgs: rootParsedArgs } = await currentParser.#parseFlags(rootArgsSlice, {
+          skipHelpHandling: true,
+        });
         parsingSteps[0].parsed = rootParsedArgs;
         accumulatedArgs = { ...accumulatedArgs, ...rootParsedArgs };
       } catch (e: any) {
         parsingSteps[0].error = e.message;
       }
-      remainingArgs =
-        rootSubCommandIndex === -1
-          ? []
-          : remainingArgs.slice(rootSubCommandIndex);
+      remainingArgs = rootSubCommandIndex === -1 ? [] : remainingArgs.slice(rootSubCommandIndex);
 
       for (let i = 0; i < identifiedCommandChain.length; i++) {
         const subCommandName = identifiedCommandChain[i];
@@ -1081,9 +1014,7 @@ export class ArgParserBase<
           currentParser.#subCommands.has(arg),
         );
         const currentLevelArgsSlice =
-          nextSubCommandIndex === -1
-            ? remainingArgs
-            : remainingArgs.slice(0, nextSubCommandIndex);
+          nextSubCommandIndex === -1 ? remainingArgs : remainingArgs.slice(0, nextSubCommandIndex);
         const stepInfo: {
           level: string;
           argsSlice: string[];
@@ -1096,55 +1027,40 @@ export class ArgParserBase<
         parsingSteps.push(stepInfo);
 
         try {
-          const { parsedArgs: currentLevelParsedArgs } =
-            await currentParser.#parseFlags(currentLevelArgsSlice, {
+          const { parsedArgs: currentLevelParsedArgs } = await currentParser.#parseFlags(
+            currentLevelArgsSlice,
+            {
               skipHelpHandling: true,
-            });
+            },
+          );
           stepInfo.parsed = currentLevelParsedArgs;
           accumulatedArgs = { ...accumulatedArgs, ...currentLevelParsedArgs };
         } catch (e: any) {
           stepInfo.error = e.message;
         }
-        remainingArgs =
-          nextSubCommandIndex === -1
-            ? []
-            : remainingArgs.slice(nextSubCommandIndex);
+        remainingArgs = nextSubCommandIndex === -1 ? [] : remainingArgs.slice(nextSubCommandIndex);
       }
 
       this.#logger.info(chalk.yellow("\nParsing Simulation Steps:"));
       parsingSteps.forEach((step) => {
         this.#logger.info(`  Level: ${chalk.cyan(step.level)}`);
-        this.#logger.info(
-          `    Args Slice Considered: ${JSON.stringify(step.argsSlice)}`,
-        );
+        this.#logger.info(`    Args Slice Considered: ${JSON.stringify(step.argsSlice)}`);
         if (step.parsed) {
-          this.#logger.info(
-            `    Parsed Args at this Level: ${JSON.stringify(step.parsed)}`,
-          );
+          this.#logger.info(`    Parsed Args at this Level: ${JSON.stringify(step.parsed)}`);
         }
         if (step.error) {
-          this.#logger.info(
-            `    ${chalk.red("Error during parse simulation:")} ${step.error}`,
-          );
+          this.#logger.info(`    ${chalk.red("Error during parse simulation:")} ${step.error}`);
         }
       });
 
-      this.#logger.info(
-        chalk.yellow(
-          "\nFinal Accumulated Args State (before final validation):",
-        ),
-      );
+      this.#logger.info(chalk.yellow("\nFinal Accumulated Args State (before final validation):"));
       this.#logger.info(JSON.stringify(accumulatedArgs, null, 2));
 
-      this.#logger.info(
-        chalk.yellow("\nArguments Remaining After Simulation:"),
-      );
+      this.#logger.info(chalk.yellow("\nArguments Remaining After Simulation:"));
       this.#logger.info(JSON.stringify(remainingArgs, null, 2));
 
       this.#logger.info(
-        chalk.yellow.bold(
-          "\n--- ArgParser Static Configuration (Final Parser) ---",
-        ),
+        chalk.yellow.bold("\n--- ArgParser Static Configuration (Final Parser) ---"),
       );
       identifiedFinalParser.printAll();
 
@@ -1182,8 +1098,7 @@ export class ArgParserBase<
     }
     // ---- END GUARD FOR identifiedFinalParser ----
 
-    const helpFlagDefinition =
-      identifiedFinalParser.#flagManager.getFlag("help");
+    const helpFlagDefinition = identifiedFinalParser.#flagManager.getFlag("help");
     if (helpFlagDefinition && !options?.skipHelpHandling) {
       const helpOptions = helpFlagDefinition["options"];
 
@@ -1201,9 +1116,7 @@ export class ArgParserBase<
       // }
       // ---- END ADDED DEBUG AND DEFENSIVE CHECK ----
 
-      const helpRequested = processArgs.some((arg) =>
-        helpOptions.includes(arg),
-      );
+      const helpRequested = processArgs.some((arg) => helpOptions.includes(arg));
 
       if (helpRequested) {
         await this.#_preloadDynamicFlagsForHelp(processArgs);
@@ -1248,8 +1161,7 @@ export class ArgParserBase<
 
       for (const flag of parser.#flagManager.flags) {
         // Use FlagManager
-        if (flag["name"] === "help" || checkedFlagNames.has(flag["name"]))
-          continue;
+        if (flag["name"] === "help" || checkedFlagNames.has(flag["name"])) continue;
 
         // Check if this flag is inherited by the immediate child
         let flagIsInheritedByChild = false;
@@ -1282,10 +1194,7 @@ export class ArgParserBase<
 
         if (flag["allowMultiple"]) {
           // For allowMultiple, it's missing if undefined OR an empty array
-          if (
-            value === undefined ||
-            (Array.isArray(value) && value.length === 0)
-          ) {
+          if (value === undefined || (Array.isArray(value) && value.length === 0)) {
             currentFlagIsMissing = true;
           }
         } else {
@@ -1318,17 +1227,11 @@ export class ArgParserBase<
     }
   }
 
-  #_applyDefaultValues(
-    finalArgs: TParsedArgsWithRouting<any>,
-    finalParser: ArgParserBase,
-  ): void {
+  #_applyDefaultValues(finalArgs: TParsedArgsWithRouting<any>, finalParser: ArgParserBase): void {
     for (const flag of finalParser.#flagManager.flags) {
       // Use FlagManager
       const flagName = flag["name"] as string;
-      if (
-        finalArgs[flagName] === undefined &&
-        flag["defaultValue"] !== undefined
-      ) {
+      if (finalArgs[flagName] === undefined && flag["defaultValue"] !== undefined) {
         if (flag["allowMultiple"]) {
           finalArgs[flagName] = Array.isArray(flag["defaultValue"])
             ? flag["defaultValue"]
@@ -1340,10 +1243,7 @@ export class ArgParserBase<
     }
   }
 
-  #_applyEnvFallback(
-    finalArgs: TParsedArgsWithRouting<any>,
-    finalParser: ArgParserBase,
-  ): void {
+  #_applyEnvFallback(finalArgs: TParsedArgsWithRouting<any>, finalParser: ArgParserBase): void {
     for (const flag of finalParser.#flagManager.flags) {
       const flagName = flag["name"] as string;
 
@@ -1369,34 +1269,24 @@ export class ArgParserBase<
 
       if (foundVal !== undefined) {
         try {
-          const typedVal = this.#configurationManager.convertValueToFlagType(
-            foundVal,
-            flag,
-          );
+          const typedVal = this.#configurationManager.convertValueToFlagType(foundVal, flag);
           if (flag["allowMultiple"]) {
             // If allowMultiple, convertValueToFlagType returns array or single.
             // We ensure it's set correctly.
-            finalArgs[flagName] = Array.isArray(typedVal)
-              ? typedVal
-              : [typedVal];
+            finalArgs[flagName] = Array.isArray(typedVal) ? typedVal : [typedVal];
           } else {
             finalArgs[flagName] = typedVal;
           }
         } catch (e) {
           console.warn(
-            chalk.yellow(
-              `Warning: Failed to parse env var for flag '${flagName}': ${e}`,
-            ),
+            chalk.yellow(`Warning: Failed to parse env var for flag '${flagName}': ${e}`),
           );
         }
       }
     }
   }
 
-  #_syncToEnv(
-    finalArgs: TParsedArgsWithRouting<any>,
-    finalParser: ArgParserBase,
-  ): void {
+  #_syncToEnv(finalArgs: TParsedArgsWithRouting<any>, finalParser: ArgParserBase): void {
     for (const flag of finalParser.#flagManager.flags) {
       if (!flag["env"]) continue;
 
@@ -1404,9 +1294,7 @@ export class ArgParserBase<
       const value = finalArgs[flagName];
 
       if (value !== undefined) {
-        const envVars = Array.isArray(flag["env"])
-          ? flag["env"]
-          : [flag["env"]];
+        const envVars = Array.isArray(flag["env"]) ? flag["env"] : [flag["env"]];
         // Convert value to string for Env
         let strVal = "";
         if (typeof value === "object") {
@@ -1438,11 +1326,8 @@ export class ArgParserBase<
       const args = handlerToExecute.context.args || {};
 
       // Try to get the original input arguments from the final args if available
-      const inputArgs =
-        (finalArgs as InternalParsedArgs)._originalInputArgs || "unknown";
-      const inputArgsStr = Array.isArray(inputArgs)
-        ? inputArgs.join(" ")
-        : inputArgs;
+      const inputArgs = (finalArgs as InternalParsedArgs)._originalInputArgs || "unknown";
+      const inputArgsStr = Array.isArray(inputArgs) ? inputArgs.join(" ") : inputArgs;
 
       console.log(
         `[--s-enable-fuzzy] handler() skipped for command chain: ${commandChain.join(" ") || "(root)"}`,
@@ -1460,10 +1345,7 @@ export class ArgParserBase<
       const flagName = flag["name"] as keyof typeof finalArgs;
       if (finalArgs.hasOwnProperty(flagName)) {
         (handlerArgs as any)[flagName] = finalArgs[flagName];
-      } else if (
-        flag["allowMultiple"] &&
-        !handlerArgs.hasOwnProperty(flagName)
-      ) {
+      } else if (flag["allowMultiple"] && !handlerArgs.hasOwnProperty(flagName)) {
         (handlerArgs as any)[flagName] = [];
       }
     }
@@ -1490,19 +1372,13 @@ export class ArgParserBase<
       (finalArgs as InternalParsedArgs).handlerResponse = handlerResult;
 
       // Merge handler result into final args if it's an object
-      if (
-        handlerResult &&
-        typeof handlerResult === "object" &&
-        !Array.isArray(handlerResult)
-      ) {
+      if (handlerResult && typeof handlerResult === "object" && !Array.isArray(handlerResult)) {
         Object.assign(finalArgs, handlerResult);
       }
     } catch (error) {
       // For synchronous handlers, we can handle sync errors
       if (this.#handleErrors) {
-        this.#displayErrorAndExit(
-          new ArgParserError(`Handler error: ${error}`, []),
-        );
+        this.#displayErrorAndExit(new ArgParserError(`Handler error: ${error}`, []));
       } else {
         throw error;
       }
@@ -1544,17 +1420,12 @@ export class ArgParserBase<
 
     // Handle auto-execution: only run if script is executed directly (not imported)
     // Default to true unless explicitly disabled, but only when importMetaUrl is provided
-    const shouldCheckAutoExecution =
-      options?.importMetaUrl && options?.autoExecute !== false;
+    const shouldCheckAutoExecution = options?.importMetaUrl && options?.autoExecute !== false;
     if (shouldCheckAutoExecution) {
-      const isDirectExecution = ArgParserBase.isExecutedDirectly(
-        options.importMetaUrl,
-      );
+      const isDirectExecution = ArgParserBase.isExecutedDirectly(options.importMetaUrl);
       if (!isDirectExecution) {
         // Script is being imported, not executed directly - return early without parsing
-        debug.log(
-          "Auto-execution enabled but script is imported, skipping execution",
-        );
+        debug.log("Auto-execution enabled but script is imported, skipping execution");
         return {} as TParsedArgsWithRouting<any>;
       }
     }
@@ -1562,11 +1433,7 @@ export class ArgParserBase<
     // Handle automatic argument detection when no arguments provided
     if (processArgs === undefined) {
       // Check if we're in a Node.js environment
-      if (
-        typeof process !== "undefined" &&
-        process.argv &&
-        Array.isArray(process.argv)
-      ) {
+      if (typeof process !== "undefined" && process.argv && Array.isArray(process.argv)) {
         processArgs = process.argv.slice(2);
       } else {
         // Not in Node.js environment, throw an error
@@ -1605,15 +1472,10 @@ export class ArgParserBase<
       } as TParsedArgsWithRouting<any>;
     }
 
-    const globalCheckResult = await this.#_handleGlobalChecks(
-      processArgs,
-      options,
-    );
+    const globalCheckResult = await this.#_handleGlobalChecks(processArgs, options);
     if (globalCheckResult !== false) {
       // If it's a ParseResult, return it; otherwise return empty object for backward compatibility
-      return globalCheckResult === true
-        ? ({} as TParsedArgsWithRouting<any>)
-        : globalCheckResult;
+      return globalCheckResult === true ? ({} as TParsedArgsWithRouting<any>) : globalCheckResult;
     }
 
     try {
@@ -1628,9 +1490,7 @@ export class ArgParserBase<
         identifiedParserChain,
       );
       if (saveToEnvResult !== false) {
-        return saveToEnvResult === true
-          ? ({} as TParsedArgsWithRouting<any>)
-          : saveToEnvResult;
+        return saveToEnvResult === true ? ({} as TParsedArgsWithRouting<any>) : saveToEnvResult;
       }
 
       const { finalArgs, handlerToExecute } = await this._parseRecursive(
@@ -1653,20 +1513,12 @@ export class ArgParserBase<
 
       // Skip mandatory flag validation in fuzzy mode
       if (!this.#fuzzyMode) {
-        this.#_validateMandatoryFlags(
-          finalArgs,
-          identifiedParserChain,
-          identifiedCommandChain,
-        );
+        this.#_validateMandatoryFlags(finalArgs, identifiedParserChain, identifiedCommandChain);
       }
 
       this.#_applyDefaultValues(finalArgs, identifiedFinalParser);
 
-      this.#_prepareAndExecuteHandler(
-        handlerToExecute,
-        finalArgs,
-        options?.skipHandlers ?? false,
-      );
+      this.#_prepareAndExecuteHandler(handlerToExecute, finalArgs, options?.skipHandlers ?? false);
 
       // Handle deep option for async handlers (default: true)
       const shouldAwaitHandlers = options?.deep !== false;
@@ -1676,11 +1528,7 @@ export class ArgParserBase<
           finalArgs.handlerResponse = handlerResult;
 
           // Merge handler result into final args if it's an object
-          if (
-            handlerResult &&
-            typeof handlerResult === "object" &&
-            !Array.isArray(handlerResult)
-          ) {
+          if (handlerResult && typeof handlerResult === "object" && !Array.isArray(handlerResult)) {
             Object.assign(finalArgs, handlerResult);
           }
 
@@ -1690,9 +1538,7 @@ export class ArgParserBase<
         } catch (error) {
           // Handle async handler errors - respect the handleErrors setting
           if (this.#handleErrors) {
-            this.#displayErrorAndExit(
-              new ArgParserError(`Handler error: ${error}`, []),
-            );
+            this.#displayErrorAndExit(new ArgParserError(`Handler error: ${error}`, []));
           } else {
             throw error;
           }
@@ -1705,9 +1551,7 @@ export class ArgParserBase<
         if (this.#handleErrors) {
           const errorResult = this.#displayErrorAndExit(error);
           // If autoExit is false, return the ParseResult; otherwise return empty object
-          return this.#autoExit
-            ? ({} as TParsedArgsWithRouting<any>)
-            : errorResult;
+          return this.#autoExit ? ({} as TParsedArgsWithRouting<any>) : errorResult;
         } else {
           throw error;
         }
@@ -1757,13 +1601,13 @@ export class ArgParserBase<
 
     // Determine which arguments belong to the current parser level
     const argsForCurrentLevel =
-      subCommandIndex === -1
-        ? argsToParse
-        : argsToParse.slice(0, subCommandIndex);
+      subCommandIndex === -1 ? argsToParse : argsToParse.slice(0, subCommandIndex);
 
     // Parse flags for the current level using #parseFlags
-    const { parsedArgs: currentLevelArgs, firstUnconsumedIndex } =
-      await currentParser.#parseFlags(argsForCurrentLevel, options);
+    const { parsedArgs: currentLevelArgs, firstUnconsumedIndex } = await currentParser.#parseFlags(
+      argsForCurrentLevel,
+      options,
+    );
 
     // Apply environment variables fallback
     // Priority: CLI Flag > Env Var > Default Value
@@ -1796,8 +1640,7 @@ export class ArgParserBase<
         finalParseResultArgs["$commandChain"] = commandChainSoFar;
       }
 
-      let handlerToExecute: RecursiveParseResult["handlerToExecute"] =
-        undefined;
+      let handlerToExecute: RecursiveParseResult["handlerToExecute"] = undefined;
       // Create context with displayHelp implementation
       const handlerContext: IHandlerContext<any, any> = {
         args: currentLevelArgs,
@@ -1847,10 +1690,7 @@ export class ArgParserBase<
     }
 
     const subCommandConfig = currentParser.#subCommands.get(subCommandName!);
-    if (
-      !subCommandConfig ||
-      !(subCommandConfig.parser instanceof ArgParserBase)
-    ) {
+    if (!subCommandConfig || !(subCommandConfig.parser instanceof ArgParserBase)) {
       // This should ideally not be reached if addSubCommand validated the parser instance
       throw new ArgParserError(
         `Internal error: Subcommand '${subCommandName!}' is misconfigured or its parser is not a valid ArgParser instance.`,
@@ -1890,10 +1730,7 @@ export class ArgParserBase<
     );
     if (dynamicCandidates.length > 0) {
       const loaderOutput: TParsedArgs<ProcessedFlag[]> = Object.fromEntries(
-        dynamicCandidates.map((f) => [
-          f["name"],
-          f["allowMultiple"] ? [] : undefined,
-        ]),
+        dynamicCandidates.map((f) => [f["name"], f["allowMultiple"] ? [] : undefined]),
       ) as TParsedArgs<ProcessedFlag[]>;
       const tmpConsumed = new Set<number>();
 
@@ -1901,21 +1738,14 @@ export class ArgParserBase<
       for (const flagToCheck of dynamicCandidates) {
         if (flagToCheck["allowLigature"] && !flagToCheck["flagOnly"]) {
           const regex = createRegExp(
-            anyOf(
-              ...flagToCheck["options"].map((option: string) => `${option}=`),
-            ),
+            anyOf(...flagToCheck["options"].map((option: string) => `${option}=`)),
             oneOrMore(char).groupedAs("arg"),
           );
           for (let i = 0; i < args.length; i++) {
             if (tmpConsumed.has(i)) continue;
             const matches = regex.exec(`${args[i]}`);
             if (matches?.groups?.["arg"]) {
-              await this._addToOutput(
-                flagToCheck,
-                matches.groups["arg"],
-                loaderOutput,
-                options,
-              );
+              await this._addToOutput(flagToCheck, matches.groups["arg"], loaderOutput, options);
               tmpConsumed.add(i);
               if (!flagToCheck["allowMultiple"]) break;
             }
@@ -1931,19 +1761,13 @@ export class ArgParserBase<
           const nextIndex = index + 1;
           const nextValueExists = nextIndex < args.length;
           const nextValue = nextValueExists ? args[nextIndex] : undefined;
-          const nextValueIsFlag =
-            typeof nextValue === "string" && nextValue.startsWith("-");
+          const nextValueIsFlag = typeof nextValue === "string" && nextValue.startsWith("-");
           if (flagToCheck["options"].includes(value)) {
             tmpConsumed.add(index);
             if (flagToCheck["flagOnly"]) {
               await this._addToOutput(flagToCheck, true, loaderOutput, options);
             } else if (nextValueExists && !nextValueIsFlag) {
-              await this._addToOutput(
-                flagToCheck,
-                nextValue,
-                loaderOutput,
-                options,
-              );
+              await this._addToOutput(flagToCheck, nextValue, loaderOutput, options);
               tmpConsumed.add(nextIndex);
             } else if (flagToCheck["type"] === Boolean) {
               await this._addToOutput(flagToCheck, true, loaderOutput, options);
@@ -1977,10 +1801,7 @@ export class ArgParserBase<
             forHelp: !!options?.dynamicHelpPreload,
             registerFlags,
           });
-          const awaited =
-            maybe && typeof (maybe as any).then === "function"
-              ? await maybe
-              : maybe;
+          const awaited = maybe && typeof (maybe as any).then === "function" ? await maybe : maybe;
           if (Array.isArray(awaited)) registerFlags(awaited);
         }
       }
@@ -1990,10 +1811,7 @@ export class ArgParserBase<
     }
 
     const output: TParsedArgs<ProcessedFlag[]> = Object.fromEntries(
-      flags.map((flag) => [
-        flag["name"],
-        flag["allowMultiple"] ? [] : undefined,
-      ]),
+      flags.map((flag) => [flag["name"], flag["allowMultiple"] ? [] : undefined]),
     ) as TParsedArgs<ProcessedFlag[]>;
 
     let consumedIndices = new Set<number>();
@@ -2001,9 +1819,7 @@ export class ArgParserBase<
     for (const flagToCheck of flags) {
       if (flagToCheck["allowLigature"] && !flagToCheck["flagOnly"]) {
         const regex = createRegExp(
-          anyOf(
-            ...flagToCheck["options"].map((option: string) => `${option}=`),
-          ),
+          anyOf(...flagToCheck["options"].map((option: string) => `${option}=`)),
           oneOrMore(char).groupedAs("arg"),
         );
         for (let i = 0; i < args.length; i++) {
@@ -2011,12 +1827,7 @@ export class ArgParserBase<
           const itemToCheck = args[i];
           const matches = regex.exec(`${itemToCheck}`);
           if (matches?.groups?.["arg"]) {
-            await this._addToOutput(
-              flagToCheck,
-              matches?.groups?.["arg"],
-              output,
-              options,
-            );
+            await this._addToOutput(flagToCheck, matches?.groups?.["arg"], output, options);
             consumedIndices.add(i);
             if (!flagToCheck["allowMultiple"]) break;
           }
@@ -2032,8 +1843,7 @@ export class ArgParserBase<
         const nextIndex = index + 1;
         const nextValueExists = nextIndex < args.length;
         const nextValue = nextValueExists ? args[nextIndex] : undefined;
-        const nextValueIsFlag =
-          typeof nextValue === "string" && nextValue.startsWith("-");
+        const nextValueIsFlag = typeof nextValue === "string" && nextValue.startsWith("-");
 
         if (flagToCheck["options"].includes(value)) {
           // Mark the flag itself as consumed immediately
@@ -2067,10 +1877,7 @@ export class ArgParserBase<
 
     // Get flags with positional property, sorted by positional index
     const positionalFlags = flags
-      .filter(
-        (f: ProcessedFlag) =>
-          typeof f["positional"] === "number" && f["positional"] > 0,
-      )
+      .filter((f: ProcessedFlag) => typeof f["positional"] === "number" && f["positional"] > 0)
       .sort(
         (a: ProcessedFlag, b: ProcessedFlag) =>
           (a["positional"] as number) - (b["positional"] as number),
@@ -2124,9 +1931,7 @@ export class ArgParserBase<
       rootAppName = current.#appName;
     }
 
-    const helpTitle = this.#subCommandName
-      ? `${rootAppName} ${this.#subCommandName}`
-      : rootAppName;
+    const helpTitle = this.#subCommandName ? `${rootAppName} ${this.#subCommandName}` : rootAppName;
 
     let help = `${cyan(`${helpTitle} Help`)} (${this.#parameters.mandatoryCharacter} = Mandatory fields):\n\n`;
 
@@ -2144,22 +1949,17 @@ export class ArgParserBase<
 
     // Build usage pattern with positional args
     const positionalFlagsForUsage = this.#flagManager.flags
-      .filter(
-        (f: ProcessedFlag) =>
-          typeof f["positional"] === "number" && f["positional"] > 0,
-      )
+      .filter((f: ProcessedFlag) => typeof f["positional"] === "number" && f["positional"] > 0)
       .sort(
         (a: ProcessedFlag, b: ProcessedFlag) =>
           (a["positional"] as number) - (b["positional"] as number),
       );
 
     if (positionalFlagsForUsage.length > 0) {
-      const commandName =
-        this.#subCommandName || this.#appCommandName || this.#appName;
+      const commandName = this.#subCommandName || this.#appCommandName || this.#appName;
       const posArgs = positionalFlagsForUsage
         .map((f: ProcessedFlag) => {
-          const isMandatory =
-            typeof f["mandatory"] === "function" ? true : f["mandatory"];
+          const isMandatory = typeof f["mandatory"] === "function" ? true : f["mandatory"];
           const argName = (f as any)["valueHint"] || f["name"].toUpperCase();
           return isMandatory ? `<${argName}>` : `[${argName}]`;
         })
@@ -2202,13 +2002,9 @@ export class ArgParserBase<
           if (subFlags.length > 0) {
             subHelp += `\n${indent(2)}${dim("Flags:")}`;
             subFlags
-              .sort((a: ProcessedFlag, b: ProcessedFlag) =>
-                a["name"].localeCompare(b["name"]),
-              )
+              .sort((a: ProcessedFlag, b: ProcessedFlag) => a["name"].localeCompare(b["name"]))
               .forEach((f: ProcessedFlag) => {
-                const flagOptions = f["options"]
-                  .map((opt: string) => green(opt))
-                  .join(", ");
+                const flagOptions = f["options"].map((opt: string) => green(opt)).join(", ");
                 const flagDesc = Array.isArray(f["description"])
                   ? f["description"][0]
                   : f["description"];
@@ -2218,9 +2014,7 @@ export class ArgParserBase<
             subHelp += `\n${indent(2)}${dim("Flags:")} none`;
           }
 
-          const subSubCommandNames = Array.from(
-            actualSubParserInstance.#subCommands.keys(),
-          ); // Get keys from actualSubParserInstance's Map
+          const subSubCommandNames = Array.from(actualSubParserInstance.#subCommands.keys()); // Get keys from actualSubParserInstance's Map
           if (subSubCommandNames.length > 0) {
             subHelp += `\n${indent(2)}${dim("Sub-commands:")} ${subSubCommandNames.join(", ")}`;
           } else {
@@ -2245,8 +2039,7 @@ export class ArgParserBase<
             .sort((a: string, b: string) => a.length - b.length) // Sort by length (shortest first)
             .map((opt: string) => green(opt))
             .join(", ");
-          const isMandatory =
-            typeof flag.mandatory === "function" ? "dynamic" : flag.mandatory;
+          const isMandatory = typeof flag.mandatory === "function" ? "dynamic" : flag.mandatory;
           const mandatoryIndicator =
             isMandatory === true
               ? ` ${red(this.#parameters.mandatoryCharacter || "*")}`
@@ -2278,8 +2071,7 @@ export class ArgParserBase<
 
               // In Zod v4, check for object shape directly (typeName might be undefined)
               if (def.shape) {
-                const shape =
-                  typeof def.shape === "function" ? def.shape() : def.shape;
+                const shape = typeof def.shape === "function" ? def.shape() : def.shape;
                 const properties = Object.keys(shape);
                 if (properties.length > 0) {
                   if (properties.length <= 4) {
@@ -2316,10 +2108,7 @@ export class ArgParserBase<
           {
             let isRepeatable = false;
             try {
-              if (
-                typeof flag["type"] === "function" &&
-                flag["type"].name === "Array"
-              ) {
+              if (typeof flag["type"] === "function" && flag["type"].name === "Array") {
                 isRepeatable = true;
               }
               const maybeZodSchema = flag["type"] as ZodTypeAny;
@@ -2335,8 +2124,7 @@ export class ArgParserBase<
             } catch {}
 
             const primaryOpt =
-              flag["options"].find((o: string) => o.startsWith("--")) ??
-              flag["options"][0];
+              flag["options"].find((o: string) => o.startsWith("--")) ?? flag["options"][0];
             const valueHint = (flag as any)["valueHint"] as string | undefined;
 
             if (!flag["flagOnly"]) {
@@ -2344,9 +2132,7 @@ export class ArgParserBase<
                 metaLines.push("Multiple values allowed (repeat flag)");
                 const v1 = valueHint ?? "value1";
                 const v2 = valueHint ?? "value2";
-                metaLines.push(
-                  `Example: ${primaryOpt} ${v1} ${primaryOpt} ${v2}`,
-                );
+                metaLines.push(`Example: ${primaryOpt} ${v1} ${primaryOpt} ${v2}`);
               } else {
                 const v = valueHint ?? "value";
                 metaLines.push(`Example: ${primaryOpt} ${v}`);
@@ -2362,33 +2148,22 @@ export class ArgParserBase<
           if (flag["flagOnly"]) {
             metaLines.push("Flag only (no value expected)");
           }
-          if (
-            flag["defaultValue"] !== undefined &&
-            flag["defaultValue"] !== null
-          ) {
+          if (flag["defaultValue"] !== undefined && flag["defaultValue"] !== null) {
             metaLines.push(`Default: ${JSON.stringify(flag["defaultValue"])}`);
           }
           if (flag["enum"] && flag["enum"].length > 0) {
-            metaLines.push(
-              `Allowed values: ${flag["enum"].map((v: any) => `'${v}'`).join(", ")}`,
-            );
+            metaLines.push(`Allowed values: ${flag["enum"].map((v: any) => `'${v}'`).join(", ")}`);
           }
           // Add positional indicator
-          if (
-            typeof flag["positional"] === "number" &&
-            flag["positional"] > 0
-          ) {
+          if (typeof flag["positional"] === "number" && flag["positional"] > 0) {
             metaLines.push(`Positional argument #${flag["positional"]}`);
           }
 
           const maxOptionLength = Math.max(
-            ...localFlags.map(
-              (f: ProcessedFlag) => f["options"].join(", ").length,
-            ),
+            ...localFlags.map((f: ProcessedFlag) => f["options"].join(", ").length),
             0,
           );
-          const formattedOptions =
-            optionsText.padEnd(maxOptionLength + 5) + mandatoryIndicator;
+          const formattedOptions = optionsText.padEnd(maxOptionLength + 5) + mandatoryIndicator;
 
           return `
 ${indent()}${formattedOptions}
@@ -2465,20 +2240,14 @@ ${descriptionLines
       commandNameToSuggest = this.#appCommandName;
     } else if (this.#appName && this.#appName !== "Argument Parser") {
       commandNameToSuggest = this.#appName;
-    } else if (
-      typeof process !== "undefined" &&
-      process.argv &&
-      process.argv[1]
-    ) {
+    } else if (typeof process !== "undefined" && process.argv && process.argv[1]) {
       try {
         commandNameToSuggest = path.basename(process.argv[1]);
       } catch {}
     }
 
     this.#logger.error(`\n${chalk.red.bold("Error:")} ${error.message}`);
-    this.#logger.error(
-      `\n${chalk.dim(`Try '${commandNameToSuggest} --help' for usage details.`)}`,
-    );
+    this.#logger.error(`\n${chalk.dim(`Try '${commandNameToSuggest} --help' for usage details.`)}`);
 
     if (this.#autoExit) {
       if (typeof process === "object" && typeof process.exit === "function") {
@@ -2518,25 +2287,17 @@ ${descriptionLines
       `${flagIndent}appCommandName: ${parser.#appCommandName ?? chalk.dim("undefined")}`,
     );
     this.#logger.info(`${flagIndent}handleErrors: ${parser.#handleErrors}`);
-    this.#logger.info(
-      `${flagIndent}throwForDuplicateFlags: ${parser.#throwForDuplicateFlags}`,
-    );
-    this.#logger.info(
-      `${flagIndent}inheritParentFlags: ${parser.#inheritParentFlags}`,
-    );
+    this.#logger.info(`${flagIndent}throwForDuplicateFlags: ${parser.#throwForDuplicateFlags}`);
+    this.#logger.info(`${flagIndent}inheritParentFlags: ${parser.#inheritParentFlags}`);
     this.#logger.info(`${flagIndent}Handler Defined: ${!!parser.#handler}`);
-    this.#logger.info(
-      `${subIndent}Internal Params: ${JSON.stringify(parser.#parameters)}`,
-    );
+    this.#logger.info(`${subIndent}Internal Params: ${JSON.stringify(parser.#parameters)}`);
 
     const flags = parser.#flagManager.flags;
     if (flags.length > 0) {
       this.#logger.info(`${subIndent}Flags (${flags.length}):`);
       flags.forEach((flag: ProcessedFlag) => {
         this.#logger.info(`${flagIndent}* ${chalk.green(flag["name"])}:`);
-        this.#logger.info(
-          `${flagIndent}  Options: ${flag["options"].join(", ")}`,
-        );
+        this.#logger.info(`${flagIndent}  Options: ${flag["options"].join(", ")}`);
         this.#logger.info(
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
@@ -2546,22 +2307,14 @@ ${descriptionLines
         this.#logger.info(
           `${flagIndent}  Mandatory: ${typeof flag["mandatory"] === "function" ? "dynamic" : (flag["mandatory"] ?? false)}`,
         );
-        this.#logger.info(
-          `${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`,
-        );
+        this.#logger.info(`${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`);
         this.#logger.info(`${flagIndent}  Flag Only: ${flag["flagOnly"]}`);
-        this.#logger.info(
-          `${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`,
-        );
-        this.#logger.info(
-          `${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`,
-        );
+        this.#logger.info(`${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`);
+        this.#logger.info(`${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`);
         this.#logger.info(
           `${flagIndent}  Enum: ${flag["enum"] && flag["enum"].length > 0 ? flag["enum"].join(", ") : "none"}`,
         );
-        this.#logger.info(
-          `${flagIndent}  Validator Defined: ${!!flag["validate"]}`,
-        );
+        this.#logger.info(`${flagIndent}  Validator Defined: ${!!flag["validate"]}`);
       });
     } else {
       this.#logger.info(`${subIndent}Flags: ${chalk.dim("none")}`);
@@ -2569,9 +2322,7 @@ ${descriptionLines
 
     const subCommandParsers = Array.from(parser.#subCommands.values());
     if (subCommandParsers.length > 0) {
-      this.#logger.info(
-        `${subIndent}Sub-Commands (${subCommandParsers.length}):`,
-      );
+      this.#logger.info(`${subIndent}Sub-Commands (${subCommandParsers.length}):`);
       subCommandParsers.forEach((subCommand: any) => {
         this.#_printRecursiveToConsole(subCommand.parser, level + 1, visited);
       });
@@ -2606,18 +2357,12 @@ ${descriptionLines
     }
     addLine(`${subIndent}Options:`);
     addLine(`${flagIndent}appName: ${parser.#appName}`);
-    addLine(
-      `${flagIndent}appCommandName: ${parser.#appCommandName ?? "undefined"}`,
-    );
+    addLine(`${flagIndent}appCommandName: ${parser.#appCommandName ?? "undefined"}`);
     addLine(`${flagIndent}handleErrors: ${parser.#handleErrors}`);
-    addLine(
-      `${flagIndent}throwForDuplicateFlags: ${parser.#throwForDuplicateFlags}`,
-    );
+    addLine(`${flagIndent}throwForDuplicateFlags: ${parser.#throwForDuplicateFlags}`);
     addLine(`${flagIndent}inheritParentFlags: ${parser.#inheritParentFlags}`);
     addLine(`${flagIndent}Handler Defined: ${!!parser.#handler}`);
-    addLine(
-      `${subIndent}Internal Params: ${JSON.stringify(parser.#parameters)}`,
-    );
+    addLine(`${subIndent}Internal Params: ${JSON.stringify(parser.#parameters)}`);
 
     const flags = parser.#flagManager.flags;
     if (flags.length > 0) {
@@ -2629,11 +2374,7 @@ ${descriptionLines
           `${flagIndent}  Description: ${Array.isArray(flag["description"]) ? flag["description"].join(" | ") : flag["description"]}`,
         );
         let typeName = "unknown";
-        if (
-          flag["type"] &&
-          typeof flag["type"] === "object" &&
-          (flag["type"] as any)._def
-        ) {
+        if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
           typeName = "Zod schema";
         } else if (typeof flag["type"] === "function") {
           typeName = flag["type"].name || "custom function";
@@ -2650,9 +2391,7 @@ ${descriptionLines
         addLine(
           `${flagIndent}  Mandatory: ${typeof flag["mandatory"] === "function" ? "dynamic" : (flag["mandatory"] ?? false)}`,
         );
-        addLine(
-          `${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`,
-        );
+        addLine(`${flagIndent}  Default: ${JSON.stringify(flag["defaultValue"])}`);
         addLine(`${flagIndent}  Flag Only: ${flag["flagOnly"]}`);
         addLine(`${flagIndent}  Allow Multiple: ${flag["allowMultiple"]}`);
         addLine(`${flagIndent}  Allow Ligature: ${flag["allowLigature"]}`);
@@ -2669,11 +2408,7 @@ ${descriptionLines
     if (subCommandParsers.length > 0) {
       addLine(`${subIndent}Sub-Commands (${subCommandParsers.length}):`);
       subCommandParsers.forEach((subCommand: any) => {
-        output += this.#_buildRecursiveString(
-          subCommand.parser,
-          level + 1,
-          visited,
-        );
+        output += this.#_buildRecursiveString(subCommand.parser, level + 1, visited);
       });
     } else {
       addLine(`${subIndent}Sub-Commands: none`);
@@ -2681,10 +2416,7 @@ ${descriptionLines
     return output;
   }
 
-  #_buildRecursiveJson(
-    parser: ArgParserBase,
-    visited = new Set<ArgParserBase>(),
-  ): object {
+  #_buildRecursiveJson(parser: ArgParserBase, visited = new Set<ArgParserBase>()): object {
     if (visited.has(parser))
       return {
         note: `Reference to already processed parser: ${parser.#subCommandName || parser.#appName}`,
@@ -2710,11 +2442,7 @@ ${descriptionLines
     const flags = parser.#flagManager.flags;
     config.flags = flags.map((flag: ProcessedFlag) => {
       let typeName = "unknown";
-      if (
-        flag["type"] &&
-        typeof flag["type"] === "object" &&
-        (flag["type"] as any)._def
-      ) {
+      if (flag["type"] && typeof flag["type"] === "object" && (flag["type"] as any)._def) {
         typeName = "Zod schema";
       } else if (typeof flag["type"] === "function") {
         typeName = flag["type"].name || "custom function";
@@ -2734,9 +2462,7 @@ ${descriptionLines
         description: flag["description"],
         type: typeName,
         mandatory:
-          typeof flag["mandatory"] === "function"
-            ? "dynamic"
-            : (flag["mandatory"] ?? false),
+          typeof flag["mandatory"] === "function" ? "dynamic" : (flag["mandatory"] ?? false),
         defaultValue: flag["defaultValue"],
         flagOnly: flag["flagOnly"],
         allowMultiple: flag["allowMultiple"],
@@ -2749,10 +2475,7 @@ ${descriptionLines
     const subCommands = Array.from(parser.#subCommands.values());
     if (subCommands.length > 0) {
       subCommands.forEach((sub: any) => {
-        config.subCommands[sub.name] = this.#_buildRecursiveJson(
-          sub.parser,
-          visited,
-        );
+        config.subCommands[sub.name] = this.#_buildRecursiveJson(sub.parser, visited);
       });
     }
 
@@ -2766,11 +2489,7 @@ ${descriptionLines
    */
   addMcpResource(config: McpResourceConfig): this {
     this.#mcpResourcesManager.addResource(config);
-    this.#mcpNotificationsManager.notifyChange(
-      "resources",
-      "added",
-      config.name,
-    );
+    this.#mcpNotificationsManager.notifyChange("resources", "added", config.name);
     return this;
   }
 
@@ -2823,11 +2542,7 @@ ${descriptionLines
    * Add a change listener for MCP entities
    */
   onMcpChange(
-    listener: (event: {
-      type: McpChangeType;
-      action: string;
-      entityName?: string;
-    }) => void,
+    listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void,
   ): this {
     this.#mcpNotificationsManager.addGlobalListener(listener);
     return this;
@@ -2837,11 +2552,7 @@ ${descriptionLines
    * Remove a change listener for MCP entities
    */
   offMcpChange(
-    listener: (event: {
-      type: McpChangeType;
-      action: string;
-      entityName?: string;
-    }) => void,
+    listener: (event: { type: McpChangeType; action: string; entityName?: string }) => void,
   ): this {
     this.#mcpNotificationsManager.removeGlobalListener(listener);
     return this;
@@ -2876,26 +2587,15 @@ ${descriptionLines
     parserChain: ArgParserBase[],
   ): boolean | ParseResult {
     try {
-      const result = this.#configurationManager.handleSaveToEnvFlag(
-        processArgs,
-        parserChain,
-      );
+      const result = this.#configurationManager.handleSaveToEnvFlag(processArgs, parserChain);
       if (result) {
         // Configuration was saved successfully
-        return this._handleExit(
-          0,
-          "Configuration saved successfully",
-          "success",
-        );
+        return this._handleExit(0, "Configuration saved successfully", "success");
       }
       return result;
     } catch (error) {
       // Configuration save failed
-      return this._handleExit(
-        1,
-        error instanceof Error ? error.message : String(error),
-        "error",
-      );
+      return this._handleExit(1, error instanceof Error ? error.message : String(error), "error");
     }
   }
 
@@ -2906,10 +2606,7 @@ ${descriptionLines
     processArgs: string[],
     buildDxtIndex: number,
   ): Promise<boolean | ParseResult> {
-    return await this.#dxtGenerator.handleBuildDxtFlag(
-      processArgs,
-      buildDxtIndex,
-    );
+    return await this.#dxtGenerator.handleBuildDxtFlag(processArgs, buildDxtIndex);
   }
 
   /**
@@ -2949,10 +2646,7 @@ ${descriptionLines
       debug.log("Successfully imported simple-mcp-logger");
 
       // Resolve logger configuration from MCP server config
-      const loggerConfig = this.#_resolveLoggerConfigForServe(
-        mcpServerConfig,
-        resolvedLogPath,
-      );
+      const loggerConfig = this.#_resolveLoggerConfigForServe(mcpServerConfig, resolvedLogPath);
 
       if (typeof loggerConfig === "string") {
         mcpLogger = mcpLoggerModule.createMcpLogger("MCP Serve", loggerConfig);
@@ -2988,11 +2682,7 @@ ${descriptionLines
         mcpLogger.mcpError(
           "No MCP server configuration found. Use withMcp() or addMcpSubCommand() to configure MCP server.",
         );
-        return this._handleExit(
-          1,
-          "No MCP server configuration found",
-          "error",
-        );
+        return this._handleExit(1, "No MCP server configuration found", "error");
       }
 
       mcpLogger.mcpError(
@@ -3001,9 +2691,7 @@ ${descriptionLines
 
       mcpLogger.mcpError(`Using log path: ${resolvedLogPath}`);
 
-      mcpLogger.mcpError(
-        `Transport options: ${JSON.stringify(transportOptions)}`,
-      );
+      mcpLogger.mcpError(`Transport options: ${JSON.stringify(transportOptions)}`);
 
       // Start the unified MCP server
       try {
@@ -3026,9 +2714,7 @@ ${descriptionLines
         );
       }
 
-      mcpLogger.mcpError(
-        "MCP server started successfully, keeping process alive",
-      );
+      mcpLogger.mcpError("MCP server started successfully, keeping process alive");
 
       // Keep the process alive indefinitely
       return new Promise(() => {});
@@ -3053,10 +2739,7 @@ ${descriptionLines
    * @param resolvedLogPath Resolved log path from CLI flags and config priority
    * @returns Logger configuration object or string path
    */
-  #_resolveLoggerConfigForServe(
-    mcpServerConfig: any,
-    resolvedLogPath: string,
-  ): any {
+  #_resolveLoggerConfigForServe(mcpServerConfig: any, resolvedLogPath: string): any {
     // Priority 1: CLI flag override (already resolved in resolvedLogPath)
     // Priority 2: New 'log' configuration from withMcp
     if (mcpServerConfig?.log) {
@@ -3093,9 +2776,7 @@ ${descriptionLines
   #_getMcpServerConfiguration(): any {
     // First, check if this is an ArgParser instance with withMcp() configuration
     if ((this as unknown as IMcpServerMethods).getMcpServerConfig) {
-      const mcpConfig = (
-        this as unknown as IMcpServerMethods
-      ).getMcpServerConfig();
+      const mcpConfig = (this as unknown as IMcpServerMethods).getMcpServerConfig();
       if (mcpConfig) {
         return mcpConfig;
       }
@@ -3147,8 +2828,7 @@ ${descriptionLines
       );
     }
 
-    const { serverInfo, toolOptions, defaultTransports, defaultTransport } =
-      mcpServerConfig;
+    const { serverInfo, toolOptions, defaultTransports, defaultTransport } = mcpServerConfig;
 
     // Determine which transport configuration to use - CLI flags take precedence over programmatic defaults
     if (transportOptions.transports) {
@@ -3168,10 +2848,7 @@ ${descriptionLines
       }
     } else if (transportOptions.transportType) {
       // Single transport specified via CLI flags - takes precedence over programmatic defaults
-      const transportType = transportOptions.transportType as
-        | "stdio"
-        | "sse"
-        | "streamable-http";
+      const transportType = transportOptions.transportType as "stdio" | "sse" | "streamable-http";
       const finalTransportOptions = {
         port: transportOptions.port,
         host: transportOptions.host || "localhost",
@@ -3250,9 +2927,7 @@ ${descriptionLines
     // Recursively check child parsers
     for (const [_name, subCommand] of this.#subCommands.entries()) {
       if (subCommand.parser) {
-        const childMcpCommands = (
-          subCommand.parser as ArgParserBase
-        ).#_findAllMcpSubCommands();
+        const childMcpCommands = (subCommand.parser as ArgParserBase).#_findAllMcpSubCommands();
         mcpSubCommands.push(...childMcpCommands);
       }
     }
@@ -3354,9 +3029,7 @@ ${descriptionLines
         case "--host":
         case "--path":
         case "--transports":
-          console.warn(
-            `Warning: ${arg} is deprecated. Use --s-mcp-${arg.slice(2)} instead.`,
-          );
+          console.warn(`Warning: ${arg} is deprecated. Use --s-mcp-${arg.slice(2)} instead.`);
           // Fall through to handle the old flag for now
           if (arg === "--transport" && nextArg && !nextArg.startsWith("-")) {
             options.transportType = nextArg;
@@ -3370,11 +3043,7 @@ ${descriptionLines
           } else if (arg === "--path" && nextArg && !nextArg.startsWith("-")) {
             options.path = nextArg;
             i++;
-          } else if (
-            arg === "--transports" &&
-            nextArg &&
-            !nextArg.startsWith("-")
-          ) {
+          } else if (arg === "--transports" && nextArg && !nextArg.startsWith("-")) {
             options.transports = nextArg;
             i++;
           }

@@ -141,9 +141,7 @@ VERBOSE=true
 
     test("should throw error for invalid JSON", () => {
       const content = "{ invalid json }";
-      expect(() => configManager.parseJsonFile(content)).toThrow(
-        "Failed to parse JSON",
-      );
+      expect(() => configManager.parseJsonFile(content)).toThrow("Failed to parse JSON");
     });
   });
 
@@ -162,9 +160,9 @@ VERBOSE=true
 
     test("should throw error for invalid number", () => {
       const flag = { name: "test", type: "number" };
-      expect(() =>
-        configManager.convertValueToFlagType("not-a-number", flag),
-      ).toThrow("Cannot convert");
+      expect(() => configManager.convertValueToFlagType("not-a-number", flag)).toThrow(
+        "Cannot convert",
+      );
     });
 
     test("should convert boolean values", () => {
@@ -178,19 +176,9 @@ VERBOSE=true
 
     test("should convert table/array values", () => {
       const flag = { name: "test", type: "table" };
-      expect(configManager.convertValueToFlagType(["a", "b"], flag)).toEqual([
-        "a",
-        "b",
-      ]);
-      expect(configManager.convertValueToFlagType("a,b,c", flag)).toEqual([
-        "a",
-        "b",
-        "c",
-      ]);
-      expect(configManager.convertValueToFlagType('["x","y"]', flag)).toEqual([
-        "x",
-        "y",
-      ]);
+      expect(configManager.convertValueToFlagType(["a", "b"], flag)).toEqual(["a", "b"]);
+      expect(configManager.convertValueToFlagType("a,b,c", flag)).toEqual(["a", "b", "c"]);
+      expect(configManager.convertValueToFlagType('["x","y"]', flag)).toEqual(["x", "y"]);
     });
   });
 
@@ -257,10 +245,7 @@ VERBOSE=true
       const envConfig = { input: "config.txt", verbose: true };
       const processArgs = ["--count", "10"];
 
-      const result = configManager.mergeEnvConfigWithArgs(
-        envConfig,
-        processArgs,
-      );
+      const result = configManager.mergeEnvConfigWithArgs(envConfig, processArgs);
 
       expect(result).toContain("--count");
       expect(result).toContain("10");
@@ -273,10 +258,7 @@ VERBOSE=true
       const envConfig = { input: "config.txt" };
       const processArgs = ["--input", "cli.txt"];
 
-      const result = configManager.mergeEnvConfigWithArgs(
-        envConfig,
-        processArgs,
-      );
+      const result = configManager.mergeEnvConfigWithArgs(envConfig, processArgs);
 
       // Should keep the CLI version, not add the config version
       expect(result.filter((arg) => arg === "--input")).toHaveLength(1);

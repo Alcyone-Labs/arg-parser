@@ -64,22 +64,16 @@ export class DxtGenerator {
         const testUtils = new DxtGeneratorTestUtils(
           this.argParserInstance,
           () => this.extractMcpServerInfo(),
-          (exitCode, message, type, data) =>
-            this._handleExit(exitCode, message, type, data),
+          (exitCode, message, type, data) => this._handleExit(exitCode, message, type, data),
         );
-        return await testUtils.handleTestModeDxtGeneration(
-          processArgs,
-          buildDxtIndex,
-        );
+        return await testUtils.handleTestModeDxtGeneration(processArgs, buildDxtIndex);
       }
 
       // Check for --s-with-node-modules flag
       const withNodeModules = processArgs.includes("--s-with-node-modules");
       if (withNodeModules) {
         console.log(
-          chalk.yellow(
-            "🗂️  --s-with-node-modules detected: will include node_modules in bundle",
-          ),
+          chalk.yellow("🗂️  --s-with-node-modules detected: will include node_modules in bundle"),
         );
 
         // Validate that node_modules exists and looks properly set up
@@ -90,16 +84,8 @@ export class DxtGenerator {
               "❌ Error: node_modules directory not found. Please run the installation command first.",
             ),
           );
-          console.log(
-            chalk.cyan(
-              "💡 Required command: pnpm install --prod --node-linker=hoisted",
-            ),
-          );
-          return this._handleExit(
-            1,
-            "node_modules directory not found",
-            "error",
-          );
+          console.log(chalk.cyan("💡 Required command: pnpm install --prod --node-linker=hoisted"));
+          return this._handleExit(1, "node_modules directory not found", "error");
         }
 
         // Check if node_modules looks properly hoisted (no nested node_modules in immediate subdirs)
@@ -126,15 +112,11 @@ export class DxtGenerator {
               ),
             );
             console.log(
-              chalk.cyan(
-                "   rm -rf node_modules && pnpm install --prod --node-linker=hoisted",
-              ),
+              chalk.cyan("   rm -rf node_modules && pnpm install --prod --node-linker=hoisted"),
             );
           } else {
             console.log(
-              chalk.green(
-                "✅ node_modules appears properly hoisted and ready for bundling",
-              ),
+              chalk.green("✅ node_modules appears properly hoisted and ready for bundling"),
             );
           }
         } catch (error) {
@@ -156,9 +138,7 @@ export class DxtGenerator {
       const entryPointFile = process.argv[1];
 
       if (!entryPointFile || !fs.existsSync(entryPointFile)) {
-        console.error(
-          chalk.red(`Error: Entry point file not found: ${entryPointFile}`),
-        );
+        console.error(chalk.red(`Error: Entry point file not found: ${entryPointFile}`));
         return this._handleExit(1, "Entry point file not found", "error");
       }
 
@@ -167,11 +147,7 @@ export class DxtGenerator {
       // If the output folder was not specified but other system flags were.
       if (outputDir.startsWith("--s-")) outputDir = "./dxt";
 
-      console.log(
-        chalk.cyan(
-          `\n🔧 Building DXT package for entry point: ${entryPointFile}`,
-        ),
-      );
+      console.log(chalk.cyan(`\n🔧 Building DXT package for entry point: ${entryPointFile}`));
       console.log(chalk.gray(`Output directory: ${outputDir}`));
       console.log(chalk.gray(`Entrypoint file: ${entryPointFile}`));
 
@@ -180,12 +156,10 @@ export class DxtGenerator {
 
       console.log(chalk.green(`\n✅ DXT package generation completed!`));
 
-      return this._handleExit(
-        0,
-        "DXT package generation completed",
-        "success",
-        { entryPoint: entryPointFile, outputDir },
-      );
+      return this._handleExit(0, "DXT package generation completed", "success", {
+        entryPoint: entryPointFile,
+        outputDir,
+      });
     } catch (error) {
       console.error(
         chalk.red(
@@ -222,14 +196,11 @@ export class DxtGenerator {
     const appName = this.argParserInstance.getAppName();
     const appCommandName = this.argParserInstance.getAppCommandName();
     const description =
-      (this.argParserInstance as any).getDescription?.() ||
-      "MCP server generated from ArgParser";
+      (this.argParserInstance as any).getDescription?.() || "MCP server generated from ArgParser";
 
     const defaultInfo = {
       name:
-        appCommandName ||
-        appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") ||
-        "mcp-server",
+        appCommandName || appName?.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "_") || "mcp-server",
       version: "1.0.0",
       description: description,
     };
@@ -250,18 +221,14 @@ export class DxtGenerator {
 
         // Try to get tool options from withMcp() configuration
         if ((this.argParserInstance as any).getMcpServerConfig) {
-          const mcpConfig = (
-            this.argParserInstance as any
-          ).getMcpServerConfig();
+          const mcpConfig = (this.argParserInstance as any).getMcpServerConfig();
           if (mcpConfig?.toolOptions) {
             toolOptions = mcpConfig.toolOptions;
           }
         }
 
         // Use the unified MCP tool generation (includes both CLI-generated and manual tools)
-        const mcpTools = (this.argParserInstance as any).toMcpTools(
-          toolOptions,
-        );
+        const mcpTools = (this.argParserInstance as any).toMcpTools(toolOptions);
 
         return mcpTools.map((tool: any) => ({
           name: tool.name,
@@ -273,10 +240,7 @@ export class DxtGenerator {
       const tools: Array<{ name: string; description?: string }> = [];
 
       // Add main command tool if there's a handler
-      if (
-        this.argParserInstance.getHandler &&
-        this.argParserInstance.getHandler()
-      ) {
+      if (this.argParserInstance.getHandler && this.argParserInstance.getHandler()) {
         const appName = this.argParserInstance.getAppName() || "main";
         const commandName =
           this.argParserInstance.getAppCommandName() ||
@@ -284,9 +248,7 @@ export class DxtGenerator {
 
         tools.push({
           name: commandName,
-          description:
-            this.argParserInstance.getDescription() ||
-            `Execute ${appName} command`,
+          description: this.argParserInstance.getDescription() || `Execute ${appName} command`,
         });
       }
 
@@ -302,8 +264,7 @@ export class DxtGenerator {
             "main";
           tools.push({
             name: `${commandName}_${name}`,
-            description:
-              (subCmd as any).description || `Execute ${name} subcommand`,
+            description: (subCmd as any).description || `Execute ${name} subcommand`,
           });
         }
       }
@@ -351,10 +312,7 @@ export class DxtGenerator {
       if (serverInfo?.logo) {
         const customLogo = serverInfo.logo;
 
-        if (
-          customLogo.startsWith("http://") ||
-          customLogo.startsWith("https://")
-        ) {
+        if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
           // Download logo from URL
           try {
             console.log(`📥 Downloading logo from: ${customLogo}`);
@@ -372,9 +330,7 @@ export class DxtGenerator {
               }
               console.log("✓ Downloaded logo from URL");
             } else {
-              console.warn(
-                `⚠ Failed to download logo: HTTP ${response.status}`,
-              );
+              console.warn(`⚠ Failed to download logo: HTTP ${response.status}`);
             }
           } catch (error) {
             console.warn(
@@ -390,9 +346,7 @@ export class DxtGenerator {
             // Resolve relative to the directory containing the entry point file
             const entryDir = path.dirname(entryPointFile);
             logoPath = path.resolve(entryDir, customLogo);
-            console.log(
-              `📍 Resolving logo path relative to entry point: ${logoPath}`,
-            );
+            console.log(`📍 Resolving logo path relative to entry point: ${logoPath}`);
           } else {
             // Absolute path or no entry point provided - resolve relative to cwd
             logoPath = path.resolve(customLogo);
@@ -419,33 +373,18 @@ export class DxtGenerator {
 
         // If not found, try the source location (development)
         if (!fs.existsSync(logoPath)) {
-          logoPath = path.join(
-            currentDir,
-            "..",
-            "docs",
-            "MCP",
-            "icons",
-            "logo_1_small.jpg",
-          );
+          logoPath = path.join(currentDir, "..", "docs", "MCP", "icons", "logo_1_small.jpg");
         }
 
         // If still not found, try relative to process.cwd()
         if (!fs.existsSync(logoPath)) {
-          const currentDir =
-            typeof process !== "undefined" ? process.cwd() : "/test";
-          logoPath = path.join(
-            currentDir,
-            "docs",
-            "MCP",
-            "icons",
-            "logo_1_small.jpg",
-          );
+          const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
+          logoPath = path.join(currentDir, "docs", "MCP", "icons", "logo_1_small.jpg");
         }
 
         // If still not found, try node_modules (when package is installed)
         if (!fs.existsSync(logoPath)) {
-          const currentDir =
-            typeof process !== "undefined" ? process.cwd() : "/test";
+          const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
           logoPath = path.join(
             currentDir,
             "node_modules",
@@ -459,14 +398,8 @@ export class DxtGenerator {
 
         // If still not found, try package root dist/assets (for local build)
         if (!fs.existsSync(logoPath)) {
-          const currentDir =
-            typeof process !== "undefined" ? process.cwd() : "/test";
-          logoPath = path.join(
-            currentDir,
-            "dist",
-            "assets",
-            "logo_1_small.jpg",
-          );
+          const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
+          logoPath = path.join(currentDir, "dist", "assets", "logo_1_small.jpg");
         }
 
         if (fs.existsSync(logoPath)) {
@@ -526,11 +459,7 @@ export class DxtGenerator {
 
       // Handle logo copying/downloading to working directory
       const serverInfo = this.extractMcpServerInfo();
-      const logoFilename = await this.addLogoToFolder(
-        projectRoot,
-        serverInfo,
-        entryPointFile,
-      );
+      const logoFilename = await this.addLogoToFolder(projectRoot, serverInfo, entryPointFile);
       console.log(
         logoFilename
           ? chalk.gray(`✓ Logo prepared: ${logoFilename}`)
@@ -538,8 +467,7 @@ export class DxtGenerator {
       );
 
       // Run TSDown build from the project root directory
-      const originalCwd =
-        typeof process !== "undefined" ? process.cwd() : "/test";
+      const originalCwd = typeof process !== "undefined" ? process.cwd() : "/test";
       try {
         // process.chdir(projectRoot);
 
@@ -548,15 +476,11 @@ export class DxtGenerator {
 
         console.log(chalk.gray(`Building with TSDown: ${relativeEntryPath}`));
         console.log(
-          chalk.green(
-            `${withNodeModules ? "with node_modules" : "without node_modules"}`,
-          ),
+          chalk.green(`${withNodeModules ? "with node_modules" : "without node_modules"}`),
         );
 
         // Extract MCP config for use in copy function
-        const mcpConfig = (
-          this.argParserInstance as any
-        ).getMcpServerConfig?.();
+        const mcpConfig = (this.argParserInstance as any).getMcpServerConfig?.();
 
         // Preserve directory structure by including the entry directory in outDir
         const entryDir = path.dirname(relativeEntryPath);
@@ -583,11 +507,7 @@ export class DxtGenerator {
           unbundle: true,
           external: (id: string, importer?: string) => {
             try {
-              const external = this.shouldModuleBeExternal(
-                id,
-                importer,
-                withNodeModules,
-              );
+              const external = this.shouldModuleBeExternal(id, importer, withNodeModules);
 
               if (Boolean(process.env["DEBUG"]))
                 console.log(
@@ -596,20 +516,13 @@ export class DxtGenerator {
 
               return Boolean(external);
             } catch (error) {
-              console.warn(
-                `Warning: Error in external function for ${id}:`,
-                error,
-              );
+              console.warn(`Warning: Error in external function for ${id}:`, error);
               return true; // Default to external on error
             }
           },
           noExternal: (id: string, importer?: string) => {
             try {
-              const external = this.shouldModuleBeExternal(
-                id,
-                importer,
-                withNodeModules,
-              );
+              const external = this.shouldModuleBeExternal(id, importer, withNodeModules);
 
               if (Boolean(process.env["DEBUG"]))
                 console.log(
@@ -618,40 +531,27 @@ export class DxtGenerator {
 
               return Boolean(external === false);
             } catch (error) {
-              console.warn(
-                `Warning: Error in noExternal function for ${id}:`,
-                error,
-              );
+              console.warn(`Warning: Error in noExternal function for ${id}:`, error);
               return false; // Default to not noExternal on error
             }
           },
-          copy: async (
-            options: any,
-          ): Promise<Array<string | { from: string; to: string }>> => {
+          copy: async (options: any): Promise<Array<string | { from: string; to: string }>> => {
             try {
-              const outputPaths: Array<string | { from: string; to: string }> =
-                ["package.json"];
+              const outputPaths: Array<string | { from: string; to: string }> = ["package.json"];
 
               // Only include node_modules if --s-with-node-modules flag is set
               if (withNodeModules) {
-                console.log(
-                  chalk.gray(
-                    "📦 Including node_modules in bundle (may take longer)...",
-                  ),
-                );
+                console.log(chalk.gray("📦 Including node_modules in bundle (may take longer)..."));
                 outputPaths.push("node_modules");
               }
 
               // Calculate the DXT package root (parent of outDir when preserving structure)
               const dxtPackageRoot =
-                entryDir !== "." && entryDir !== ""
-                  ? path.dirname(options.outDir)
-                  : options.outDir;
+                entryDir !== "." && entryDir !== "" ? path.dirname(options.outDir) : options.outDir;
 
               // Add logo if it was successfully prepared
               if (logoFilename) {
-                const currentDir =
-                  typeof process !== "undefined" ? process.cwd() : "/test";
+                const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
                 const logoPath = path.join(currentDir, logoFilename);
                 if (fs.existsSync(logoPath)) {
                   console.log(chalk.gray(`Adding logo from: ${logoPath}`));
@@ -664,26 +564,18 @@ export class DxtGenerator {
 
               // Add user-specified include files from DXT configuration
               if (mcpConfig?.dxt?.include) {
-                console.log(
-                  chalk.gray(
-                    "📁 Including additional files from DXT configuration...",
-                  ),
-                );
+                console.log(chalk.gray("📁 Including additional files from DXT configuration..."));
 
                 for (const includeItem of mcpConfig.dxt.include) {
                   if (typeof includeItem === "string") {
                     // Simple string path - copy to same relative location in DXT package root
                     // First substitute any DXT variables in the path
-                    const resolvedIncludePath =
-                      DxtPathResolver.substituteVariables(
-                        includeItem,
-                        DxtPathResolver.detectContext(),
-                        { allowUndefined: true }, // Allow undefined variables for flexibility
-                      );
-                    const sourcePath = path.resolve(
-                      projectRoot,
-                      resolvedIncludePath,
+                    const resolvedIncludePath = DxtPathResolver.substituteVariables(
+                      includeItem,
+                      DxtPathResolver.detectContext(),
+                      { allowUndefined: true }, // Allow undefined variables for flexibility
                     );
+                    const sourcePath = path.resolve(projectRoot, resolvedIncludePath);
                     if (fs.existsSync(sourcePath)) {
                       console.log(chalk.gray(`  • ${resolvedIncludePath}`));
                       outputPaths.push({
@@ -700,27 +592,19 @@ export class DxtGenerator {
                   } else {
                     // Object with from/to mapping - copy to specified location in DXT package root
                     // Substitute DXT variables in both from and to paths
-                    const resolvedFromPath =
-                      DxtPathResolver.substituteVariables(
-                        includeItem.from,
-                        DxtPathResolver.detectContext(),
-                        { allowUndefined: true },
-                      );
+                    const resolvedFromPath = DxtPathResolver.substituteVariables(
+                      includeItem.from,
+                      DxtPathResolver.detectContext(),
+                      { allowUndefined: true },
+                    );
                     const resolvedToPath = DxtPathResolver.substituteVariables(
                       includeItem.to,
                       DxtPathResolver.detectContext(),
                       { allowUndefined: true },
                     );
-                    const sourcePath = path.resolve(
-                      projectRoot,
-                      resolvedFromPath,
-                    );
+                    const sourcePath = path.resolve(projectRoot, resolvedFromPath);
                     if (fs.existsSync(sourcePath)) {
-                      console.log(
-                        chalk.gray(
-                          `  • ${resolvedFromPath} → ${resolvedToPath}`,
-                        ),
-                      );
+                      console.log(chalk.gray(`  • ${resolvedFromPath} → ${resolvedToPath}`));
                       outputPaths.push({
                         from: sourcePath,
                         to: path.join(dxtPackageRoot, resolvedToPath),
@@ -766,13 +650,8 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 // To run manually:
 // npx tsdown -c tsdown.config.dxt.ts
 `;
-          fs.writeFileSync(
-            path.join("dxt", "tsdown.config.dxt.ts"),
-            configContent,
-          );
-          console.log(
-            chalk.gray("📝 Debug config written to dxt/tsdown.config.dxt.ts"),
-          );
+          fs.writeFileSync(path.join("dxt", "tsdown.config.dxt.ts"), configContent);
+          console.log(chalk.gray("📝 Debug config written to dxt/tsdown.config.dxt.ts"));
         }
 
         try {
@@ -807,9 +686,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         // Run dxt pack (temporarily disabled due to dynamic import issues)
         console.log(chalk.cyan("📦 DXT package ready for packing"));
         console.log(
-          chalk.gray(
-            `To complete the process, run: npx @anthropic-ai/dxt pack ${outputDir}/`,
-          ),
+          chalk.gray(`To complete the process, run: npx @anthropic-ai/dxt pack ${outputDir}/`),
         );
         // await this.packDxtPackage();
       } finally {
@@ -955,8 +832,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
    */
   public isNodeModulesPackage(packageId: string): boolean {
     try {
-      const currentDir =
-        typeof process !== "undefined" ? process.cwd() : "/test";
+      const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
       let searchDir = currentDir;
       let attempts = 0;
       const maxAttempts = 3;
@@ -971,10 +847,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
           const packagePath = path.join(nodeModulesPath, packageId);
           if (fs.existsSync(packagePath)) {
-            const packagePackageJsonPath = path.join(
-              packagePath,
-              "package.json",
-            );
+            const packagePackageJsonPath = path.join(packagePath, "package.json");
             return fs.existsSync(packagePackageJsonPath);
           }
 
@@ -1021,10 +894,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       ),
 
       // 3. From the root directory (development/local build)
-      path.join(
-        typeof process !== "undefined" ? process.cwd() : "/test",
-        ".dxtignore.template",
-      ),
+      path.join(typeof process !== "undefined" ? process.cwd() : "/test", ".dxtignore.template"),
 
       // 4. From the library root (when using local file dependency)
       path.join(
@@ -1109,10 +979,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           properties[flag.name].enum = flag.enum;
         }
 
-        if (
-          flag.defaultValue !== undefined &&
-          typeof flag.defaultValue !== "function"
-        ) {
+        if (flag.defaultValue !== undefined && typeof flag.defaultValue !== "function") {
           properties[flag.name].default = flag.defaultValue;
         }
 
@@ -1127,9 +994,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         {
           name: commandName || packageInfo.name || "cli-tool",
           description:
-            packageInfo.description ||
-            this.argParserInstance.getDescription() ||
-            "CLI tool",
+            packageInfo.description || this.argParserInstance.getDescription() || "CLI tool",
         },
       ];
     }
@@ -1162,10 +1027,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         packageInfo.description ||
         "MCP server generated by @alcyone-labs/arg-parser",
       author: serverInfo.author || {
-        name:
-          packageInfo.author?.name ||
-          packageInfo.author ||
-          "@alcyone-labs/arg-parser",
+        name: packageInfo.author?.name || packageInfo.author || "@alcyone-labs/arg-parser",
         ...(packageInfo.author?.email && { email: packageInfo.author.email }),
         url:
           packageInfo.author?.url ||
@@ -1200,10 +1062,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       license: packageInfo.license || "MIT",
     };
 
-    fs.writeFileSync(
-      path.join(dxtDir, "manifest.json"),
-      JSON.stringify(manifest, null, 2),
-    );
+    fs.writeFileSync(path.join(dxtDir, "manifest.json"), JSON.stringify(manifest, null, 2));
 
     console.log(chalk.gray("✅ DXT package files set up"));
   }
@@ -1211,18 +1070,12 @@ export default ${JSON.stringify(buildConfig, null, 2)};
   /**
    * Detects the actual output filename generated by TSDown
    */
-  private detectTsdownOutputFile(
-    outputDir: string,
-    expectedBaseName: string,
-  ): string | null {
+  private detectTsdownOutputFile(outputDir: string, expectedBaseName: string): string | null {
     try {
-      const currentDir =
-        typeof process !== "undefined" ? process.cwd() : "/test";
+      const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
       const dxtDir = path.resolve(currentDir, outputDir);
       if (!fs.existsSync(dxtDir)) {
-        console.warn(
-          chalk.yellow(`⚠ Output directory (${outputDir}) not found`),
-        );
+        console.warn(chalk.yellow(`⚠ Output directory (${outputDir}) not found`));
         return null;
       }
 
@@ -1328,9 +1181,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
         return bestMatch;
       }
 
-      console.warn(
-        chalk.yellow(`⚠ Could not detect TSDown output file in ${outputDir}`),
-      );
+      console.warn(chalk.yellow(`⚠ Could not detect TSDown output file in ${outputDir}`));
       return null;
     } catch (error) {
       console.warn(
@@ -1412,9 +1263,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
     // Security warnings (log but continue)
     const sensitiveKeywords = ["key", "token", "password", "secret", "auth"];
     const envLower = envVar.toLowerCase();
-    const hasSensitiveKeyword = sensitiveKeywords.some((keyword) =>
-      envLower.includes(keyword),
-    );
+    const hasSensitiveKeyword = sensitiveKeywords.some((keyword) => envLower.includes(keyword));
 
     if (hasSensitiveKeyword && dxtOptions.sensitive === false) {
       console.warn(
@@ -1503,14 +1352,11 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
     // Helper function to get description with default value
     const getDxtDescription = (flag: any, envVar: string): string => {
-      let baseDescription =
-        flag.description || `${envVar} environment variable`;
+      let baseDescription = flag.description || `${envVar} environment variable`;
 
       // Add default value to description if available
       const defaultValue =
-        flag.dxtOptions?.default ??
-        flag.dxtOptions?.localDefault ??
-        flag.defaultValue;
+        flag.dxtOptions?.default ?? flag.dxtOptions?.localDefault ?? flag.defaultValue;
       if (defaultValue !== undefined && typeof defaultValue !== "function") {
         baseDescription += ` (default: ${defaultValue})`;
       }
@@ -1632,15 +1478,12 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       const tsconfig = getTsconfig(importer);
       if (!tsconfig?.config.compilerOptions?.paths) {
         if (Boolean(process.env["DEBUG"])) {
-          console.log(
-            `  <${chalk.gray("ts-paths")}> No tsconfig or paths found for '${importer}'`,
-          );
+          console.log(`  <${chalk.gray("ts-paths")}> No tsconfig or paths found for '${importer}'`);
         }
         // Fall through to regular file resolution
       } else {
         if (Boolean(process.env["DEBUG"])) {
-          const currentDir =
-            typeof process !== "undefined" ? process.cwd() : "/test";
+          const currentDir = typeof process !== "undefined" ? process.cwd() : "/test";
           console.log(
             `  <${chalk.gray("ts-paths")}> Found tsconfig at '${path.relative(currentDir, tsconfig.path)}' with paths:`,
             Object.keys(tsconfig.config.compilerOptions.paths),
@@ -1660,23 +1503,15 @@ export default ${JSON.stringify(buildConfig, null, 2)};
           const possiblePaths = pathsMatcher(id);
 
           if (Boolean(process.env["DEBUG"])) {
-            console.log(
-              `  <${chalk.grey("ts-paths")}> Possible paths for '${id}':`,
-              possiblePaths,
-            );
+            console.log(`  <${chalk.grey("ts-paths")}> Possible paths for '${id}':`, possiblePaths);
           }
 
           // Try to resolve each possible path
           for (const possiblePath of possiblePaths) {
-            const resolvedPath = path.resolve(
-              path.dirname(tsconfig.path),
-              possiblePath,
-            );
+            const resolvedPath = path.resolve(path.dirname(tsconfig.path), possiblePath);
 
             if (Boolean(process.env["DEBUG"])) {
-              console.log(
-                `  <${chalk.grey("ts-paths")}> Trying resolved path: '${resolvedPath}'`,
-              );
+              console.log(`  <${chalk.grey("ts-paths")}> Trying resolved path: '${resolvedPath}'`);
             }
 
             // Try common extensions
@@ -1684,10 +1519,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
             // Check if it's a file (with or without extension)
             // 1. Try the resolved path as-is
-            if (
-              fs.existsSync(resolvedPath) &&
-              fs.statSync(resolvedPath).isFile()
-            ) {
+            if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
               if (Boolean(process.env["DEBUG"])) {
                 console.log(
                   `  <${chalk.grey("ts-paths")}> ✓ Resolved '${id}' to '${resolvedPath}'`,
@@ -1726,10 +1558,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
             }
 
             // Check if it's a directory with index file
-            if (
-              fs.existsSync(resolvedPath) &&
-              fs.statSync(resolvedPath).isDirectory()
-            ) {
+            if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
               for (const ext of extensions) {
                 const indexPath = path.join(resolvedPath, `index${ext}`);
                 if (fs.existsSync(indexPath)) {
@@ -1748,9 +1577,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
 
       // TypeScript path resolution failed, try regular file resolution
       if (Boolean(process.env["DEBUG"])) {
-        console.log(
-          `  <${chalk.gray("file-resolve")}> Trying regular file resolution for '${id}'`,
-        );
+        console.log(`  <${chalk.gray("file-resolve")}> Trying regular file resolution for '${id}'`);
       }
 
       // Try to resolve as a regular file path relative to the importer
@@ -1767,9 +1594,7 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       // 1. Try the path as-is
       if (fs.existsSync(testPath) && fs.statSync(testPath).isFile()) {
         if (Boolean(process.env["DEBUG"])) {
-          console.log(
-            `  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${testPath}'`,
-          );
+          console.log(`  <${chalk.gray("file-resolve")}> ✓ Resolved '${id}' to '${testPath}'`);
         }
         return testPath;
       }
@@ -1819,16 +1644,10 @@ export default ${JSON.stringify(buildConfig, null, 2)};
       }
 
       if (Boolean(process.env["DEBUG"])) {
-        console.log(
-          `  <${chalk.gray("module-resolve")}> ✗ Could not resolve '${id}'`,
-        );
+        console.log(`  <${chalk.gray("module-resolve")}> ✗ Could not resolve '${id}'`);
       }
     } catch (error) {
-      console.warn(
-        chalk.yellow(
-          `Warning: Failed to resolve module path '${id}': ${error}`,
-        ),
-      );
+      console.warn(chalk.yellow(`Warning: Failed to resolve module path '${id}': ${error}`));
     }
 
     return null;

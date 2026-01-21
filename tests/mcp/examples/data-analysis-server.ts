@@ -169,8 +169,7 @@ const cli = ArgParser.withMcp({
       },
       {
         name: "measures",
-        description:
-          "Statistical measures to compute (comma-separated or 'all')",
+        description: "Statistical measures to compute (comma-separated or 'all')",
         options: ["--measures", "-m"],
         type: "string",
         defaultValue: "mean,median,standardDeviation",
@@ -239,8 +238,7 @@ const cli = ArgParser.withMcp({
         throw new Error("Need at least 4 values to detect outliers");
       }
 
-      let outliers: Array<{ value: number; index: number; score?: number }> =
-        [];
+      let outliers: Array<{ value: number; index: number; score?: number }> = [];
       let stats = computeStatistics(values);
 
       if (method === "iqr") {
@@ -279,8 +277,7 @@ const cli = ArgParser.withMcp({
     parser: new ArgParser({}, [
       {
         name: "values",
-        description:
-          "Numeric values to analyze (comma-separated or JSON array)",
+        description: "Numeric values to analyze (comma-separated or JSON array)",
         options: ["--values", "-v"],
         type: "string",
         mandatory: true,
@@ -378,23 +375,17 @@ function computeStatistics(values: number[]): StatisticalSummary {
   const mean = sum / n;
 
   // Median
-  const median =
-    n % 2 === 0
-      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-      : sorted[Math.floor(n / 2)];
+  const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
 
   // Mode (most frequent value)
   const frequency: Record<number, number> = {};
   values.forEach((val) => (frequency[val] = (frequency[val] || 0) + 1));
   const maxFreq = Math.max(...Object.values(frequency));
-  const modes = Object.keys(frequency).filter(
-    (key) => frequency[parseFloat(key)] === maxFreq,
-  );
+  const modes = Object.keys(frequency).filter((key) => frequency[parseFloat(key)] === maxFreq);
   const mode = modes.length === n ? null : parseFloat(modes[0]); // No mode if all values are unique
 
   // Variance and standard deviation
-  const variance =
-    values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n;
+  const variance = values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n;
   const standardDeviation = Math.sqrt(variance);
 
   // Quartiles
@@ -433,9 +424,7 @@ function computeCorrelation(x: number[], y: number[]): number {
   const sumY2 = y.reduce((acc, yi) => acc + yi * yi, 0);
 
   const numerator = n * sumXY - sumX * sumY;
-  const denominator = Math.sqrt(
-    (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY),
-  );
+  const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
 
   return denominator === 0 ? 0 : numerator / denominator;
 }
@@ -484,9 +473,7 @@ function generateDataSummary(data: DataPoint[]): any {
     };
 
     // Determine data type
-    const numericValues = values.filter(
-      (val) => typeof val === "number" && !isNaN(val as number),
-    );
+    const numericValues = values.filter((val) => typeof val === "number" && !isNaN(val as number));
     const stringValues = values.filter((val) => typeof val === "string");
     const booleanValues = values.filter((val) => typeof val === "boolean");
 
@@ -499,8 +486,7 @@ function generateDataSummary(data: DataPoint[]): any {
         uniqueValues: new Set(stringValues).size,
         mostCommon: getMostCommon(stringValues as string[]),
         averageLength:
-          stringValues.reduce((sum, str) => sum + (str as string).length, 0) /
-          stringValues.length,
+          stringValues.reduce((sum, str) => sum + (str as string).length, 0) / stringValues.length,
       };
     } else if (booleanValues.length > 0) {
       summary.dataTypes[field] = "boolean";
@@ -549,9 +535,7 @@ function validateData(data: DataPoint[]): any {
   // Check for data quality issues
   fields.forEach((field) => {
     const values = data.map((record) => record[field]);
-    const nullCount = values.filter(
-      (val) => val === null || val === undefined,
-    ).length;
+    const nullCount = values.filter((val) => val === null || val === undefined).length;
 
     if (nullCount > data.length * 0.5) {
       issues.push({
@@ -573,9 +557,7 @@ function validateData(data: DataPoint[]): any {
 function cleanData(data: DataPoint[]): any {
   const cleaned = data.filter((record) => {
     // Remove records where all values are null
-    return Object.values(record).some(
-      (val) => val !== null && val !== undefined,
-    );
+    return Object.values(record).some((val) => val !== null && val !== undefined);
   });
 
   const removedCount = data.length - cleaned.length;
@@ -594,9 +576,7 @@ function getMostCommon(values: string[]): { value: string; count: number } {
   values.forEach((val) => (frequency[val] = (frequency[val] || 0) + 1));
 
   const maxCount = Math.max(...Object.values(frequency));
-  const mostCommon = Object.keys(frequency).find(
-    (key) => frequency[key] === maxCount,
-  )!;
+  const mostCommon = Object.keys(frequency).find((key) => frequency[key] === maxCount)!;
 
   return { value: mostCommon, count: maxCount };
 }

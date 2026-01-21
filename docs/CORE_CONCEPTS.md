@@ -8,14 +8,7 @@ Flags are defined using the `IFlag` interface within the `flags` array of a tool
 interface IFlag {
   name: string; // Internal name (e.g., 'verbose')
   options: string[]; // Command-line options (e.g., ['--verbose', '-v'])
-  type:
-    | "string"
-    | "number"
-    | "boolean"
-    | "array"
-    | "object"
-    | Function
-    | ZodSchema;
+  type: "string" | "number" | "boolean" | "array" | "object" | Function | ZodSchema;
   description?: string; // Help text
   mandatory?: boolean | ((args: any) => boolean); // Whether the flag is required
   defaultValue?: any; // Default value if not provided

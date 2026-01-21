@@ -45,9 +45,7 @@ export interface McpPromptResponse {
 /**
  * Prompt handler function type
  */
-export type McpPromptHandler = (
-  args: any,
-) => McpPromptResponse | Promise<McpPromptResponse>;
+export type McpPromptHandler = (args: any) => McpPromptResponse | Promise<McpPromptResponse>;
 
 /**
  * Prompt configuration for registration
@@ -141,9 +139,7 @@ export class McpPromptsManager {
       return await entry.config.handler(validatedArgs);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new Error(
-          `Invalid arguments for prompt '${name}': ${error.message}`,
-        );
+        throw new Error(`Invalid arguments for prompt '${name}': ${error.message}`);
       }
       throw error;
     }
@@ -258,14 +254,8 @@ export const createSummarizationPrompt = (): McpPromptConfig => ({
   description: "Generate prompts for text summarization",
   argsSchema: z.object({
     text: z.string().describe("The text to summarize"),
-    length: z
-      .enum(["brief", "medium", "detailed"])
-      .optional()
-      .describe("Summary length"),
-    style: z
-      .enum(["bullet-points", "paragraph", "executive"])
-      .optional()
-      .describe("Summary style"),
+    length: z.enum(["brief", "medium", "detailed"]).optional().describe("Summary length"),
+    style: z.enum(["bullet-points", "paragraph", "executive"]).optional().describe("Summary style"),
   }),
   handler: ({ text, length, style }) => {
     const lengthInstruction =
@@ -311,10 +301,7 @@ export const createTranslationPrompt = (): McpPromptConfig => ({
       .string()
       .optional()
       .describe("Source language (auto-detect if not specified)"),
-    tone: z
-      .enum(["formal", "casual", "professional"])
-      .optional()
-      .describe("Translation tone"),
+    tone: z.enum(["formal", "casual", "professional"]).optional().describe("Translation tone"),
   }),
   handler: ({ text, targetLanguage, sourceLanguage, tone }) => {
     const sourceInstruction = sourceLanguage
@@ -355,9 +342,7 @@ export const createDocumentationPrompt = (): McpPromptConfig => ({
   }),
   handler: ({ code, language, style, includeExamples }) => {
     const styleInstruction = style ? ` using ${style} format` : "";
-    const examplesInstruction = includeExamples
-      ? " Include usage examples."
-      : "";
+    const examplesInstruction = includeExamples ? " Include usage examples." : "";
 
     return {
       description: `Documentation prompt for ${language || "code"}${styleInstruction}`,

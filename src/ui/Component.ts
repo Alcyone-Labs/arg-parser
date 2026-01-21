@@ -23,8 +23,7 @@ export abstract class Component {
 
   constructor(config: IComponentConfig = {}) {
     this.config = config;
-    this.id =
-      config.id || `component_${Math.random().toString(36).substr(2, 9)}`;
+    this.id = config.id || `component_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   public resize(x: number, y: number, width: number, height: number): void {

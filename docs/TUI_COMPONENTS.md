@@ -29,20 +29,22 @@ This document provides detailed reference information for the modern, reactive c
 Containers with borders, titles, and optional padding.
 
 #### Props (`Card`)
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `title` | `string` | Title displayed at the top |
-| `padding` | `number` | Internal padding (default: 0) |
-| `borderStyle` | `string` | Border style (double, single, rounded) |
-| `children` | `JSX.Element` | Content of the card |
+
+| Prop          | Type          | Description                            |
+| ------------- | ------------- | -------------------------------------- |
+| `title`       | `string`      | Title displayed at the top             |
+| `padding`     | `number`      | Internal padding (default: 0)          |
+| `borderStyle` | `string`      | Border style (double, single, rounded) |
+| `children`    | `JSX.Element` | Content of the card                    |
 
 #### Props (`StatCard`)
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `label` | `string` | Label for the metric |
-| `value` | `number \| string` | Main value to display |
-| `format` | `"percent" \| "number"` | Value formatting |
-| `trend` | `"up" \| "down" \| "none"` | Optional trend indicator |
+
+| Prop     | Type                       | Description              |
+| -------- | -------------------------- | ------------------------ |
+| `label`  | `string`                   | Label for the metric     |
+| `value`  | `number \| string`         | Main value to display    |
+| `format` | `"percent" \| "number"`    | Value formatting         |
+| `trend`  | `"up" \| "down" \| "none"` | Optional trend indicator |
 
 ```tsx
 <StatCard label="Memory usage" value={0.65} format="percent" trend="up" />
@@ -55,13 +57,14 @@ Containers with borders, titles, and optional padding.
 A flexible split-pane layout with a "Master" list and "Detail" view.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `header` | `string \| JSX.Element` | Optional header content |
-| `master` | `JSX.Element` | Left/Top content |
-| `detail` | `JSX.Element` | Right/Bottom content |
-| `masterSize` | `string` | Size of master (e.g., "30%") |
-| `orientation` | `"horizontal" \| "vertical"` | Split orientation |
+
+| Prop          | Type                         | Description                  |
+| ------------- | ---------------------------- | ---------------------------- |
+| `header`      | `string \| JSX.Element`      | Optional header content      |
+| `master`      | `JSX.Element`                | Left/Top content             |
+| `detail`      | `JSX.Element`                | Right/Bottom content         |
+| `masterSize`  | `string`                     | Size of master (e.g., "30%") |
+| `orientation` | `"horizontal" \| "vertical"` | Split orientation            |
 
 ---
 
@@ -70,10 +73,11 @@ A flexible split-pane layout with a "Master" list and "Detail" view.
 A path indicator typically used for navigation context.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `items` | `string[]` | Array of path segments |
-| `separator` | `string` | Separator character (default: `>`) |
+
+| Prop        | Type       | Description                        |
+| ----------- | ---------- | ---------------------------------- |
+| `items`     | `string[]` | Array of path segments             |
+| `separator` | `string`   | Separator character (default: `>`) |
 
 ---
 
@@ -84,12 +88,13 @@ A path indicator typically used for navigation context.
 Standard button with hover and active states.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `label` | `string` | Text content |
-| `onClick` | `() => void` | Event handler |
-| `variant` | `"primary" \| "danger" \| "muted"` | Visual style |
-| `disabled` | `boolean` | Disable interaction |
+
+| Prop       | Type                               | Description         |
+| ---------- | ---------------------------------- | ------------------- |
+| `label`    | `string`                           | Text content        |
+| `onClick`  | `() => void`                       | Event handler       |
+| `variant`  | `"primary" \| "danger" \| "muted"` | Visual style        |
+| `disabled` | `boolean`                          | Disable interaction |
 
 ---
 
@@ -98,12 +103,13 @@ Standard button with hover and active states.
 A high-performance list that only renders visible items.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
-| `items` | `any[]` | Data items |
-| `selectedIndex` | `number` | Currently selected index |
-| `onSelect` | `(item: any) => void` | Triggered on select |
-| `renderItem` | `(item: any) => JSX.Element` | Custom item renderer |
+
+| Prop            | Type                         | Description              |
+| --------------- | ---------------------------- | ------------------------ |
+| `items`         | `any[]`                      | Data items               |
+| `selectedIndex` | `number`                     | Currently selected index |
+| `onSelect`      | `(item: any) => void`        | Triggered on select      |
+| `renderItem`    | `(item: any) => JSX.Element` | Custom item renderer     |
 
 ---
 
@@ -114,8 +120,9 @@ A high-performance list that only renders visible items.
 Stack-based navigation for deep hierarchies.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
+
+| Prop       | Type                              | Description                                   |
+| ---------- | --------------------------------- | --------------------------------------------- |
 | `children` | `(nav: Navigator) => JSX.Element` | children as function receiving nav controller |
 
 ---
@@ -125,8 +132,9 @@ Stack-based navigation for deep hierarchies.
 Renders markdown-formatted text.
 
 #### Props
-| Prop | Type | Description |
-| ---- | ---- | ----------- |
+
+| Prop      | Type     | Description   |
+| --------- | -------- | ------------- |
 | `content` | `string` | Markdown text |
 
 ---
@@ -145,9 +153,9 @@ The essential wrapper for any TUI application.
 
 ### Hooks
 
-| Hook | Description |
-| ---- | ----------- |
-| `useTui()` | Access global TUI state and config |
-| `useTheme()`| Get current theme and colors |
-| `useShortcuts()` | Register local keyboard shortcuts |
-| `useToast()` | Trigger transient notifications |
+| Hook             | Description                        |
+| ---------------- | ---------------------------------- |
+| `useTui()`       | Access global TUI state and config |
+| `useTheme()`     | Get current theme and colors       |
+| `useShortcuts()` | Register local keyboard shortcuts  |
+| `useToast()`     | Trigger transient notifications    |

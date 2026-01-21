@@ -2,19 +2,19 @@
   "name": "canny-cli",
   "version": "1.0.0",
   "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.14.0",
   "dependencies": {
     "@alcyone-labs/arg-parser": "file:../../../",
     "@alcyone-labs/modelcontextprotocol-sdk": "^1.16.0",
     "chalk": "^5.4.1",
     "zod": "^4.0.5"
-  }
+  },
+  "packageManager": "pnpm@10.14.0"
 }

@@ -63,12 +63,7 @@ function ItemDetails(props: { item: Item }) {
       <text color={t().colors.text} marginTop={1}>
         {props.item.description}
       </text>
-      <box
-        borderStyle="single"
-        borderColor={t().colors.border}
-        padding={1}
-        marginTop={2}
-      >
+      <box borderStyle="single" borderColor={t().colors.border} padding={1} marginTop={2}>
         <text color={t().colors.text}>Count: </text>
         <text bold color={t().colors.accent}>
           {props.item.count}

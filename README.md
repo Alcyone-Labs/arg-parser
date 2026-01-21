@@ -50,9 +50,7 @@ const cli = ArgParser.withMcp({
 }).addTool({
   name: "greet",
   description: "A tool to greet someone",
-  flags: [
-    { name: "name", type: "string", mandatory: true, options: ["--name"] },
-  ],
+  flags: [{ name: "name", type: "string", mandatory: true, options: ["--name"] }],
   handler: async (ctx) => {
     console.log(`Hey ${ctx.args.name}!`);
     return { success: true, greeting: `Hey ${ctx.args.name}!` };

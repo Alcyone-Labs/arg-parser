@@ -27,11 +27,7 @@ import { ExitGuard } from "../runtime/ExitGuard";
 import { ShortcutProvider, type ShortcutBinding } from "../shortcuts";
 import { ThemeProvider, type TuiTheme } from "../themes";
 import { ToastProvider } from "../toast";
-import {
-  cleanupTerminal,
-  enableMouseReporting,
-  switchToAlternateScreen,
-} from "../tty";
+import { cleanupTerminal, enableMouseReporting, switchToAlternateScreen } from "../tty";
 
 // ============================================================================
 // Types
@@ -148,12 +144,7 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
       return;
     }
 
-    const sign =
-      event.scroll.direction === "up"
-        ? -1
-        : event.scroll.direction === "down"
-          ? 1
-          : 0;
+    const sign = event.scroll.direction === "up" ? -1 : event.scroll.direction === "down" ? 1 : 0;
     if (sign === 0) {
       return;
     }
@@ -181,10 +172,7 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
   };
 
   // Resolve theme
-  const themeName =
-    typeof props.theme === "string"
-      ? props.theme
-      : (props.theme?.name ?? "dark");
+  const themeName = typeof props.theme === "string" ? props.theme : (props.theme?.name ?? "dark");
 
   // Build the provider tree
   return createComponent(ExitGuard, {
@@ -203,11 +191,7 @@ export function TuiProvider(props: TuiProviderProps): JSX.Element {
                   return createComponent(ToastProvider, {
                     get children() {
                       return (
-                        <box
-                          width="100%"
-                          height="100%"
-                          onMouseScroll={handleMouseScroll}
-                        >
+                        <box width="100%" height="100%" onMouseScroll={handleMouseScroll}>
                           {props.children}
                         </box>
                       );

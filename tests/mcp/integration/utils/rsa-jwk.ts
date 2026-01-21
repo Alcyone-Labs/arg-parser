@@ -33,11 +33,7 @@ export function parsePkcs1PublicDerToModExp(der: Buffer): {
 }
 
 export function base64Url(buf: Buffer): string {
-  return buf
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+  return buf.toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 export function rsaPublicDerToJwk(der: Buffer, kid: string) {

@@ -7,14 +7,7 @@
  */
 
 import type { Buffer } from "node:buffer";
-import {
-  createMemo,
-  createSignal,
-  For,
-  onCleanup,
-  onMount,
-  Show,
-} from "solid-js";
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { render, useKeyboard, useRenderer } from "@opentui/solid";
 
 // ============================================================================
@@ -138,13 +131,9 @@ const MOCK_TRACES: Trace[] = [
   },
   ...Array.from({ length: 147 }, (_, i) => ({
     id: `tr_${100 + i}`,
-    workflowName: [
-      "daily-summary",
-      "email-sender",
-      "data-sync",
-      "pdf-extractor",
-      "rag-indexer",
-    ][i % 5]!,
+    workflowName: ["daily-summary", "email-sender", "data-sync", "pdf-extractor", "rag-indexer"][
+      i % 5
+    ]!,
     status: Math.random() > 0.8 ? "error" : ("success" as any),
     duration: Math.floor(Math.random() * 5000),
     tokens: Math.floor(Math.random() * 20000),
@@ -245,13 +234,8 @@ type ThemeName = keyof typeof THEMES;
 const THEME_NAMES = Object.keys(THEMES) as ThemeName[];
 
 const formatBytes = (b: number) =>
-  b < 1024
-    ? `${b}B`
-    : b < 1048576
-      ? `${(b / 1024).toFixed(1)}KB`
-      : `${(b / 1048576).toFixed(1)}MB`;
-const formatDuration = (ms: number) =>
-  ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+  b < 1024 ? `${b}B` : b < 1048576 ? `${(b / 1024).toFixed(1)}KB` : `${(b / 1048576).toFixed(1)}MB`;
+const formatDuration = (ms: number) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`);
 const formatCost = (c: number) => `$${c.toFixed(4)}`;
 
 // Dynamic viewport: Terminal height minus header (3), breadcrumb (1), footer (1), borders (2), title (1)
@@ -312,21 +296,9 @@ function App() {
 
   const t = () => THEMES[theme()];
 
-  const dbScroll = useVirtualScroll(
-    () => MOCK_DBS,
-    selectedDbIdx,
-    viewportHeight,
-  );
-  const traceScroll = useVirtualScroll(
-    () => MOCK_TRACES,
-    selectedTraceIdx,
-    viewportHeight,
-  );
-  const stepScroll = useVirtualScroll(
-    () => MOCK_STEPS,
-    selectedStepIdx,
-    viewportHeight,
-  );
+  const dbScroll = useVirtualScroll(() => MOCK_DBS, selectedDbIdx, viewportHeight);
+  const traceScroll = useVirtualScroll(() => MOCK_TRACES, selectedTraceIdx, viewportHeight);
+  const stepScroll = useVirtualScroll(() => MOCK_STEPS, selectedStepIdx, viewportHeight);
 
   const cycleTheme = () => {
     const idx = (THEME_NAMES.indexOf(theme()) + 1) % THEME_NAMES.length;
@@ -371,24 +343,15 @@ function App() {
   // Mouse scroll moves selection (like keyboard navigation)
   const scrollCurrentList = (delta: number) => {
     if (level() === 1) {
-      const newIdx = Math.max(
-        0,
-        Math.min(MOCK_DBS.length - 1, selectedDbIdx() + delta),
-      );
+      const newIdx = Math.max(0, Math.min(MOCK_DBS.length - 1, selectedDbIdx() + delta));
       setSelectedDbIdx(newIdx);
       dbScroll.adjustScroll(newIdx);
     } else if (level() === 2) {
-      const newIdx = Math.max(
-        0,
-        Math.min(MOCK_TRACES.length - 1, selectedTraceIdx() + delta),
-      );
+      const newIdx = Math.max(0, Math.min(MOCK_TRACES.length - 1, selectedTraceIdx() + delta));
       setSelectedTraceIdx(newIdx);
       traceScroll.adjustScroll(newIdx);
     } else if (level() === 3) {
-      const newIdx = Math.max(
-        0,
-        Math.min(MOCK_STEPS.length - 1, selectedStepIdx() + delta),
-      );
+      const newIdx = Math.max(0, Math.min(MOCK_STEPS.length - 1, selectedStepIdx() + delta));
       setSelectedStepIdx(newIdx);
       stepScroll.adjustScroll(newIdx);
     }
@@ -456,17 +419,11 @@ function App() {
   });
 
   const selectedDb = () => MOCK_DBS[selectedDbIdx()] ?? MOCK_DBS[0]!;
-  const selectedTrace = () =>
-    MOCK_TRACES[selectedTraceIdx()] ?? MOCK_TRACES[0]!;
+  const selectedTrace = () => MOCK_TRACES[selectedTraceIdx()] ?? MOCK_TRACES[0]!;
   const selectedStep = () => MOCK_STEPS[selectedStepIdx()] ?? MOCK_STEPS[0]!;
 
   return (
-    <box
-      width="100%"
-      height="100%"
-      flexDirection="column"
-      backgroundColor={t().bg}
-    >
+    <box width="100%" height="100%" flexDirection="column" backgroundColor={t().bg}>
       {/* Header */}
       <box
         height={3}
@@ -517,15 +474,9 @@ function App() {
               {({ item, globalIndex }) => (
                 <box
                   height={1}
-                  backgroundColor={
-                    globalIndex === selectedDbIdx() ? t().selection : undefined
-                  }
+                  backgroundColor={globalIndex === selectedDbIdx() ? t().selection : undefined}
                 >
-                  <text
-                    color={
-                      globalIndex === selectedDbIdx() ? t().selectionFg : t().fg
-                    }
-                  >
+                  <text color={globalIndex === selectedDbIdx() ? t().selectionFg : t().fg}>
                     {globalIndex === selectedDbIdx() ? "› " : "  "}
                     {item.name}
                   </text>
@@ -542,19 +493,9 @@ function App() {
               {({ item, globalIndex }) => (
                 <box
                   height={1}
-                  backgroundColor={
-                    globalIndex === selectedTraceIdx()
-                      ? t().selection
-                      : undefined
-                  }
+                  backgroundColor={globalIndex === selectedTraceIdx() ? t().selection : undefined}
                 >
-                  <text
-                    color={
-                      globalIndex === selectedTraceIdx()
-                        ? t().selectionFg
-                        : t().fg
-                    }
-                  >
+                  <text color={globalIndex === selectedTraceIdx() ? t().selectionFg : t().fg}>
                     {globalIndex === selectedTraceIdx() ? "› " : "  "}
                     {item.workflowName}
                   </text>
@@ -571,19 +512,9 @@ function App() {
               {({ item, globalIndex }) => (
                 <box
                   height={1}
-                  backgroundColor={
-                    globalIndex === selectedStepIdx()
-                      ? t().selection
-                      : undefined
-                  }
+                  backgroundColor={globalIndex === selectedStepIdx() ? t().selection : undefined}
                 >
-                  <text
-                    color={
-                      globalIndex === selectedStepIdx()
-                        ? t().selectionFg
-                        : t().fg
-                    }
-                  >
+                  <text color={globalIndex === selectedStepIdx() ? t().selectionFg : t().fg}>
                     {globalIndex === selectedStepIdx() ? "› " : "  "}
                     {item.name}
                   </text>
@@ -616,12 +547,7 @@ function App() {
             <text bold color={t().accent}>
               {selectedTrace().workflowName}
             </text>
-            <text
-              color={
-                selectedTrace().status === "success" ? t().success : t().error
-              }
-              bold
-            >
+            <text color={selectedTrace().status === "success" ? t().success : t().error} bold>
               {selectedTrace().status.toUpperCase()}
             </text>
             <text color={t().muted} marginBottom={1}>
@@ -634,13 +560,9 @@ function App() {
               padding={1}
               marginTop={1}
             >
-              <text color={t().fg}>
-                Duration: {formatDuration(selectedTrace().duration)}
-              </text>
+              <text color={t().fg}>Duration: {formatDuration(selectedTrace().duration)}</text>
               <text color={t().fg}>Tokens: {selectedTrace().tokens}</text>
-              <text color={t().fg}>
-                Cost: {formatCost(selectedTrace().cost)}
-              </text>
+              <text color={t().fg}>Cost: {formatCost(selectedTrace().cost)}</text>
             </box>
           </Show>
 

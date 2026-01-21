@@ -228,8 +228,7 @@ describe("MCP Log Path Configuration", () => {
       });
 
       // Import the createMcpLogger function to verify it accepts logPath parameter
-      const { createMcpLogger } =
-        await import("@alcyone-labs/simple-mcp-logger");
+      const { createMcpLogger } = await import("@alcyone-labs/simple-mcp-logger");
 
       // Verify that createMcpLogger can accept a second parameter for log path
       expect(() => {

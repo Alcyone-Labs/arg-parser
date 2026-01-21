@@ -72,9 +72,7 @@ describe("DxtOptions Validation", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow(
-        "Invalid dxtOptions.default for PORT_VAR: expected number, got string",
-      );
+      }).toThrow("Invalid dxtOptions.default for PORT_VAR: expected number, got string");
     });
 
     it("should throw error for boolean type mismatch", () => {
@@ -96,9 +94,7 @@ describe("DxtOptions Validation", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow(
-        "Invalid dxtOptions.default for ENABLED_VAR: expected boolean, got string",
-      );
+      }).toThrow("Invalid dxtOptions.default for ENABLED_VAR: expected boolean, got string");
     });
   });
 

@@ -39,11 +39,7 @@ export function Button(props: ButtonProps): JSX.Element {
 
     switch (props.variant) {
       case "danger":
-        return isPressed()
-          ? "#bd2c00"
-          : isHovered()
-            ? "#c82829"
-            : current().colors.error;
+        return isPressed() ? "#bd2c00" : isHovered() ? "#c82829" : current().colors.error;
       case "primary":
       default:
         // Use accent color for primary, but darken/lighten on interaction
@@ -76,9 +72,7 @@ export function Button(props: ButtonProps): JSX.Element {
       style: {
         border: "single",
         borderColor:
-          isHovered() && !props.disabled
-            ? current().colors.text
-            : current().colors.border,
+          isHovered() && !props.disabled ? current().colors.text : current().colors.border,
         bg: getBackgroundColor(),
       },
       // Event handlers

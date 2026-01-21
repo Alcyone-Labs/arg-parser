@@ -259,15 +259,11 @@ const rootParser = new ArgParser({
     description: "Build a package",
     inheritParentFlags: true,
     handler: async (ctx) => {
-      const packageJson = await import(
-        path.join(process.cwd(), "package.json")
-      );
+      const packageJson = await import(path.join(process.cwd(), "package.json"));
       console.log(`Building: ${packageJson.name}`);
 
       // Display user-friendly path
-      console.log(
-        `Package location: ${path.relative(ctx.rootPath, process.cwd())}`,
-      );
+      console.log(`Package location: ${path.relative(ctx.rootPath, process.cwd())}`);
     },
   });
 ```
@@ -331,7 +327,6 @@ If you see "Multiple working directory flags detected":
 - Only the last one in the command chain is used
 - This is intentional behavior (last wins)
 - Remove duplicate workspace flags to avoid confusion
-
 
 ## Summary
 

@@ -124,9 +124,7 @@ function TraceDetail(props: { trace: Trace }) {
         </box>
       </Card>
 
-      <text style={{ bold: true, underline: true }}>
-        Steps ({props.trace.steps.length})
-      </text>
+      <text style={{ bold: true, underline: true }}>Steps ({props.trace.steps.length})</text>
 
       <box flexDirection="column" gap={0} overflow="scroll" flexGrow={1}>
         {props.trace.steps.map((step) => (
@@ -142,10 +140,7 @@ function TraceDetail(props: { trace: Trace }) {
                 {step.status.toUpperCase()}{" "}
               </text>
             </box>
-            <text style={{ fg: "gray" }}>
-              {" "}
-              Duration: {Math.floor(step.duration)}ms
-            </text>
+            <text style={{ fg: "gray" }}> Duration: {Math.floor(step.duration)}ms</text>
             <text> {step.details}</text>
           </box>
         ))}
@@ -170,12 +165,7 @@ function TraceList(props: { onSelect: (trace: Trace) => void }) {
   };
 
   return (
-    <box
-      flexDirection="column"
-      width="100%"
-      height="100%"
-      onKeyDown={handleKey}
-    >
+    <box flexDirection="column" width="100%" height="100%" onKeyDown={handleKey}>
       <text
         style={{
           bold: true,
@@ -190,10 +180,7 @@ function TraceList(props: { onSelect: (trace: Trace) => void }) {
           height={1}
           style={{
             bg: i === selectedIndex() ? current().colors.selection : undefined,
-            fg:
-              i === selectedIndex()
-                ? current().colors.text
-                : current().colors.muted,
+            fg: i === selectedIndex() ? current().colors.text : current().colors.muted,
           }}
         >
           <text>
@@ -244,20 +231,8 @@ function Dashboard() {
           {/* Stats Row */}
           <box height={6} flexDirection="row" gap={1}>
             <StatCard label="Total Traces" value={TRACES.length} width="33%" />
-            <StatCard
-              label="Avg Duration"
-              value={145}
-              format="number"
-              width="33%"
-              trend="up"
-            />
-            <StatCard
-              label="Error Rate"
-              value={0.05}
-              format="percent"
-              width="33%"
-              trend="down"
-            />
+            <StatCard label="Avg Duration" value={145} format="number" width="33%" trend="up" />
+            <StatCard label="Error Rate" value={0.05} format="percent" width="33%" trend="down" />
           </box>
 
           {/* Main Content */}

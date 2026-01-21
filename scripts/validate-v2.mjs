@@ -49,9 +49,7 @@ async function runCommand(command, cwd = tempDir, options = {}) {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(
-          new Error(`Command failed with code ${code}: ${stderr || stdout}`),
-        );
+        reject(new Error(`Command failed with code ${code}: ${stderr || stdout}`));
       }
     });
 
@@ -82,10 +80,7 @@ async function main() {
     version: "1.0.0",
     type: "module",
   };
-  fs.writeFileSync(
-    join(tempDir, "package.json"),
-    JSON.stringify(packageJson, null, 2),
-  );
+  fs.writeFileSync(join(tempDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
   console.log("📦 Installing package...");
   await runCommand(`npm install ${PACKAGE_NAME}@latest`, tempDir, {
@@ -281,10 +276,7 @@ console.log('TypeScript compilation successful');
           skipLibCheck: true,
         },
       };
-      fs.writeFileSync(
-        join(tempDir, "tsconfig.json"),
-        JSON.stringify(tsConfig, null, 2),
-      );
+      fs.writeFileSync(join(tempDir, "tsconfig.json"), JSON.stringify(tsConfig, null, 2));
 
       await runCommand("npx tsc --noEmit test-types.ts", tempDir, {
         silent: true,

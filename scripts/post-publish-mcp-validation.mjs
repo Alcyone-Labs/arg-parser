@@ -62,9 +62,7 @@ async function runCommand(command, cwd = tempDir, options = {}) {
       if (code === 0) {
         resolve({ stdout, stderr, code });
       } else {
-        reject(
-          new Error(`Command failed with code ${code}: ${stderr || stdout}`),
-        );
+        reject(new Error(`Command failed with code ${code}: ${stderr || stdout}`));
       }
     });
 
@@ -99,17 +97,12 @@ async function main() {
     type: "module",
     dependencies: {},
   };
-  fs.writeFileSync(
-    join(tempDir, "package.json"),
-    JSON.stringify(packageJson, null, 2),
-  );
+  fs.writeFileSync(join(tempDir, "package.json"), JSON.stringify(packageJson, null, 2));
 
   // Install the package and MCP SDK
-  await runCommand(
-    `npm install ${PACKAGE_NAME}@latest @modelcontextprotocol/sdk`,
-    tempDir,
-    { silent: true },
-  );
+  await runCommand(`npm install ${PACKAGE_NAME}@latest @modelcontextprotocol/sdk`, tempDir, {
+    silent: true,
+  });
 
   // Test 1: MCP Tool Generation
   totalTests++;
@@ -222,11 +215,7 @@ console.log(JSON.stringify({
       });
       const output = JSON.parse(result.stdout.trim());
 
-      if (
-        !output.success ||
-        !output.executionResult ||
-        !output.inputProcessed
-      ) {
+      if (!output.success || !output.executionResult || !output.inputProcessed) {
         throw new Error("MCP tool execution test failed");
       }
     })
@@ -416,11 +405,7 @@ test().catch(console.error);
       });
       const output = JSON.parse(result.stdout.trim());
 
-      if (
-        !output.success ||
-        !output.successfulExecution ||
-        !output.errorHandling
-      ) {
+      if (!output.success || !output.successfulExecution || !output.errorHandling) {
         throw new Error("MCP error handling test failed");
       }
     })
@@ -434,9 +419,7 @@ test().catch(console.error);
   console.log(`✅ Passed: ${passedTests}/${totalTests} MCP tests`);
 
   if (passedTests === totalTests) {
-    console.log(
-      "\n🎉 All MCP validation tests passed! MCP integration is working correctly.",
-    );
+    console.log("\n🎉 All MCP validation tests passed! MCP integration is working correctly.");
     process.exit(0);
   } else {
     console.log(

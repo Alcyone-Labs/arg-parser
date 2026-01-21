@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# === CONFIGURATION (REPLACE THESE) ===
-REPO_URL="https://github.com/AlcyoneLabs/arg-parser.git"
+REPO_URL="https://github.com/Alcyone-Labs/arg-parser.git"
 SKILL_NAME="arg-parser"
 # =====================================
 

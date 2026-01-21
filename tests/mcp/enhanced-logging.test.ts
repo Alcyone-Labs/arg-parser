@@ -101,13 +101,7 @@ describe("Enhanced MCP Logging Configuration", () => {
   });
 
   test("should handle all supported log levels", () => {
-    const levels: Array<McpLoggerOptions["level"]> = [
-      "debug",
-      "info",
-      "warn",
-      "error",
-      "silent",
-    ];
+    const levels: Array<McpLoggerOptions["level"]> = ["debug", "info", "warn", "error", "silent"];
 
     levels.forEach((level) => {
       expect(() => {

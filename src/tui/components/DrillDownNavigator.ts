@@ -49,9 +49,7 @@ export interface DrillDownNavigatorProps {
  * </DrillDownNavigator>
  * ```
  */
-export function DrillDownNavigator(
-  props: DrillDownNavigatorProps,
-): JSX.Element {
+export function DrillDownNavigator(props: DrillDownNavigatorProps): JSX.Element {
   const [stack, setStack] = createSignal<Array<() => JSX.Element>>([]);
 
   const push = (view: () => JSX.Element) => {
@@ -110,10 +108,7 @@ export function DrillDownNavigator(
         if (event.defaultPrevented) return;
 
         // Escape or Left Arrow to go back
-        if (
-          (event.key === "Escape" || event.key === "ArrowLeft") &&
-          canGoBack()
-        ) {
+        if ((event.key === "Escape" || event.key === "ArrowLeft") && canGoBack()) {
           pop();
         }
       },

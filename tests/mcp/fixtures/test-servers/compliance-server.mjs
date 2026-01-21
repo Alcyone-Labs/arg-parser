@@ -57,10 +57,7 @@ const cli = ArgParser.withMcp({
     handler: async (ctx) => {
       const errors = [];
       if (!ctx.args.data) errors.push("Data is required");
-      if (
-        ctx.args.format &&
-        !["json", "xml", "yaml"].includes(ctx.args.format)
-      ) {
+      if (ctx.args.format && !["json", "xml", "yaml"].includes(ctx.args.format)) {
         errors.push("Invalid format");
       }
 

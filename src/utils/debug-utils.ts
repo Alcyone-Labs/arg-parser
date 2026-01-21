@@ -13,9 +13,7 @@ import { createMcpLogger } from "@alcyone-labs/simple-mcp-logger";
 const isDebugEnabled = (): boolean => {
   try {
     // Safe access to process.env that works in all JavaScript environments
-    return Boolean(
-      typeof process !== "undefined" && process.env && process.env["DEBUG"],
-    );
+    return Boolean(typeof process !== "undefined" && process.env && process.env["DEBUG"]);
   } catch {
     // Fallback for environments where process is not available
     return false;
@@ -74,10 +72,7 @@ export const debug = {
   prefixed: (prefix: string, ...args: any[]): void => {
     if (isDebugEnabled()) {
       const [msg, ...rest] = args;
-      logger.info(
-        `[${prefix}] ${typeof msg === "string" ? msg : String(msg)}`,
-        ...rest,
-      );
+      logger.info(`[${prefix}] ${typeof msg === "string" ? msg : String(msg)}`, ...rest);
     }
   },
 

@@ -50,9 +50,7 @@ describe("Unified Tool Architecture", () => {
 
       parser.addTool(toolConfig);
 
-      expect(() => parser.addTool(toolConfig)).toThrow(
-        "Tool with name 'duplicate' already exists",
-      );
+      expect(() => parser.addTool(toolConfig)).toThrow("Tool with name 'duplicate' already exists");
     });
 
     test("should validate tool configuration", () => {
@@ -135,11 +133,7 @@ describe("Unified Tool Architecture", () => {
         handler: async (ctx) => ({ echo: ctx.args.message }),
       });
 
-      const result = await parser.parseAsync([
-        "echo",
-        "--message",
-        "hello world",
-      ]);
+      const result = await parser.parseAsync(["echo", "--message", "hello world"]);
       expect(result.echo).toBe("hello world");
       expect(result.$commandChain).toEqual(["echo"]);
     });
@@ -178,15 +172,7 @@ describe("Unified Tool Architecture", () => {
         },
       });
 
-      const result = await parser.parseAsync([
-        "calc",
-        "--a",
-        "5",
-        "--b",
-        "3",
-        "--op",
-        "add",
-      ]);
+      const result = await parser.parseAsync(["calc", "--a", "5", "--b", "3", "--op", "add"]);
       expect(result.result).toBe(8);
       expect(result.operation).toBe("add");
       expect(result.operands).toEqual({ a: 5, b: 3 });
@@ -322,9 +308,7 @@ describe("Unified Tool Architecture", () => {
 
       // Add legacy MCP tool (should show deprecation warning)
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const stderrSpy = vi
-        .spyOn(process.stderr, "write")
-        .mockImplementation(() => true);
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
       parser.addMcpTool({
         name: "legacy-tool",
@@ -421,19 +405,11 @@ describe("Unified Tool Architecture", () => {
         });
 
       // Test CLI execution
-      const stringResult = await parser.parseAsync([
-        "string-tool",
-        "--text",
-        "hello",
-      ]);
+      const stringResult = await parser.parseAsync(["string-tool", "--text", "hello"]);
       expect(stringResult.type).toBe("string");
       expect(stringResult.value).toBe("hello");
 
-      const numberResult = await parser.parseAsync([
-        "number-tool",
-        "--num",
-        "42",
-      ]);
+      const numberResult = await parser.parseAsync(["number-tool", "--num", "42"]);
       expect(numberResult.type).toBe("number");
       expect(numberResult.value).toBe(42);
 

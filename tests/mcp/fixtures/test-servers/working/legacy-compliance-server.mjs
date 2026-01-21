@@ -4,8 +4,7 @@ import { ArgParser } from "@alcyone-labs/arg-parser";
 const cli = ArgParser.withMcp({
   appName: "Legacy Compliance Server",
   appCommandName: "legacy-compliance-server",
-  description:
-    "MCP server for protocol compliance testing using legacy patterns",
+  description: "MCP server for protocol compliance testing using legacy patterns",
   mcp: {
     serverInfo: {
       name: "legacy-compliance-test-server",
@@ -58,10 +57,7 @@ const cli = ArgParser.withMcp({
     handler: async (ctx) => {
       const errors = [];
       if (!ctx.args.data) errors.push("Data is required");
-      if (
-        ctx.args.format &&
-        !["json", "xml", "yaml"].includes(ctx.args.format)
-      ) {
+      if (ctx.args.format && !["json", "xml", "yaml"].includes(ctx.args.format)) {
         errors.push("Invalid format");
       }
 

@@ -34,12 +34,7 @@ export class SplitLayout extends Component {
     this.resize(this.x, this.y, this.width, this.height);
   }
 
-  public override resize(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
+  public override resize(x: number, y: number, width: number, height: number): void {
     super.resize(x, y, width, height);
 
     if (this.direction === "horizontal") {
@@ -55,12 +50,7 @@ export class SplitLayout extends Component {
       }
 
       this.first.resize(x, y, splitX, height);
-      this.second.resize(
-        x + splitX + this.gap,
-        y,
-        Math.max(0, width - splitX - this.gap),
-        height,
-      );
+      this.second.resize(x + splitX + this.gap, y, Math.max(0, width - splitX - this.gap), height);
     } else {
       let splitY: number;
 
@@ -73,12 +63,7 @@ export class SplitLayout extends Component {
       }
 
       this.first.resize(x, y, width, splitY);
-      this.second.resize(
-        x,
-        y + splitY + this.gap,
-        width,
-        Math.max(0, height - splitY - this.gap),
-      );
+      this.second.resize(x, y + splitY + this.gap, width, Math.max(0, height - splitY - this.gap));
     }
   }
 

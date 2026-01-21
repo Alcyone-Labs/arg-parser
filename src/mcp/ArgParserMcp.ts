@@ -7,13 +7,8 @@ import type { IFlag } from "../core/types";
  * This version doesn't load any config plugins, making it suitable for
  * autonomous builds where TOML/YAML dependencies cause bundling issues.
  */
-export class ArgParserMcp<
-  THandlerReturn = any,
-> extends ArgParser<THandlerReturn> {
-  constructor(
-    params?: IArgParserParams<THandlerReturn>,
-    initialFlags?: IFlag[],
-  ) {
+export class ArgParserMcp<THandlerReturn = any> extends ArgParser<THandlerReturn> {
+  constructor(params?: IArgParserParams<THandlerReturn>, initialFlags?: IFlag[]) {
     // Set a flag to indicate this is MCP mode (no config plugins)
     const mcpParams = {
       ...params,

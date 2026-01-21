@@ -43,9 +43,7 @@ describe("Output Schema Verification", () => {
     expect(Array.isArray(toolsResponse.tools)).toBe(true);
     expect(toolsResponse.tools.length).toBeGreaterThan(0);
 
-    const searchTool = toolsResponse.tools.find(
-      (tool: any) => tool.name === "search",
-    );
+    const searchTool = toolsResponse.tools.find((tool: any) => tool.name === "search");
     if (!searchTool) {
       throw new Error("Search tool not found");
     }
@@ -80,9 +78,6 @@ describe("Output Schema Verification", () => {
     expect(typeof result.structuredContent.query).toBe("string");
     expect(result.structuredContent.query).toBe("test");
 
-    console.log(
-      "✅ StructuredContent:",
-      JSON.stringify(result.structuredContent, null, 2),
-    );
+    console.log("✅ StructuredContent:", JSON.stringify(result.structuredContent, null, 2));
   });
 });

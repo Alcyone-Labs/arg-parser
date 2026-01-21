@@ -35,12 +35,7 @@ export class StackNavigator extends Component {
     return this.stack[this.stack.length - 1];
   }
 
-  public override resize(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-  ): void {
+  public override resize(x: number, y: number, width: number, height: number): void {
     super.resize(x, y, width, height);
     // Resize all components in stack? Or just the active one?
     // Good practice to resize current one. Older ones can retain state or resize on return.

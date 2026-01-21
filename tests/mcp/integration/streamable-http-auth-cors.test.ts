@@ -74,9 +74,7 @@ describe("streamable-http CORS/Auth", () => {
       },
     });
     expect(res.status).toBe(204);
-    expect(res.headers["access-control-allow-origin"]).toBe(
-      "http://localhost:5173",
-    );
+    expect(res.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
     expect(res.headers["access-control-allow-methods"]).toContain("POST");
     // Credentials and Vary header coverage
     expect(res.headers["access-control-allow-credentials"]).toBe("true");

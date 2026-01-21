@@ -6,12 +6,7 @@
  * - Chord sequences: "ctrl+x t" (press Ctrl+X, then t)
  */
 
-import {
-  createContext,
-  createSignal,
-  useContext,
-  type Accessor,
-} from "solid-js";
+import { createContext, createSignal, useContext, type Accessor } from "solid-js";
 import type { JSX } from "@opentui/solid";
 import { createComponent } from "@opentui/solid";
 import type { ShortcutBinding } from "./types";
@@ -83,9 +78,9 @@ export function ShortcutProvider(props: {
   bindings?: ShortcutBinding[];
   children: JSX.Element;
 }): JSX.Element {
-  const [registeredBindings, setRegisteredBindings] = createSignal<
-    ShortcutBinding[]
-  >(props.bindings ?? []);
+  const [registeredBindings, setRegisteredBindings] = createSignal<ShortcutBinding[]>(
+    props.bindings ?? [],
+  );
   const [pending, setPending] = createSignal<string | null>(null);
   let chordTimeout: ReturnType<typeof setTimeout> | null = null;
 

@@ -83,9 +83,7 @@ describe("McpPromptsManager", () => {
     });
 
     test("should validate prompt configuration", () => {
-      expect(() => manager.addPrompt({} as any)).toThrow(
-        "Prompt name is required",
-      );
+      expect(() => manager.addPrompt({} as any)).toThrow("Prompt name is required");
 
       expect(() =>
         manager.addPrompt({
@@ -212,9 +210,7 @@ describe("McpPromptsManager", () => {
     });
 
     test("should validate arguments against schema", async () => {
-      await expect(manager.executePrompt("echo", {})).rejects.toThrow(
-        "Invalid arguments",
-      );
+      await expect(manager.executePrompt("echo", {})).rejects.toThrow("Invalid arguments");
       await expect(
         manager.executePrompt("math", {
           operation: "invalid",

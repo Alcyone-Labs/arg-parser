@@ -132,10 +132,7 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
     const label = props.getLabel ? props.getLabel(item) : String(item);
     const t = theme();
     return (
-      <box
-        height={1}
-        backgroundColor={selected ? t.colors.selection : undefined}
-      >
+      <box height={1} backgroundColor={selected ? t.colors.selection : undefined}>
         <text color={selected ? t.colors.background : t.colors.text}>
           {showIndicator ? (selected ? "› " : "  ") : ""}
           {label}
@@ -154,9 +151,7 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
         </text>
       </Show>
       <For each={visibleItems()}>
-        {({ item, globalIndex }) =>
-          renderItem(item, globalIndex, globalIndex === selectedIndex())
-        }
+        {({ item, globalIndex }) => renderItem(item, globalIndex, globalIndex === selectedIndex())}
       </For>
     </box>
   );

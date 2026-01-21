@@ -39,21 +39,11 @@ describe("MCP Transport Types", () => {
 
       // Transport flags are now system flags (--s-mcp-*), not part of subcommand
       const transportFlags = serveCommand?.parser.flags;
-      expect(
-        transportFlags?.find((f: any) => f.name === "transport"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "transports"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "port"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "host"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "path"),
-      ).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "transport")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "transports")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "port")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "host")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "path")).toBeUndefined();
     });
 
     test("should use system flags for transport configuration", () => {
@@ -67,21 +57,11 @@ describe("MCP Transport Types", () => {
 
       // Transport configuration is now handled via system flags (--s-mcp-*)
       // The subcommand parser should not have transport flags
-      expect(
-        transportFlags?.find((f: any) => f.name === "transport"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "transports"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "port"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "host"),
-      ).toBeUndefined();
-      expect(
-        transportFlags?.find((f: any) => f.name === "path"),
-      ).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "transport")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "transports")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "port")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "host")).toBeUndefined();
+      expect(transportFlags?.find((f: any) => f.name === "path")).toBeUndefined();
 
       // System flags are handled at the parser level, not in subcommands
       // Test that the parser can handle system transport flags
@@ -121,9 +101,7 @@ describe("MCP Transport Types", () => {
 
   describe("startMcpServerWithMultipleTransports method", () => {
     test("should have startMcpServerWithMultipleTransports method", () => {
-      expect(typeof parser.startMcpServerWithMultipleTransports).toBe(
-        "function",
-      );
+      expect(typeof parser.startMcpServerWithMultipleTransports).toBe("function");
     });
 
     test("should accept multiple transport configurations", () => {
@@ -239,9 +217,7 @@ describe("MCP Transport Types", () => {
       // Verify MCP sub-command exists (transport options are now system flags)
       expect(complexParser.getSubCommands().has("serve")).toBe(true);
       const serveCommand = complexParser.getSubCommands().get("serve");
-      expect(
-        serveCommand?.parser.flags.find((f: any) => f.name === "transport"),
-      ).toBeUndefined();
+      expect(serveCommand?.parser.flags.find((f: any) => f.name === "transport")).toBeUndefined();
     });
   });
 

@@ -49,12 +49,7 @@ export class Input extends Component {
     }
 
     // Pad rest
-    lines.push(
-      (text + " ".repeat(Math.max(0, this.width - text.length))).substring(
-        0,
-        this.width,
-      ),
-    );
+    lines.push((text + " ".repeat(Math.max(0, this.width - text.length))).substring(0, this.width));
 
     return lines;
   }

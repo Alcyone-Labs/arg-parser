@@ -2,7 +2,7 @@
 
 - [x] Publish as an open-source library
 - [x] Make ArgParser compatible with MCP out-of-the-box
-- [x] Rename --LIB-* flags to --s-*
+- [x] Rename --LIB-\* flags to --s-\*
 - [x] Make it possible to pass a `--s-save-to-env /path/to/file` parameter that saves all the parameters to a file (works with Bash-style .env, JSON, YAML, TOML)
 - [x] Make it possible to pass a `--s-with-env /path/to/file` parameter that loads all the parameters from a file (works with Bash-style .env, JSON, YAML, TOML)
 - [x] Add support for async type function to enable more flexibility

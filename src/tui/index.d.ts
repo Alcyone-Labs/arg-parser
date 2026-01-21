@@ -34,10 +34,7 @@ export interface TuiAppConfig {
   onDestroy?: () => void;
 }
 
-export declare function createTuiApp(
-  App: () => JSX.Element,
-  config?: TuiAppConfig
-): Promise<void>;
+export declare function createTuiApp(App: () => JSX.Element, config?: TuiAppConfig): Promise<void>;
 
 // =============================================================================
 // TUI Provider
@@ -140,9 +137,7 @@ export interface ToastContextValue {
   info: (message: string) => void;
 }
 
-export declare function ToastProvider(props: {
-  children: JSX.Element;
-}): JSX.Element;
+export declare function ToastProvider(props: { children: JSX.Element }): JSX.Element;
 
 export declare function useToast(): ToastContextValue;
 
@@ -175,15 +170,13 @@ export interface VirtualListResult {
   scrollTo: (idx: number) => void;
 }
 
-export declare function VirtualList<T = unknown>(
-  props: VirtualListProps<T>
-): JSX.Element;
+export declare function VirtualList<T = unknown>(props: VirtualListProps<T>): JSX.Element;
 
 export declare function createVirtualListController<T = unknown>(
   items: Accessor<T[]>,
   selectedIndex: Accessor<number>,
   setSelectedIndex: (idx: number) => void,
-  viewportHeight: Accessor<number>
+  viewportHeight: Accessor<number>,
 ): VirtualListResult;
 
 export interface MasterDetailProps {
@@ -239,9 +232,7 @@ export interface DrillDownNavigatorProps {
   }) => JSX.Element;
 }
 
-export declare function DrillDownNavigator(
-  props: DrillDownNavigatorProps
-): JSX.Element;
+export declare function DrillDownNavigator(props: DrillDownNavigatorProps): JSX.Element;
 
 export interface MasterDetailLayoutProps {
   masterWidth?: string;
@@ -249,9 +240,7 @@ export interface MasterDetailLayoutProps {
   detail: JSX.Element;
 }
 
-export declare function MasterDetailLayout(
-  props: MasterDetailLayoutProps
-): JSX.Element;
+export declare function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element;
 
 // =============================================================================
 // Hooks
@@ -265,7 +254,7 @@ export interface VirtualScrollResult {
 
 export declare function useVirtualScroll(
   itemCount: Accessor<number>,
-  viewportHeight: Accessor<number>
+  viewportHeight: Accessor<number>,
 ): VirtualScrollResult;
 
 export declare function getViewportHeight(reservedRows?: number): number;

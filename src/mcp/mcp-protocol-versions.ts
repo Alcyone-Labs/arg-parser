@@ -37,10 +37,7 @@ export const MCP_DRAFT_VERSIONS = [
 /**
  * All available protocol versions (stable + draft)
  */
-export const ALL_MCP_VERSIONS = [
-  ...MCP_PROTOCOL_VERSIONS,
-  ...MCP_DRAFT_VERSIONS,
-] as const;
+export const ALL_MCP_VERSIONS = [...MCP_PROTOCOL_VERSIONS, ...MCP_DRAFT_VERSIONS] as const;
 
 /**
  * Type for stable MCP protocol versions
@@ -81,8 +78,7 @@ export const LATEST_MCP_PROTOCOL_VERSION: McpProtocolVersion =
 /**
  * Minimum supported protocol version (oldest stable version)
  */
-export const MINIMUM_MCP_PROTOCOL_VERSION: McpProtocolVersion =
-  MCP_PROTOCOL_VERSIONS[0];
+export const MINIMUM_MCP_PROTOCOL_VERSION: McpProtocolVersion = MCP_PROTOCOL_VERSIONS[0];
 
 /**
  * Validates if a protocol version string follows the MCP format (YYYY-MM-DD or 'draft')
@@ -94,9 +90,7 @@ export function isValidMcpVersionFormat(version: string): boolean {
 /**
  * Checks if a protocol version is an official stable MCP version
  */
-export function isOfficialMcpVersion(
-  version: string,
-): version is McpProtocolVersion {
+export function isOfficialMcpVersion(version: string): version is McpProtocolVersion {
   return MCP_PROTOCOL_VERSIONS.includes(version as McpProtocolVersion);
 }
 
@@ -145,9 +139,7 @@ export function isProductionReady(version: string): boolean {
  *
  * Note: The actual MCP SDK may implement its own version negotiation.
  */
-export function negotiateProtocolVersion(
-  requestedVersion: string,
-): McpAnyVersion {
+export function negotiateProtocolVersion(requestedVersion: string): McpAnyVersion {
   // Validate format first
   if (!isValidMcpVersionFormat(requestedVersion)) {
     // If format is invalid, return the current/latest stable version

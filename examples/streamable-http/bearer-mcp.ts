@@ -45,10 +45,7 @@ export default cli;
 // Execute if run directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   cli.parse(process.argv.slice(2)).catch((error) => {
-    console.error(
-      "Error:",
-      error instanceof Error ? error.message : String(error),
-    );
+    console.error("Error:", error instanceof Error ? error.message : String(error));
     process.exit(1);
   });
 }

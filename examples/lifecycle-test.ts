@@ -15,13 +15,9 @@ const cli = ArgParser.withMcp({
     lifecycle: {
       onInitialize: async (ctx) => {
         console.log("🚀 LIFECYCLE: onInitialize called");
-        console.log(
-          `   Client: ${ctx.clientInfo.name} v${ctx.clientInfo.version}`,
-        );
+        console.log(`   Client: ${ctx.clientInfo.name} v${ctx.clientInfo.version}`);
         console.log(`   Protocol: ${ctx.protocolVersion}`);
-        console.log(
-          `   Server: ${ctx.serverInfo.name} v${ctx.serverInfo.version}`,
-        );
+        console.log(`   Server: ${ctx.serverInfo.name} v${ctx.serverInfo.version}`);
 
         // Test flag access
         const testFlag = ctx.getFlag("test-flag");
@@ -81,12 +77,7 @@ const cli = ArgParser.withMcp({
 export { cli };
 
 // Auto-execute only when run directly
-await cli
-  .parse(undefined, { importMetaUrl: import.meta.url })
-  .catch((error) => {
-    console.error(
-      "Error:",
-      error instanceof Error ? error.message : String(error),
-    );
-    process.exit(1);
-  });
+await cli.parse(undefined, { importMetaUrl: import.meta.url }).catch((error) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

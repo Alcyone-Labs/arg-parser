@@ -115,10 +115,7 @@ export abstract class BaseMcpClient extends EventEmitter {
   public abstract disconnect(): Promise<void>;
 
   // MCP Protocol Methods
-  public async initialize(clientInfo: {
-    name: string;
-    version: string;
-  }): Promise<McpServerInfo> {
+  public async initialize(clientInfo: { name: string; version: string }): Promise<McpServerInfo> {
     this.log("Initializing MCP connection", clientInfo);
     const result = await this.sendRequest("initialize", {
       protocolVersion: "2025-06-18", // Use latest protocol version to enable outputSchema support
@@ -328,9 +325,7 @@ export class McpSseClient extends BaseMcpClient {
   protected sendMessage(message: McpMessage): void {
     // SSE is typically one-way, but for testing we'll simulate request/response
     // In a real implementation, this would use WebSocket or HTTP POST
-    throw new Error(
-      "SSE client not fully implemented - requires WebSocket or HTTP transport",
-    );
+    throw new Error("SSE client not fully implemented - requires WebSocket or HTTP transport");
   }
 
   public async connect(): Promise<void> {
@@ -362,9 +357,7 @@ export class McpHttpClient extends BaseMcpClient {
 
   protected sendMessage(message: McpMessage): void {
     // HTTP client would send POST request to the MCP endpoint
-    throw new Error(
-      "HTTP client not fully implemented - requires HTTP request implementation",
-    );
+    throw new Error("HTTP client not fully implemented - requires HTTP request implementation");
   }
 
   public async connect(): Promise<void> {

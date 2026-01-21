@@ -33,10 +33,7 @@ export class Button extends Component {
 
     // Simple overlap check
     const isInside =
-      mx >= this.x &&
-      mx < this.x + this.width &&
-      my >= this.y &&
-      my < this.y + this.height;
+      mx >= this.x && mx < this.x + this.width && my >= this.y && my < this.y + this.height;
 
     if (isInside) {
       if (!this.isHovered) {

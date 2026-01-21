@@ -14,12 +14,7 @@ const DatabaseConfigSchema = z.object({
     })
     .describe("Database credentials"),
   ssl: z.boolean().optional().describe("Enable SSL connection"),
-  poolSize: z
-    .number()
-    .min(1)
-    .max(100)
-    .default(10)
-    .describe("Connection pool size"),
+  poolSize: z.number().min(1).max(100).default(10).describe("Connection pool size"),
 });
 
 const ApiConfigSchema = z.object({
@@ -31,32 +26,19 @@ const ApiConfigSchema = z.object({
     .max(30000)
     .default(5000)
     .describe("Request timeout in milliseconds"),
-  retries: z
-    .number()
-    .min(0)
-    .max(5)
-    .default(3)
-    .describe("Number of retry attempts"),
+  retries: z.number().min(0).max(5).default(3).describe("Number of retry attempts"),
   endpoints: z.array(z.string()).describe("Available API endpoints"),
-  features: z
-    .array(z.enum(["auth", "logging", "metrics", "caching"]))
-    .describe("Enabled features"),
+  features: z.array(z.enum(["auth", "logging", "metrics", "caching"])).describe("Enabled features"),
 });
 
 const DeploymentConfigSchema = z.object({
-  environment: z
-    .enum(["development", "staging", "production"])
-    .describe("Deployment environment"),
+  environment: z.enum(["development", "staging", "production"]).describe("Deployment environment"),
   region: z.string().describe("Deployment region"),
   scaling: z
     .object({
       minInstances: z.number().min(1).describe("Minimum number of instances"),
       maxInstances: z.number().min(1).describe("Maximum number of instances"),
-      targetCpu: z
-        .number()
-        .min(10)
-        .max(100)
-        .describe("Target CPU utilization percentage"),
+      targetCpu: z.number().min(10).max(100).describe("Target CPU utilization percentage"),
     })
     .describe("Auto-scaling configuration"),
   monitoring: z
@@ -72,14 +54,12 @@ const DeploymentConfigSchema = z.object({
 const cli = ArgParser.withMcp({
   appName: "Advanced Configuration CLI",
   appCommandName: "config-cli",
-  description:
-    "A CLI that demonstrates Zod schema flags for structured JSON input",
+  description: "A CLI that demonstrates Zod schema flags for structured JSON input",
   mcp: {
     serverInfo: {
       name: "config-cli-mcp-server",
       version: "1.0.0",
-      description:
-        "MCP server for configuration management with structured JSON validation",
+      description: "MCP server for configuration management with structured JSON validation",
     },
   },
 })
@@ -103,12 +83,8 @@ const cli = ArgParser.withMcp({
       },
     ],
     outputSchema: {
-      success: z
-        .boolean()
-        .describe("Whether the database setup was successful"),
-      connectionString: z
-        .string()
-        .describe("Generated database connection string"),
+      success: z.boolean().describe("Whether the database setup was successful"),
+      connectionString: z.string().describe("Generated database connection string"),
       poolInfo: z
         .object({
           size: z.number(),
@@ -165,9 +141,7 @@ const cli = ArgParser.withMcp({
       },
     ],
     outputSchema: {
-      success: z
-        .boolean()
-        .describe("Whether the API configuration was successful"),
+      success: z.boolean().describe("Whether the API configuration was successful"),
       clientId: z.string().describe("Generated API client ID"),
       endpoints: z.array(z.string()).describe("Configured API endpoints"),
       features: z.array(z.string()).describe("Enabled features"),
@@ -236,14 +210,10 @@ const cli = ArgParser.withMcp({
         `   Scaling: ${config.scaling.minInstances}-${config.scaling.maxInstances} instances`,
       );
       console.log(`   Target CPU: ${config.scaling.targetCpu}%`);
-      console.log(
-        `   Monitoring: ${config.monitoring.enabled ? "enabled" : "disabled"}`,
-      );
+      console.log(`   Monitoring: ${config.monitoring.enabled ? "enabled" : "disabled"}`);
 
       if (config.monitoring.enabled) {
-        console.log(
-          `   Alert Email: ${config.monitoring.alertEmail || "not configured"}`,
-        );
+        console.log(`   Alert Email: ${config.monitoring.alertEmail || "not configured"}`);
         console.log(`   Metrics: ${config.monitoring.metrics.join(", ")}`);
       }
 
@@ -268,9 +238,7 @@ const cli = ArgParser.withMcp({
 // Add main handler for help and general info
 cli.handler = async (ctx) => {
   console.log("🎯 Advanced Configuration CLI");
-  console.log(
-    "This CLI demonstrates Zod schema flags for structured JSON input validation.",
-  );
+  console.log("This CLI demonstrates Zod schema flags for structured JSON input validation.");
   console.log("");
   console.log("Available commands:");
   console.log("  setup-database  - Configure database with structured JSON");

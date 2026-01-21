@@ -60,9 +60,7 @@ export class FlagManager {
 
     if (this.#_flags.has(safeFlag["name"])) {
       if (this.#throwForDuplicateFlags) {
-        throw new Error(
-          `FlagManager: Flag '${safeFlag["name"]}' already exists.`,
-        );
+        throw new Error(`FlagManager: Flag '${safeFlag["name"]}' already exists.`);
       } else {
         console.warn(
           `Warning: FlagManager: Flag '${safeFlag["name"]}' already exists. Duplicate not added.`,

@@ -47,13 +47,9 @@ async function initializePiiModel(): Promise<void> {
     try {
       // This demonstrates ONNX model loading via Transformers.js
       // The model files and ONNX Runtime binaries are bundled with --s-with-node-modules
-      piiExtractor = await pipeline(
-        "token-classification",
-        "Xenova/bert-base-NER",
-        {
-          dtype: "q4f16",
-        },
-      );
+      piiExtractor = await pipeline("token-classification", "Xenova/bert-base-NER", {
+        dtype: "q4f16",
+      });
       console.log("✅ Model loaded successfully");
     } catch (error) {
       console.error("❌ Failed to load model:", error);
@@ -100,9 +96,7 @@ async function extractPiiEntities(text: string): Promise<PiiResult> {
 
 // Helper function to properly aggregate BERT tokenized entities
 // This handles the B-I-O tagging scheme and subword tokens
-function aggregateEntities(
-  entities: any[],
-): Array<{ text: string; label: string }> {
+function aggregateEntities(entities: any[]): Array<{ text: string; label: string }> {
   const aggregated: Array<{ text: string; label: string }> = [];
   let currentEntity: { text: string; label: string } | null = null;
 
@@ -162,8 +156,7 @@ const cli = ArgParser.withMcp({
     serverInfo: {
       name: "onnx-entity-detector",
       version: "1.0.0",
-      description:
-        "Detects named entities in text using BERT ONNX model via Transformers.js",
+      description: "Detects named entities in text using BERT ONNX model via Transformers.js",
     },
     logPath: "./onnx-entity-detector.log",
     defaultTransports: [{ type: "stdio" }],
@@ -208,9 +201,7 @@ const cli = ArgParser.withMcp({
           console.log("📊 Analysis Results:");
           console.log(`   Model: ${result.modelUsed}`);
           console.log(`   Total entities found: ${result.totalEntities}`);
-          console.log(
-            `   Text processed: ${result.processedText.substring(0, 100)}...`,
-          );
+          console.log(`   Text processed: ${result.processedText.substring(0, 100)}...`);
         }
 
         if (result.entities.length === 0) {

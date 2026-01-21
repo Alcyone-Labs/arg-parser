@@ -56,9 +56,7 @@ cli.addSubCommand({
         (k) => k !== "help" && ctx.args[k] !== undefined,
       );
       if (realArgs.length === 0) {
-        console.log(
-          "No flags provided to 'manual'. Try providing flags or see help:",
-        );
+        console.log("No flags provided to 'manual'. Try providing flags or see help:");
         // 2. Explicit help trigger from handler
         ctx.displayHelp();
         return;

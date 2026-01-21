@@ -216,26 +216,14 @@ export class McpNotificationsManager {
   /**
    * Send notification to a specific client
    */
-  private sendNotificationToClient(
-    client: McpClientSubscription,
-    type: McpChangeType,
-  ): void {
+  private sendNotificationToClient(client: McpClientSubscription, type: McpChangeType): void {
     try {
       // Send MCP notification using the connection
-      if (
-        client.connection &&
-        typeof client.connection.sendNotification === "function"
-      ) {
-        client.connection.sendNotification(
-          `notifications/${type}/list_changed`,
-          {},
-        );
+      if (client.connection && typeof client.connection.sendNotification === "function") {
+        client.connection.sendNotification(`notifications/${type}/list_changed`, {});
       }
     } catch (error) {
-      logger.error(
-        `Error sending notification to client ${client.clientId}:`,
-        error,
-      );
+      logger.error(`Error sending notification to client ${client.clientId}:`, error);
       // Consider removing the client if connection is broken
       this.removeClient(client.clientId);
     }
@@ -285,11 +273,7 @@ export class McpNotificationsManager {
 export function createDebouncedNotifier(
   manager: McpNotificationsManager,
   delay: number = 100,
-): (
-  type: McpChangeType,
-  action: "added" | "removed" | "updated",
-  entityName?: string,
-) => void {
+): (type: McpChangeType, action: "added" | "removed" | "updated", entityName?: string) => void {
   const pending = new Map<
     string,
     {
@@ -300,11 +284,7 @@ export function createDebouncedNotifier(
   >();
   let timeoutId: NodeJS.Timeout | null = null;
 
-  return (
-    type: McpChangeType,
-    action: "added" | "removed" | "updated",
-    entityName?: string,
-  ) => {
+  return (type: McpChangeType, action: "added" | "removed" | "updated", entityName?: string) => {
     const key = `${type}:${action}:${entityName || ""}`;
     pending.set(key, { type, action, entityName });
 
@@ -339,9 +319,7 @@ export function createFilteredListener(
 /**
  * Create a logging change listener for debugging
  */
-export function createLoggingListener(
-  prefix: string = "[MCP]",
-): McpChangeListener {
+export function createLoggingListener(prefix: string = "[MCP]"): McpChangeListener {
   return (event: McpChangeEvent) => {
     const entityInfo = event.entityName ? ` (${event.entityName})` : "";
     // Use console.log directly for debugging output (not MCP-safe, but this is a debug utility)

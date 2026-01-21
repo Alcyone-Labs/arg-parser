@@ -82,10 +82,7 @@ describe("TSDown Detection Integration", () => {
       fs.writeFileSync(path.join(tempDir, fileName), content);
     });
 
-    const result = (dxtGenerator as any).detectTsdownOutputFile(
-      tempDir,
-      "canny-cli.ts",
-    );
+    const result = (dxtGenerator as any).detectTsdownOutputFile(tempDir, "canny-cli.ts");
 
     expect(result).toBe("canny-cli.js");
   });
@@ -101,8 +98,7 @@ describe("TSDown Detection Integration", () => {
     fs.writeFileSync(path.join(tempDir, "dist-456.js"), "// dist");
 
     // Create mock package.json in current directory for the test
-    const originalCwd =
-      typeof process !== "undefined" ? process.cwd() : "/test";
+    const originalCwd = typeof process !== "undefined" ? process.cwd() : "/test";
     if (typeof process !== "undefined") {
       process.chdir(tempDir);
     }
@@ -117,17 +113,10 @@ describe("TSDown Detection Integration", () => {
 
     try {
       // Call setupDxtPackageFiles with detected filename
-      const detectedFile = (dxtGenerator as any).detectTsdownOutputFile(
-        tempDir,
-        "test-app.ts",
-      );
+      const detectedFile = (dxtGenerator as any).detectTsdownOutputFile(tempDir, "test-app.ts");
       expect(detectedFile).toBe("test-app.js");
 
-      await (dxtGenerator as any).setupDxtPackageFiles(
-        entryFile,
-        tempDir,
-        detectedFile,
-      );
+      await (dxtGenerator as any).setupDxtPackageFiles(entryFile, tempDir, detectedFile);
 
       // Verify manifest was created with correct entry point
       const manifestPath = path.join(tempDir, "manifest.json");
@@ -135,9 +124,7 @@ describe("TSDown Detection Integration", () => {
 
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
       expect(manifest.server.entry_point).toBe("test-app.js");
-      expect(manifest.server.mcp_config.args).toContain(
-        "${__dirname}/test-app.js",
-      );
+      expect(manifest.server.mcp_config.args).toContain("${__dirname}/test-app.js");
     } finally {
       if (typeof process !== "undefined") {
         process.chdir(originalCwd);
@@ -153,8 +140,7 @@ describe("TSDown Detection Integration", () => {
     // Don't create any JS output files - force fallback
 
     // Create mock package.json
-    const originalCwd =
-      typeof process !== "undefined" ? process.cwd() : "/test";
+    const originalCwd = typeof process !== "undefined" ? process.cwd() : "/test";
     if (typeof process !== "undefined") {
       process.chdir(tempDir);
     }
@@ -197,10 +183,7 @@ describe("TSDown Detection Integration", () => {
     fs.writeFileSync(path.join(tempDir, "my-cli-server.js"), "similar name");
     fs.writeFileSync(path.join(tempDir, "my-cli-bundle.js"), "another similar");
 
-    let result = (dxtGenerator as any).detectTsdownOutputFile(
-      tempDir,
-      "my-cli.ts",
-    );
+    let result = (dxtGenerator as any).detectTsdownOutputFile(tempDir, "my-cli.ts");
     expect(result).toBe("my-cli.js");
 
     // Clear and test case 2: No exact match, score by name similarity
@@ -208,15 +191,9 @@ describe("TSDown Detection Integration", () => {
     fs.mkdirSync(tempDir);
 
     fs.writeFileSync(path.join(tempDir, "server.js"), "no similarity");
-    fs.writeFileSync(
-      path.join(tempDir, "weather-cli-bundle.js"),
-      "high similarity",
-    );
+    fs.writeFileSync(path.join(tempDir, "weather-cli-bundle.js"), "high similarity");
 
-    result = (dxtGenerator as any).detectTsdownOutputFile(
-      tempDir,
-      "weather-cli.ts",
-    );
+    result = (dxtGenerator as any).detectTsdownOutputFile(tempDir, "weather-cli.ts");
     expect(result).toBe("weather-cli-bundle.js");
   });
 
@@ -229,10 +206,7 @@ describe("TSDown Detection Integration", () => {
     fs.writeFileSync(path.join(tempDir, "target-app.js"), "main entry");
 
     const startTime = Date.now();
-    const result = (dxtGenerator as any).detectTsdownOutputFile(
-      tempDir,
-      "target-app.ts",
-    );
+    const result = (dxtGenerator as any).detectTsdownOutputFile(tempDir, "target-app.ts");
     const endTime = Date.now();
 
     expect(result).toBe("target-app.js");

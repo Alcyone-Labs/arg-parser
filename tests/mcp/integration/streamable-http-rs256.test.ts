@@ -45,12 +45,8 @@ describe("streamable-http RS256 JWT", () => {
     const { publicKey, privateKey } = generateKeyPairSync("rsa", {
       modulusLength: 2048,
     });
-    publicKeyPem = publicKey
-      .export({ type: "pkcs1", format: "pem" })
-      .toString();
-    privateKeyPem = privateKey
-      .export({ type: "pkcs1", format: "pem" })
-      .toString();
+    publicKeyPem = publicKey.export({ type: "pkcs1", format: "pem" }).toString();
+    privateKeyPem = privateKey.export({ type: "pkcs1", format: "pem" }).toString();
 
     serverProc = startExample("examples/streamable-http/rs256-mcp.ts", {
       RS256_PUBLIC_KEY: publicKeyPem,

@@ -285,14 +285,10 @@ These failures indicate serious issues with core MCP functionality.
     let suitesToRun = TEST_SUITES;
 
     if (this.selectedSuite) {
-      const selectedSuite = TEST_SUITES.find(
-        (s) => s.name === this.selectedSuite,
-      );
+      const selectedSuite = TEST_SUITES.find((s) => s.name === this.selectedSuite);
       if (!selectedSuite) {
         console.error(`❌ Unknown test suite: ${this.selectedSuite}`);
-        console.error(
-          `Available suites: ${TEST_SUITES.map((s) => s.name).join(", ")}`,
-        );
+        console.error(`Available suites: ${TEST_SUITES.map((s) => s.name).join(", ")}`);
         return false;
       }
       suitesToRun = [selectedSuite];

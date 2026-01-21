@@ -11,12 +11,8 @@ describe("MCP Console Hijacking", () => {
     originalConsole = globalThis.console;
 
     // Spy on stdout and stderr
-    stdoutSpy = vi
-      .spyOn(process.stdout, "write")
-      .mockImplementation(() => true);
-    stderrSpy = vi
-      .spyOn(process.stderr, "write")
-      .mockImplementation(() => true);
+    stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -63,9 +59,7 @@ describe("MCP Console Hijacking", () => {
 
       // Check that console.log was called with the expected message
       const logCalls = consoleLogSpy.mock.calls.map((call) => call.join(" "));
-      expect(logCalls.some((call) => call.includes("CLI Output: hello"))).toBe(
-        true,
-      );
+      expect(logCalls.some((call) => call.includes("CLI Output: hello"))).toBe(true);
 
       // Clean up
       consoleLogSpy.mockRestore();

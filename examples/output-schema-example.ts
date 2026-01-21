@@ -1,10 +1,6 @@
 #!/usr/bin/env bun
 import { z } from "zod";
-import {
-  ArgParser,
-  createOutputSchema,
-  OutputSchemaPatterns,
-} from "../src/index";
+import { ArgParser, createOutputSchema, OutputSchemaPatterns } from "../src/index";
 
 // Example 1: Using predefined output schema patterns (RECOMMENDED: via toMcpTools options)
 const fileProcessorCli = new ArgParser({
@@ -275,9 +271,7 @@ async function demonstrateOutputSchemas() {
   console.log("🔧 Output Schema Examples\n");
 
   // Generate MCP tools with automatic output schemas (RECOMMENDED APPROACH)
-  console.log(
-    "1. File Processor CLI - MCP Tools with predefined schema via toMcpTools():",
-  );
+  console.log("1. File Processor CLI - MCP Tools with predefined schema via toMcpTools():");
   const fileProcessorTools = fileProcessorCli.toMcpTools({
     autoGenerateOutputSchema: "successWithData",
   });
@@ -290,9 +284,7 @@ async function demonstrateOutputSchemas() {
     }
   });
 
-  console.log(
-    "\n2. Database CLI - MCP Tools with custom Zod schema via toMcpTools():",
-  );
+  console.log("\n2. Database CLI - MCP Tools with custom Zod schema via toMcpTools():");
   const databaseTools = databaseCli.toMcpTools({
     defaultOutputSchema: customDatabaseSchema,
   });
@@ -301,9 +293,7 @@ async function demonstrateOutputSchemas() {
     console.log(`   Has Output Schema: ${tool.outputSchema ? "✅" : "❌"}`);
   });
 
-  console.log(
-    "\n3. Multi-Tool CLI - Different schemas per tool (tools have their own schemas):",
-  );
+  console.log("\n3. Multi-Tool CLI - Different schemas per tool (tools have their own schemas):");
   const multiTools = multiToolCli.toMcpTools({
     outputSchemaMap: {
       "multi-tool": createOutputSchema("successError"),
@@ -323,9 +313,7 @@ async function demonstrateOutputSchemas() {
     console.log(`   Has Output Schema: ${tool.outputSchema ? "✅" : "❌"}`);
   });
 
-  console.log(
-    "\n5. Advanced CLI - Tools with custom schemas (schemas defined directly in tools):",
-  );
+  console.log("\n5. Advanced CLI - Tools with custom schemas (schemas defined directly in tools):");
   const advancedTools = advancedCli.toMcpTools();
   advancedTools.forEach((tool) => {
     console.log(`   Tool: ${tool.name}`);
@@ -351,9 +339,7 @@ async function demonstrateOutputSchemas() {
   console.log(`   Custom schema created: ${customSchema._def.type}`);
 
   console.log("\n🎉 RECOMMENDED API PATTERNS:");
-  console.log(
-    "   ✨ BEST: Output schemas defined directly in .addTool() method",
-  );
+  console.log("   ✨ BEST: Output schemas defined directly in .addTool() method");
   console.log("   ✨ GOOD: Output schemas via toMcpTools() options");
   console.log(
     "   ✨ LEGACY: setDefaultOutputSchema() and enableAutoOutputSchema() (still supported)",

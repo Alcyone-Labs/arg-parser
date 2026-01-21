@@ -57,12 +57,8 @@ export class ArgParserFuzzyTester {
     const results: TestResult[] = [];
 
     if (this.options.verbose) {
-      this.parser.logger.info(
-        `Discovered ${commandPaths.length} command paths:`,
-      );
-      commandPaths.forEach((path) =>
-        this.parser.logger.info(`  ${path.join(" ") || "(root)"}`),
-      );
+      this.parser.logger.info(`Discovered ${commandPaths.length} command paths:`);
+      commandPaths.forEach((path) => this.parser.logger.info(`  ${path.join(" ") || "(root)"}`));
     }
 
     for (const commandPath of commandPaths) {
@@ -106,12 +102,7 @@ export class ArgParserFuzzyTester {
       allPaths.push(newPath);
 
       // Recursively explore this subcommand's subcommands
-      this.discoverSubCommandPaths(
-        subCommand.parser,
-        newPath,
-        allPaths,
-        depth + 1,
-      );
+      this.discoverSubCommandPaths(subCommand.parser, newPath, allPaths, depth + 1);
     }
   }
 
@@ -138,9 +129,7 @@ export class ArgParserFuzzyTester {
     const flags = this.getFlags(targetParser);
 
     if (this.options.verbose) {
-      this.parser.logger.info(
-        `Testing command path: ${commandPath.join(" ") || "(root)"}`,
-      );
+      this.parser.logger.info(`Testing command path: ${commandPath.join(" ") || "(root)"}`);
     }
 
     // Test valid combinations
@@ -198,14 +187,10 @@ export class ArgParserFuzzyTester {
 
     // Separate mandatory and optional flags
     const mandatoryFlags = flags.filter(
-      (f) =>
-        f["name"] !== "help" &&
-        (typeof f["mandatory"] === "boolean" ? f["mandatory"] : false),
+      (f) => f["name"] !== "help" && (typeof f["mandatory"] === "boolean" ? f["mandatory"] : false),
     );
     const optionalFlags = flags.filter(
-      (f) =>
-        f["name"] !== "help" &&
-        (typeof f["mandatory"] === "boolean" ? !f["mandatory"] : true),
+      (f) => f["name"] !== "help" && (typeof f["mandatory"] === "boolean" ? !f["mandatory"] : true),
     );
 
     // Generate base combination with all mandatory flags
@@ -293,10 +278,7 @@ export class ArgParserFuzzyTester {
   /**
    * Generate arguments for a specific flag
    */
-  private generateFlagArgs(
-    flag: ProcessedFlag,
-    mode: "valid" | "invalid" | "random",
-  ): string[] {
+  private generateFlagArgs(flag: ProcessedFlag, mode: "valid" | "invalid" | "random"): string[] {
     const option = flag["options"][0]; // Use first option
     if (!option) return [];
 
@@ -321,14 +303,9 @@ export class ArgParserFuzzyTester {
   /**
    * Generate values for a flag based on its type and constraints
    */
-  private generateFlagValues(
-    flag: ProcessedFlag,
-    mode: "valid" | "invalid" | "random",
-  ): string[] {
+  private generateFlagValues(flag: ProcessedFlag, mode: "valid" | "invalid" | "random"): string[] {
     const count =
-      flag["allowMultiple"] && mode !== "invalid"
-        ? Math.floor(Math.random() * 3) + 1
-        : 1;
+      flag["allowMultiple"] && mode !== "invalid" ? Math.floor(Math.random() * 3) + 1 : 1;
 
     const values: string[] = [];
 
@@ -406,9 +383,7 @@ export class ArgParserFuzzyTester {
         (testResult as any)._originalInputArgs = originalArgs;
       }
 
-      const executionTime = this.options.includePerformance
-        ? Date.now() - startTime
-        : undefined;
+      const executionTime = this.options.includePerformance ? Date.now() - startTime : undefined;
 
       return {
         commandPath,
@@ -418,9 +393,7 @@ export class ArgParserFuzzyTester {
         executionTime,
       };
     } catch (error) {
-      const executionTime = this.options.includePerformance
-        ? Date.now() - startTime
-        : undefined;
+      const executionTime = this.options.includePerformance ? Date.now() - startTime : undefined;
 
       return {
         commandPath,
@@ -435,17 +408,13 @@ export class ArgParserFuzzyTester {
   /**
    * Generate comprehensive test report
    */
-  private generateReport(
-    commandPaths: string[][],
-    results: TestResult[],
-  ): FuzzyTestReport {
+  private generateReport(commandPaths: string[][], results: TestResult[]): FuzzyTestReport {
     const totalTests = results.length;
     const successfulTests = results.filter((r) => r.success).length;
     const failedTests = totalTests - successfulTests;
 
     // Coverage by path
-    const coverageByPath: Record<string, { total: number; passed: number }> =
-      {};
+    const coverageByPath: Record<string, { total: number; passed: number }> = {};
     for (const path of commandPaths) {
       const pathKey = path.join(" ") || "(root)";
       const pathResults = results.filter(

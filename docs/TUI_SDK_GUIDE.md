@@ -17,7 +17,6 @@ The TUI SDK is included in `@alcyone-labs/arg-parser`, but requires specific pee
 npm install @opentui/solid @opentui/core solid-js
 ```
 
-
 ## Quick Start
 
 The TUI module is available via the `@alcyone-labs/arg-parser/tui` entry point. The recommended way to start an application is using `createTuiApp`, which handles terminal initialization and provides core context (Theme, Shortcuts, Toast).
@@ -81,9 +80,7 @@ Use `DrillDownNavigator` for stack-based navigation (like a mobile app or file b
 import { DrillDownNavigator } from "@alcyone-labs/arg-parser/tui";
 
 <DrillDownNavigator>
-  {(nav) => (
-    <List onSelect={(item) => nav.push(() => <Details item={item} />)} />
-  )}
+  {(nav) => <List onSelect={(item) => nav.push(() => <Details item={item} />)} />}
 </DrillDownNavigator>;
 ```
 
@@ -137,11 +134,7 @@ import { useTheme } from "@alcyone-labs/arg-parser/tui";
 function ThemeSwitcher() {
   const { current, setTheme, cycle } = useTheme();
 
-  return (
-    <text style={{ fg: current().colors.accent }}>
-      Current theme: {current().name}
-    </text>
-  );
+  return <text style={{ fg: current().colors.accent }}>Current theme: {current().name}</text>;
 }
 ```
 

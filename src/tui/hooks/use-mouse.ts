@@ -5,11 +5,7 @@
  */
 
 import { onCleanup, onMount } from "solid-js";
-import {
-  disableMouseReporting,
-  enableMouseReporting,
-  parseMouseScroll,
-} from "../tty";
+import { disableMouseReporting, enableMouseReporting, parseMouseScroll } from "../tty";
 
 export interface UseMouseOptions {
   /** Callback when mouse wheel scrolls. Delta is negative for up, positive for down. */

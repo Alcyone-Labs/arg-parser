@@ -419,9 +419,7 @@ describe("Output Schema Version Handling", () => {
       const notSupportedTools = parserNotSupported.toMcpTools();
 
       const supportedTool = supportedTools.find((t) => t.name === "error-tool");
-      const notSupportedTool = notSupportedTools.find(
-        (t) => t.name === "error-tool",
-      );
+      const notSupportedTool = notSupportedTools.find((t) => t.name === "error-tool");
 
       // Version that supports output schemas should have output schema
       expect(supportedTool?.outputSchema).toBeDefined();

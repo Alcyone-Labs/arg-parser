@@ -120,11 +120,7 @@ export {
 } from "./config/plugins";
 
 export { ArgParserFuzzyTester } from "./testing/fuzzy-tester";
-export type {
-  FuzzyTestOptions,
-  TestResult,
-  FuzzyTestReport,
-} from "./testing/fuzzy-tester";
+export type { FuzzyTestOptions, TestResult, FuzzyTestReport } from "./testing/fuzzy-tester";
 
 // SimpleChalk export for chalk replacement in autonomous builds
 export { default as SimpleChalk } from "@alcyone-labs/simple-chalk";
@@ -142,9 +138,4 @@ export {
 // TUI System exports (OpenTUI v2 with SolidJS)
 // NOTE: TUI runtime (createTuiApp) is available via separate import: "@alcyone-labs/arg-parser/tui"
 // This avoids loading @opentui/core during normal arg-parser usage.
-export type {
-  TuiAppConfig,
-  TuiTheme,
-  ShortcutBinding,
-  ToastType,
-} from "./tui/types";
+export type { TuiAppConfig, TuiTheme, ShortcutBinding, ToastType } from "./tui/types";

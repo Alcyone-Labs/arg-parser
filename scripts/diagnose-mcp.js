@@ -56,9 +56,7 @@ class McpDiagnostic {
         accessSync(filePath, constants.X_OK);
         this.log(`${description} is executable`);
       } catch (error) {
-        this.addWarning(
-          `${description} is not executable - this might cause issues`,
-        );
+        this.addWarning(`${description} is not executable - this might cause issues`);
       }
     } catch (error) {
       this.addIssue(`${description} is not readable: ${error.message}`);
@@ -67,9 +65,7 @@ class McpDiagnostic {
 
   checkManifest() {
     if (!this.manifestPath) {
-      this.addWarning(
-        "No manifest path provided - skipping manifest validation",
-      );
+      this.addWarning("No manifest path provided - skipping manifest validation");
       return;
     }
 

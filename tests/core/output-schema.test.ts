@@ -29,8 +29,7 @@ describe("Output Schema Support", () => {
         name: z.string(),
       });
 
-      const successWithDataSchema =
-        OutputSchemaPatterns.successWithData(customDataSchema);
+      const successWithDataSchema = OutputSchemaPatterns.successWithData(customDataSchema);
       expect(successWithDataSchema._def.type).toBe("object");
 
       const listSchema = OutputSchemaPatterns.list(customDataSchema);

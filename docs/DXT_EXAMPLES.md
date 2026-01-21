@@ -70,9 +70,7 @@ const parser = new ArgParser()
     name: "convert",
     description: "Convert image to specified format",
     handler: async (args) => {
-      const outputPath = DxtPathResolver.resolvePath(
-        `${args.outputDir}/converted.${args.format}`,
-      );
+      const outputPath = DxtPathResolver.resolvePath(`${args.outputDir}/converted.${args.format}`);
 
       console.log(`Converting ${args.input} to ${outputPath}`);
       console.log(`Quality: ${args.quality}%`);

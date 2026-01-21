@@ -10,8 +10,8 @@ describe("Working Directory Management", () => {
 
   beforeEach(async () => {
     // Enable optional config plugins (TOML, YAML) for testing
-    await import("../../src/config/plugins/ConfigPluginRegistry.ts").then(
-      (mod) => mod.enableOptionalConfigPluginsAsync(),
+    await import("../../src/config/plugins/ConfigPluginRegistry.ts").then((mod) =>
+      mod.enableOptionalConfigPluginsAsync(),
     );
 
     // Save original cwd
@@ -158,11 +158,7 @@ describe("Working Directory Management", () => {
           type: "string",
         });
 
-      const result = await parser.parse([
-        "--workspace",
-        testDir,
-        "--s-with-env",
-      ]);
+      const result = await parser.parse(["--workspace", testDir, "--s-with-env"]);
 
       expect(result.priority).toBe("local");
     });
@@ -194,11 +190,7 @@ describe("Working Directory Management", () => {
             type: "string",
           });
 
-        const result = await parser.parse([
-          "--workspace",
-          testDir,
-          "--s-with-env",
-        ]);
+        const result = await parser.parse(["--workspace", testDir, "--s-with-env"]);
 
         expect(result.priority).toBe("dev");
       } finally {
@@ -238,11 +230,7 @@ describe("Working Directory Management", () => {
             type: "string",
           });
 
-        const result = await parser.parse([
-          "--workspace",
-          testDir,
-          "--s-with-env",
-        ]);
+        const result = await parser.parse(["--workspace", testDir, "--s-with-env"]);
 
         expect(result.priority).toBe("test");
       } finally {
@@ -284,13 +272,7 @@ describe("Working Directory Management", () => {
           parser: subParser,
         });
 
-      const result = await parser1.parse([
-        "--w1",
-        testDir,
-        "sub",
-        "--w2",
-        testDir2,
-      ]);
+      const result = await parser1.parse(["--w1", testDir, "sub", "--w2", testDir2]);
 
       expect(result.cwd).toBe(testDir2); // Last one wins
     });
@@ -312,9 +294,7 @@ describe("Working Directory Management", () => {
 
       const result = await parser.parse(["--workspace", "/nonexistent/path"]);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("does not exist"),
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("does not exist"));
       expect(result.cwd).toBe(originalCwd);
     });
 
@@ -337,9 +317,7 @@ describe("Working Directory Management", () => {
 
       const result = await parser.parse(["--workspace", filePath]);
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("is not a directory"),
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("is not a directory"));
       expect(result.cwd).toBe(originalCwd);
     });
   });

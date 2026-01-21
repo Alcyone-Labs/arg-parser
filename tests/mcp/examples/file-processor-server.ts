@@ -20,13 +20,7 @@
  *   bun tests/mcp/examples/file-processor-server.ts serve --transport sse --port 3001
  */
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, resolve } from "node:path";
 import { ArgParser } from "../../../src";
 
@@ -136,8 +130,7 @@ const cli = ArgParser.withMcp({
         analysis.detailed = {
           emptyLines: lines.filter((line) => line.trim() === "").length,
           longestLine: Math.max(...lines.map((line) => line.length)),
-          averageLineLength:
-            lines.reduce((sum, line) => sum + line.length, 0) / lines.length,
+          averageLineLength: lines.reduce((sum, line) => sum + line.length, 0) / lines.length,
           wordFrequency: getWordFrequency(words.slice(0, 100)), // Top 100 words
           extension: extname(filePath),
           encoding: "utf-8",
@@ -147,14 +140,9 @@ const cli = ArgParser.withMcp({
       if (analysisType === "full") {
         analysis.advanced = {
           uniqueWords: new Set(words.map((w) => w.toLowerCase())).size,
-          averageWordLength:
-            words.reduce((sum, word) => sum + word.length, 0) / words.length,
-          sentenceCount: content
-            .split(/[.!?]+/)
-            .filter((s) => s.trim().length > 0).length,
-          paragraphCount: content
-            .split(/\n\s*\n/)
-            .filter((p) => p.trim().length > 0).length,
+          averageWordLength: words.reduce((sum, word) => sum + word.length, 0) / words.length,
+          sentenceCount: content.split(/[.!?]+/).filter((s) => s.trim().length > 0).length,
+          paragraphCount: content.split(/\n\s*\n/).filter((p) => p.trim().length > 0).length,
         };
       }
 
@@ -212,10 +200,7 @@ const cli = ArgParser.withMcp({
         case "add-line-numbers":
           transformedContent = content
             .split("\n")
-            .map(
-              (line, index) =>
-                `${(index + 1).toString().padStart(4, " ")}: ${line}`,
-            )
+            .map((line, index) => `${(index + 1).toString().padStart(4, " ")}: ${line}`)
             .join("\n");
           break;
         default:
@@ -228,8 +213,7 @@ const cli = ArgParser.withMcp({
         originalSize: content.length,
         transformedSize: transformedContent.length,
         preview:
-          transformedContent.substring(0, 200) +
-          (transformedContent.length > 200 ? "..." : ""),
+          transformedContent.substring(0, 200) + (transformedContent.length > 200 ? "..." : ""),
       };
 
       if (outputPath) {
@@ -253,8 +237,7 @@ const cli = ArgParser.withMcp({
       },
       {
         name: "output",
-        description:
-          "Output file path (optional, returns content if not specified)",
+        description: "Output file path (optional, returns content if not specified)",
         options: ["--output", "-o"],
         type: "string",
       },
@@ -263,13 +246,7 @@ const cli = ArgParser.withMcp({
         description: "Transformation to apply",
         options: ["--transform", "-t"],
         type: "string",
-        enum: [
-          "uppercase",
-          "lowercase",
-          "reverse-lines",
-          "remove-empty-lines",
-          "add-line-numbers",
-        ],
+        enum: ["uppercase", "lowercase", "reverse-lines", "remove-empty-lines", "add-line-numbers"],
         mandatory: true,
       },
     ]),
@@ -300,9 +277,7 @@ const cli = ArgParser.withMcp({
           });
         }
       } else if (stats.isDirectory()) {
-        const files = recursive
-          ? getFilesRecursively(searchPath)
-          : getFilesInDirectory(searchPath);
+        const files = recursive ? getFilesRecursively(searchPath) : getFilesInDirectory(searchPath);
 
         for (const file of files) {
           try {
@@ -404,8 +379,7 @@ function searchInFile(
 ): Array<{ lineNumber: number; line: string; match: string }> {
   const content = readFileSync(filePath, "utf-8");
   const lines = content.split("\n");
-  const matches: Array<{ lineNumber: number; line: string; match: string }> =
-    [];
+  const matches: Array<{ lineNumber: number; line: string; match: string }> = [];
 
   const searchPattern = caseSensitive ? pattern : pattern.toLowerCase();
 

@@ -16,13 +16,5 @@ export {
 } from "./ConfigPluginRegistry";
 
 // Optional plugins (these may throw if dependencies are not available)
-export {
-  TomlConfigPlugin,
-  createTomlPlugin,
-  createTomlPluginAsync,
-} from "./TomlConfigPlugin";
-export {
-  YamlConfigPlugin,
-  createYamlPlugin,
-  createYamlPluginAsync,
-} from "./YamlConfigPlugin";
+export { TomlConfigPlugin, createTomlPlugin, createTomlPluginAsync } from "./TomlConfigPlugin";
+export { YamlConfigPlugin, createYamlPlugin, createYamlPluginAsync } from "./YamlConfigPlugin";

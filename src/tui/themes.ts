@@ -5,12 +5,7 @@
  * support for custom theme registration.
  */
 
-import {
-  createContext,
-  createSignal,
-  useContext,
-  type Accessor,
-} from "solid-js";
+import { createContext, createSignal, useContext, type Accessor } from "solid-js";
 import type { JSX } from "@opentui/solid";
 import { createComponent } from "@opentui/solid";
 import type { TuiTheme } from "./types";
@@ -137,10 +132,7 @@ export const Theme = {
      * Extend the base theme with overrides.
      * Color overrides are shallow-merged with the base colors.
      */
-    extend: (overrides: {
-      name?: string;
-      colors?: Partial<TuiTheme["colors"]>;
-    }): TuiTheme => ({
+    extend: (overrides: { name?: string; colors?: Partial<TuiTheme["colors"]> }): TuiTheme => ({
       name: overrides.name ?? `${base.name}-extended`,
       colors: { ...base.colors, ...overrides.colors },
     }),
@@ -183,10 +175,7 @@ const ThemeContext = createContext<ThemeContextValue>();
 /**
  * Theme provider component
  */
-export function ThemeProvider(props: {
-  initial?: string;
-  children: JSX.Element;
-}): JSX.Element {
+export function ThemeProvider(props: { initial?: string; children: JSX.Element }): JSX.Element {
   const themes = { ...TuiThemes };
   const initialTheme = themes[props.initial ?? "dark"] ?? themes["dark"];
 

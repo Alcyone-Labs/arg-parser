@@ -5,12 +5,7 @@
  * for quick feedback messages like "Copied!", "Saved", etc.
  */
 
-import {
-  createContext,
-  createSignal,
-  useContext,
-  type Accessor,
-} from "solid-js";
+import { createContext, createSignal, useContext, type Accessor } from "solid-js";
 import type { JSX } from "@opentui/solid";
 import { createComponent } from "@opentui/solid";
 import type { ToastType } from "./types";
@@ -86,14 +81,10 @@ export function ToastProvider(props: { children: JSX.Element }): JSX.Element {
   };
 
   const value: ToastContextValue = {
-    info: (message, duration = DEFAULT_DURATION) =>
-      show(message, "info", duration),
-    success: (message, duration = DEFAULT_DURATION) =>
-      show(message, "success", duration),
-    error: (message, duration = DEFAULT_DURATION) =>
-      show(message, "error", duration),
-    warning: (message, duration = DEFAULT_DURATION) =>
-      show(message, "warning", duration),
+    info: (message, duration = DEFAULT_DURATION) => show(message, "info", duration),
+    success: (message, duration = DEFAULT_DURATION) => show(message, "success", duration),
+    error: (message, duration = DEFAULT_DURATION) => show(message, "error", duration),
+    warning: (message, duration = DEFAULT_DURATION) => show(message, "warning", duration),
     state,
     hide,
   };

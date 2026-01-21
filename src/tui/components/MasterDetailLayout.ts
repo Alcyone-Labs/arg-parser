@@ -48,9 +48,7 @@ function parseWidth(width: number | string | undefined): number | string {
  * />
  * ```
  */
-export function MasterDetailLayout(
-  props: MasterDetailLayoutProps,
-): JSX.Element {
+export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element {
   const masterWidth = parseWidth(props.masterWidth);
   const gap = props.gap ?? 1;
   const showDivider = props.showDivider ?? true;

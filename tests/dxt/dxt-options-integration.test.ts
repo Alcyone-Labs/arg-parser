@@ -385,9 +385,7 @@ describe("DxtOptions Integration Tests", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow(
-        "Invalid dxtOptions.default for INVALID_VAR: expected number, got string",
-      );
+      }).toThrow("Invalid dxtOptions.default for INVALID_VAR: expected number, got string");
     });
 
     it("should handle type mismatch errors during DXT generation", async () => {
@@ -409,9 +407,7 @@ describe("DxtOptions Integration Tests", () => {
 
       expect(() => {
         dxtGenerator.generateEnvAndUserConfig();
-      }).toThrow(
-        "Invalid dxtOptions.default for TYPE_MISMATCH_VAR: expected number, got string",
-      );
+      }).toThrow("Invalid dxtOptions.default for TYPE_MISMATCH_VAR: expected number, got string");
     });
   });
 });

@@ -76,18 +76,14 @@ describe("--s-build-dxt System Flag", () => {
     expect(result).toHaveProperty("shouldExit", true);
     expect(result).toHaveProperty("type", "success");
     expect(fs.existsSync(testOutputDir)).toBe(true);
-    expect(fs.existsSync(path.join(testOutputDir, "test-mcp-server-dxt"))).toBe(
-      true,
-    );
+    expect(fs.existsSync(path.join(testOutputDir, "test-mcp-server-dxt"))).toBe(true);
 
     // Verify DXT folder contents
     const dxtPath = path.join(testOutputDir, "test-mcp-server-dxt");
     expect(fs.existsSync(path.join(dxtPath, "manifest.json"))).toBe(true);
     expect(fs.existsSync(path.join(dxtPath, "package.json"))).toBe(true);
     expect(fs.existsSync(path.join(dxtPath, "README.md"))).toBe(true);
-    expect(fs.existsSync(path.join(dxtPath, "build-dxt-package.sh"))).toBe(
-      true,
-    );
+    expect(fs.existsSync(path.join(dxtPath, "build-dxt-package.sh"))).toBe(true);
 
     // Verify manifest content
     const manifestPath = path.join(dxtPath, "manifest.json");

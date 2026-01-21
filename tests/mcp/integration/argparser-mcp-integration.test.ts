@@ -131,10 +131,7 @@ describe("ArgParser MCP Integration", () => {
         description: "Test prompt for Zod v4 compatibility with MCP SDK",
         argsSchema: z.object({
           message: z.string().describe("Message to process"),
-          format: z
-            .enum(["json", "text", "markdown"])
-            .optional()
-            .describe("Output format"),
+          format: z.enum(["json", "text", "markdown"]).optional().describe("Output format"),
           metadata: z
             .object({
               author: z.string(),

@@ -208,11 +208,7 @@ try {
 
   const report = await fuzzyTester.runFuzzyTest();
 
-  if (
-    report &&
-    typeof report.totalTests === "number" &&
-    report.totalTests > 0
-  ) {
+  if (report && typeof report.totalTests === "number" && report.totalTests > 0) {
     console.log("   ✅ Fuzzy testing functionality works");
   } else {
     throw new Error("Fuzzy testing not working properly");

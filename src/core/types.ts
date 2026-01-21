@@ -9,11 +9,7 @@ export type ArgParserInstance = IArgParser;
  * This allows ArgParserBase to use these methods without depending on the concrete ArgParser class.
  */
 export interface IMcpServerMethods {
-  createMcpServer(
-    serverInfo?: any,
-    toolOptions?: any,
-    logPath?: any,
-  ): Promise<any>;
+  createMcpServer(serverInfo?: any, toolOptions?: any, logPath?: any): Promise<any>;
 
   startMcpServerWithTransport(
     serverInfo: any,
@@ -64,9 +60,7 @@ export interface IArgParser<THandlerReturn = any> {
 
   // Configuration methods
   setHandler(
-    handler: (
-      ctx: IHandlerContext<any, any>,
-    ) => THandlerReturn | Promise<THandlerReturn>,
+    handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>,
   ): this;
 
   // Help
@@ -106,9 +100,7 @@ export const FlagInheritance = {
   AllParents: "all-parents",
 } as const;
 
-export type TFlagInheritance =
-  | (typeof FlagInheritance)[keyof typeof FlagInheritance]
-  | boolean;
+export type TFlagInheritance = (typeof FlagInheritance)[keyof typeof FlagInheritance] | boolean;
 
 /**
  * Zod schema for validating DXT-specific options
@@ -118,9 +110,7 @@ export const zodDxtOptionsSchema = z
     sensitive: z
       .boolean()
       .optional()
-      .describe(
-        "Whether this field should be marked as sensitive in DXT user_config",
-      ),
+      .describe("Whether this field should be marked as sensitive in DXT user_config"),
     localDefault: z
       .string()
       .optional()
@@ -129,39 +119,24 @@ export const zodDxtOptionsSchema = z
       .enum(["string", "directory", "file", "boolean", "number"])
       .optional()
       .describe("DXT input type - determines UI component in DXT clients"),
-    multiple: z
-      .boolean()
-      .optional()
-      .describe("Allow multiple values (for arrays)"),
+    multiple: z.boolean().optional().describe("Allow multiple values (for arrays)"),
     min: z.number().optional().describe("Minimum value (for number type)"),
     max: z.number().optional().describe("Maximum value (for number type)"),
     default: z
       .any()
       .optional()
-      .describe(
-        "DXT-specific default value (overrides localDefault if provided)",
-      ),
-    title: z
-      .string()
-      .optional()
-      .describe("Custom title for the user_config field"),
+      .describe("DXT-specific default value (overrides localDefault if provided)"),
+    title: z.string().optional().describe("Custom title for the user_config field"),
   })
   .strict()
   .refine(
     (data) => {
       // If min or max are provided, type should be "number"
-      if (
-        (data.min !== undefined || data.max !== undefined) &&
-        data.type !== "number"
-      ) {
+      if ((data.min !== undefined || data.max !== undefined) && data.type !== "number") {
         return false;
       }
       // If min and max are both provided, min should be <= max
-      if (
-        data.min !== undefined &&
-        data.max !== undefined &&
-        data.min > data.max
-      ) {
+      if (data.min !== undefined && data.max !== undefined && data.min > data.max) {
         return false;
       }
       return true;
@@ -177,15 +152,11 @@ export const zodFlagSchema = z
     name: z
       .string()
       .min(1, "Flag name cannot be empty")
-      .describe(
-        "The output property name, used as a return key `{name: value}`. Must be unique.",
-      ),
+      .describe("The output property name, used as a return key `{name: value}`. Must be unique."),
     allowLigature: z
       .boolean()
       .default(true)
-      .describe(
-        "Enable both forms of flag input, e.g., `./script.js -f=value` and `-f value`.",
-      ),
+      .describe("Enable both forms of flag input, e.g., `./script.js -f=value` and `-f value`."),
     allowMultiple: z
       .boolean()
       .default(false)
@@ -196,18 +167,12 @@ export const zodFlagSchema = z
       .union([z.string(), z.array(z.string())])
       .optional()
       .describe("Textual description for help messages."),
-    valueHint: z
-      .string()
-      .optional()
-      .describe("Hint/example value shown in help and examples."),
+    valueHint: z.string().optional().describe("Hint/example value shown in help and examples."),
     options: z
       .array(z.string().min(1))
       .min(1, "Flag must have at least one option (e.g., ['-f', '--flag'])")
       .describe("Array of option strings, e.g., ['-f', '--flag']."),
-    defaultValue: z
-      .any()
-      .optional()
-      .describe("Default value if the flag is not provided."),
+    defaultValue: z.any().optional().describe("Default value if the flag is not provided."),
     type: z
       .union([
         z.any().refine((val) => val === String, {
@@ -238,9 +203,7 @@ export const zodFlagSchema = z
         z.string().refine(
           // String literal types
           (value) =>
-            ["boolean", "string", "number", "array", "object"].includes(
-              value.toLowerCase(),
-            ),
+            ["boolean", "string", "number", "array", "object"].includes(value.toLowerCase()),
           {
             message:
               "Invalid type string. Must be one of 'boolean', 'string', 'number', 'array', 'object'.",
@@ -277,9 +240,7 @@ export const zodFlagSchema = z
         ) => boolean | string | void | Promise<boolean | string | void>
       >((val) => typeof val === "function", "Must be a validation function")
       .optional()
-      .describe(
-        "Custom validation function for the flag's value (receives value, parsedArgs).",
-      ),
+      .describe("Custom validation function for the flag's value (receives value, parsedArgs)."),
     enum: z // User-provided enum values
       .array(z.any())
       .optional()
@@ -292,9 +253,7 @@ export const zodFlagSchema = z
       ),
     dxtOptions: zodDxtOptionsSchema
       .optional()
-      .describe(
-        "DXT-specific configuration options for enhanced DXT manifest generation",
-      ),
+      .describe("DXT-specific configuration options for enhanced DXT manifest generation"),
     dynamicRegister: z
       .custom<DynamicRegisterFn>((val) => typeof val === "function")
       .optional()
@@ -321,21 +280,11 @@ export const zodFlagSchema = z
   .transform((obj) => {
     // Alias handling for 'default' and 'required'
     const newObj: { [key: string]: any } = { ...obj };
-    if (
-      "default" in newObj &&
-      newObj["default"] !== undefined &&
-      !("defaultValue" in newObj)
-    ) {
+    if ("default" in newObj && newObj["default"] !== undefined && !("defaultValue" in newObj)) {
       newObj["defaultValue"] = newObj["default"];
     }
-    if (
-      "required" in newObj &&
-      newObj["required"] !== undefined &&
-      !("mandatory" in newObj)
-    ) {
-      newObj["mandatory"] = newObj["required"] as
-        | boolean
-        | ((parsedArgs: any) => boolean);
+    if ("required" in newObj && newObj["required"] !== undefined && !("mandatory" in newObj)) {
+      newObj["mandatory"] = newObj["required"] as boolean | ((parsedArgs: any) => boolean);
     }
     return newObj;
   });
@@ -493,10 +442,7 @@ export type DynamicRegisterFn = (
  * particularly its `type` property and validation/enum/mandatory functions.
  * This is the type that ArgParser would internally work with for parsing and type extraction.
  */
-export type ProcessedFlag = Omit<
-  ProcessedFlagCore,
-  "validate" | "enum" | "mandatory"
-> & {
+export type ProcessedFlag = Omit<ProcessedFlagCore, "validate" | "enum" | "mandatory"> & {
   // `type` is already correctly typed via ProcessedFlagCore.
   validate?: (
     value: any,
@@ -512,45 +458,43 @@ export type ProcessedFlag = Omit<
 /**
  * Resolves the TypeScript type from a flag's `type` definition.
  */
-export type ResolveType<T extends TParsedArgsTypeFromFlagDef> =
-  T extends StringConstructor
-    ? string
-    : T extends NumberConstructor
-      ? number
-      : T extends BooleanConstructor
-        ? boolean
-        : T extends ArrayConstructor
-          ? any[] // Default to array of any if not further specified
-          : T extends ObjectConstructor
-            ? Record<string, any> // Default to object with any properties
-            : T extends ZodTypeAny
-              ? z.infer<T> // Infer TypeScript type from Zod schema
-              : T extends "string"
-                ? string
-                : T extends "number"
-                  ? number
-                  : T extends "boolean"
-                    ? boolean
-                    : T extends "array"
-                      ? any[] // Default for string literal 'array'
-                      : T extends "object"
-                        ? Record<string, any> // Default for string literal 'object'
-                        : T extends (value: string) => infer R // Custom parser function
-                          ? R // The return type of the custom parser
-                          : any; // Fallback type
+export type ResolveType<T extends TParsedArgsTypeFromFlagDef> = T extends StringConstructor
+  ? string
+  : T extends NumberConstructor
+    ? number
+    : T extends BooleanConstructor
+      ? boolean
+      : T extends ArrayConstructor
+        ? any[] // Default to array of any if not further specified
+        : T extends ObjectConstructor
+          ? Record<string, any> // Default to object with any properties
+          : T extends ZodTypeAny
+            ? z.infer<T> // Infer TypeScript type from Zod schema
+            : T extends "string"
+              ? string
+              : T extends "number"
+                ? number
+                : T extends "boolean"
+                  ? boolean
+                  : T extends "array"
+                    ? any[] // Default for string literal 'array'
+                    : T extends "object"
+                      ? Record<string, any> // Default for string literal 'object'
+                      : T extends (value: string) => infer R // Custom parser function
+                        ? R // The return type of the custom parser
+                        : any; // Fallback type
 
 /**
  * Extracts the final TypeScript type for a flag's value based on its definition,
  * considering `flagOnly` and `allowMultiple` properties.
  */
-export type ExtractFlagType<TFlag extends ProcessedFlag> =
-  TFlag["flagOnly"] extends true // If the flag is a "flag-only" (presence) type
-    ? TFlag["allowMultiple"] extends true
-      ? boolean[] // Multiple presence flags result in an array of booleans
-      : boolean // Single presence flag results in a boolean
-    : TFlag["allowMultiple"] extends true // If the flag can have multiple values
-      ? Array<ResolveType<TFlag["type"]>> // Results in an array of the resolved type
-      : ResolveType<TFlag["type"]>; // Single value of the resolved type
+export type ExtractFlagType<TFlag extends ProcessedFlag> = TFlag["flagOnly"] extends true // If the flag is a "flag-only" (presence) type
+  ? TFlag["allowMultiple"] extends true
+    ? boolean[] // Multiple presence flags result in an array of booleans
+    : boolean // Single presence flag results in a boolean
+  : TFlag["allowMultiple"] extends true // If the flag can have multiple values
+    ? Array<ResolveType<TFlag["type"]>> // Results in an array of the resolved type
+    : ResolveType<TFlag["type"]>; // Single value of the resolved type
 
 /**
  * Represents the structured object of parsed arguments.
@@ -558,9 +502,7 @@ export type ExtractFlagType<TFlag extends ProcessedFlag> =
  * `TFlags` should be the array of `ProcessedFlag` definitions for the specific command.
  */
 export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
-  [K in TFlags[number]["name"]]: ExtractFlagType<
-    Extract<TFlags[number], { name: K }>
-  >;
+  [K in TFlags[number]["name"]]: ExtractFlagType<Extract<TFlags[number], { name: K }>>;
 };
 
 /**
@@ -568,10 +510,7 @@ export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
  * @template TCurrentCommandArgs Shape of `args` for the current command, derived from its flags.
  * @template TParentCommandArgs Shape of `parentArgs` from the parent command, if any.
  */
-export type IHandlerContext<
-  TCurrentCommandArgs = any,
-  TParentCommandArgs = any,
-> = {
+export type IHandlerContext<TCurrentCommandArgs = any, TParentCommandArgs = any> = {
   /** Parsed arguments specific to the current command. */
   args: TCurrentCommandArgs;
   /** Parsed arguments from the parent command, if this is a subcommand. */
@@ -701,14 +640,8 @@ export const OutputSchemaPatterns = {
   successError: () =>
     z.object({
       success: z.boolean().describe("Whether the operation was successful"),
-      message: z
-        .string()
-        .optional()
-        .describe("Optional message about the operation"),
-      error: z
-        .string()
-        .optional()
-        .describe("Error message if operation failed"),
+      message: z.string().optional().describe("Optional message about the operation"),
+      error: z.string().optional().describe("Error message if operation failed"),
     }),
 
   /**
@@ -719,14 +652,8 @@ export const OutputSchemaPatterns = {
     z.object({
       success: z.boolean().describe("Whether the operation was successful"),
       data: dataSchema || z.any().describe("The response data"),
-      message: z
-        .string()
-        .optional()
-        .describe("Optional message about the operation"),
-      error: z
-        .string()
-        .optional()
-        .describe("Error message if operation failed"),
+      message: z.string().optional().describe("Optional message about the operation"),
+      error: z.string().optional().describe("Error message if operation failed"),
     }),
 
   /**
@@ -737,10 +664,7 @@ export const OutputSchemaPatterns = {
     z.object({
       items: z.array(itemSchema || z.any()).describe("Array of items"),
       count: z.number().optional().describe("Total number of items"),
-      hasMore: z
-        .boolean()
-        .optional()
-        .describe("Whether there are more items available"),
+      hasMore: z.boolean().optional().describe("Whether there are more items available"),
     }),
 
   /**
@@ -752,10 +676,7 @@ export const OutputSchemaPatterns = {
       path: z.string().describe("File path"),
       size: z.number().optional().describe("File size in bytes"),
       created: z.boolean().optional().describe("Whether the file was created"),
-      modified: z
-        .boolean()
-        .optional()
-        .describe("Whether the file was modified"),
+      modified: z.boolean().optional().describe("Whether the file was modified"),
       exists: z.boolean().optional().describe("Whether the file exists"),
     }),
 
@@ -768,10 +689,7 @@ export const OutputSchemaPatterns = {
       exitCode: z.number().describe("Process exit code"),
       stdout: z.string().optional().describe("Standard output"),
       stderr: z.string().optional().describe("Standard error output"),
-      duration: z
-        .number()
-        .optional()
-        .describe("Execution duration in milliseconds"),
+      duration: z.number().optional().describe("Execution duration in milliseconds"),
       command: z.string().optional().describe("The command that was executed"),
     }),
 } as const;
@@ -848,10 +766,7 @@ export interface ISubCommand<
   parser: ArgParserInstance;
   /** Handler function for this subcommand. */
   handler?: (
-    ctx: IHandlerContext<
-      TParsedArgs<TSubCommandFlags>,
-      TParsedArgs<TParentCommandFlags>
-    >,
+    ctx: IHandlerContext<TParsedArgs<TSubCommandFlags>, TParsedArgs<TParentCommandFlags>>,
   ) => THandlerReturn | Promise<THandlerReturn>;
   /** Internal flag to identify MCP subcommands for proper exclusion from tool generation */
   isMcp?: boolean;
@@ -917,8 +832,5 @@ export type MainHandler<
   TParentParserFlags extends FlagsArray = FlagsArray,
   THandlerReturn = any,
 > = (
-  ctx: IHandlerContext<
-    TParsedArgs<TParserFlags>,
-    TParsedArgs<TParentParserFlags>
-  >,
+  ctx: IHandlerContext<TParsedArgs<TParserFlags>, TParsedArgs<TParentParserFlags>>,
 ) => THandlerReturn | Promise<THandlerReturn>;

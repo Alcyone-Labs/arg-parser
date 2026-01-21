@@ -8,9 +8,7 @@ import { cli } from "./auto-execution.js";
 console.log("🔍 Testing auto-execution by importing the module...");
 
 console.log("✅ Import completed successfully!");
-console.log(
-  "🎯 The CLI was not executed because it was imported, not run directly",
-);
+console.log("🎯 The CLI was not executed because it was imported, not run directly");
 console.log("📋 Available CLI instance:", typeof cli);
 
 // We can still manually parse if needed

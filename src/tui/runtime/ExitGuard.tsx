@@ -14,9 +14,7 @@ type ExitGuardState = {
   isExiting: boolean;
 };
 
-const EXIT_GUARD_STATE_KEY = Symbol.for(
-  "@alcyone-labs/arg-parser/tui/ExitGuardState",
-);
+const EXIT_GUARD_STATE_KEY = Symbol.for("@alcyone-labs/arg-parser/tui/ExitGuardState");
 
 function getExitGuardState(): ExitGuardState | undefined {
   return (process as any)[EXIT_GUARD_STATE_KEY] as ExitGuardState | undefined;

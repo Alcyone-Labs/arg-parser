@@ -29,13 +29,7 @@ function App() {
   });
 
   return (
-    <box
-      width="100%"
-      height="100%"
-      flexDirection="column"
-      borderStyle="single"
-      padding={1}
-    >
+    <box width="100%" height="100%" flexDirection="column" borderStyle="single" padding={1}>
       <text bold>OpenTUI Direct Test</text>
       <text>Count: {count()}</text>
       <text color="#888888">Press Up/Down to change count, Q to quit</text>

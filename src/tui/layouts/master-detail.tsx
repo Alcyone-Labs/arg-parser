@@ -103,8 +103,7 @@ export interface PanelProps {
 
 function resolveTheme(theme?: LayoutTheme | LayoutThemeName): LayoutTheme {
   if (!theme) return LAYOUT_THEMES.dark;
-  if (typeof theme === "string")
-    return LAYOUT_THEMES[theme] ?? LAYOUT_THEMES.dark;
+  if (typeof theme === "string") return LAYOUT_THEMES[theme] ?? LAYOUT_THEMES.dark;
   return theme;
 }
 
@@ -115,19 +114,12 @@ function resolveTheme(theme?: LayoutTheme | LayoutThemeName): LayoutTheme {
 /**
  * Main layout wrapper.
  */
-export function MasterDetailLayout(
-  props: MasterDetailLayoutProps,
-): JSX.Element {
+export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element {
   const t = resolveTheme(props.theme);
   const masterWidth = props.masterWidth ?? "35%";
 
   return (
-    <box
-      width="100%"
-      height="100%"
-      flexDirection="column"
-      backgroundColor={t.bg}
-    >
+    <box width="100%" height="100%" flexDirection="column" backgroundColor={t.bg}>
       {/* Header */}
       <box
         height={3}
