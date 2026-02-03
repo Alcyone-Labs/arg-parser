@@ -12,19 +12,180 @@ import { McpPromptsManager, type McpPromptConfig } from "../mcp/mcp-prompts.js";
 import { McpResourcesManager, type McpResourceConfig } from "../mcp/mcp-resources.js";
 import { debug } from "../utils/debug-utils";
 import { FlagManager } from "./FlagManager";
+import { PromptManager } from "./PromptManager";
 import { resolveLogPath } from "./log-path-utils";
 import { FlagInheritance } from "./types";
+import type { ISystemArgs } from "./types";
 import type {
   IArgParser,
   IFlag,
   IHandlerContext,
   IMcpServerMethods,
+  IPromptableFlag,
   ISubCommand,
   ParseResult,
   ProcessedFlag,
-  TFlagInheritance,
+  PromptWhen,
   TParsedArgs,
+  TFlagInheritance,
 } from "./types";
+
+/**
+ * Detects system flags from process arguments and returns an ISystemArgs object.
+ * Also returns the filtered processArgs with system flags removed.
+ * This extracts values for flags that take arguments and boolean presence for others.
+ */
+function detectAndStripSystemFlags(processArgs: string[]): {
+  systemArgs: ISystemArgs;
+  filteredArgs: string[];
+} {
+  const systemArgs: ISystemArgs = {};
+  const filteredArgs: string[] = [];
+
+  for (let i = 0; i < processArgs.length; i++) {
+    const arg = processArgs[i];
+    const nextArg = processArgs[i + 1];
+    const hasNextArg = nextArg !== undefined && !nextArg.startsWith("-");
+
+    switch (arg) {
+      case "--s-debug":
+        systemArgs.debug = true;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-debug-print":
+        systemArgs.debugPrint = true;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-enable-fuzzy":
+        systemArgs.enableFuzzy = true;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-with-env":
+        systemArgs.withEnv = hasNextArg ? nextArg : true;
+        if (hasNextArg) i++; // Skip next arg since we consumed it
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-save-to-env":
+        systemArgs.saveToEnv = true;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-build-dxt":
+        systemArgs.buildDxt = hasNextArg ? nextArg : true;
+        if (hasNextArg) i++;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-serve":
+        systemArgs.mcpServe = true;
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-transport":
+        if (hasNextArg) {
+          systemArgs.mcpTransport = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-port":
+        if (hasNextArg) {
+          systemArgs.mcpPort = parseInt(nextArg, 10);
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-host":
+        if (hasNextArg) {
+          systemArgs.mcpHost = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-path":
+        if (hasNextArg) {
+          systemArgs.mcpPath = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-transports":
+        if (hasNextArg) {
+          systemArgs.mcpTransports = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-log-path":
+        if (hasNextArg) {
+          systemArgs.mcpLogPath = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-cors":
+        if (hasNextArg) {
+          try {
+            systemArgs.mcpCors = JSON.parse(nextArg);
+          } catch {
+            systemArgs.mcpCors = nextArg;
+          }
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--s-mcp-auth":
+        if (hasNextArg) {
+          try {
+            systemArgs.mcpAuth = JSON.parse(nextArg);
+          } catch {
+            systemArgs.mcpAuth = nextArg;
+          }
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      // Legacy flags (deprecated)
+      case "--transport":
+        if (hasNextArg) {
+          systemArgs.mcpTransport = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--port":
+        if (hasNextArg) {
+          systemArgs.mcpPort = parseInt(nextArg, 10);
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--host":
+        if (hasNextArg) {
+          systemArgs.mcpHost = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--path":
+        if (hasNextArg) {
+          systemArgs.mcpPath = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      case "--transports":
+        if (hasNextArg) {
+          systemArgs.mcpTransports = nextArg;
+          i++;
+        }
+        // Don't add to filteredArgs - strip it
+        break;
+      default:
+        // Not a system flag, keep it in filteredArgs
+        filteredArgs.push(arg);
+    }
+  }
+
+  return { systemArgs, filteredArgs };
+}
 
 export class ArgParserError extends Error {
   public commandChain: string[];
@@ -117,6 +278,33 @@ export interface IArgParserParams<THandlerReturn = any> {
    * If not provided, a default one will be created.
    */
   logger?: Logger;
+  /**
+   * When to trigger interactive prompts for this command.
+   * - `"interactive-flag"` (default): Prompts shown only when `--interactive` or `-i` flag is present
+   * - `"missing"`: Prompts shown when any promptable flag is missing a value
+   * - `"always"`: Always show prompts (overrides CLI args for promptable flags)
+   *
+   * @default "interactive-flag"
+   *
+   * @example
+   * ```typescript
+   * const cli = new ArgParser({
+   *   appName: "my-cli",
+   *   promptWhen: "interactive-flag",
+   *   handler: async (ctx) => {
+   *     if (ctx.isInteractive) {
+   *       console.log("Interactive mode:", ctx.promptAnswers);
+   *     }
+   *   }
+   * });
+   * ```
+   */
+  promptWhen?: import("./types").PromptWhen;
+  /**
+   * Called when user cancels (Ctrl+C) during interactive prompts.
+   * If not provided, exits gracefully with code 0.
+   */
+  onCancel?: (ctx: import("./types").IHandlerContext) => void | Promise<void>;
 }
 
 export interface IParseOptions {
@@ -178,6 +366,7 @@ type InternalParsedArgs<T = any> = TParsedArgsWithRouting<T> & {
 type RecursiveParseResult = {
   finalArgs: InternalParsedArgs<any>; // Changed from TParsedArgsWithRouting<any>
   handlerToExecute?: { handler: Function; context: IHandlerContext };
+  systemArgs?: ISystemArgs;
 };
 
 export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerReturn> {
@@ -223,6 +412,10 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
 
   /** Tracks if effective working directory has been resolved */
   #workingDirectoryResolved = false;
+
+  // Interactive prompts configuration
+  #promptWhen: PromptWhen = "interactive-flag";
+  #onCancel?: (ctx: IHandlerContext) => void | Promise<void>;
 
   constructor(options: IArgParserParams<THandlerReturn> = {}, initialFlags?: readonly IFlag[]) {
     this.#appName = options.appName || "app";
@@ -296,6 +489,10 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
         this.addSubCommand(sub);
       }
     }
+
+    // Initialize interactive prompts configuration
+    this.#promptWhen = options.promptWhen ?? "interactive-flag";
+    this.#onCancel = options.onCancel;
   }
 
   get flags(): ProcessedFlag[] {
@@ -365,6 +562,26 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
 
   public getSubCommands(): Map<string, ISubCommand> {
     return this.#subCommands;
+  }
+
+  /**
+   * Sets the promptWhen setting for this parser.
+   * Used internally to propagate promptWhen from parent to sub-parser.
+   * @param promptWhen - The promptWhen value
+   */
+  setPromptWhen(promptWhen: PromptWhen): this {
+    this.#promptWhen = promptWhen;
+    return this;
+  }
+
+  /**
+   * Sets the onCancel callback for this parser.
+   * Used internally to propagate onCancel from parent to sub-parser.
+   * @param onCancel - The onCancel callback
+   */
+  setOnCancel(onCancel: (ctx: IHandlerContext) => void | Promise<void>): this {
+    this.#onCancel = onCancel;
+    return this;
   }
 
   private async _addToOutput(
@@ -511,7 +728,45 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     return this;
   }
 
+  /**
+   * Collects all flags that have interactive prompt configuration.
+   * These flags can participate in interactive mode.
+   *
+   * @returns Array of promptable flags with their names
+   */
+  getPromptableFlags(): Array<{ flag: IPromptableFlag; name: string }> {
+    const promptableFlags: Array<{ flag: IPromptableFlag; name: string }> = [];
+
+    for (const flag of this.#flagManager.flags) {
+      // Check if flag has prompt configuration (type guard for IPromptableFlag)
+      if ("prompt" in flag && typeof flag["prompt"] === "function") {
+        promptableFlags.push({ flag: flag as IPromptableFlag, name: flag["name"] });
+      }
+    }
+
+    return promptableFlags;
+  }
+
+  /**
+   * Gets the promptWhen setting for this parser.
+   * @returns The promptWhen value
+   */
+  getPromptWhen(): PromptWhen {
+    return this.#promptWhen;
+  }
+
   addSubCommand(subCommandConfig: ISubCommand): this {
+    // Handle interactive subcommand properties
+    if ("promptWhen" in subCommandConfig && subCommandConfig.promptWhen) {
+      // Propagate promptWhen to sub-parser
+      subCommandConfig.parser.setPromptWhen?.(subCommandConfig.promptWhen);
+    }
+
+    if ("onCancel" in subCommandConfig && subCommandConfig.onCancel) {
+      // Propagate onCancel to sub-parser
+      subCommandConfig.parser.setOnCancel?.(subCommandConfig.onCancel);
+    }
+
     if (this.#subCommands.has(subCommandConfig.name)) {
       throw new Error(`Sub-command '${subCommandConfig.name}' already exists`);
     }
@@ -1005,9 +1260,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
           });
           break;
         }
-        currentParser = (currentParser as any).#subCommands.get(
-          subCommandName,
-        )?.parser;
+        currentParser = (currentParser as any).#subCommands.get(subCommandName)?.parser;
         remainingArgs = remainingArgs.slice(1);
 
         const nextSubCommandIndex = remainingArgs.findIndex((arg) =>
@@ -1450,18 +1703,22 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     // Store original args for fuzzy mode logging
     const originalProcessArgs = [...processArgs];
 
+    // Detect system flags early and strip them from processArgs so they're not treated as unknown commands
+    const { systemArgs: detectedSystemArgs, filteredArgs: processArgsWithoutSystemFlags } =
+      detectAndStripSystemFlags(processArgs);
+    // Replace processArgs with filtered version (strip system flags)
+    processArgs.length = 0;
+    processArgs.push(...processArgsWithoutSystemFlags);
+
     // Check if fuzzy mode is enabled (global fuzzy mode detection)
     // This allows automatic prevention of parse() execution without requiring boilerplate
     // Prevent execution if:
     // 1. ARGPARSER_FUZZY_MODE environment variable is set (during fuzzy test imports)
-    // 2. OR --s-enable-fuzzy is in process.argv but not in current processArgs (global fuzzy testing)
+    // 2. OR --s-enable-fuzzy was detected in the original args
     // 3. AND skipHelpHandling is not true (not a programmatic call from fuzzy tester)
     const shouldPreventExecution =
       typeof process !== "undefined" &&
-      (process.env["ARGPARSER_FUZZY_MODE"] === "true" ||
-        (process.argv &&
-          process.argv.includes("--s-enable-fuzzy") &&
-          !processArgs.includes("--s-enable-fuzzy"))) &&
+      (process.env["ARGPARSER_FUZZY_MODE"] === "true" || detectedSystemArgs.enableFuzzy === true) &&
       !options?.skipHelpHandling;
 
     if (shouldPreventExecution) {
@@ -1469,11 +1726,16 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
       return {
         _fuzzyModePreventedExecution: true,
         _originalInputArgs: originalProcessArgs,
+        systemArgs: detectedSystemArgs,
       } as TParsedArgsWithRouting<any>;
     }
 
     const globalCheckResult = await this.#_handleGlobalChecks(processArgs, options);
     if (globalCheckResult !== false) {
+      // If it's a ParseResult, inject systemArgs and return it
+      if (globalCheckResult !== true && typeof globalCheckResult === "object") {
+        (globalCheckResult as any).systemArgs = detectedSystemArgs;
+      }
       // If it's a ParseResult, return it; otherwise return empty object for backward compatibility
       return globalCheckResult === true ? ({} as TParsedArgsWithRouting<any>) : globalCheckResult;
     }
@@ -1490,20 +1752,30 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
         identifiedParserChain,
       );
       if (saveToEnvResult !== false) {
+        // Inject systemArgs into the result before returning
+        if (saveToEnvResult !== true && typeof saveToEnvResult === "object") {
+          (saveToEnvResult as any).systemArgs = detectedSystemArgs;
+        }
         return saveToEnvResult === true ? ({} as TParsedArgsWithRouting<any>) : saveToEnvResult;
       }
 
-      const { finalArgs, handlerToExecute } = await this._parseRecursive(
+      const { finalArgs, handlerToExecute, systemArgs } = await this._parseRecursive(
         processArgs,
         this,
         {},
         [],
         options,
         undefined,
+        detectedSystemArgs,
       );
 
       if (identifiedCommandChain.length > 0) {
         finalArgs.$commandChain = identifiedCommandChain;
+      }
+
+      // Add systemArgs to the final result so it's available to handlers and returned to callers
+      if (systemArgs && Object.keys(systemArgs).length > 0) {
+        finalArgs.systemArgs = systemArgs;
       }
 
       // Store original args for fuzzy mode logging
@@ -1585,6 +1857,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     commandChainSoFar: string[],
     options?: IParseOptions,
     parentParser?: ArgParserBase,
+    systemArgs?: ISystemArgs,
   ): Promise<RecursiveParseResult> {
     let subCommandIndex = -1;
     let subCommandName: string | null = null;
@@ -1665,7 +1938,45 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
         rootPath: this.#rootPath || undefined,
         logger: this.#logger,
         isMcp: options?.isMcp || false,
+        systemArgs: systemArgs,
+        promptAnswers: {},
+        isInteractive: false,
       };
+
+      // Check for and execute interactive prompts
+      const promptableFlags = currentParser.getPromptableFlags();
+      const shouldRunInteractive = PromptManager.shouldTriggerInteractive(
+        currentParser.#promptWhen,
+        promptableFlags,
+        currentLevelArgs,
+      );
+
+      if (shouldRunInteractive && PromptManager.isInteractiveEnvironment()) {
+        const promptManager = new PromptManager({
+          context: handlerContext,
+          onCancel: currentParser.#onCancel,
+        });
+
+        const promptResult = await promptManager.executePrompts(promptableFlags);
+
+        if (promptResult.success) {
+          // Merge prompt answers into args
+          Object.assign(currentLevelArgs, promptResult.answers);
+          Object.assign(finalParseResultArgs, promptResult.answers);
+
+          // Update context with prompt answers and mark as interactive
+          handlerContext.promptAnswers = promptResult.answers;
+          handlerContext.isInteractive = true;
+          handlerContext.args = currentLevelArgs;
+        } else if (promptResult.cancelled) {
+          // User cancelled - exit gracefully
+          return {
+            finalArgs: finalParseResultArgs,
+            handlerToExecute: undefined,
+            systemArgs,
+          };
+        }
+      }
 
       if (currentParser.#handler) {
         handlerToExecute = {
@@ -1679,7 +1990,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
           context: handlerContext,
         };
       }
-      return { finalArgs: finalParseResultArgs, handlerToExecute };
+      return { finalArgs: finalParseResultArgs, handlerToExecute, systemArgs };
     }
     if (firstUnconsumedIndex < argsForCurrentLevel.length) {
       const unknownCommand = argsForCurrentLevel[firstUnconsumedIndex];
@@ -1712,6 +2023,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
       nextCommandChain,
       options,
       currentParser,
+      systemArgs,
     );
   }
 

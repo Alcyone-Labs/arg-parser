@@ -1,5 +1,154 @@
 ## Changelog
 
+### v2.14.0
+
+**New Feature: Interactive Prompts with @clack/prompts**
+
+Added comprehensive interactive prompt support using @clack/prompts, enabling dual-mode CLIs that work both programmatically (via flags) and interactively (via prompts).
+
+#### Interactive Prompts Core Features
+
+- **`promptWhen` Configuration**: Control when prompts appear:
+  - `"interactive-flag"` (default): Show prompts when `--interactive` or `-i` flag is present
+  - `"missing"`: Show prompts when any promptable flag is missing a value
+  - `"always"`: Always show prompts (overrides CLI args)
+
+- **Prompt Types**: Support for all @clack/prompts types:
+  - `text` - Free text input with validation
+  - `password` - Hidden input for sensitive data
+  - `confirm` - Yes/no boolean prompts
+  - `select` - Single choice from list with hints
+  - `multiselect` - Multiple selections with array output
+
+- **Sequential Prompts**: Chain prompts with dependencies using `promptSequence`:
+```typescript
+cli.addFlag({
+  name: "environment",
+  promptSequence: 1,
+  prompt: async () => ({ type: "select", message: "Env:", options: ["staging", "prod"] }),
+} as IPromptableFlag);
+
+cli.addFlag({
+  name: "version",
+  promptSequence: 2,
+  prompt: async (ctx) => {
+    const env = ctx.promptAnswers?.environment; // Access previous answer
+    return { type: "select", message: `Version for ${env}:`, options: getVersions(env) };
+  },
+} as IPromptableFlag);
+```
+
+- **Validation & Re-prompt**: Built-in validation with automatic re-prompt on failure:
+```typescript
+prompt: async () => ({
+  type: "text",
+  message: "Email:",
+  validate: (val) => val.includes("@") || "Invalid email",
+})
+```
+
+- **TTY Detection**: Automatically falls back to flag-only mode in CI/pipes (non-TTY environments)
+
+- **Cancel Handling**: Graceful Ctrl+C handling with `onCancel` callback
+
+#### New APIs
+
+- **`IPromptableFlag`** interface - Extends `IFlag` with `prompt` and `promptSequence` properties
+- **`IInteractiveSubCommand`** interface - Extends `ISubCommand` with `promptWhen` and `onCancel`
+- **`PromptManager`** class - Manages prompt execution, sorting, and validation
+  - `PromptManager.isInteractiveEnvironment()` - Check TTY status
+  - `PromptManager.shouldTriggerInteractive()` - Check trigger conditions
+  - `PromptManager.sortFlagsBySequence()` - Sort prompts by sequence
+- **`IHandlerContext` extensions**:
+  - `promptAnswers?: Record<string, any>` - Collected prompt answers
+  - `isInteractive?: boolean` - Whether running in interactive mode
+- **ArgParser methods**:
+  - `getPromptableFlags()` - Get all flags with prompt configuration
+  - `getPromptWhen()` / `setPromptWhen()` - Get/set prompt trigger mode
+  - `setOnCancel()` - Set cancel callback
+
+#### System Flags Enhancement
+
+- **`args.systemArgs`** - System flags (like `--s-debug`, `--s-mcp-serve`) are now exposed in handler context:
+```typescript
+handler: async (ctx) => {
+  console.log(ctx.systemArgs); // { debug: true, mcpServe: true, ... }
+}
+```
+
+#### Flag Options Collision Detection
+
+- **Enhanced `FlagManager`** now detects and warns about option string collisions:
+```typescript
+// This will warn: "-f" collides between "file" and "force" flags
+cli.addFlag({ name: "file", options: ["-f", "--file"], type: "string" });
+cli.addFlag({ name: "force", options: ["-f", "--force"], type: "boolean" }); // Warning!
+```
+
+- Configure behavior with `detectOptionCollisions` and `throwForOptionCollisions` options
+
+#### Documentation & Examples
+
+- **Comprehensive Examples**: Added `examples/interactive-prompts-examples.ts` with 5 working examples:
+  1. Basic greeting CLI
+  2. Deployment with dynamic versions
+  3. Git helper with "missing" trigger
+  4. Database setup with password prompts
+  5. Feature installer with multiselect
+  
+- **Master Example Runner**: Interactive demo that lets users select and run any example
+
+- **Complete Documentation**:
+  - `docs/specs/INTERACTIVE_PROMPTS.md` - Full specification
+  - `docs/CORE_CONCEPTS.md` - Updated with interactive prompts section
+  - JSDoc for all new public APIs
+  - 24 comprehensive test cases
+
+#### Usage Example
+
+```typescript
+import { ArgParser, type IPromptableFlag } from "@alcyone-labs/arg-parser";
+
+const cli = new ArgParser({
+  appName: "deploy-tool",
+  promptWhen: "interactive-flag",
+  handler: async (ctx) => {
+    // Merge CLI args with prompt answers
+    const env = ctx.args.environment || ctx.promptAnswers?.["environment"];
+    console.log(`Deploying to ${env}...`);
+  },
+});
+
+// Add interactive flag
+cli.addFlag({
+  name: "interactive",
+  options: ["--interactive", "-i"],
+  type: "boolean",
+  flagOnly: true,
+});
+
+// Add promptable flag
+cli.addFlag({
+  name: "environment",
+  options: ["--env", "-e"],
+  type: "string",
+  prompt: async () => ({
+    type: "select",
+    message: "Select environment:",
+    options: [
+      { label: "Staging", value: "staging", hint: "Safe for testing" },
+      { label: "Production", value: "production", hint: "Careful!" },
+    ],
+  }),
+} as IPromptableFlag);
+
+await cli.parse();
+```
+
+#### Breaking Changes
+
+None. All changes are additive and backward compatible.
+
 ### v2.13.5
 
 **OpenTUI TUI Display Fixes**

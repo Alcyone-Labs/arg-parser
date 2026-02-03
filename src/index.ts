@@ -83,7 +83,24 @@ export {
   createOutputSchema,
   type ArgParserOptions,
   type ArgParserBehaviorOptions,
+  type ISystemArgs,
+  // Interactive prompts types
+  type PromptType,
+  type PromptFieldConfig,
+  type PromptWhen,
+  type IPromptableFlag,
+  type IInteractiveSubCommand,
 } from "./core/types";
+
+// FlagManager exports for advanced flag management and collision detection
+export { FlagManager, type FlagManagerOptions, type FlagOptionCollision } from "./core/FlagManager";
+
+// PromptManager exports for interactive prompts with @clack/prompts
+export {
+  PromptManager,
+  type PromptManagerOptions,
+  type PromptResult,
+} from "./core/PromptManager";
 
 export {
   generateMcpToolsFromArgParser,

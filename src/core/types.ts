@@ -78,6 +78,11 @@ export interface IArgParser<THandlerReturn = any> {
 
   // MCP methods from ArgParser subclass (optional in interface but present at runtime)
   getMcpServerConfig?(): any;
+
+  // Interactive prompts methods (optional in interface but present at runtime)
+  setPromptWhen?(promptWhen: PromptWhen): this;
+  setOnCancel?(onCancel: (ctx: IHandlerContext) => void | Promise<void>): this;
+  getPromptWhen?(): PromptWhen;
 }
 
 /**
@@ -275,6 +280,17 @@ export const zodFlagSchema = z
         "If set, this flag captures the Nth trailing positional argument (1-indexed). " +
           "Multiple flags can have different positional values to capture multiple trailing args in order.",
       ),
+    // Interactive prompt configuration
+    prompt: z
+      .custom<(ctx: any) => any>((val) => typeof val === "function")
+      .optional()
+      .describe("Prompt configuration factory for interactive mode"),
+    promptSequence: z
+      .number()
+      .int()
+      .positive("Prompt sequence must be a positive integer")
+      .optional()
+      .describe("Explicit sequence order for prompts (1 = first, 2 = second, etc.)"),
   })
   // Allow unrecognized properties by default in Zod v4
   .transform((obj) => {
@@ -506,6 +522,173 @@ export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
 };
 
 /**
+ * System flags detected during parsing.
+ * These flags are processed by ArgParser internally and made available to handlers
+ * for inspection and debugging purposes.
+ */
+export interface ISystemArgs {
+  /** Whether --s-debug flag was present (enables debug output) */
+  debug?: boolean;
+  /** Whether --s-debug-print flag was present (prints config and exits) */
+  debugPrint?: boolean;
+  /** Whether --s-enable-fuzzy flag was present (enables fuzzy testing mode) */
+  enableFuzzy?: boolean;
+  /** Path provided with --s-with-env flag (loads env config from file), or true if no path */
+  withEnv?: string | true;
+  /** Whether --s-save-to-env flag was present (saves config to env file) */
+  saveToEnv?: boolean;
+  /** Output path for --s-build-dxt flag (generates DXT package), or true if no path */
+  buildDxt?: string | true;
+  /** Whether --s-mcp-serve flag was present (starts MCP server) */
+  mcpServe?: boolean;
+  /** Transport type from --s-mcp-transport flag */
+  mcpTransport?: string;
+  /** Port from --s-mcp-port flag */
+  mcpPort?: number;
+  /** Host from --s-mcp-host flag */
+  mcpHost?: string;
+  /** Path from --s-mcp-path flag */
+  mcpPath?: string;
+  /** Transports config from --s-mcp-transports flag */
+  mcpTransports?: string;
+  /** Log path from --s-mcp-log-path flag */
+  mcpLogPath?: string;
+  /** CORS config from --s-mcp-cors flag */
+  mcpCors?: any;
+  /** Auth config from --s-mcp-auth flag */
+  mcpAuth?: any;
+  /** Raw system flags that were detected but not explicitly typed */
+  [key: string]: any;
+}
+
+/**
+ * Types of interactive prompts supported by @clack/prompts integration.
+ */
+export type PromptType = "text" | "password" | "confirm" | "select" | "multiselect";
+
+/**
+ * Configuration for a single interactive prompt field.
+ * Used to define the appearance and behavior of a prompt.
+ *
+ * @example
+ * ```typescript
+ * {
+ *   type: "select",
+ *   message: "Select environment:",
+ *   options: [
+ *     { label: "Staging", value: "staging", hint: "Safe for testing" },
+ *     { label: "Production", value: "production", hint: "Careful!" }
+ *   ],
+ *   validate: (val) => val !== "production" || confirm("Are you sure?")
+ * }
+ * ```
+ */
+export interface PromptFieldConfig {
+  /** Type of prompt to display */
+  type: PromptType;
+
+  /** Message shown to the user */
+  message: string;
+
+  /** Placeholder text (for text/password types) */
+  placeholder?: string;
+
+  /** Initial/default value */
+  initial?: any;
+
+  /**
+   * Validation function.
+   * Return true for valid, string for error message.
+   * Can be async.
+   */
+  validate?: (value: any, ctx: IHandlerContext) => boolean | string | Promise<boolean | string>;
+
+  /**
+   * Options for select/multiselect.
+   * Can be simple strings or label/value objects.
+   */
+  options?: Array<string | { label: string; value: any; hint?: string }>;
+
+  /** Maximum items to show before scrolling (select/multiselect) */
+  maxItems?: number;
+}
+
+/**
+ * When to trigger interactive prompts for a command.
+ * - `"interactive-flag"`: Prompts shown only when `--interactive` or `-i` flag is present (default)
+ * - `"missing"`: Prompts shown when any promptable flag is missing a value
+ * - `"always"`: Always show prompts (overrides CLI args for promptable flags)
+ */
+export type PromptWhen = "interactive-flag" | "missing" | "always";
+
+/**
+ * Extended flag with interactive prompt capability.
+ * Flags with a `prompt` property can participate in interactive mode.
+ *
+ * @example
+ * ```typescript
+ * cli.addFlag({
+ *   name: "environment",
+ *   options: ["--env", "-e"],
+ *   type: "string",
+ *   promptSequence: 1,
+ *   prompt: async (ctx) => ({
+ *     type: "select",
+ *     message: "Select environment:",
+ *     options: ["staging", "production"]
+ *   })
+ * });
+ * ```
+ */
+export interface IPromptableFlag extends IFlag {
+  /**
+   * Prompt configuration factory.
+   * If provided, this flag can participate in interactive mode.
+   * Called at prompt time to get the configuration for @clack/prompts.
+   *
+   * The context (`ctx`) includes `promptAnswers` with previous answers,
+   * enabling conditional prompts based on earlier selections.
+   */
+  prompt?: (ctx: IHandlerContext) => PromptFieldConfig | Promise<PromptFieldConfig>;
+
+  /**
+   * Explicit sequence order (1 = first, 2 = second, etc.)
+   * If omitted, uses the flag's position in the parser's flag array.
+   * Ties are broken by array order (first in array wins).
+   */
+  promptSequence?: number;
+}
+
+/**
+ * Extended subcommand with interactive mode support.
+ * Configure when prompts are shown and handle cancellation.
+ *
+ * @example
+ * ```typescript
+ * cli.addSubCommand({
+ *   name: "deploy",
+ *   description: "Deploy the application",
+ *   promptWhen: "interactive-flag",
+ *   parser: deployParser,
+ *   onCancel: () => console.log("Deployment cancelled")
+ * });
+ * ```
+ */
+export interface IInteractiveSubCommand extends ISubCommand {
+  /**
+   * When to trigger interactive prompts for this command.
+   * @default "interactive-flag"
+   */
+  promptWhen?: PromptWhen;
+
+  /**
+   * Called when user cancels (Ctrl+C) during prompts.
+   * If not provided, exits gracefully with code 0.
+   */
+  onCancel?: (ctx: IHandlerContext) => void | Promise<void>;
+}
+
+/**
  * Generic context object passed to command handlers.
  * @template TCurrentCommandArgs Shape of `args` for the current command, derived from its flags.
  * @template TParentCommandArgs Shape of `parentArgs` from the parent command, if any.
@@ -525,6 +708,11 @@ export type IHandlerContext<TCurrentCommandArgs = any, TParentCommandArgs = any>
   // rootParser?: ArgParserInstance;
   /** Indicates if the handler is being called from MCP mode (true) or CLI mode (false). */
   isMcp?: boolean;
+  /**
+   * Indicates if running in interactive mode (prompts were shown).
+   * Only true when interactive prompts were triggered and completed.
+   */
+  isInteractive?: boolean;
   /**
    * Get a flag value with proper resolution priority (CLI flag > ENV > default).
    * Only available in MCP mode when isMcp is true.
@@ -555,6 +743,30 @@ export type IHandlerContext<TCurrentCommandArgs = any, TParentCommandArgs = any>
    * const userInputPath = path.resolve(ctx.rootPath, ctx.args.input);
    */
   rootPath?: string;
+  /**
+   * System flags that were detected during parsing.
+   * These are flags that start with --s- and are processed internally by ArgParser.
+   * They are made available to handlers for inspection and debugging.
+   *
+   * @example
+   * // User runs: my-cli --s-debug --s-mcp-serve
+   * // In handler:
+   * console.log(ctx.systemArgs); // { debug: true, mcpServe: true }
+   */
+  systemArgs?: ISystemArgs;
+  /**
+   * Answers collected from interactive prompts.
+   * Populated sequentially as prompts are answered.
+   * Available to subsequent prompts for conditional logic.
+   * Also available to the final handler.
+   *
+   * Keys are flag names, values are the user's answers.
+   *
+   * @example
+   * // After prompts: environment="staging", version="1.2.3"
+   * console.log(ctx.promptAnswers); // { environment: "staging", version: "1.2.3" }
+   */
+  promptAnswers?: Record<string, any>;
   /**
    * Data-safe logger instance.
    * In MCP mode, this logger ensures STDOUT safety by routing logs to STDERR or a file.
@@ -778,6 +990,37 @@ export interface ISubCommand<
   };
   /** MCP tool generation options for DXT generation */
   mcpToolOptions?: any;
+  /**
+   * When to trigger interactive prompts for this command.
+   * - `"interactive-flag"` (default): Prompts shown only when `--interactive` or `-i` flag is present
+   * - `"missing"`: Prompts shown when any promptable flag is missing a value
+   * - `"always"`: Always show prompts (overrides CLI args for promptable flags)
+   *
+   * @example
+   * ```typescript
+   * cli.addSubCommand({
+   *   name: "deploy",
+   *   description: "Deploy the application",
+   *   promptWhen: "interactive-flag",
+   *   parser: deployParser
+   * });
+   * ```
+   */
+  promptWhen?: PromptWhen;
+  /**
+   * Called when user cancels (Ctrl+C) during prompts.
+   * If not provided, exits gracefully with code 0.
+   *
+   * @example
+   * ```typescript
+   * cli.addSubCommand({
+   *   name: "deploy",
+   *   parser: deployParser,
+   *   onCancel: (ctx) => console.log("Deployment cancelled by user")
+   * });
+   * ```
+   */
+  onCancel?: (ctx: IHandlerContext) => void | Promise<void>;
 }
 
 /**

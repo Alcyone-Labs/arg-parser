@@ -634,3 +634,153 @@ ArgParser provides features to automatically show help messages when a command i
 - **`triggerAutoHelpIfNoHandler`**: A setting that, when enabled, automatically triggers the help display for any command or sub-command that does not have an explicit handler defined.
 
 For more details, see the [Automatic Help Display Guide](./DISPLAY_HELP.md) and the [example demo](../examples/auto-help-demo.ts).
+
+### Interactive Prompts
+
+ArgParser integrates with `@clack/prompts` to provide interactive prompts alongside traditional CLI flags. This allows you to build dual-mode CLIs that work both programmatically (via flags) and interactively (via prompts).
+
+#### Basic Setup
+
+Enable interactive mode by setting `promptWhen` and adding a `--interactive` flag:
+
+```typescript
+import { ArgParser, type IPromptableFlag } from "@alcyone-labs/arg-parser";
+
+const cli = new ArgParser({
+  appName: "deploy-tool",
+  promptWhen: "interactive-flag", // Trigger with --interactive
+  handler: async (ctx) => {
+    // Access answers from either CLI flags or interactive prompts
+    const env = ctx.args.environment || ctx.promptAnswers?.["environment"];
+    console.log(`Deploying to ${env}...`);
+  },
+});
+
+// Required: Add --interactive flag
+cli.addFlag({
+  name: "interactive",
+  options: ["--interactive", "-i"],
+  type: "boolean",
+  flagOnly: true,
+  description: "Run in interactive mode",
+});
+
+// Add promptable flag
+cli.addFlag({
+  name: "environment",
+  options: ["--env", "-e"],
+  type: "string",
+  prompt: async () => ({
+    type: "select",
+    message: "Select environment:",
+    options: ["staging", "production"],
+  }),
+} as IPromptableFlag);
+```
+
+#### promptWhen Modes
+
+- **`"interactive-flag"` (default)**: Show prompts only when `--interactive` or `-i` flag is present
+- **`"missing"`**: Show prompts when any promptable flag is missing a value
+- **`"always"`**: Always show prompts (overrides CLI args)
+
+#### Prompt Types
+
+- **`text`**: Free text input
+- **`password`**: Hidden input
+- **`confirm`**: Yes/no prompt
+- **`select`**: Single choice from list
+- **`multiselect`**: Multiple choices
+
+#### Sequential Prompts
+
+Use `promptSequence` to order prompts and access previous answers:
+
+```typescript
+cli.addFlag({
+  name: "region",
+  options: ["--region"],
+  type: "string",
+  promptSequence: 1,
+  prompt: async () => ({
+    type: "select",
+    message: "Region:",
+    options: ["us-east", "us-west"],
+  }),
+} as IPromptableFlag);
+
+cli.addFlag({
+  name: "datacenter",
+  options: ["--datacenter"],
+  type: "string",
+  promptSequence: 2,
+  prompt: async (ctx) => {
+    const region = ctx.promptAnswers?.["region"];
+    return {
+      type: "select",
+      message: `Datacenter in ${region}:`,
+      options: region === "us-east" ? ["dc1", "dc2"] : ["dc3", "dc4"],
+    };
+  },
+} as IPromptableFlag);
+```
+
+#### Validation
+
+Add validation that automatically re-prompts on failure:
+
+```typescript
+cli.addFlag({
+  name: "email",
+  options: ["--email"],
+  type: "string",
+  prompt: async () => ({
+    type: "text",
+    message: "Email:",
+    validate: (val) => val.includes("@") || "Invalid email",
+  }),
+} as IPromptableFlag);
+```
+
+#### Subcommands with Prompts
+
+For subcommands with prompts, add `--interactive` to the root CLI:
+
+```typescript
+const root = new ArgParser({ appName: "root" });
+
+// Required for subcommand prompts
+root.addFlag({
+  name: "interactive",
+  options: ["-i", "--interactive"],
+  type: "boolean",
+  flagOnly: true,
+});
+
+const child = new ArgParser({
+  appName: "deploy",
+  promptWhen: "always",
+  handler: async (ctx) => {
+    console.log("Deploying to:", ctx.promptAnswers?.["env"]);
+  },
+});
+
+child.addFlag({
+  name: "env",
+  options: ["--env"],
+  type: "string",
+  prompt: async () => ({
+    type: "select",
+    message: "Environment:",
+    options: ["staging", "production"],
+  }),
+} as IPromptableFlag);
+
+root.addSubCommand({
+  name: "deploy",
+  parser: child,
+  onCancel: () => console.log("Cancelled"),
+});
+```
+
+For complete documentation, see the [Interactive Prompts Specification](./specs/INTERACTIVE_PROMPTS.md) and the [example file](../examples/interactive-prompts-examples.ts).

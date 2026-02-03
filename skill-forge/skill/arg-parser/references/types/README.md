@@ -21,9 +21,7 @@ interface IHandlerContext<TCurrentCommandArgs = any, TParentCommandArgs = any> {
 
 ```typescript
 type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
-  [K in TFlags[number]["name"]]: ExtractFlagType<
-    Extract<TFlags[number], { name: K }>
-  >;
+  [K in TFlags[number]["name"]]: ExtractFlagType<Extract<TFlags[number], { name: K }>>;
 };
 ```
 
@@ -109,10 +107,7 @@ interface ISubCommand<
   description?: string;
   parser: ArgParserInstance;
   handler?: (
-    ctx: IHandlerContext<
-      TParsedArgs<TSubCommandFlags>,
-      TParsedArgs<TParentCommandFlags>
-    >,
+    ctx: IHandlerContext<TParsedArgs<TSubCommandFlags>, TParsedArgs<TParentCommandFlags>>,
   ) => THandlerReturn | Promise<THandlerReturn>;
   isMcp?: boolean;
   mcpServerInfo?: { name: string; version: string; description?: string };
@@ -213,9 +208,7 @@ interface JwtVerifyOptions {
 ## LogPath
 
 ```typescript
-type LogPath =
-  | string
-  | { path: string; relativeTo?: "entry" | "cwd" | "absolute" };
+type LogPath = string | { path: string; relativeTo?: "entry" | "cwd" | "absolute" };
 ```
 
 ## IDxtOptions

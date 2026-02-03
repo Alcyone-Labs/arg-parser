@@ -4,9 +4,9 @@ description: Type-safe CLI argument parser with MCP integration Zod validation a
 references:
   - core-api
   - flags
+  - interactive-prompts
   - mcp-integration
   - types
-  - interactive-prompts
 ---
 
 # When Apply
@@ -50,6 +50,7 @@ Use this skill when user needs to:
 - Validation in prompts returns `true` for valid or `string` for error message
 - TTY detection auto-falls back to flag-only mode in CI/pipes
 - Cancel handler (Ctrl+C) calls `onCancel` callback or exits gracefully
+- Subcommands with prompts need `--interactive` on BOTH root AND sub-parser
 
 # Workflow
 

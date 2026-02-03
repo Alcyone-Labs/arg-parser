@@ -1,0 +1,26 @@
+name = "ArgParser"
+description = "Type-safe CLI argument parser with MCP integration, Zod validation, and interactive prompts"
+
+[[commands]]
+name = "arg-parser"
+description = "Use ArgParser skill for CLI development"
+
+[[references]]
+path = "{{SKILL_PATH}}/references/core-api"
+description = "ArgParser class and handlers"
+
+[[references]]
+path = "{{SKILL_PATH}}/references/flags"
+description = "Flag definitions and validation"
+
+[[references]]
+path = "{{SKILL_PATH}}/references/interactive-prompts"
+description = "@clack/prompts integration"
+
+[[references]]
+path = "{{SKILL_PATH}}/references/mcp-integration"
+description = "MCP server setup"
+
+[[references]]
+path = "{{SKILL_PATH}}/references/types"
+description = "TypeScript types and interfaces"
