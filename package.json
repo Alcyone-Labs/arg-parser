@@ -110,7 +110,7 @@
     "@modelcontextprotocol/sdk": "^1.25.3",
     "get-tsconfig": "^4.13.0",
     "magic-regexp": "^0.10.0",
-    "solid-js": "^1.9.10",
+    "solid-js": "^1.9.11",
     "zod": "^4.3.5"
   },
   "devDependencies": {
