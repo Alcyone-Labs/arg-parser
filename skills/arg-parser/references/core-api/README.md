@@ -25,14 +25,14 @@ new ArgParser(options?: IArgParserParams, initialFlags?: IFlag[])
 
 ```typescript
 interface IHandlerContext {
-  args: TParsedArgs;           // Parsed flag values
-  parentArgs?: TParsedArgs;    // Parent command args (subcommands)
-  commandChain: string[];      // Command hierarchy
-  parser: ArgParserInstance;   // Current parser
-  displayHelp(): void;         // Show help
-  systemArgs?: ISystemArgs;    // System flags
-  promptAnswers?: Record;      // Interactive answers
-  isInteractive?: boolean;     // Interactive mode flag
+  args: TParsedArgs; // Parsed flag values
+  parentArgs?: TParsedArgs; // Parent command args (subcommands)
+  commandChain: string[]; // Command hierarchy
+  parser: ArgParserInstance; // Current parser
+  displayHelp(): void; // Show help
+  systemArgs?: ISystemArgs; // System flags
+  promptAnswers?: Record; // Interactive answers
+  isInteractive?: boolean; // Interactive mode flag
 }
 ```
 

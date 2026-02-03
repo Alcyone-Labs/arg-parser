@@ -100,18 +100,18 @@ cli.addFlag({
 handler: async (ctx) => {
   // Merge args (CLI) with promptAnswers (interactive)
   const env = ctx.args.environment || ctx.promptAnswers?.environment;
-}
+};
 ```
 
 ## Prompt Types
 
-| Type | Description | Returns |
-|------|-------------|---------|
-| `text` | Free text input | `string` |
-| `password` | Hidden input | `string` |
-| `confirm` | Yes/no prompt | `boolean` |
-| `select` | Single choice from list | Selected value |
-| `multiselect` | Multiple choices | `Array<value>` |
+| Type          | Description             | Returns        |
+| ------------- | ----------------------- | -------------- |
+| `text`        | Free text input         | `string`       |
+| `password`    | Hidden input            | `string`       |
+| `confirm`     | Yes/no prompt           | `boolean`      |
+| `select`      | Single choice from list | Selected value |
+| `multiselect` | Multiple choices        | `Array<value>` |
 
 ## Examples
 
@@ -173,9 +173,7 @@ cli.addFlag({
     return {
       type: "select",
       message: `Version for ${env}:`,
-      options: env === "prod" 
-        ? ["1.0.0", "1.1.0"] 
-        : ["2.0.0-beta"],
+      options: env === "prod" ? ["1.0.0", "1.1.0"] : ["2.0.0-beta"],
     };
   },
 } as IPromptableFlag);
@@ -222,6 +220,7 @@ root.addSubCommand({
 ```
 
 See also:
+
 - `api.md` - Full API reference
 - `configuration.md` - Setup and config options
 - `patterns.md` - Common implementation patterns

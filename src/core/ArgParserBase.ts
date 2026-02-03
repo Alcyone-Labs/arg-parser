@@ -1260,7 +1260,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
           });
           break;
         }
-        currentParser = (currentParser as any).#subCommands.get(subCommandName)?.parser;
+        currentParser = currentParser.#subCommands.get(subCommandName)?.parser as ArgParserBase;
         remainingArgs = remainingArgs.slice(1);
 
         const nextSubCommandIndex = remainingArgs.findIndex((arg) =>
@@ -1703,12 +1703,8 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     // Store original args for fuzzy mode logging
     const originalProcessArgs = [...processArgs];
 
-    // Detect system flags early and strip them from processArgs so they're not treated as unknown commands
-    const { systemArgs: detectedSystemArgs, filteredArgs: processArgsWithoutSystemFlags } =
-      detectAndStripSystemFlags(processArgs);
-    // Replace processArgs with filtered version (strip system flags)
-    processArgs.length = 0;
-    processArgs.push(...processArgsWithoutSystemFlags);
+    // Detect system flags early to populate systemArgs
+    const { systemArgs: detectedSystemArgs } = detectAndStripSystemFlags(processArgs);
 
     // Check if fuzzy mode is enabled (global fuzzy mode detection)
     // This allows automatic prevention of parse() execution without requiring boilerplate
@@ -1731,6 +1727,14 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     }
 
     const globalCheckResult = await this.#_handleGlobalChecks(processArgs, options);
+
+    // NOW strip system flags from processArgs so they're not treated as unknown commands
+    // This must be done after #_handleGlobalChecks so flags like --s-with-env are processed
+    const { filteredArgs: processArgsWithoutSystemFlags } = detectAndStripSystemFlags(processArgs);
+    // Replace processArgs with filtered version (strip system flags)
+    processArgs.length = 0;
+    processArgs.push(...processArgsWithoutSystemFlags);
+
     if (globalCheckResult !== false) {
       // If it's a ParseResult, inject systemArgs and return it
       if (globalCheckResult !== true && typeof globalCheckResult === "object") {

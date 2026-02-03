@@ -233,7 +233,7 @@ prompt: async () => ({
     if (val.length < 3) return "Name must be at least 3 characters";
     return true; // Valid
   },
-})
+});
 ```
 
 ### Async Validation
@@ -247,7 +247,7 @@ prompt: async () => ({
     if (exists) return "Username already taken";
     return true;
   },
-})
+});
 ```
 
 ### Context-Aware Validation
@@ -262,5 +262,5 @@ prompt: async (ctx) => ({
     if (val !== prevAnswer) return "Must match previous field";
     return true;
   },
-})
+});
 ```

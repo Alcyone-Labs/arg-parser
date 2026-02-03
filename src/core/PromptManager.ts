@@ -1,10 +1,5 @@
 import * as p from "@clack/prompts";
-import type {
-  IHandlerContext,
-  IPromptableFlag,
-  PromptFieldConfig,
-  PromptWhen,
-} from "./types";
+import type { IHandlerContext, IPromptableFlag, PromptFieldConfig, PromptWhen } from "./types";
 
 /**
  * Options for creating a PromptManager instance.
@@ -196,10 +191,7 @@ export class PromptManager {
    * @param config - The prompt configuration
    * @returns The validated value
    */
-  async #executePromptWithValidation(
-    name: string,
-    config: PromptFieldConfig,
-  ): Promise<any> {
+  async #executePromptWithValidation(name: string, config: PromptFieldConfig): Promise<any> {
     while (true) {
       // Execute the prompt
       const value = await this.#executePrompt(config);

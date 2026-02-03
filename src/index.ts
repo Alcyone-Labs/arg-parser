@@ -96,11 +96,7 @@ export {
 export { FlagManager, type FlagManagerOptions, type FlagOptionCollision } from "./core/FlagManager";
 
 // PromptManager exports for interactive prompts with @clack/prompts
-export {
-  PromptManager,
-  type PromptManagerOptions,
-  type PromptResult,
-} from "./core/PromptManager";
+export { PromptManager, type PromptManagerOptions, type PromptResult } from "./core/PromptManager";
 
 export {
   generateMcpToolsFromArgParser,

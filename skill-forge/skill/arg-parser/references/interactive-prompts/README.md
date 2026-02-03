@@ -29,15 +29,15 @@ Need CLI with user input?
 
 ## Quick Reference
 
-| Feature | How To |
-|---------|--------|
-| Basic prompt | Add `prompt` property to flag |
-| Trigger mode | Set `promptWhen` in ArgParser options |
-| Explicit ordering | Use `promptSequence: 1, 2, 3...` |
-| Access previous answers | Use `ctx.promptAnswers` in prompt factory |
-| Validation | Return `true` or error `string` from `validate` |
-| Cancel handling | Provide `onCancel` callback |
-| Non-TTY fallback | Automatic - uses flags only in CI/pipes |
+| Feature                 | How To                                          |
+| ----------------------- | ----------------------------------------------- |
+| Basic prompt            | Add `prompt` property to flag                   |
+| Trigger mode            | Set `promptWhen` in ArgParser options           |
+| Explicit ordering       | Use `promptSequence: 1, 2, 3...`                |
+| Access previous answers | Use `ctx.promptAnswers` in prompt factory       |
+| Validation              | Return `true` or error `string` from `validate` |
+| Cancel handling         | Provide `onCancel` callback                     |
+| Non-TTY fallback        | Automatic - uses flags only in CI/pipes         |
 
 ## Prompt Types
 

@@ -27,9 +27,7 @@ import { ArgParser } from "@alcyone-labs/arg-parser";
 const cli = new ArgParser({
   appName: "my-cli",
   handler: async (ctx) => console.log(ctx.args),
-}).addFlags([
-  { name: "input", options: ["-i"], type: String, mandatory: true },
-]);
+}).addFlags([{ name: "input", options: ["-i"], type: String, mandatory: true }]);
 
 await cli.parse();
 ```

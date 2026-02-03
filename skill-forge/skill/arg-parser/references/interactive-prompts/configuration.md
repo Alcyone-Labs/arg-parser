@@ -7,13 +7,13 @@
 ```typescript
 interface IArgParserParams {
   // ... other options ...
-  
+
   /**
    * When to trigger interactive prompts for this command.
    * @default "interactive-flag"
    */
   promptWhen?: "interactive-flag" | "missing" | "always";
-  
+
   /**
    * Called when user cancels (Ctrl+C) during prompts.
    * If not provided, exits gracefully with code 0.
@@ -24,11 +24,11 @@ interface IArgParserParams {
 
 ### promptWhen Values
 
-| Value | Description | Use Case |
-|-------|-------------|----------|
-| `"interactive-flag"` | Prompts only when `--interactive` or `-i` flag present | Explicit opt-in to interactive mode |
-| `"missing"` | Prompts when any promptable flag missing value | Graceful degradation for required fields |
-| `"always"` | Always show prompts regardless of flags | Interactive-first CLI design |
+| Value                | Description                                            | Use Case                                 |
+| -------------------- | ------------------------------------------------------ | ---------------------------------------- |
+| `"interactive-flag"` | Prompts only when `--interactive` or `-i` flag present | Explicit opt-in to interactive mode      |
+| `"missing"`          | Prompts when any promptable flag missing value         | Graceful degradation for required fields |
+| `"always"`           | Always show prompts regardless of flags                | Interactive-first CLI design             |
 
 ### Default Configuration
 
@@ -48,14 +48,14 @@ const defaults = {
   name: "environment",           // required
   options: ["--env", "-e"],      // required
   type: "string",                // required
-  
+
   // Prompt configuration
   prompt: async (ctx) => ({     // optional
     type: "select",
     message: "Select environment:",
     options: ["staging", "production"],
   }),
-  
+
   // Explicit sequence order
   promptSequence: 1,             // optional
 }
@@ -74,8 +74,8 @@ const defaults = {
 
 ```typescript
 {
-  type: PromptType;      // required - "text" | "password" | "confirm" | "select" | "multiselect"
-  message: string;       // required - Question shown to user
+  type: PromptType; // required - "text" | "password" | "confirm" | "select" | "multiselect"
+  message: string; // required - Question shown to user
 }
 ```
 
@@ -122,7 +122,7 @@ const defaults = {
   message: "Select option:",
   options?: [
     "simple-string-option",              // Simple string
-    { 
+    {
       label: "Display Label",            // What user sees
       value: "internal-value",           // What's returned
       hint?: "Additional info"           // Grey hint text
@@ -158,6 +158,7 @@ validate?: (
 ```
 
 **Return values:**
+
 - `true` - Validation passed
 - `string` - Validation failed, string is error message shown to user
 - Re-prompts indefinitely until validation passes
@@ -181,11 +182,13 @@ Automatic non-TTY detection for CI/pipes:
 ### Missing Value Detection (promptWhen: "missing")
 
 Values considered "missing":
+
 - `undefined`
 - `null`
 - `""` (empty string)
 
 Values considered "present":
+
 - Any non-empty string
 - Any boolean (true/false)
 - Any number (including 0)
@@ -199,8 +202,9 @@ Values considered "present":
 parser.addSubCommand({
   name: "deploy",
   description: "Deploy application",
-  promptWhen: "interactive-flag",  // Override parent setting
-  onCancel: (ctx) => {            // Override parent cancel handler
+  promptWhen: "interactive-flag", // Override parent setting
+  onCancel: (ctx) => {
+    // Override parent cancel handler
     console.log("Deploy cancelled");
   },
   parser: deployParser,
@@ -208,6 +212,7 @@ parser.addSubCommand({
 ```
 
 **Inheritance:**
+
 - `promptWhen` inherited from parent if not specified
 - `onCancel` inherited from parent if not specified
 - Can override at subcommand level

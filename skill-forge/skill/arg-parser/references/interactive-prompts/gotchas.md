@@ -43,15 +43,15 @@ Validation failures cause infinite re-prompt until valid. Always provide escape 
 prompt: async () => ({
   type: "text",
   message: "Enter value:",
-  validate: (val) => val === "secret" || "Wrong!",  // User stuck if they don't know secret
-})
+  validate: (val) => val === "secret" || "Wrong!", // User stuck if they don't know secret
+});
 
 // Good: Allow skip with Ctrl+C or provide hint
 prompt: async () => ({
   type: "text",
   message: "Enter value (hint: starts with 's'):",
   validate: (val) => val.length > 0 || "Value is required",
-})
+});
 ```
 
 ## TypeScript Type Casting
@@ -109,14 +109,14 @@ const zodFlagSchema = z.object({
 const cli = new ArgParser({
   handler: async (ctx) => {
     // At this point, all prompts have completed
-    console.log(ctx.promptAnswers);  // ✅ Full answers
+    console.log(ctx.promptAnswers); // ✅ Full answers
   },
 });
 
 // In prompt factory - previous answers available
 cli.addFlag({
   prompt: async (ctx) => {
-    console.log(ctx.promptAnswers);  // ✅ Previous answers only
+    console.log(ctx.promptAnswers); // ✅ Previous answers only
     // Current flag not yet added
   },
 } as IPromptableFlag);
@@ -131,8 +131,8 @@ cli.addFlag({
 ```typescript
 // Warning: Error here will not be caught
 onCancel: async (ctx) => {
-  await cleanup();  // If this throws, process exits with error
-}
+  await cleanup(); // If this throws, process exits with error
+};
 
 // Better: Wrap in try-catch
 onCancel: async (ctx) => {
@@ -141,7 +141,7 @@ onCancel: async (ctx) => {
   } catch (err) {
     console.error("Cleanup failed:", err);
   }
-}
+};
 ```
 
 ## Sequence Numbers
@@ -184,14 +184,14 @@ cli.addFlag({ name: "second", ... } as IPromptableFlag); // Second
 prompt: async () => ({
   type: "password",
   message: "Password:",
-  placeholder: "min 8 chars",  // ❌ Ignored
-})
+  placeholder: "min 8 chars", // ❌ Ignored
+});
 
 // Solution: Include hint in message
 prompt: async () => ({
   type: "password",
-  message: "Password (min 8 characters):",  // ✅ Include in message
-})
+  message: "Password (min 8 characters):", // ✅ Include in message
+});
 ```
 
 ## Array Results
@@ -203,7 +203,7 @@ Multiselect returns an array, which may need different handling than single valu
 ```typescript
 cli.addFlag({
   name: "features",
-  type: "array",  // Note: array type
+  type: "array", // Note: array type
   prompt: async () => ({
     type: "multiselect",
     options: ["a", "b", "c"],
@@ -211,8 +211,8 @@ cli.addFlag({
 } as IPromptableFlag);
 
 // Result:
-ctx.promptAnswers?.features  // ["a", "b"] - array!
-ctx.args.features            // Also array if passed via --features a --features b
+ctx.promptAnswers?.features; // ["a", "b"] - array!
+ctx.args.features; // Also array if passed via --features a --features b
 ```
 
 ## Validation Return Types
@@ -223,10 +223,10 @@ Only `true` means success. Falsy values don't trigger error messages.
 
 ```typescript
 // Bad: Empty string is falsy, no error shown
-validate: (val) => val.length > 3 || ""  // ❌ Empty string = no error
+validate: (val) => val.length > 3 || ""; // ❌ Empty string = no error
 
 // Good: Always return string for errors
-validate: (val) => val.length > 3 || "Must be > 3 chars"  // ✅ Shows error
+validate: (val) => val.length > 3 || "Must be > 3 chars"; // ✅ Shows error
 ```
 
 ## Subcommand Inheritance
@@ -237,11 +237,11 @@ Subcommands inherit `promptWhen` from parent if not explicitly set.
 
 ```typescript
 const parent = new ArgParser({
-  promptWhen: "always",  // All subcommands inherit this!
+  promptWhen: "always", // All subcommands inherit this!
 });
 
 const child = new ArgParser({
-  promptWhen: "interactive-flag",  // Override parent
+  promptWhen: "interactive-flag", // Override parent
 });
 ```
 
@@ -253,7 +253,7 @@ Cancel handler also inherited. Set explicitly to override.
 parent.addSubCommand({
   name: "deploy",
   parser: deployParser,
-  onCancel: (ctx) => console.log("Deploy cancelled"),  // Specific message
+  onCancel: (ctx) => console.log("Deploy cancelled"), // Specific message
 });
 ```
 
@@ -283,7 +283,7 @@ Errors in async prompt factories will crash the prompt flow.
 ```typescript
 cli.addFlag({
   prompt: async () => {
-    const options = await fetchFromAPI();  // If this throws...
+    const options = await fetchFromAPI(); // If this throws...
     return { type: "select", options };
   },
 } as IPromptableFlag);
@@ -297,7 +297,7 @@ prompt: async () => {
     // Return fallback or re-throw with context
     return { type: "text", message: "Enter manually:" };
   }
-}
+};
 ```
 
 ## Process Exit

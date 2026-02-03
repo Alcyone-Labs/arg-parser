@@ -21,6 +21,7 @@ Added comprehensive interactive prompt support using @clack/prompts, enabling du
   - `multiselect` - Multiple selections with array output
 
 - **Sequential Prompts**: Chain prompts with dependencies using `promptSequence`:
+
 ```typescript
 cli.addFlag({
   name: "environment",
@@ -39,12 +40,13 @@ cli.addFlag({
 ```
 
 - **Validation & Re-prompt**: Built-in validation with automatic re-prompt on failure:
+
 ```typescript
 prompt: async () => ({
   type: "text",
   message: "Email:",
   validate: (val) => val.includes("@") || "Invalid email",
-})
+});
 ```
 
 - **TTY Detection**: Automatically falls back to flag-only mode in CI/pipes (non-TTY environments)
@@ -70,15 +72,17 @@ prompt: async () => ({
 #### System Flags Enhancement
 
 - **`args.systemArgs`** - System flags (like `--s-debug`, `--s-mcp-serve`) are now exposed in handler context:
+
 ```typescript
 handler: async (ctx) => {
   console.log(ctx.systemArgs); // { debug: true, mcpServe: true, ... }
-}
+};
 ```
 
 #### Flag Options Collision Detection
 
 - **Enhanced `FlagManager`** now detects and warns about option string collisions:
+
 ```typescript
 // This will warn: "-f" collides between "file" and "force" flags
 cli.addFlag({ name: "file", options: ["-f", "--file"], type: "string" });
@@ -95,7 +99,6 @@ cli.addFlag({ name: "force", options: ["-f", "--force"], type: "boolean" }); // 
   3. Git helper with "missing" trigger
   4. Database setup with password prompts
   5. Feature installer with multiselect
-  
 - **Master Example Runner**: Interactive demo that lets users select and run any example
 
 - **Complete Documentation**:

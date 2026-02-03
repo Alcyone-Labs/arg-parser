@@ -11,9 +11,9 @@ Turn any CLI into an MCP server that AI tools can call.
 ```typescript
 const parser = new ArgParser({...})
   .withMcp({
-    serverInfo: { 
-      name: "my-cli", 
-      version: "1.0.0" 
+    serverInfo: {
+      name: "my-cli",
+      version: "1.0.0"
     },
     defaultTransport: { type: "stdio" }
   });
@@ -37,7 +37,7 @@ parser.addTool({
 
 ```typescript
 .withMcp({
-  dxt: { 
+  dxt: {
     include: ["config/", "assets/"],
     exclude: ["tests/"]
   }

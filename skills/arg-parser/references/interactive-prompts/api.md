@@ -26,11 +26,11 @@ type PromptWhen = "interactive-flag" | "missing" | "always";
 interface PromptFieldConfig {
   type: PromptType;
   message: string;
-  placeholder?: string;      // For text/password
-  initial?: any;             // Default value
+  placeholder?: string; // For text/password
+  initial?: any; // Default value
   validate?: (value: any, ctx: IHandlerContext) => boolean | string | Promise<boolean | string>;
-  options?: Array<string | { label: string; value: any; hint?: string }>;  // For select/multiselect
-  maxItems?: number;         // For select/multiselect scrolling
+  options?: Array<string | { label: string; value: any; hint?: string }>; // For select/multiselect
+  maxItems?: number; // For select/multiselect scrolling
 }
 ```
 
@@ -41,7 +41,7 @@ Extends `IFlag` with prompt properties:
 ```typescript
 interface IPromptableFlag extends IFlag {
   prompt?: (ctx: IHandlerContext) => PromptFieldConfig | Promise<PromptFieldConfig>;
-  promptSequence?: number;   // 1 = first, 2 = second, etc.
+  promptSequence?: number; // 1 = first, 2 = second, etc.
 }
 ```
 
@@ -61,10 +61,10 @@ interface IInteractiveSubCommand extends ISubCommand {
 ```typescript
 interface IHandlerContext {
   // ... existing properties ...
-  
+
   /** Answers from interactive prompts */
   promptAnswers?: Record<string, any>;
-  
+
   /** Whether running in interactive mode */
   isInteractive?: boolean;
 }
@@ -96,7 +96,7 @@ Determines if interactive mode should trigger based on condition.
 const shouldRun = PromptManager.shouldTriggerInteractive(
   "missing",
   [{ flag: envFlag, name: "environment" }],
-  { environment: undefined }
+  { environment: undefined },
 );
 // Returns: true (environment is missing)
 ```
@@ -186,8 +186,9 @@ parser.setOnCancel((ctx) => {
 ```typescript
 new ArgParser({
   appName: "my-cli",
-  promptWhen: "interactive-flag",  // When to trigger prompts
-  onCancel: (ctx) => {             // Cancel handler
+  promptWhen: "interactive-flag", // When to trigger prompts
+  onCancel: (ctx) => {
+    // Cancel handler
     console.log("Cancelled");
   },
   handler: async (ctx) => {
@@ -222,7 +223,7 @@ prompt: async () => ({
   placeholder: "default value",
   initial: "starting value",
   validate: (val) => val.length > 0 || "Required",
-})
+});
 ```
 
 ### Password
@@ -231,7 +232,7 @@ prompt: async () => ({
 prompt: async () => ({
   type: "password",
   message: "Enter password:",
-})
+});
 ```
 
 ### Confirm
@@ -241,7 +242,7 @@ prompt: async () => ({
   type: "confirm",
   message: "Are you sure?",
   initial: false,
-})
+});
 ```
 
 ### Select
@@ -257,7 +258,7 @@ prompt: async () => ({
   ],
   initial: "a",
   maxItems: 5,
-})
+});
 ```
 
 ### Multiselect
@@ -272,5 +273,5 @@ prompt: async () => ({
   ],
   initial: ["a"],
   maxItems: 10,
-})
+});
 ```

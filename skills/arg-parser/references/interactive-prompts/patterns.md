@@ -14,7 +14,7 @@ const cli = new ArgParser({
     // Works with both CLI args and prompt answers
     const env = ctx.args.environment || ctx.promptAnswers?.environment;
     const version = ctx.args.version || ctx.promptAnswers?.version;
-    
+
     console.log(`Deploying ${version} to ${env}`);
   },
 });
@@ -79,14 +79,14 @@ cli.addFlag({
   promptSequence: 2,
   prompt: async (ctx) => {
     const region = ctx.promptAnswers?.region;
-    
+
     // Dynamic options based on previous answer
     const datacenters = {
       "us-east": ["dc1", "dc2"],
       "us-west": ["dc3", "dc4"],
       "eu-central": ["dc5", "dc6"],
     };
-    
+
     return {
       type: "select",
       message: `Datacenter in ${region}:`,
@@ -108,12 +108,12 @@ cli.addFlag({
   promptSequence: 3,
   prompt: async (ctx) => {
     const env = ctx.promptAnswers?.environment;
-    
+
     // Only confirm for production
     if (env !== "production") {
       return { type: "confirm", message: "Continue?", initial: true };
     }
-    
+
     return {
       type: "confirm",
       message: "⚠️  DEPLOYING TO PRODUCTION! Are you absolutely sure?",
@@ -206,7 +206,7 @@ const masterCLI = new ArgParser({
     if (ctx.promptAnswers?.example) {
       const exampleName = ctx.promptAnswers.example;
       console.log(`Running: ${exampleName}`);
-      
+
       // Run the selected example
       switch (exampleName) {
         case "basic":
@@ -295,7 +295,7 @@ cli.addFlag({
 handler: async (ctx) => {
   const features: string[] = ctx.args.features || ctx.promptAnswers?.features || [];
   console.log(`Installing: ${features.join(", ")}`);
-}
+};
 ```
 
 ## Pattern 8: Subcommand with Mandatory Prompts

@@ -299,7 +299,7 @@ prompt: async (ctx) => {
     message: "Choose:",
     options: options || [], // Empty array if fetch fails
   };
-}
+};
 ```
 
 **Result:** @clack/prompts may crash or show empty list.
@@ -317,7 +317,7 @@ prompt: async (ctx) => {
     message: "Choose:",
     options,
   };
-}
+};
 ```
 
 ## Gotcha 12: Async Validation Errors
@@ -333,7 +333,7 @@ prompt: async () => ({
     if (exists) return "User exists";
     return true;
   },
-})
+});
 ```
 
 **Solution:** Wrap in try-catch:
@@ -351,5 +351,5 @@ prompt: async () => ({
       return "Validation error - try again";
     }
   },
-})
+});
 ```

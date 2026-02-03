@@ -54,7 +54,7 @@ cli.addFlag({
   name: "email",
   options: ["--email", "-e"],
   type: "string",
-  mandatory: true,  // Required field
+  mandatory: true, // Required field
   prompt: async () => ({
     type: "text",
     message: "Email address:",
@@ -92,7 +92,7 @@ cli.addFlag({
     // Access previous answer
     const region = ctx.promptAnswers?.["region"];
     const zones = await fetchAvailabilityZones(region);
-    
+
     return {
       type: "select",
       message: `Select AZ in ${region}:`,
@@ -127,8 +127,7 @@ wizard.addFlag({
   prompt: async () => ({
     type: "text",
     message: "Project name:",
-    validate: (val) => /^[a-z0-9-]+$/.test(val) 
-      || "Use lowercase, numbers, and hyphens only",
+    validate: (val) => /^[a-z0-9-]+$/.test(val) || "Use lowercase, numbers, and hyphens only",
   }),
 } as IPromptableFlag);
 
@@ -201,9 +200,9 @@ cli.addFlag({
   prompt: async (ctx) => {
     // Only show if canary selected
     if (ctx.promptAnswers?.["deployment-type"] !== "canary") {
-      return null;  // Skip this prompt
+      return null; // Skip this prompt
     }
-    
+
     return {
       type: "select",
       message: "Canary percentage:",
@@ -361,13 +360,12 @@ cli.addFlag({
   type: "string",
   prompt: async () => {
     // Fetch from API
-    const templates = await fetch("https://api.example.com/templates")
-      .then(r => r.json());
-    
+    const templates = await fetch("https://api.example.com/templates").then((r) => r.json());
+
     return {
       type: "select",
       message: "Select template:",
-      options: templates.map(t => ({
+      options: templates.map((t) => ({
         label: t.name,
         value: t.id,
         hint: t.description,

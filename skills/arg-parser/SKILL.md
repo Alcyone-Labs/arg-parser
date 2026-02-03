@@ -26,6 +26,7 @@ Use this skill when user needs to:
 # Rules
 
 ## Core Flag Rules
+
 - ALWAYS use `zodFlagSchema` for flag definitions with Zod v4 syntax
 - Import from `#/core/types` for interfaces IFlag IHandlerContext TParsedArgs
 - For internal imports use `#/*` alias e.g. `#/mcp/mcp-integration`
@@ -35,12 +36,14 @@ Use this skill when user needs to:
 - Environment variables: Flag > Env > Default priority
 
 ## MCP Rules
+
 - MCP tool names auto-sanitized to `^[a-zA-Z0-9_-]{1,64}$`
 - Console hijacking in MCP mode prevents STDOUT contamination
 - Use `createMcpLogger` for data-safe logging in MCP context
 - Output schemas supported in MCP protocol >= 2025-06-18
 
 ## Interactive Prompt Rules
+
 - Add `prompt` property to flags for interactive mode support
 - Use `promptSequence` for explicit ordering (1 = first, 2 = second)
 - Fallback to array order when `promptSequence` not specified

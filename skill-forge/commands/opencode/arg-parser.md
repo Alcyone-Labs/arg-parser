@@ -3,13 +3,14 @@ description: Load arg-parser skill to build type-safe CLIs with MCP and interact
 ---
 
 If $ARGUMENTS contains `--update-skill`:
-  - Determine install location:
-    - Check if `.opencode/skills/skill-forge/skill/arg-parser/` exists → local
-    - Check if `~/.config/opencode/skills/skill-forge/skill/arg-parser/` exists → global
-  - Run appropriate install command:
-    - Local: `curl -fsSL https://raw.githubusercontent.com/Alcyone-Labs/arg-parser/main/skill-forge/install.sh | bash -s -- --self --local`
-    - Global: `curl -fsSL https://raw.githubusercontent.com/Alcyone-Labs/arg-parser/main/skill-forge/install.sh | bash -s -- --self --global`
-  - Output success message and stop
+
+- Determine install location:
+  - Check if `.opencode/skills/skill-forge/skill/arg-parser/` exists → local
+  - Check if `~/.config/opencode/skills/skill-forge/skill/arg-parser/` exists → global
+- Run appropriate install command:
+  - Local: `curl -fsSL https://raw.githubusercontent.com/Alcyone-Labs/arg-parser/main/skill-forge/install.sh | bash -s -- --self --local`
+  - Global: `curl -fsSL https://raw.githubusercontent.com/Alcyone-Labs/arg-parser/main/skill-forge/install.sh | bash -s -- --self --global`
+- Output success message and stop
 
 Load skill: skill({ name: 'arg-parser' })
 

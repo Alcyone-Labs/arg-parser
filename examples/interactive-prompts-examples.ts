@@ -242,8 +242,7 @@ function createGitHelperCLI() {
     appName: "init",
     handler: async (ctx: IHandlerContext) => {
       const name = ctx.args["name"] || ctx.promptAnswers?.["name"];
-      const visibility =
-        ctx.args["visibility"] || ctx.promptAnswers?.["visibility"];
+      const visibility = ctx.args["visibility"] || ctx.promptAnswers?.["visibility"];
 
       console.log(`Initializing repo: ${name}`);
       console.log(`Visibility: ${visibility}`);
@@ -260,8 +259,7 @@ function createGitHelperCLI() {
     prompt: async () => ({
       type: "text",
       message: "Repository name:",
-      validate: (val) =>
-        /^[a-z0-9-]+$/.test(val) || "Use lowercase, numbers, and hyphens",
+      validate: (val) => /^[a-z0-9-]+$/.test(val) || "Use lowercase, numbers, and hyphens",
     }),
   } as IPromptableFlag);
 
@@ -437,8 +435,7 @@ function createMasterExampleCLI() {
   const cli = new ArgParser({
     appName: "interactive-prompts-master",
     promptWhen: "interactive-flag",
-    description:
-      "Interactive prompts master example - run any example interactively",
+    description: "Interactive prompts master example - run any example interactively",
     handler: async (ctx: IHandlerContext) => {
       // Show instructions if --instructions flag is passed
       if (ctx.args.instructions) {
@@ -544,15 +541,9 @@ function createMasterExampleCLI() {
  */
 function showInstructions() {
   console.log("");
-  console.log(
-    "╔════════════════════════════════════════════════════════════════╗",
-  );
-  console.log(
-    "║     Interactive Prompts - Master Example                      ║",
-  );
-  console.log(
-    "╚════════════════════════════════════════════════════════════════╝",
-  );
+  console.log("╔════════════════════════════════════════════════════════════════╗");
+  console.log("║     Interactive Prompts - Master Example                      ║");
+  console.log("╚════════════════════════════════════════════════════════════════╝");
   console.log("");
   console.log("This CLI demonstrates the interactive prompts feature of");
   console.log("@alcyone-labs/arg-parser with @clack/prompts integration.");
@@ -562,14 +553,10 @@ function showInstructions() {
   console.log("");
   console.log("OPTIONS:");
   console.log("  --instructions     Show this help message");
-  console.log(
-    "  --interactive, -i  Run in interactive mode to select examples",
-  );
+  console.log("  --interactive, -i  Run in interactive mode to select examples");
   console.log("");
   console.log("INTERACTIVE MODE:");
-  console.log(
-    "  When you run with --interactive, you'll see a menu of examples",
-  );
+  console.log("  When you run with --interactive, you'll see a menu of examples");
   console.log("  to choose from. Select one to run it immediately!");
   console.log("");
   console.log("AVAILABLE EXAMPLES:");
@@ -601,9 +588,7 @@ function showInstructions() {
   console.log("PROGRAMMATIC USAGE:");
   console.log("  You can also import individual example creators:");
   console.log("");
-  console.log(
-    "    import { createBasicInteractiveCLI } from './interactive-prompts-examples';",
-  );
+  console.log("    import { createBasicInteractiveCLI } from './interactive-prompts-examples';");
   console.log("    const cli = createBasicInteractiveCLI();");
   console.log("    await cli.parse(['--interactive']);");
   console.log("");

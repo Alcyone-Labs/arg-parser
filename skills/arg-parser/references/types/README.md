@@ -27,11 +27,7 @@ TypeScript types and interfaces.
 ## Usage
 
 ```typescript
-import type { 
-  IFlag, 
-  IHandlerContext, 
-  IPromptableFlag 
-} from "@alcyone-labs/arg-parser";
+import type { IFlag, IHandlerContext, IPromptableFlag } from "@alcyone-labs/arg-parser";
 ```
 
 See main SKILL.md for type examples.

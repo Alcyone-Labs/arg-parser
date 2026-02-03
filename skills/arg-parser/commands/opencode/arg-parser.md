@@ -10,9 +10,7 @@ import { ArgParser } from "@alcyone-labs/arg-parser";
 const cli = new ArgParser({
   appName: "my-cli",
   handler: async (ctx) => console.log(ctx.args),
-}).addFlags([
-  { name: "input", options: ["-i"], type: String, mandatory: true },
-]);
+}).addFlags([{ name: "input", options: ["-i"], type: String, mandatory: true }]);
 
 await cli.parse();
 ```
@@ -28,20 +26,22 @@ await cli.parse();
 ## Examples
 
 ### Basic CLI
+
 Create simple CLI with flags:
+
 ```typescript
 const cli = new ArgParser({
   appName: "deploy",
   handler: async (ctx) => {
     console.log(`Deploying to ${ctx.args.env}`);
   },
-}).addFlags([
-  { name: "env", options: ["--env"], type: String },
-]);
+}).addFlags([{ name: "env", options: ["--env"], type: String }]);
 ```
 
 ### Interactive Mode
+
 Add prompts alongside flags:
+
 ```typescript
 const cli = new ArgParser({
   appName: "setup",
@@ -58,7 +58,9 @@ const cli = new ArgParser({
 ```
 
 ### MCP Server
+
 Add MCP capabilities:
+
 ```typescript
 const parser = new ArgParser({...})
   .withMcp({
