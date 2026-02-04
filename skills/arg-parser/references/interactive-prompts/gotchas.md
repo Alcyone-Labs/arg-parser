@@ -353,3 +353,87 @@ prompt: async () => ({
   },
 });
 ```
+
+## Gotcha 13: Skip Option Doesn't Set Flag Value
+
+**Problem:** When using `skip: true`, expecting the flag to have a default value.
+
+```typescript
+cli.addFlag({
+  name: "advancedOptions",
+  prompt: async (ctx) => ({
+    type: "text",
+    message: "Enter advanced options:",
+    skip: !ctx.promptAnswers?.configureAdvanced,
+  }),
+} as IPromptableFlag);
+
+// In handler:
+handler: async (ctx) => {
+  const opts = ctx.promptAnswers?.["advancedOptions"];
+  console.log(opts); // undefined when skipped
+};
+```
+
+**Explanation:** When a prompt is skipped, no value is set for that flag. The flag remains undefined.
+
+**Solution:** Check for undefined in handler:
+
+```typescript
+handler: async (ctx) => {
+  const opts = ctx.promptAnswers?.["advancedOptions"];
+  if (opts === undefined) {
+    console.log("Using default options");
+  } else {
+    console.log("Using:", opts);
+  }
+};
+```
+
+## Gotcha 14: allowSelectAll Shows Confirmation After Selection
+
+**Problem:** Expecting `allowSelectAll` to work like a keyboard shortcut during multiselect.
+
+**Explanation:** The `allowSelectAll` option shows a confirmation prompt AFTER the user makes their initial selection, asking "Select all options?" or "Deselect all?". It's not a real-time keyboard shortcut.
+
+**Flow:**
+1. User selects some options in multiselect
+2. Confirmation appears: "Select all options?" (if partial selection) or "Deselect all?" (if all selected)
+3. If confirmed, multiselect reappears with updated selection
+
+## Gotcha 15: defaultValue vs initial Priority
+
+**Problem:** Setting both `defaultValue` on flag and `initial` in prompt, expecting `defaultValue` to win.
+
+```typescript
+cli.addFlag({
+  name: "timeout",
+  type: "number",
+  defaultValue: 30,  // Flag default
+  prompt: async () => ({
+    type: "text",
+    message: "Timeout:",
+    initial: 60,  // Prompt initial
+  }),
+} as IPromptableFlag);
+```
+
+**Result:** Prompt shows `60`, not `30`.
+
+**Explanation:** Priority is: `config.initial` > `flag.defaultValue` > `undefined`
+
+**Solution:** Only set one, or understand the priority:
+
+```typescript
+// Use flag.defaultValue (recommended for single source of truth)
+cli.addFlag({
+  name: "timeout",
+  type: "number",
+  defaultValue: 30,
+  prompt: async () => ({
+    type: "text",
+    message: "Timeout:",
+    // No initial - uses defaultValue automatically
+  }),
+} as IPromptableFlag);
+```

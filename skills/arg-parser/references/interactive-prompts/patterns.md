@@ -298,7 +298,102 @@ handler: async (ctx) => {
 };
 ```
 
-## Pattern 8: Subcommand with Mandatory Prompts
+## Pattern 8: Multiselect with Select All Toggle
+
+Enable quick selection/deselection of all options:
+
+```typescript
+cli.addFlag({
+  name: "modules",
+  options: ["--modules", "-m"],
+  type: "array",
+  prompt: async () => ({
+    type: "multiselect",
+    message: "Select modules to install:",
+    options: [
+      { value: "auth", label: "Authentication", hint: "User login" },
+      { value: "database", label: "Database", hint: "Data persistence" },
+      { value: "api", label: "API", hint: "REST endpoints" },
+      { value: "ui", label: "UI", hint: "User interface" },
+      { value: "cache", label: "Cache", hint: "Redis caching" },
+      { value: "queue", label: "Queue", hint: "Background jobs" },
+    ],
+    allowSelectAll: true,  // Enable select all/none toggle
+  }),
+} as IPromptableFlag);
+
+// After selection, user is asked "Select all options?" or "Deselect all?"
+// If confirmed, the multiselect is reshown with updated selection
+```
+
+## Pattern 9: Default Value Fallback
+
+Use flag's `defaultValue` as prompt's initial value automatically:
+
+```typescript
+cli.addFlag({
+  name: "timeout",
+  options: ["--timeout", "-t"],
+  type: "number",
+  defaultValue: 30,  // Automatically used as initial in prompt
+  prompt: async () => ({
+    type: "text",
+    message: "Enter timeout (seconds):",
+    // No initial needed - uses defaultValue automatically
+  }),
+} as IPromptableFlag);
+
+// Explicit initial overrides defaultValue
+cli.addFlag({
+  name: "retries",
+  options: ["--retries", "-r"],
+  type: "number",
+  defaultValue: 3,
+  prompt: async () => ({
+    type: "text",
+    message: "Enter retry count:",
+    initial: 5,  // This takes precedence over defaultValue
+  }),
+} as IPromptableFlag);
+
+// Priority: config.initial > flag.defaultValue > undefined
+```
+
+## Pattern 10: Conditional Prompt Skipping
+
+Skip prompts based on previous answers:
+
+```typescript
+// First prompt - ask if user wants to configure advanced options
+cli.addFlag({
+  name: "configureAdvanced",
+  options: ["--configure-advanced"],
+  type: "boolean",
+  promptSequence: 1,
+  prompt: async () => ({
+    type: "confirm",
+    message: "Would you like to configure advanced options?",
+    initial: false,
+  }),
+} as IPromptableFlag);
+
+// Second prompt - only shown if first answer was true
+cli.addFlag({
+  name: "advancedOptions",
+  options: ["--advanced-options"],
+  type: "string",
+  promptSequence: 2,
+  prompt: async (ctx) => ({
+    type: "text",
+    message: "Enter advanced options:",
+    skip: !ctx.promptAnswers?.configureAdvanced,  // Skip if false
+  }),
+} as IPromptableFlag);
+
+// When skip is true, the prompt is not shown and no value is set
+```
+
+## Pattern 11: Subcommand with Mandatory Prompts
 
 Force prompts for required fields:
 

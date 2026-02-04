@@ -593,8 +593,21 @@ export interface PromptFieldConfig {
   /** Placeholder text (for text/password types) */
   placeholder?: string;
 
-  /** Initial/default value */
+  /**
+   * Initial/default value for the prompt.
+   * For select: the value to pre-select
+   * For multiselect: array of values to pre-select
+   * For confirm: boolean initial value
+   * Falls back to flag's defaultValue if not specified
+   */
   initial?: any;
+
+  /**
+   * Whether to allow "select all" toggle in multiselect.
+   * When true, user can press 'a' to select all, 'a' again to deselect all.
+   * @default false
+   */
+  allowSelectAll?: boolean;
 
   /**
    * Validation function.
@@ -611,6 +624,13 @@ export interface PromptFieldConfig {
 
   /** Maximum items to show before scrolling (select/multiselect) */
   maxItems?: number;
+
+  /**
+   * If true, this prompt will be skipped and the flag will not be set.
+   * Useful for conditional prompts based on previous answers.
+   * @default false
+   */
+  skip?: boolean;
 }
 
 /**

@@ -238,6 +238,84 @@ describe("PromptManager Unit Tests", () => {
       expect(manager.executePrompts).toBeDefined();
     });
   });
+
+  describe("getInitialValue", () => {
+    test("should use config.initial when provided", () => {
+      const flag = { defaultValue: "flag-default" } as IPromptableFlag;
+      const config = {
+        type: "text" as const,
+        message: "Enter value:",
+        initial: "config-initial",
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBe("config-initial");
+    });
+
+    test("should fall back to flag.defaultValue when config.initial is undefined", () => {
+      const flag = { defaultValue: "flag-default" } as IPromptableFlag;
+      const config = {
+        type: "text" as const,
+        message: "Enter value:",
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBe("flag-default");
+    });
+
+    test("should return undefined when neither config.initial nor flag.defaultValue is set", () => {
+      const flag = {} as IPromptableFlag;
+      const config = {
+        type: "text" as const,
+        message: "Enter value:",
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBeUndefined();
+    });
+
+    test("should use config.initial even if it's an empty string", () => {
+      const flag = { defaultValue: "flag-default" } as IPromptableFlag;
+      const config = {
+        type: "text" as const,
+        message: "Enter value:",
+        initial: "",
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBe("");
+    });
+
+    test("should use config.initial even if it's false", () => {
+      const flag = { defaultValue: true } as IPromptableFlag;
+      const config = {
+        type: "confirm" as const,
+        message: "Confirm?",
+        initial: false,
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBe(false);
+    });
+
+    test("should use config.initial even if it's 0", () => {
+      const flag = { defaultValue: 10 } as IPromptableFlag;
+      const config = {
+        type: "text" as const,
+        message: "Enter number:",
+        initial: 0,
+      };
+
+      const result = PromptManager.getInitialValue(config, flag);
+
+      expect(result).toBe(0);
+    });
+  });
 });
 
 describe("PromptManager Integration with ArgParser", () => {
@@ -271,6 +349,79 @@ describe("PromptManager Integration with ArgParser", () => {
 
     expect(promptableFlags).toHaveLength(1);
     expect(promptableFlags[0].name).toBe("environment");
+  });
+
+  test("should skip prompts when skip is true", async () => {
+    const { ArgParser } = await import("../src/core/ArgParser");
+
+    const parser = new ArgParser({
+      appName: "Test CLI",
+    });
+
+    // Add a flag with skip: true
+    parser.addFlag({
+      name: "optional",
+      options: ["--optional"],
+      type: "string",
+      prompt: async () => ({
+        type: "text",
+        message: "Optional value:",
+        skip: true,
+      }),
+    } as IPromptableFlag);
+
+    const promptableFlags = parser.getPromptableFlags();
+    expect(promptableFlags).toHaveLength(1);
+    expect(promptableFlags[0].name).toBe("optional");
+  });
+
+  test("should support multiselect with allowSelectAll option", async () => {
+    const { ArgParser } = await import("../src/core/ArgParser");
+
+    const parser = new ArgParser({
+      appName: "Test CLI",
+    });
+
+    // Add a multiselect flag with allowSelectAll
+    parser.addFlag({
+      name: "features",
+      options: ["--features"],
+      type: "array",
+      prompt: async () => ({
+        type: "multiselect",
+        message: "Select features:",
+        options: ["auth", "api", "ui", "db"],
+        allowSelectAll: true,
+      }),
+    } as IPromptableFlag);
+
+    const promptableFlags = parser.getPromptableFlags();
+    expect(promptableFlags).toHaveLength(1);
+    expect(promptableFlags[0].name).toBe("features");
+  });
+
+  test("should support flags with defaultValue for prompt initial value", async () => {
+    const { ArgParser } = await import("../src/core/ArgParser");
+
+    const parser = new ArgParser({
+      appName: "Test CLI",
+    });
+
+    // Add a flag with defaultValue
+    parser.addFlag({
+      name: "timeout",
+      options: ["--timeout"],
+      type: "number",
+      defaultValue: 30,
+      prompt: async () => ({
+        type: "text",
+        message: "Enter timeout:",
+      }),
+    } as IPromptableFlag);
+
+    const promptableFlags = parser.getPromptableFlags();
+    expect(promptableFlags).toHaveLength(1);
+    expect(promptableFlags[0].name).toBe("timeout");
   });
 
   test("should return empty array when no promptable flags", async () => {

@@ -1,5 +1,89 @@
 ## Changelog
 
+### v2.14.1
+
+**Patch Release: Interactive Prompts Enhancements & Bug Fix**
+
+#### Bug Fixes
+
+- **Fixed TypeScript syntax error** in `ArgParserBase.ts` line 3246: Invalid private method call syntax `ArgParserBase.#_findAllMcpSubCommands()` replaced with proper casting and method invocation pattern
+
+#### Interactive Prompts Enhancements
+
+Three powerful enhancements to the interactive prompts system (originally part of v2.14.0):
+
+**1. Default Value Fallback**
+
+When a flag has `defaultValue` but no explicit `initial` in the prompt config, the `defaultValue` is automatically used as the initial value:
+
+```typescript
+cli.addFlag({
+  name: "timeout",
+  type: "number",
+  defaultValue: 30,  // Used as initial in prompt
+  prompt: async () => ({
+    type: "text",
+    message: "Enter timeout:",
+    // No initial needed - uses defaultValue automatically
+  }),
+} as IPromptableFlag);
+```
+
+**Priority:** `config.initial` > `flag.defaultValue` > `undefined`
+
+**2. Conditional Prompt Skipping**
+
+Skip prompts based on previous answers using the `skip` option:
+
+```typescript
+cli.addFlag({
+  name: "advancedOptions",
+  promptSequence: 2,
+  prompt: async (ctx) => ({
+    type: "text",
+    message: "Enter advanced options:",
+    skip: !ctx.promptAnswers?.configureAdvanced,  // Skip if false
+  }),
+} as IPromptableFlag);
+```
+
+**3. Multiselect with Select All**
+
+Enable quick selection/deselection of all options:
+
+```typescript
+cli.addFlag({
+  name: "modules",
+  type: "array",
+  prompt: async () => ({
+    type: "multiselect",
+    message: "Select modules:",
+    options: ["auth", "database", "api", "ui", "cache"],
+    allowSelectAll: true,  // Shows "Select all options?" confirmation
+  }),
+} as IPromptableFlag);
+```
+
+**API Additions:**
+
+- `PromptFieldConfig.allowSelectAll?: boolean` - Enable select all toggle for multiselect
+- `PromptFieldConfig.skip?: boolean` - Skip the prompt entirely
+- `PromptManager.getInitialValue(config, flag)` - Get initial value with fallback logic
+
+#### Documentation & Examples
+
+- **Updated Examples**: `examples/interactive-prompts-examples.ts` now includes 8 working examples:
+  1. Basic greeting CLI
+  2. Deployment with dynamic versions
+  3. Git helper with "missing" trigger
+  4. Database setup with password prompts
+  5. Feature installer with multiselect
+  6. **Default value fallback demonstration** (NEW)
+  7. **Conditional prompt skipping** (NEW)
+  8. **Multiselect with select all toggle** (NEW)
+- **Enhanced Test Coverage**: 33 comprehensive test cases covering all new features
+- **Updated Skills Documentation**: `@skills/arg-parser` reference docs now include all interactive prompt enhancements
+
 ### v2.14.0
 
 **New Feature: Interactive Prompts with @clack/prompts**
@@ -93,19 +177,84 @@ cli.addFlag({ name: "force", options: ["-f", "--force"], type: "boolean" }); // 
 
 #### Documentation & Examples
 
-- **Comprehensive Examples**: Added `examples/interactive-prompts-examples.ts` with 5 working examples:
+- **Comprehensive Examples**: Added `examples/interactive-prompts-examples.ts` with 8 working examples:
   1. Basic greeting CLI
   2. Deployment with dynamic versions
   3. Git helper with "missing" trigger
   4. Database setup with password prompts
   5. Feature installer with multiselect
+  6. Default value fallback demonstration
+  7. Conditional prompt skipping
+  8. Multiselect with select all toggle
 - **Master Example Runner**: Interactive demo that lets users select and run any example
 
 - **Complete Documentation**:
   - `docs/specs/INTERACTIVE_PROMPTS.md` - Full specification
   - `docs/CORE_CONCEPTS.md` - Updated with interactive prompts section
   - JSDoc for all new public APIs
-  - 24 comprehensive test cases
+  - 33 comprehensive test cases
+
+#### Enhanced Interactive Prompts (v2.14.0+)
+
+Added three powerful enhancements to the interactive prompts system:
+
+**1. Default Value Fallback**
+
+When a flag has `defaultValue` but no explicit `initial` in the prompt config, the `defaultValue` is automatically used as the initial value:
+
+```typescript
+cli.addFlag({
+  name: "timeout",
+  type: "number",
+  defaultValue: 30, // Used as initial in prompt
+  prompt: async () => ({
+    type: "text",
+    message: "Enter timeout:",
+    // No initial needed - uses defaultValue automatically
+  }),
+} as IPromptableFlag);
+```
+
+**Priority:** `config.initial` > `flag.defaultValue` > `undefined`
+
+**2. Conditional Prompt Skipping**
+
+Skip prompts based on previous answers using the `skip` option:
+
+```typescript
+cli.addFlag({
+  name: "advancedOptions",
+  promptSequence: 2,
+  prompt: async (ctx) => ({
+    type: "text",
+    message: "Enter advanced options:",
+    skip: !ctx.promptAnswers?.configureAdvanced, // Skip if false
+  }),
+} as IPromptableFlag);
+```
+
+**3. Multiselect with Select All**
+
+Enable quick selection/deselection of all options:
+
+```typescript
+cli.addFlag({
+  name: "modules",
+  type: "array",
+  prompt: async () => ({
+    type: "multiselect",
+    message: "Select modules:",
+    options: ["auth", "database", "api", "ui", "cache"],
+    allowSelectAll: true, // Shows "Select all options?" confirmation
+  }),
+} as IPromptableFlag);
+```
+
+**API Additions:**
+
+- `PromptFieldConfig.allowSelectAll?: boolean` - Enable select all toggle for multiselect
+- `PromptFieldConfig.skip?: boolean` - Skip the prompt entirely
+- `PromptManager.getInitialValue(config, flag)` - Get initial value with fallback logic
 
 #### Usage Example
 

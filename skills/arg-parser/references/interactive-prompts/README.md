@@ -113,6 +113,84 @@ handler: async (ctx) => {
 | `select`      | Single choice from list | Selected value |
 | `multiselect` | Multiple choices        | `Array<value>` |
 
+## Enhanced Features
+
+### Default Value Fallback
+
+When a flag has `defaultValue` but no explicit `initial` in the prompt config, the `defaultValue` is automatically used as the initial value:
+
+```typescript
+cli.addFlag({
+  name: "timeout",
+  options: ["--timeout", "-t"],
+  type: "number",
+  defaultValue: 30, // Used as initial in prompt
+  prompt: async () => ({
+    type: "text",
+    message: "Enter timeout (seconds):",
+    // No initial needed - uses defaultValue automatically
+  }),
+} as IPromptableFlag);
+```
+
+**Priority:** `config.initial` > `flag.defaultValue` > `undefined`
+
+### Conditional Prompt Skipping
+
+Skip prompts based on previous answers using the `skip` option:
+
+```typescript
+// First prompt
+cli.addFlag({
+  name: "configureAdvanced",
+  options: ["--configure-advanced"],
+  type: "boolean",
+  promptSequence: 1,
+  prompt: async () => ({
+    type: "confirm",
+    message: "Configure advanced options?",
+    initial: false,
+  }),
+} as IPromptableFlag);
+
+// Second prompt - skipped if first was false
+cli.addFlag({
+  name: "advancedOptions",
+  options: ["--advanced-options"],
+  type: "string",
+  promptSequence: 2,
+  prompt: async (ctx) => ({
+    type: "text",
+    message: "Enter advanced options:",
+    skip: !ctx.promptAnswers?.configureAdvanced,
+  }),
+} as IPromptableFlag);
+```
+
+### Multiselect with Select All
+
+Enable quick selection/deselection of all options in multiselect prompts:
+
+```typescript
+cli.addFlag({
+  name: "modules",
+  options: ["--modules", "-m"],
+  type: "array",
+  prompt: async () => ({
+    type: "multiselect",
+    message: "Select modules to install:",
+    options: ["auth", "database", "api", "ui", "cache"],
+    allowSelectAll: true, // Enable select all/none toggle
+  }),
+} as IPromptableFlag);
+```
+
+When `allowSelectAll` is true:
+
+- After the multiselect, a confirmation prompt asks "Select all options?" or "Deselect all?"
+- If confirmed, the multiselect is reshown with all/none selected
+- Useful when selecting many options from a long list
+
 ## Examples
 
 ### Basic Interactive CLI

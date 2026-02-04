@@ -27,12 +27,20 @@ interface PromptFieldConfig {
   type: PromptType;
   message: string;
   placeholder?: string; // For text/password
-  initial?: any; // Default value
+  initial?: any; // Default value (highest priority)
+  allowSelectAll?: boolean; // For multiselect - enable select all/none toggle
   validate?: (value: any, ctx: IHandlerContext) => boolean | string | Promise<boolean | string>;
   options?: Array<string | { label: string; value: any; hint?: string }>; // For select/multiselect
   maxItems?: number; // For select/multiselect scrolling
+  skip?: boolean; // Skip this prompt entirely
 }
 ```
+
+**Field Details:**
+
+- `initial`: Explicit default value for the prompt. If not provided, falls back to flag's `defaultValue`.
+- `allowSelectAll`: When `true` on multiselect prompts, shows a confirmation after selection to toggle all/none options.
+- `skip`: When `true`, the prompt is not shown and no value is set for the flag. Useful for conditional prompting based on previous answers.
 
 ### IPromptableFlag
 
@@ -111,6 +119,24 @@ const sorted = PromptManager.sortFlagsBySequence([
   { flag: { promptSequence: 1 }, name: "first", index: 1 },
 ]);
 // Returns: [{ name: "first" ... }, { name: "second" ... }]
+```
+
+##### `getInitialValue(config, flag): any`
+
+Gets the initial value for a prompt, falling back to flag's `defaultValue`.
+
+**Priority:** `config.initial` > `flag.defaultValue` > `undefined`
+
+```typescript
+const flag = { defaultValue: 30 } as IPromptableFlag;
+const config = { type: "text", message: "Timeout:" };
+
+const initial = PromptManager.getInitialValue(config, flag);
+// Returns: 30 (from flag.defaultValue)
+
+const config2 = { type: "text", message: "Timeout:", initial: 60 };
+const initial2 = PromptManager.getInitialValue(config2, flag);
+// Returns: 60 (config.initial takes precedence)
 ```
 
 #### Instance Methods
@@ -273,5 +299,17 @@ prompt: async () => ({
   ],
   initial: ["a"],
   maxItems: 10,
+  allowSelectAll: true, // Enable select all/none toggle
+});
+```
+
+**With Select All:**
+
+```typescript
+prompt: async () => ({
+  type: "multiselect",
+  message: "Select modules:",
+  options: ["auth", "database", "api", "ui", "cache", "queue"],
+  allowSelectAll: true, // Shows "Select all options?" confirmation
 });
 ```

@@ -3243,7 +3243,8 @@ ${descriptionLines
     // Recursively check child parsers
     for (const [_name, subCommand] of this.#subCommands.entries()) {
       if (subCommand.parser) {
-        const childMcpCommands = (subCommand.parser as ArgParserBase).#_findAllMcpSubCommands();
+        const childParser = subCommand.parser as ArgParserBase;
+        const childMcpCommands = childParser.#_findAllMcpSubCommands();
         mcpSubCommands.push(...childMcpCommands);
       }
     }

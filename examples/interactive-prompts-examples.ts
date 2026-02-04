@@ -424,6 +424,233 @@ function createFeatureInstallerCLI() {
 }
 
 // ============================================================================
+// Example 6: Default Value Fallback
+// ============================================================================
+
+/**
+ * A CLI demonstrating automatic defaultValue fallback for prompts.
+ * When a flag has defaultValue but no explicit initial in prompt config,
+ * the defaultValue is automatically used as the initial value.
+ *
+ * Usage:
+ *   # Interactive mode - timeout will default to 30
+ *   node interactive-prompts-examples.ts defaults --interactive
+ *   # ? Enter timeout (seconds): [30]
+ *
+ *   # Override with flag
+ *   node interactive-prompts-examples.ts defaults --timeout 60
+ */
+function createDefaultsExampleCLI() {
+  const cli = new ArgParser({
+    appName: "defaults-example",
+    promptWhen: "interactive-flag",
+    handler: async (ctx: IHandlerContext) => {
+      const timeout = ctx.args["timeout"] || ctx.promptAnswers?.["timeout"];
+      const retries = ctx.args["retries"] || ctx.promptAnswers?.["retries"];
+      const enabled = ctx.args["enabled"] || ctx.promptAnswers?.["enabled"];
+
+      console.log(`Configuration:`);
+      console.log(`  Timeout: ${timeout}s`);
+      console.log(`  Retries: ${retries}`);
+      console.log(`  Enabled: ${enabled}`);
+    },
+  });
+
+  cli.addFlag({
+    name: "interactive",
+    options: ["--interactive", "-i"],
+    type: "boolean",
+    flagOnly: true,
+    description: "Run in interactive mode",
+  });
+
+  // Flag with defaultValue - will be used as initial in prompt
+  cli.addFlag({
+    name: "timeout",
+    options: ["--timeout", "-t"],
+    type: "number",
+    description: "Request timeout in seconds",
+    defaultValue: 30,
+    prompt: async () => ({
+      type: "text",
+      message: "Enter timeout (seconds):",
+      // No initial specified - will automatically use defaultValue (30)
+    }),
+  } as IPromptableFlag);
+
+  // Flag with defaultValue and explicit initial (explicit wins)
+  cli.addFlag({
+    name: "retries",
+    options: ["--retries", "-r"],
+    type: "number",
+    description: "Number of retry attempts",
+    defaultValue: 3,
+    prompt: async () => ({
+      type: "text",
+      message: "Enter retry count:",
+      initial: 5, // Explicit initial overrides defaultValue
+    }),
+  } as IPromptableFlag);
+
+  // Flag with defaultValue for confirm prompt
+  cli.addFlag({
+    name: "enabled",
+    options: ["--enabled", "-e"],
+    type: "boolean",
+    description: "Enable the feature",
+    defaultValue: true,
+    prompt: async () => ({
+      type: "confirm",
+      message: "Enable feature?",
+      // No initial specified - will use defaultValue (true)
+    }),
+  } as IPromptableFlag);
+
+  return cli;
+}
+
+// ============================================================================
+// Example 7: Conditional Prompt Skipping
+// ============================================================================
+
+/**
+ * A CLI demonstrating conditional prompt skipping.
+ * When skip is true, the prompt is not shown and no value is set.
+ * This allows dynamic skipping based on previous answers.
+ *
+ * Usage:
+ *   node interactive-prompts-examples.ts skip --interactive
+ *   # ? Would you like to configure advanced options? (Y/n)
+ *   # If yes, shows advanced options prompt
+ *   # If no, skips the advanced options prompt
+ */
+function createSkipExampleCLI() {
+  const cli = new ArgParser({
+    appName: "skip-example",
+    promptWhen: "interactive-flag",
+    handler: async (ctx: IHandlerContext) => {
+      const configureAdvanced =
+        ctx.args["configureAdvanced"] || ctx.promptAnswers?.["configureAdvanced"];
+      const advancedOptions = ctx.promptAnswers?.["advancedOptions"];
+
+      console.log(`Configuration:`);
+      console.log(`  Configure advanced: ${configureAdvanced}`);
+      if (advancedOptions) {
+        console.log(`  Advanced options: ${advancedOptions}`);
+      } else {
+        console.log(`  Advanced options: (skipped)`);
+      }
+    },
+  });
+
+  cli.addFlag({
+    name: "interactive",
+    options: ["--interactive", "-i"],
+    type: "boolean",
+    flagOnly: true,
+    description: "Run in interactive mode",
+  });
+
+  // First prompt - ask if user wants to configure advanced options
+  cli.addFlag({
+    name: "configureAdvanced",
+    options: ["--configure-advanced"],
+    type: "boolean",
+    description: "Configure advanced options",
+    promptSequence: 1,
+    prompt: async () => ({
+      type: "confirm",
+      message: "Would you like to configure advanced options?",
+      initial: false,
+    }),
+  } as IPromptableFlag);
+
+  // Second prompt - only shown if first answer was true
+  cli.addFlag({
+    name: "advancedOptions",
+    options: ["--advanced-options"],
+    type: "string",
+    description: "Advanced configuration options",
+    promptSequence: 2,
+    prompt: async (ctx: IHandlerContext) => {
+      // Skip if user chose not to configure advanced options
+      const shouldConfigure = ctx.promptAnswers?.["configureAdvanced"];
+
+      return {
+        type: "text",
+        message: "Enter advanced options:",
+        skip: !shouldConfigure, // Skip if shouldConfigure is false
+      };
+    },
+  } as IPromptableFlag);
+
+  return cli;
+}
+
+// ============================================================================
+// Example 8: Multiselect with Select All
+// ============================================================================
+
+/**
+ * A CLI demonstrating multiselect with select all/none toggle.
+ * When allowSelectAll is true, users can quickly select or deselect all options.
+ *
+ * Usage:
+ *   node interactive-prompts-examples.ts multiselect-all --interactive
+ *   # ? Select all modules to install: (press 'a' to toggle all)
+ *   #   [ ] Authentication
+ *   #   [ ] Database
+ *   #   [ ] API
+ *   #   [ ] UI
+ *   # After selection, offers "Select all options?" or "Deselect all?"
+ */
+function createMultiselectAllExampleCLI() {
+  const cli = new ArgParser({
+    appName: "multiselect-all-example",
+    promptWhen: "interactive-flag",
+    handler: async (ctx: IHandlerContext) => {
+      const modules = ctx.args["modules"] || ctx.promptAnswers?.["modules"];
+
+      if (Array.isArray(modules) && modules.length > 0) {
+        console.log(`Installing modules: ${modules.join(", ")}`);
+      } else {
+        console.log("No modules selected");
+      }
+    },
+  });
+
+  cli.addFlag({
+    name: "interactive",
+    options: ["--interactive", "-i"],
+    type: "boolean",
+    flagOnly: true,
+    description: "Run in interactive mode",
+  });
+
+  cli.addFlag({
+    name: "modules",
+    options: ["--modules", "-m"],
+    type: "array",
+    description: "Modules to install",
+    prompt: async () => ({
+      type: "multiselect",
+      message: "Select all modules to install:",
+      options: [
+        { value: "auth", label: "Authentication", hint: "User login & sessions" },
+        { value: "database", label: "Database", hint: "Data persistence" },
+        { value: "api", label: "API", hint: "REST endpoints" },
+        { value: "ui", label: "UI", hint: "User interface" },
+        { value: "cache", label: "Cache", hint: "Redis caching" },
+        { value: "queue", label: "Queue", hint: "Background jobs" },
+      ],
+      allowSelectAll: true, // Enable select all/none toggle
+    }),
+  } as IPromptableFlag);
+
+  return cli;
+}
+
+// ============================================================================
 // Master Example - Interactive Demo Runner
 // ============================================================================
 
@@ -444,8 +671,8 @@ function createMasterExampleCLI() {
       }
 
       // If we have a selected example from interactive mode, run it
-      if (ctx.isInteractive && ctx.promptAnswers?.example) {
-        const exampleName = ctx.promptAnswers.example;
+      if (ctx.isInteractive && ctx.promptAnswers?.["example"]) {
+        const exampleName = ctx.promptAnswers["example"];
         console.log(`\n🚀 Running example: ${exampleName}\n`);
 
         switch (exampleName) {
@@ -463,6 +690,15 @@ function createMasterExampleCLI() {
             break;
           case "features":
             await runExample("features", createFeatureInstallerCLI, ctx.promptAnswers);
+            break;
+          case "defaults":
+            await runExample("defaults", createDefaultsExampleCLI, ctx.promptAnswers);
+            break;
+          case "skip":
+            await runExample("skip", createSkipExampleCLI, ctx.promptAnswers);
+            break;
+          case "multiselect-all":
+            await runExample("multiselect-all", createMultiselectAllExampleCLI, ctx.promptAnswers);
             break;
           default:
             console.log("Unknown example selected");
@@ -529,6 +765,21 @@ function createMasterExampleCLI() {
           label: "Feature Installer CLI",
           hint: "Multiselect for feature selection",
         },
+        {
+          value: "defaults",
+          label: "Default Value Fallback",
+          hint: "Automatic defaultValue as prompt initial",
+        },
+        {
+          value: "skip",
+          label: "Conditional Prompt Skipping",
+          hint: "Skip prompts based on previous answers",
+        },
+        {
+          value: "multiselect-all",
+          label: "Multiselect with Select All",
+          hint: "Toggle all/none in multiselect prompts",
+        },
       ],
     }),
   } as IPromptableFlag);
@@ -585,6 +836,21 @@ function showInstructions() {
   console.log("     • Multiple selections with hints");
   console.log("     • Array value handling");
   console.log("");
+  console.log("  6. Default Value Fallback");
+  console.log("     • Automatic defaultValue as prompt initial");
+  console.log("     • Priority: config.initial > flag.defaultValue");
+  console.log("     • Works with text, confirm, and select prompts");
+  console.log("");
+  console.log("  7. Conditional Prompt Skipping");
+  console.log("     • Skip prompts based on previous answers");
+  console.log("     • Use skip: true in prompt config");
+  console.log("     • Dynamic conditional flows");
+  console.log("");
+  console.log("  8. Multiselect with Select All");
+  console.log("     • Toggle all/none in multiselect prompts");
+  console.log("     • Use allowSelectAll: true");
+  console.log("     • Quick selection for many options");
+  console.log("");
   console.log("PROGRAMMATIC USAGE:");
   console.log("  You can also import individual example creators:");
   console.log("");
@@ -639,6 +905,9 @@ export {
   createGitHelperCLI,
   createDatabaseSetupCLI,
   createFeatureInstallerCLI,
+  createDefaultsExampleCLI,
+  createSkipExampleCLI,
+  createMultiselectAllExampleCLI,
   createMasterExampleCLI,
 };
 
