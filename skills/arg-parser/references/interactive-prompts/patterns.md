@@ -318,12 +318,10 @@ cli.addFlag({
       { value: "cache", label: "Cache", hint: "Redis caching" },
       { value: "queue", label: "Queue", hint: "Background jobs" },
     ],
-    allowSelectAll: true,  // Enable select all/none toggle
   }),
 } as IPromptableFlag);
 
-// After selection, user is asked "Select all options?" or "Deselect all?"
-// If confirmed, the multiselect is reshown with updated selection
+// Use Space to toggle individual items, Enter to confirm
 ```
 
 ## Pattern 9: Default Value Fallback
@@ -335,7 +333,7 @@ cli.addFlag({
   name: "timeout",
   options: ["--timeout", "-t"],
   type: "number",
-  defaultValue: 30,  // Automatically used as initial in prompt
+  defaultValue: 30, // Automatically used as initial in prompt
   prompt: async () => ({
     type: "text",
     message: "Enter timeout (seconds):",
@@ -352,7 +350,7 @@ cli.addFlag({
   prompt: async () => ({
     type: "text",
     message: "Enter retry count:",
-    initial: 5,  // This takes precedence over defaultValue
+    initial: 5, // This takes precedence over defaultValue
   }),
 } as IPromptableFlag);
 
@@ -386,7 +384,7 @@ cli.addFlag({
   prompt: async (ctx) => ({
     type: "text",
     message: "Enter advanced options:",
-    skip: !ctx.promptAnswers?.configureAdvanced,  // Skip if false
+    skip: !ctx.promptAnswers?.configureAdvanced, // Skip if false
   }),
 } as IPromptableFlag);
 
@@ -430,3 +428,82 @@ root.addSubCommand({
 // cli init --name my-project    # No prompts
 // cli init                      # Prompts for --name (missing)
 ```
+
+## Pattern 12: Context-Aware Pre-Configuration
+
+Use CLI flags to "pre-configure" interactive prompts, skipping questions already answered and refining choices based on context:
+
+```typescript
+const cli = new ArgParser({
+  appName: "installer",
+  promptWhen: "interactive-flag",
+  handler: async (ctx) => {
+    const scope = ctx.args.global ? "global" : "local";
+    console.log(`Installing ${scope}ly...`);
+  },
+});
+
+// Scope selection - can be pre-configured via --global or --local
+cli.addFlag({
+  name: "global",
+  options: ["--global", "-g"],
+  type: "boolean",
+  prompt: async (ctx) => ({
+    type: "confirm",
+    message: "Install globally?",
+    initial: false,
+    // Skip if user already specified --global or --local
+    skip: ctx.args.global || ctx.args.local,
+  }),
+} as IPromptableFlag);
+
+// Dynamic options based on scope
+cli.addFlag({
+  name: "packageManager",
+  options: ["--package-manager", "-p"],
+  type: "string",
+  prompt: async (ctx) => {
+    // Check if scope was pre-configured
+    const isGlobal = ctx.args.global || ctx.promptAnswers?.global;
+
+    // Refine options based on scope
+    const options = isGlobal
+      ? ["npm", "yarn", "pnpm"] // Global supports fewer managers
+      : ["npm", "yarn", "pnpm", "bun"]; // Local supports all
+
+    return {
+      type: "select",
+      message: "Package manager:",
+      options,
+      initial: ctx.args.packageManager, // Use CLI flag as default
+    };
+  },
+} as IPromptableFlag);
+
+// Scope-conditional prompt
+cli.addFlag({
+  name: "addToPath",
+  options: ["--add-to-path"],
+  type: "boolean",
+  prompt: async (ctx) => ({
+    type: "confirm",
+    message: "Add to PATH?",
+    initial: true,
+    skip: !ctx.args.global, // Only ask for global installs
+  }),
+} as IPromptableFlag);
+
+// Usage:
+// installer --interactive                    # Asks all questions
+// installer --global --interactive           # Skips scope, refines package managers
+// installer --local -p npm --interactive     # Pre-configures scope and package manager
+// installer --global -p npm -d /usr/local    # Fully programmatic, no prompts
+```
+
+**Key techniques:**
+
+- Check `ctx.args` to see if flag was provided via CLI
+- Use `skip` to avoid questions already answered
+- Use `initial` to pre-select values from flags
+- Dynamically generate `options` based on context
+- Combine with `promptWhen: "missing"` for hybrid behavior

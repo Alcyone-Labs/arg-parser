@@ -588,25 +588,25 @@ function createSkipExampleCLI() {
 }
 
 // ============================================================================
-// Example 8: Multiselect with Select All
+// Example 8: Multiselect with Multiple Selections
 // ============================================================================
 
 /**
- * A CLI demonstrating multiselect with select all/none toggle.
- * When allowSelectAll is true, users can quickly select or deselect all options.
+ * A CLI demonstrating multiselect prompts for selecting multiple items.
+ * Users can toggle individual items with Space and confirm with Enter.
  *
  * Usage:
  *   node interactive-prompts-examples.ts multiselect-all --interactive
- *   # ? Select all modules to install: (press 'a' to toggle all)
- *   #   [ ] Authentication
- *   #   [ ] Database
- *   #   [ ] API
- *   #   [ ] UI
- *   # After selection, offers "Select all options?" or "Deselect all?"
+ *   # ? Select modules to install:
+ *   #   [ ] Authentication (User login & sessions)
+ *   #   [x] Database (Data persistence)
+ *   #   [ ] API (REST endpoints)
+ *   #   [x] UI (User interface)
+ *   # Use Space to toggle, Enter to confirm
  */
 function createMultiselectAllExampleCLI() {
   const cli = new ArgParser({
-    appName: "multiselect-all-example",
+    appName: "multiselect-example",
     promptWhen: "interactive-flag",
     handler: async (ctx: IHandlerContext) => {
       const modules = ctx.args["modules"] || ctx.promptAnswers?.["modules"];
@@ -634,7 +634,7 @@ function createMultiselectAllExampleCLI() {
     description: "Modules to install",
     prompt: async () => ({
       type: "multiselect",
-      message: "Select all modules to install:",
+      message: "Select modules to install:",
       options: [
         { value: "auth", label: "Authentication", hint: "User login & sessions" },
         { value: "database", label: "Database", hint: "Data persistence" },
@@ -643,7 +643,6 @@ function createMultiselectAllExampleCLI() {
         { value: "cache", label: "Cache", hint: "Redis caching" },
         { value: "queue", label: "Queue", hint: "Background jobs" },
       ],
-      allowSelectAll: true, // Enable select all/none toggle
     }),
   } as IPromptableFlag);
 
@@ -699,6 +698,9 @@ function createMasterExampleCLI() {
             break;
           case "multiselect-all":
             await runExample("multiselect-all", createMultiselectAllExampleCLI, ctx.promptAnswers);
+            break;
+          case "preconfig":
+            await runExample("preconfig", createPreconfigExampleCLI, ctx.promptAnswers);
             break;
           default:
             console.log("Unknown example selected");
@@ -777,8 +779,13 @@ function createMasterExampleCLI() {
         },
         {
           value: "multiselect-all",
-          label: "Multiselect with Select All",
-          hint: "Toggle all/none in multiselect prompts",
+          label: "Multiselect with Multiple Selections",
+          hint: "Select multiple items using Space",
+        },
+        {
+          value: "preconfig",
+          label: "Context-Aware Pre-Configuration",
+          hint: "Use flags to pre-configure interactive prompts",
         },
       ],
     }),
@@ -846,10 +853,16 @@ function showInstructions() {
   console.log("     • Use skip: true in prompt config");
   console.log("     • Dynamic conditional flows");
   console.log("");
-  console.log("  8. Multiselect with Select All");
-  console.log("     • Toggle all/none in multiselect prompts");
-  console.log("     • Use allowSelectAll: true");
-  console.log("     • Quick selection for many options");
+  console.log("  8. Multiselect with Multiple Selections");
+  console.log("     • Select multiple items with Space");
+  console.log("     • Navigate with arrow keys");
+  console.log("     • Confirm with Enter");
+  console.log("");
+  console.log("  9. Context-Aware Pre-Configuration");
+  console.log("     • Use CLI flags to pre-configure interactive mode");
+  console.log("     • Skip questions already answered by flags");
+  console.log("     • Refine choices based on flag context");
+  console.log("     • Conditional flows based on pre-selection");
   console.log("");
   console.log("PROGRAMMATIC USAGE:");
   console.log("  You can also import individual example creators:");
@@ -885,6 +898,11 @@ async function runExample(
     case "git":
       args.push("init");
       break;
+    case "preconfig":
+      // Pre-config example can receive additional flags
+      if (selectedAnswers.global) args.push("--global");
+      if (selectedAnswers.local) args.push("--local");
+      break;
   }
 
   try {
@@ -893,6 +911,218 @@ async function runExample(
     // Examples may exit or throw - that's expected
     console.log("\n✅ Example completed!");
   }
+}
+
+// ============================================================================
+// Example 9: Context-Aware Pre-Configuration
+// ============================================================================
+
+/**
+ * A CLI demonstrating how to use flags to "pre-configure" interactive prompts.
+ * This allows users to provide some options via CLI flags, which then:
+ * - Pre-select defaults in interactive mode
+ * - Skip questions already answered by flags
+ * - Refine available choices based on context
+ * - Create conditional flows based on pre-selection
+ *
+ * Usage:
+ *   # Full interactive mode - asks all questions
+ *   node interactive-prompts-examples.ts preconfig --interactive
+ *
+ *   # Pre-configure global scope - skips scope question, refines choices
+ *   node interactive-prompts-examples.ts preconfig --global --interactive
+ *
+ *   # Pre-configure local scope with package manager
+ *   node interactive-prompts-examples.ts preconfig --local --package-manager npm --interactive
+ *
+ *   # Fully programmatic - no prompts
+ *   node interactive-prompts-examples.ts preconfig --global --package-manager npm --directory /usr/local
+ */
+function createPreconfigExampleCLI() {
+  const cli = new ArgParser({
+    appName: "preconfig-example",
+    promptWhen: "interactive-flag",
+    handler: async (ctx: IHandlerContext) => {
+      // Collect answers from both CLI args and interactive prompts
+      const isGlobal = ctx.args["global"] ?? ctx.promptAnswers?.["global"];
+      const isLocal = ctx.args["local"] ?? ctx.promptAnswers?.["local"];
+      const packageManager = ctx.args["packageManager"] ?? ctx.promptAnswers?.["packageManager"];
+      const directory = ctx.args["directory"] ?? ctx.promptAnswers?.["directory"];
+      const createSymlink = ctx.args["createSymlink"] ?? ctx.promptAnswers?.["createSymlink"];
+      const addToPath = ctx.args["addToPath"] ?? ctx.promptAnswers?.["addToPath"];
+
+      // Determine scope
+      const scope = isGlobal ? "global" : isLocal ? "local" : "unknown";
+
+      console.log(`\n📦 Installation Configuration:`);
+      console.log(`  Scope: ${scope}`);
+      console.log(`  Package Manager: ${packageManager}`);
+      console.log(`  Directory: ${directory}`);
+      console.log(`  Create Symlink: ${createSymlink ?? false}`);
+      console.log(`  Add to PATH: ${addToPath ?? false}`);
+
+      if (scope === "global") {
+        console.log(`\n⚠️  Installing globally requires sudo on some systems`);
+      } else {
+        console.log(`\n✓ Local installation in project directory`);
+      }
+    },
+  });
+
+  cli.addFlag({
+    name: "interactive",
+    options: ["--interactive", "-i"],
+    type: "boolean",
+    flagOnly: true,
+    description: "Run in interactive mode",
+  });
+
+  // Scope flags - can be provided via CLI to pre-configure
+  cli.addFlag({
+    name: "global",
+    options: ["--global", "-g"],
+    type: "boolean",
+    description: "Install globally",
+    prompt: async (ctx: IHandlerContext) => {
+      // If --global or --local already provided, skip this question
+      const hasGlobal = ctx.args["global"] === true;
+      const hasLocal = ctx.args["local"] === true;
+
+      return {
+        type: "confirm",
+        message: "Install globally?",
+        initial: false,
+        skip: hasGlobal || hasLocal, // Skip if scope already specified
+      };
+    },
+  } as IPromptableFlag);
+
+  cli.addFlag({
+    name: "local",
+    options: ["--local", "-l"],
+    type: "boolean",
+    description: "Install locally (project scope)",
+    prompt: async (ctx: IHandlerContext) => {
+      // Skip if already answered
+      const hasGlobal = ctx.args["global"] === true || ctx.promptAnswers?.["global"] === true;
+      const hasLocal = ctx.args["local"] === true;
+
+      return {
+        type: "confirm",
+        message: "Install locally in current project?",
+        initial: true,
+        skip: hasGlobal || hasLocal,
+      };
+    },
+  } as IPromptableFlag);
+
+  // Package manager - options refined based on scope
+  cli.addFlag({
+    name: "packageManager",
+    options: ["--package-manager", "-p"],
+    type: "string",
+    description: "Package manager to use",
+    prompt: async (ctx: IHandlerContext) => {
+      // Determine scope from flags or previous answers
+      const isGlobal = ctx.args["global"] === true || ctx.promptAnswers?.["global"] === true;
+      const isLocal = ctx.args["local"] === true || ctx.promptAnswers?.["local"] === true;
+
+      // Different options based on scope
+      let options: Array<{ label: string; value: string; hint?: string }>;
+
+      if (isGlobal) {
+        // Global installations typically use npm or yarn global
+        options = [
+          { value: "npm", label: "npm", hint: "npm install -g" },
+          { value: "yarn", label: "Yarn", hint: "yarn global add" },
+          { value: "pnpm", label: "pnpm", hint: "pnpm add -g" },
+        ];
+      } else if (isLocal) {
+        // Local installations can use any package manager
+        options = [
+          { value: "npm", label: "npm", hint: "Standard choice" },
+          { value: "yarn", label: "Yarn", hint: "Fast, reliable" },
+          { value: "pnpm", label: "pnpm", hint: "Disk space efficient" },
+          { value: "bun", label: "Bun", hint: "Ultra-fast" },
+        ];
+      } else {
+        // Default options if scope not yet determined
+        options = [
+          { value: "npm", label: "npm" },
+          { value: "yarn", label: "Yarn" },
+          { value: "pnpm", label: "pnpm" },
+        ];
+      }
+
+      return {
+        type: "select",
+        message: "Select package manager:",
+        options,
+        initial: ctx.args["packageManager"], // Use CLI flag as default if provided
+      };
+    },
+  } as IPromptableFlag);
+
+  // Directory - default changes based on scope
+  cli.addFlag({
+    name: "directory",
+    options: ["--directory", "-d"],
+    type: "string",
+    description: "Installation directory",
+    prompt: async (ctx: IHandlerContext) => {
+      const isGlobal = ctx.args["global"] === true || ctx.promptAnswers?.["global"] === true;
+      const isLocal = ctx.args["local"] === true || ctx.promptAnswers?.["local"] === true;
+
+      // Different default based on scope
+      const defaultDir = isGlobal ? "/usr/local/bin" : isLocal ? "./node_modules/.bin" : "./";
+
+      return {
+        type: "text",
+        message: "Installation directory:",
+        placeholder: defaultDir,
+        initial: ctx.args["directory"] ?? defaultDir, // Use CLI flag or scope-based default
+        validate: (val) => val.length > 0 || "Directory is required",
+      };
+    },
+  } as IPromptableFlag);
+
+  // Global-specific option: Add to PATH
+  cli.addFlag({
+    name: "addToPath",
+    options: ["--add-to-path"],
+    type: "boolean",
+    description: "Add to PATH (global only)",
+    prompt: async (ctx: IHandlerContext) => {
+      const isGlobal = ctx.args["global"] === true || ctx.promptAnswers?.["global"] === true;
+
+      return {
+        type: "confirm",
+        message: "Add to system PATH?",
+        initial: true,
+        skip: !isGlobal, // Only ask for global installations
+      };
+    },
+  } as IPromptableFlag);
+
+  // Local-specific option: Create symlink
+  cli.addFlag({
+    name: "createSymlink",
+    options: ["--create-symlink"],
+    type: "boolean",
+    description: "Create symlink in node_modules/.bin (local only)",
+    prompt: async (ctx: IHandlerContext) => {
+      const isLocal = ctx.args["local"] === true || ctx.promptAnswers?.["local"] === true;
+
+      return {
+        type: "confirm",
+        message: "Create symlink in node_modules/.bin?",
+        initial: true,
+        skip: !isLocal, // Only ask for local installations
+      };
+    },
+  } as IPromptableFlag);
+
+  return cli;
 }
 
 // ============================================================================
@@ -908,6 +1138,7 @@ export {
   createDefaultsExampleCLI,
   createSkipExampleCLI,
   createMultiselectAllExampleCLI,
+  createPreconfigExampleCLI,
   createMasterExampleCLI,
 };
 

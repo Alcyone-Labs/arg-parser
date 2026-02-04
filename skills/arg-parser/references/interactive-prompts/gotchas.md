@@ -390,16 +390,18 @@ handler: async (ctx) => {
 };
 ```
 
-## Gotcha 14: allowSelectAll Shows Confirmation After Selection
+## Gotcha 14: Multiselect Selection Tips
 
-**Problem:** Expecting `allowSelectAll` to work like a keyboard shortcut during multiselect.
+**Tip:** Use Space to toggle individual items in multiselect prompts.
 
-**Explanation:** The `allowSelectAll` option shows a confirmation prompt AFTER the user makes their initial selection, asking "Select all options?" or "Deselect all?". It's not a real-time keyboard shortcut.
+**Navigation:**
 
-**Flow:**
-1. User selects some options in multiselect
-2. Confirmation appears: "Select all options?" (if partial selection) or "Deselect all?" (if all selected)
-3. If confirmed, multiselect reappears with updated selection
+- Arrow keys: Navigate up/down
+- Space: Toggle selection of current item
+- Enter: Confirm selection
+- Ctrl+C: Cancel
+
+All items can be selected/deselected individually using Space.
 
 ## Gotcha 15: defaultValue vs initial Priority
 
@@ -409,11 +411,11 @@ handler: async (ctx) => {
 cli.addFlag({
   name: "timeout",
   type: "number",
-  defaultValue: 30,  // Flag default
+  defaultValue: 30, // Flag default
   prompt: async () => ({
     type: "text",
     message: "Timeout:",
-    initial: 60,  // Prompt initial
+    initial: 60, // Prompt initial
   }),
 } as IPromptableFlag);
 ```

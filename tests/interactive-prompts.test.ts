@@ -375,14 +375,14 @@ describe("PromptManager Integration with ArgParser", () => {
     expect(promptableFlags[0].name).toBe("optional");
   });
 
-  test("should support multiselect with allowSelectAll option", async () => {
+  test("should support multiselect prompts", async () => {
     const { ArgParser } = await import("../src/core/ArgParser");
 
     const parser = new ArgParser({
       appName: "Test CLI",
     });
 
-    // Add a multiselect flag with allowSelectAll
+    // Add a multiselect flag
     parser.addFlag({
       name: "features",
       options: ["--features"],
@@ -391,7 +391,6 @@ describe("PromptManager Integration with ArgParser", () => {
         type: "multiselect",
         message: "Select features:",
         options: ["auth", "api", "ui", "db"],
-        allowSelectAll: true,
       }),
     } as IPromptableFlag);
 

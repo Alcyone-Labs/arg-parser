@@ -56,7 +56,7 @@ Use this skill when user needs to:
 - Subcommands with prompts need `--interactive` on BOTH root AND sub-parser
 - **Default Value Fallback**: Flag `defaultValue` automatically used as prompt `initial` when not explicitly set
 - **Conditional Skipping**: Use `skip: true` or `skip: condition` to skip prompts based on previous answers
-- **Select All Toggle**: Use `allowSelectAll: true` on multiselect prompts for quick select/deselect all
+- **Multiselect Navigation**: Use Space to toggle items, arrows to navigate
 
 # Workflow
 
@@ -428,7 +428,7 @@ parser.addFlag({
   name: "timeout",
   options: ["--timeout", "-t"],
   type: "number",
-  defaultValue: 30,  // Automatically used as initial in prompt
+  defaultValue: 30, // Automatically used as initial in prompt
   prompt: async () => ({
     type: "text",
     message: "Enter timeout (seconds):",
@@ -460,7 +460,7 @@ parser.addFlag({
   prompt: async (ctx) => ({
     type: "text",
     message: "Enter advanced options:",
-    skip: !ctx.promptAnswers?.configureAdvanced,  // Skip if false
+    skip: !ctx.promptAnswers?.configureAdvanced, // Skip if false
   }),
 } as IPromptableFlag);
 ```
@@ -481,7 +481,43 @@ parser.addFlag({
       { value: "api", label: "API", hint: "REST endpoints" },
       { value: "ui", label: "UI", hint: "User interface" },
     ],
-    allowSelectAll: true,  // Enable select all/none toggle
+    // Space to toggle, Enter to confirm
   }),
+} as IPromptableFlag);
+```
+
+## Example 9: Context-aware pre-configuration
+
+Use CLI flags to pre-configure interactive prompts:
+
+```typescript
+parser.addFlag({
+  name: "global",
+  options: ["--global", "-g"],
+  type: "boolean",
+  prompt: async (ctx) => ({
+    type: "confirm",
+    message: "Install globally?",
+    initial: false,
+    skip: ctx.args.global || ctx.args.local, // Skip if already specified
+  }),
+} as IPromptableFlag);
+
+parser.addFlag({
+  name: "packageManager",
+  options: ["--package-manager", "-p"],
+  type: "string",
+  prompt: async (ctx) => {
+    // Refine options based on pre-configured scope
+    const isGlobal = ctx.args.global || ctx.promptAnswers?.global;
+    const options = isGlobal ? ["npm", "yarn", "pnpm"] : ["npm", "yarn", "pnpm", "bun"];
+
+    return {
+      type: "select",
+      message: "Package manager:",
+      options,
+      initial: ctx.args.packageManager, // Use CLI flag as default
+    };
+  },
 } as IPromptableFlag);
 ```

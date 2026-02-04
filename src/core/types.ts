@@ -603,13 +603,6 @@ export interface PromptFieldConfig {
   initial?: any;
 
   /**
-   * Whether to allow "select all" toggle in multiselect.
-   * When true, user can press 'a' to select all, 'a' again to deselect all.
-   * @default false
-   */
-  allowSelectAll?: boolean;
-
-  /**
    * Validation function.
    * Return true for valid, string for error message.
    * Can be async.

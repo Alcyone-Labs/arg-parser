@@ -1,5 +1,38 @@
 ## Changelog
 
+### v2.14.2
+
+**Patch Release: Interactive Prompts Simplification & Context-Aware Pre-Configuration**
+
+#### Changes
+
+- **Simplified Multiselect**: Removed the `allowSelectAll` option and complex toggle logic. Multiselect now uses the standard @clack/prompts behavior:
+  - Arrow keys to navigate
+  - Space to toggle individual items
+  - Enter to confirm
+  - No more confusing "Select all?" confirmation prompts
+
+#### New Features
+
+**Context-Aware Pre-Configuration Pattern**
+
+Added comprehensive example and documentation for using CLI flags to pre-configure interactive prompts:
+
+```typescript
+// Use flags to pre-set values and skip questions
+cli install --global --interactive
+// Skips "Install globally?" question, uses "global" context for subsequent prompts
+```
+
+This pattern enables:
+
+- **Pre-select defaults**: Use flag values as `initial` in prompts
+- **Smart skipping**: Skip questions already answered by flags
+- **Contextual refinement**: Show different options based on pre-selection
+- **Conditional flows**: Different question sequences based on context
+
+See Example 9 in `examples/interactive-prompts-examples.ts` for complete implementation.
+
 ### v2.14.1
 
 **Patch Release: Interactive Prompts Enhancements & Bug Fix**
@@ -20,7 +53,7 @@ When a flag has `defaultValue` but no explicit `initial` in the prompt config, t
 cli.addFlag({
   name: "timeout",
   type: "number",
-  defaultValue: 30,  // Used as initial in prompt
+  defaultValue: 30, // Used as initial in prompt
   prompt: async () => ({
     type: "text",
     message: "Enter timeout:",
@@ -42,7 +75,7 @@ cli.addFlag({
   prompt: async (ctx) => ({
     type: "text",
     message: "Enter advanced options:",
-    skip: !ctx.promptAnswers?.configureAdvanced,  // Skip if false
+    skip: !ctx.promptAnswers?.configureAdvanced, // Skip if false
   }),
 } as IPromptableFlag);
 ```
@@ -59,14 +92,13 @@ cli.addFlag({
     type: "multiselect",
     message: "Select modules:",
     options: ["auth", "database", "api", "ui", "cache"],
-    allowSelectAll: true,  // Shows "Select all options?" confirmation
   }),
 } as IPromptableFlag);
 ```
 
 **API Additions:**
 
-- `PromptFieldConfig.allowSelectAll?: boolean` - Enable select all toggle for multiselect
+- `PromptFieldConfig.
 - `PromptFieldConfig.skip?: boolean` - Skip the prompt entirely
 - `PromptManager.getInitialValue(config, flag)` - Get initial value with fallback logic
 
@@ -245,14 +277,13 @@ cli.addFlag({
     type: "multiselect",
     message: "Select modules:",
     options: ["auth", "database", "api", "ui", "cache"],
-    allowSelectAll: true, // Shows "Select all options?" confirmation
   }),
 } as IPromptableFlag);
 ```
 
 **API Additions:**
 
-- `PromptFieldConfig.allowSelectAll?: boolean` - Enable select all toggle for multiselect
+- `PromptFieldConfig.
 - `PromptFieldConfig.skip?: boolean` - Skip the prompt entirely
 - `PromptManager.getInitialValue(config, flag)` - Get initial value with fallback logic
 

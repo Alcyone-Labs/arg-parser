@@ -180,16 +180,16 @@ cli.addFlag({
     type: "multiselect",
     message: "Select modules to install:",
     options: ["auth", "database", "api", "ui", "cache"],
-    allowSelectAll: true, // Enable select all/none toggle
   }),
 } as IPromptableFlag);
 ```
 
-When `allowSelectAll` is true:
+**Multiselect Navigation:**
 
-- After the multiselect, a confirmation prompt asks "Select all options?" or "Deselect all?"
-- If confirmed, the multiselect is reshown with all/none selected
-- Useful when selecting many options from a long list
+- Arrow keys: Navigate up/down
+- Space: Toggle selection of current item
+- Enter: Confirm selection
+- Ctrl+C: Cancel
 
 ## Examples
 
