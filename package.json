@@ -107,7 +107,7 @@
     "@alcyone-labs/simple-chalk": "^1.0.2",
     "@alcyone-labs/simple-mcp-logger": "^1.2.1",
     "@clack/prompts": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "get-tsconfig": "^4.13.0",
     "magic-regexp": "^0.10.0",
     "solid-js": "^1.9.10",
