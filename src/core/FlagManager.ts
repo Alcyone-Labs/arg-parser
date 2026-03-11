@@ -20,6 +20,12 @@ export interface FlagManagerOptions {
    * @default false
    */
   throwForOptionCollisions?: boolean;
+  /**
+   * Whether to silence all warnings (including duplicate flag and option collision warnings).
+   * When true, no warnings will be logged to the console.
+   * @default false
+   */
+  silenceWarnings?: boolean;
 }
 
 /**
@@ -65,6 +71,7 @@ export class FlagManager {
   #throwForDuplicateFlags: boolean;
   #detectOptionCollisions: boolean;
   #throwForOptionCollisions: boolean;
+  #silenceWarnings: boolean;
 
   /**
    * Creates a new FlagManager instance.
@@ -76,6 +83,7 @@ export class FlagManager {
     this.#throwForDuplicateFlags = options.throwForDuplicateFlags ?? false;
     this.#detectOptionCollisions = options.detectOptionCollisions ?? true;
     this.#throwForOptionCollisions = options.throwForOptionCollisions ?? false;
+    this.#silenceWarnings = options.silenceWarnings ?? false;
     this.addFlags(initialFlags);
   }
 
@@ -195,9 +203,11 @@ export class FlagManager {
       if (this.#throwForDuplicateFlags) {
         throw new Error(`FlagManager: Flag '${safeFlag["name"]}' already exists.`);
       } else {
-        console.warn(
-          `Warning: FlagManager: Flag '${safeFlag["name"]}' already exists. Duplicate not added.`,
-        );
+        if (!this.#silenceWarnings) {
+          console.warn(
+            `Warning: FlagManager: Flag '${safeFlag["name"]}' already exists. Duplicate not added.`,
+          );
+        }
         return this;
       }
     }
@@ -216,7 +226,9 @@ export class FlagManager {
         if (this.#throwForOptionCollisions) {
           throw new Error(`FlagManager: ${message}`);
         } else {
-          console.warn(`Warning: FlagManager: ${message}`);
+          if (!this.#silenceWarnings) {
+            console.warn(`Warning: FlagManager: ${message}`);
+          }
           // Continue adding the flag even with collision warning
         }
       }

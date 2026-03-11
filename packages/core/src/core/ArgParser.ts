@@ -1,14 +1,14 @@
 /**
  * Core ArgParser implementation
- * 
+ *
  * This is the main ArgParser class with full CLI parsing capabilities.
  * It has NO dependencies on MCP, DXT, or TUI - those are provided by plugins.
  */
 
-import chalk from '@alcyone-labs/simple-chalk';
-import type { IArgParserPlugin } from '../plugin/types';
-import { FlagManager } from './FlagManager';
-import { PromptManager } from './PromptManager';
+import chalk from "@alcyone-labs/simple-chalk";
+import type { IArgParserPlugin } from "../plugin/types";
+import { FlagManager } from "./FlagManager";
+import { PromptManager } from "./PromptManager";
 import type {
   IFlag,
   IHandlerContext,
@@ -18,17 +18,20 @@ import type {
   PromptWhen,
   TFlagInheritance,
   ISystemArgs,
-} from './types';
+} from "./types";
 
 /**
  * Error thrown by ArgParser
  */
 export class ArgParserError extends Error {
   public commandChain: string[];
-  
-  constructor(message: string, public cmdChain: string[] = []) {
+
+  constructor(
+    message: string,
+    public cmdChain: string[] = [],
+  ) {
     super(message);
-    this.name = 'ArgParserError';
+    this.name = "ArgParserError";
     this.commandChain = cmdChain;
   }
 }
@@ -93,7 +96,7 @@ export interface IParseOptions {
 
 /**
  * Core ArgParser class
- * 
+ *
  * Provides complete CLI argument parsing with support for:
  * - Flags (with types, validation, defaults)
  * - Subcommands
@@ -103,62 +106,65 @@ export interface IParseOptions {
  */
 export class ArgParser<THandlerReturn = any> {
   // Private fields
-  #appName: string = 'Argument Parser';
+  #appName: string = "Argument Parser";
   #appCommandName?: string;
-  #subCommandName: string = '';
+  #subCommandName: string = "";
   #description?: string;
   #handler?: (ctx: IHandlerContext) => any;
   #subCommands: Map<string, ISubCommand> = new Map();
   #flagManager: FlagManager;
   #promptManager: PromptManager;
   #plugins: Map<string, IArgParserPlugin> = new Map();
-  
+
   // Configuration
-  #mandatoryCharacter: string = '*';
+  #mandatoryCharacter: string = "*";
   #throwForDuplicateFlags: boolean = false;
   #handleErrors: boolean = true;
   #autoExit: boolean = true;
   #inheritParentFlags: TFlagInheritance = false;
-  #promptWhen: PromptWhen = 'interactive-flag';
+  #promptWhen: PromptWhen = "interactive-flag";
 
   // State
   #parentParser?: ArgParser;
   #rootPath: string | null = null;
-  
+
   constructor(params: IArgParserParams<THandlerReturn> = {}, initialFlags?: readonly IFlag[]) {
     // Set basic properties
-    this.#appName = params.appName || 'app';
+    this.#appName = params.appName || "app";
     this.#appCommandName = params.appCommandName;
     this.#description = params.description;
     this.#handler = params.handler;
-    
+
     // Set formatting options
-    if (params.mandatoryCharacter !== undefined) this.#mandatoryCharacter = params.mandatoryCharacter;
+    if (params.mandatoryCharacter !== undefined)
+      this.#mandatoryCharacter = params.mandatoryCharacter;
 
     // Set behavior options
-    if (params.throwForDuplicateFlags !== undefined) this.#throwForDuplicateFlags = params.throwForDuplicateFlags;
+    if (params.throwForDuplicateFlags !== undefined)
+      this.#throwForDuplicateFlags = params.throwForDuplicateFlags;
     if (params.handleErrors !== undefined) this.#handleErrors = params.handleErrors;
     if (params.autoExit !== undefined) this.#autoExit = params.autoExit;
-    if (params.inheritParentFlags !== undefined) this.#inheritParentFlags = params.inheritParentFlags;
+    if (params.inheritParentFlags !== undefined)
+      this.#inheritParentFlags = params.inheritParentFlags;
     if (params.promptWhen !== undefined) this.#promptWhen = params.promptWhen;
-    
+
     // Initialize managers
     this.#flagManager = new FlagManager(
       { throwForDuplicateFlags: this.#throwForDuplicateFlags },
-      initialFlags || []
+      initialFlags || [],
     );
     this.#promptManager = new PromptManager();
-    
+
     // Add help flag
     this.addFlag({
-      name: 'help',
-      description: 'Display this help message and exit',
+      name: "help",
+      description: "Display this help message and exit",
       mandatory: false,
       type: Boolean,
-      options: ['-h', '--help'],
+      options: ["-h", "--help"],
       flagOnly: true,
     });
-    
+
     // Add subcommands
     if (params.subCommands) {
       for (const sub of params.subCommands) {
@@ -166,9 +172,9 @@ export class ArgParser<THandlerReturn = any> {
       }
     }
   }
-  
+
   // ==================== Plugin System ====================
-  
+
   /**
    * Install a plugin
    */
@@ -176,50 +182,50 @@ export class ArgParser<THandlerReturn = any> {
     if (this.#plugins.has(plugin.name)) {
       throw new Error(`Plugin '${plugin.name}' is already installed`);
     }
-    
+
     const result = plugin.install(this);
     this.#plugins.set(plugin.name, plugin);
-    
-    return (result as ArgParser) as this || this;
+
+    return (result as ArgParser as this) || this;
   }
-  
+
   /**
    * Check if a plugin is installed
    */
   hasPlugin(name: string): boolean {
     return this.#plugins.has(name);
   }
-  
+
   /**
    * Get an installed plugin
    */
   getPlugin(name: string): IArgParserPlugin | undefined {
     return this.#plugins.get(name);
   }
-  
+
   /**
    * List all installed plugins
    */
   listPlugins(): string[] {
     return Array.from(this.#plugins.keys());
   }
-  
+
   // ==================== Flag Management ====================
-  
+
   /**
    * Add a flag
    */
   addFlag(flag: IFlag): this {
     this.#flagManager.addFlag(flag);
-    
+
     // Register with prompt manager if promptable
-    if ('prompt' in flag && typeof flag.prompt === 'function') {
+    if ("prompt" in flag && typeof flag.prompt === "function") {
       this.#promptManager.registerPromptableFlag(flag as any);
     }
-    
+
     return this;
   }
-  
+
   /**
    * Add multiple flags
    */
@@ -229,37 +235,37 @@ export class ArgParser<THandlerReturn = any> {
     }
     return this;
   }
-  
+
   /**
    * Check if a flag exists
    */
   hasFlag(name: string): boolean {
     return this.#flagManager.hasFlag(name);
   }
-  
+
   /**
    * Get a flag definition
    */
   getFlagDefinition(name: string): ProcessedFlag | undefined {
     return this.#flagManager.getFlag(name);
   }
-  
+
   /**
    * Get all flags
    */
   get flags(): ProcessedFlag[] {
     return this.#flagManager.getAllFlags();
   }
-  
+
   /**
    * Get all flag names
    */
   get flagNames(): string[] {
     return this.#flagManager.getFlagNames();
   }
-  
+
   // ==================== Subcommand Management ====================
-  
+
   /**
    * Add a subcommand
    */
@@ -267,37 +273,37 @@ export class ArgParser<THandlerReturn = any> {
     if (this.#subCommands.has(subCommand.name)) {
       throw new Error(`Subcommand '${subCommand.name}' already exists`);
     }
-    
+
     // Set up parent relationship
     const subParser = subCommand.parser as ArgParser;
     if (subParser) {
       subParser.#parentParser = this;
       subParser.#subCommandName = subCommand.name;
-      
+
       // Inherit flags if configured
       if (subParser.#inheritParentFlags) {
         this.inheritFlagsToSubParser(subParser);
       }
     }
-    
+
     this.#subCommands.set(subCommand.name, subCommand);
     return this;
   }
-  
+
   /**
    * Get a subcommand
    */
   getSubCommand(name: string): ISubCommand | undefined {
     return this.#subCommands.get(name);
   }
-  
+
   /**
    * Get all subcommands
    */
   getSubCommands(): Map<string, ISubCommand> {
     return new Map(this.#subCommands);
   }
-  
+
   /**
    * Inherit flags to a sub-parser
    */
@@ -309,74 +315,76 @@ export class ArgParser<THandlerReturn = any> {
       }
     }
   }
-  
+
   // ==================== Handler Management ====================
-  
+
   /**
    * Set the handler
    */
-  setHandler(handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>): this {
+  setHandler(
+    handler: (ctx: IHandlerContext<any, any>) => THandlerReturn | Promise<THandlerReturn>,
+  ): this {
     this.#handler = handler;
     return this;
   }
-  
+
   /**
    * Get the handler
    */
   getHandler(): ((ctx: IHandlerContext) => any) | undefined {
     return this.#handler;
   }
-  
+
   // ==================== Getters ====================
-  
+
   getAppName(): string {
     return this.#appName;
   }
-  
+
   getAppCommandName(): string | undefined {
     return this.#appCommandName;
   }
-  
+
   getDescription(): string | undefined {
     return this.#description;
   }
-  
+
   getSubCommandName(): string {
     return this.#subCommandName;
   }
-  
+
   getAutoExit(): boolean {
     return this.#autoExit;
   }
-  
+
   getPromptWhen(): PromptWhen {
     return this.#promptWhen;
   }
-  
+
   // ==================== Parsing ====================
-  
+
   /**
    * Parse command line arguments
    */
   async parse(processArgs?: string[], options: IParseOptions = {}): Promise<any> {
     const args = processArgs || process.argv.slice(2);
-    
+
     try {
       // Detect and strip system flags
       const { systemArgs, filteredArgs } = this.detectAndStripSystemFlags(args);
-      
+
       // Handle help
-      if (!options.skipHelpHandling && filteredArgs.includes('--help')) {
+      if (!options.skipHelpHandling && filteredArgs.includes("--help")) {
         console.log(this.helpText());
-        return this.handleExit(0, 'Help displayed', 'help');
+        return this.handleExit(0, "Help displayed", "help");
       }
-      
+
       // Find subcommand chain
       const { finalParser, commandChain, remainingArgs } = this.findCommandChain(filteredArgs);
-      
+
       // Parse flags
       const parsedArgs = await finalParser.parseFlags(remainingArgs, options);
-      
+
       // Create handler context
       const context: IHandlerContext = {
         args: parsedArgs,
@@ -389,13 +397,13 @@ export class ArgParser<THandlerReturn = any> {
         systemArgs,
         logger: console,
       };
-      
+
       // Execute handler
       if (finalParser.#handler && !options.skipHandlers) {
         const result = await finalParser.#handler(context);
         return result;
       }
-      
+
       return parsedArgs;
     } catch (error) {
       if (error instanceof ArgParserError) {
@@ -403,12 +411,12 @@ export class ArgParser<THandlerReturn = any> {
           throw error;
         }
         console.error(chalk.red(error.message));
-        return this.handleExit(1, error.message, 'error');
+        return this.handleExit(1, error.message, "error");
       }
       throw error;
     }
   }
-  
+
   /**
    * Parse flags only
    */
@@ -434,7 +442,7 @@ export class ArgParser<THandlerReturn = any> {
           result[flag.name] = true;
         } else {
           const nextArg = args[i + 1];
-          if (nextArg && !nextArg.startsWith('-')) {
+          if (nextArg && !nextArg.startsWith("-")) {
             const value = this.parseFlagValue(nextArg, flag.type);
 
             // Handle allowMultiple - accumulate into array
@@ -463,8 +471,8 @@ export class ArgParser<THandlerReturn = any> {
         const value = result[flag.name];
         if (!flag.enum.includes(value)) {
           throw new ArgParserError(
-            `Invalid value '${value}' for flag '${flag.name}'. Allowed values: ${flag.enum.join(', ')}`,
-            [this.#appName]
+            `Invalid value '${value}' for flag '${flag.name}'. Allowed values: ${flag.enum.join(", ")}`,
+            [this.#appName],
           );
         }
       }
@@ -474,7 +482,7 @@ export class ArgParser<THandlerReturn = any> {
     const missingFlags: string[] = [];
     for (const flag of flags) {
       if (flag.mandatory && result[flag.name] === undefined) {
-        if (typeof flag.mandatory === 'function') {
+        if (typeof flag.mandatory === "function") {
           if (flag.mandatory(result)) {
             missingFlags.push(flag.name);
           }
@@ -485,34 +493,33 @@ export class ArgParser<THandlerReturn = any> {
     }
 
     if (missingFlags.length > 0) {
-      throw new ArgParserError(
-        `Missing mandatory flags: ${missingFlags.join(', ')}`,
-        [this.#appName]
-      );
+      throw new ArgParserError(`Missing mandatory flags: ${missingFlags.join(", ")}`, [
+        this.#appName,
+      ]);
     }
 
     return result;
   }
-  
+
   /**
    * Parse a flag value based on type
    */
   private parseFlagValue(value: string, type: any): any {
-    if (type === Boolean || type === 'boolean') {
+    if (type === Boolean || type === "boolean") {
       return /^(true|yes|1)$/i.test(value);
     }
-    if (type === Number || type === 'number') {
+    if (type === Number || type === "number") {
       return Number(value);
     }
-    if (type === String || type === 'string') {
+    if (type === String || type === "string") {
       return value;
     }
-    if (typeof type === 'function') {
+    if (typeof type === "function") {
       return type(value);
     }
     return value;
   }
-  
+
   /**
    * Find the command chain for subcommands
    */
@@ -524,21 +531,21 @@ export class ArgParser<THandlerReturn = any> {
     let currentParser: ArgParser = this;
     const commandChain: string[] = [];
     let remainingArgs = [...args];
-    
+
     while (remainingArgs.length > 0) {
       const subName = remainingArgs[0];
       const subCommand = currentParser.#subCommands.get(subName);
-      
+
       if (!subCommand) break;
-      
+
       commandChain.push(subName);
       currentParser = subCommand.parser as ArgParser;
       remainingArgs = remainingArgs.slice(1);
     }
-    
+
     return { finalParser: currentParser, commandChain, remainingArgs };
   }
-  
+
   /**
    * Detect and strip system flags
    */
@@ -548,89 +555,90 @@ export class ArgParser<THandlerReturn = any> {
   } {
     const systemArgs: ISystemArgs = {};
     const filteredArgs: string[] = [];
-    
+
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       const nextArg = args[i + 1];
-      
+
       switch (arg) {
-        case '--s-debug':
+        case "--s-debug":
           systemArgs.debug = true;
           break;
-        case '--s-with-env':
-          systemArgs.withEnv = nextArg && !nextArg.startsWith('-') ? nextArg : true;
-          if (nextArg && !nextArg.startsWith('-')) i++;
+        case "--s-with-env":
+          systemArgs.withEnv = nextArg && !nextArg.startsWith("-") ? nextArg : true;
+          if (nextArg && !nextArg.startsWith("-")) i++;
           break;
         default:
           filteredArgs.push(arg);
       }
     }
-    
+
     return { systemArgs, filteredArgs };
   }
-  
+
   /**
    * Handle exit
    */
-  private handleExit(exitCode: number, message?: string, type?: ParseResult['type']): ParseResult {
+  private handleExit(exitCode: number, message?: string, type?: ParseResult["type"]): ParseResult {
     const result: ParseResult = {
       success: exitCode === 0,
       exitCode,
       message,
-      type: type || (exitCode === 0 ? 'success' : 'error'),
+      type: type || (exitCode === 0 ? "success" : "error"),
       shouldExit: true,
     };
-    
-    if (this.#autoExit && typeof process !== 'undefined' && process.exit) {
+
+    if (this.#autoExit && typeof process !== "undefined" && process.exit) {
       process.exit(exitCode);
     }
-    
+
     return result;
   }
-  
+
   // ==================== Help Generation ====================
-  
+
   /**
    * Generate help text
    */
   helpText(): string {
     const lines: string[] = [];
-    
+
     // Title
     lines.push(chalk.bold(this.#appName));
     if (this.#description) {
       lines.push(this.#description);
     }
-    lines.push('');
-    
+    lines.push("");
+
     // Usage
     const commandName = this.#appCommandName || this.#appName.toLowerCase();
-    lines.push(chalk.bold('Usage:'));
+    lines.push(chalk.bold("Usage:"));
     lines.push(`  ${commandName} [options] [command]`);
-    lines.push('');
-    
+    lines.push("");
+
     // Options
     const flags = this.#flagManager.getAllFlags();
     if (flags.length > 0) {
-      lines.push(chalk.bold('Options:'));
+      lines.push(chalk.bold("Options:"));
       for (const flag of flags) {
-        const options = flag.options.join(', ');
-        const defaultStr = flag.defaultValue !== undefined ? ` (default: ${flag.defaultValue})` : '';
-        const mandatoryStr = flag.mandatory ? ` ${this.#mandatoryCharacter}` : '';
-        lines.push(`  ${options.padEnd(20)} ${flag.description || ''}${defaultStr}${mandatoryStr}`);
+        const options = flag.options.join(", ");
+        const defaultStr =
+          flag.defaultValue !== undefined ? ` (default: ${flag.defaultValue})` : "";
+        const mandatoryStr = flag.mandatory ? ` ${this.#mandatoryCharacter}` : "";
+        lines.push(`  ${options.padEnd(20)} ${flag.description || ""}${defaultStr}${mandatoryStr}`);
       }
-      lines.push('');
+      lines.push("");
     }
-    
+
     // Subcommands
     if (this.#subCommands.size > 0) {
-      lines.push(chalk.bold('Commands:'));
+      lines.push(chalk.bold("Commands:"));
       for (const [name, sub] of this.#subCommands) {
-        lines.push(`  ${name.padEnd(20)} ${sub.description || ''}`);
+        lines.push(`  ${name.padEnd(20)} ${sub.description || ""}`);
       }
-      lines.push('');
+      lines.push("");
     }
-    
-    return lines.join('\n');
+
+    return lines.join("\n");
   }
 }

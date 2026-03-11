@@ -3,7 +3,7 @@
  * @module @alcyone-labs/arg-parser/tests/setup
  */
 
-import { vi } from 'vitest';
+import { vi } from "vitest";
 
 /**
  * Global test environment
@@ -18,10 +18,10 @@ globalThis.testEnv = {
  */
 export function mockConsole() {
   return {
-    log: vi.spyOn(console, 'log').mockImplementation(() => {}),
-    error: vi.spyOn(console, 'error').mockImplementation(() => {}),
-    warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
-    info: vi.spyOn(console, 'info').mockImplementation(() => {}),
+    log: vi.spyOn(console, "log").mockImplementation(() => {}),
+    error: vi.spyOn(console, "error").mockImplementation(() => {}),
+    warn: vi.spyOn(console, "warn").mockImplementation(() => {}),
+    info: vi.spyOn(console, "info").mockImplementation(() => {}),
   };
 }
 
@@ -30,7 +30,7 @@ export function mockConsole() {
  * @returns Mock spy for process.exit
  */
 export function mockProcessExit() {
-  return vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
+  return vi.spyOn(process, "exit").mockImplementation((code?: number) => {
     throw new Error(`process.exit(${code}) called`);
   });
 }
@@ -40,7 +40,7 @@ export function mockProcessExit() {
  * @param mocks - Array of mocks to restore
  */
 export function restoreMocks(...mocks: any[]) {
-  mocks.forEach(mock => mock?.mockRestore?.());
+  mocks.forEach((mock) => mock?.mockRestore?.());
 }
 
 /**
@@ -49,6 +49,6 @@ export function restoreMocks(...mocks: any[]) {
  * @returns RegExp that matches the message case-insensitively
  */
 export function flexibleErrorRegex(message: string): RegExp {
-  const escapedMessage = message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(escapedMessage, 'i');
+  const escapedMessage = message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(escapedMessage, "i");
 }

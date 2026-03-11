@@ -3,27 +3,24 @@
  * @module @alcyone-labs/arg-parser/tests/utils/flag-factories
  */
 
-import type { IFlag } from '../../src/index.js';
+import type { IFlag } from "../../src/index.js";
 
 /**
  * Factory for creating string flags
  * @param name - Flag name
  * @param options - Optional flag configuration
  * @returns String flag configuration
- * 
+ *
  * @example
  * ```typescript
  * const flag = createStringFlag('username', { mandatory: true });
  * ```
  */
-export function createStringFlag(
-  name: string,
-  options: Partial<IFlag> = {}
-): IFlag {
+export function createStringFlag(name: string, options: Partial<IFlag> = {}): IFlag {
   return {
     name,
     options: [`--${name}`],
-    type: 'string',
+    type: "string",
     ...options,
   };
 }
@@ -33,20 +30,17 @@ export function createStringFlag(
  * @param name - Flag name
  * @param options - Optional flag configuration
  * @returns Boolean flag configuration
- * 
+ *
  * @example
  * ```typescript
  * const flag = createBooleanFlag('verbose', { defaultValue: false });
  * ```
  */
-export function createBooleanFlag(
-  name: string,
-  options: Partial<IFlag> = {}
-): IFlag {
+export function createBooleanFlag(name: string, options: Partial<IFlag> = {}): IFlag {
   return {
     name,
     options: [`--${name}`],
-    type: 'boolean',
+    type: "boolean",
     flagOnly: true,
     ...options,
   };
@@ -57,20 +51,17 @@ export function createBooleanFlag(
  * @param name - Flag name
  * @param options - Optional flag configuration
  * @returns Number flag configuration
- * 
+ *
  * @example
  * ```typescript
  * const flag = createNumberFlag('count', { defaultValue: 1 });
  * ```
  */
-export function createNumberFlag(
-  name: string,
-  options: Partial<IFlag> = {}
-): IFlag {
+export function createNumberFlag(name: string, options: Partial<IFlag> = {}): IFlag {
   return {
     name,
     options: [`--${name}`],
-    type: 'number',
+    type: "number",
     ...options,
   };
 }
@@ -80,20 +71,17 @@ export function createNumberFlag(
  * @param name - Flag name
  * @param options - Optional flag configuration
  * @returns Array flag configuration
- * 
+ *
  * @example
  * ```typescript
  * const flag = createArrayFlag('tags', { options: ['-t', '--tag'] });
  * ```
  */
-export function createArrayFlag(
-  name: string,
-  options: Partial<IFlag> = {}
-): IFlag {
+export function createArrayFlag(name: string, options: Partial<IFlag> = {}): IFlag {
   return {
     name,
     options: [`--${name}`],
-    type: 'string',
+    type: "string",
     allowMultiple: true,
     ...options,
   };
@@ -105,7 +93,7 @@ export function createArrayFlag(
  * @param values - Allowed enum values
  * @param options - Optional flag configuration
  * @returns Enum flag configuration
- * 
+ *
  * @example
  * ```typescript
  * const flag = createEnumFlag('env', ['dev', 'staging', 'prod']);
@@ -114,12 +102,12 @@ export function createArrayFlag(
 export function createEnumFlag(
   name: string,
   values: string[],
-  options: Partial<IFlag> = {}
+  options: Partial<IFlag> = {},
 ): IFlag {
   return {
     name,
     options: [`--${name}`],
-    type: 'string',
+    type: "string",
     enum: values,
     ...options,
   };
@@ -129,7 +117,7 @@ export function createEnumFlag(
  * Factory for creating mandatory flags
  * @param flag - Base flag configuration
  * @returns Flag with mandatory set to true
- * 
+ *
  * @example
  * ```typescript
  * const flag = createMandatoryFlag(createStringFlag('username'));
@@ -147,16 +135,13 @@ export function createMandatoryFlag(flag: IFlag): IFlag {
  * @param flag - Base flag configuration
  * @param defaultValue - Default value
  * @returns Flag with default value
- * 
+ *
  * @example
  * ```typescript
  * const flag = createFlagWithDefault(createNumberFlag('count'), 5);
  * ```
  */
-export function createFlagWithDefault<T>(
-  flag: IFlag,
-  defaultValue: T
-): IFlag {
+export function createFlagWithDefault<T>(flag: IFlag, defaultValue: T): IFlag {
   return {
     ...flag,
     defaultValue,

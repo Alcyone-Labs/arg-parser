@@ -16,9 +16,7 @@ export default defineConfig(() => {
   }
 
   const config: UserConfig = {
-    plugins: [
-      solid({ solid: { generate: "ssr", hydratable: false } }),
-    ],
+    plugins: [solid({ solid: { generate: "ssr", hydratable: false } })],
     build: {
       outDir: "dist",
       emptyOutDir: false,

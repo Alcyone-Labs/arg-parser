@@ -1,38 +1,38 @@
 /**
  * @fileoverview Unified Tools tests
  * @module @alcyone-labs/arg-parser/tests/features/unified-tools
- * 
+ *
  * Unified tools are a new v3.0 feature that work in both CLI and MCP modes.
  * These tests verify the unified tool API and functionality.
  */
 
-import { describe, test, expect, beforeEach } from 'vitest';
-import { ArgParser } from '../../src/index.js';
-import { createTestParser } from '../utils/index.js';
+import { describe, test, expect, beforeEach } from "vitest";
+import { ArgParser } from "../../src/index.js";
+import { createTestParser } from "../utils/index.js";
 
-describe('Unified Tools', () => {
+describe("Unified Tools", () => {
   let parser: ArgParser;
 
   beforeEach(() => {
     parser = createTestParser();
   });
 
-  describe('Tool Definition', () => {
-    test('should define a unified tool with flags', () => {
+  describe("Tool Definition", () => {
+    test("should define a unified tool with flags", () => {
       const tool = {
-        name: 'process-data',
-        description: 'Process data files',
+        name: "process-data",
+        description: "Process data files",
         flags: [
-          { 
-            name: 'input', 
-            options: ['-i', '--input'], 
-            type: 'string', 
-            mandatory: true 
+          {
+            name: "input",
+            options: ["-i", "--input"],
+            type: "string",
+            mandatory: true,
           },
-          { 
-            name: 'output', 
-            options: ['-o', '--output'], 
-            type: 'string' 
+          {
+            name: "output",
+            options: ["-o", "--output"],
+            type: "string",
           },
         ],
         handler: async (ctx: any) => {
@@ -40,111 +40,109 @@ describe('Unified Tools', () => {
         },
       };
 
-      expect(tool.name).toBe('process-data');
+      expect(tool.name).toBe("process-data");
       expect(tool.flags).toHaveLength(2);
       expect(tool.flags[0].mandatory).toBe(true);
     });
 
-    test('should define a tool with output schema', () => {
+    test("should define a tool with output schema", () => {
       const tool = {
-        name: 'query-database',
-        description: 'Query the database',
-        flags: [
-          { name: 'table', options: ['-t'], type: 'string', mandatory: true },
-        ],
-        outputSchema: 'successWithData',
+        name: "query-database",
+        description: "Query the database",
+        flags: [{ name: "table", options: ["-t"], type: "string", mandatory: true }],
+        outputSchema: "successWithData",
         handler: async (ctx: any) => ({
           success: true,
           data: { rows: [] },
         }),
       };
 
-      expect(tool.outputSchema).toBe('successWithData');
+      expect(tool.outputSchema).toBe("successWithData");
     });
   });
 
-  describe('Tool Registration', () => {
-    test('should register tool as CLI subcommand', async () => {
+  describe("Tool Registration", () => {
+    test("should register tool as CLI subcommand", async () => {
       // Tools are registered as subcommands in CLI mode
       const subParser = createTestParser({
-        appName: 'process',
+        appName: "process",
         handler: async (ctx) => ctx.args,
       }).addFlag({
-        name: 'file',
-        options: ['-f'],
-        type: 'string',
+        name: "file",
+        options: ["-f"],
+        type: "string",
         mandatory: true,
       });
 
       parser.addSubCommand({
-        name: 'process',
-        description: 'Process a file',
+        name: "process",
+        description: "Process a file",
         parser: subParser,
       });
 
-      const result = await parser.parse(['process', '-f', 'data.txt']);
-      expect(result.file).toBe('data.txt');
+      const result = await parser.parse(["process", "-f", "data.txt"]);
+      expect(result.file).toBe("data.txt");
     });
 
-    test('should support nested tool commands', async () => {
+    test("should support nested tool commands", async () => {
       const nestedParser = createTestParser({
-        appName: 'nested',
+        appName: "nested",
         handler: async (ctx) => ({ nested: true, args: ctx.args }),
       }).addFlag({
-        name: 'value',
-        options: ['-v'],
-        type: 'string',
+        name: "value",
+        options: ["-v"],
+        type: "string",
       });
 
       const subParser = createTestParser().addSubCommand({
-        name: 'nested',
-        description: 'Nested command',
+        name: "nested",
+        description: "Nested command",
         parser: nestedParser,
       });
 
       parser.addSubCommand({
-        name: 'parent',
-        description: 'Parent command',
+        name: "parent",
+        description: "Parent command",
         parser: subParser,
       });
 
-      const result = await parser.parse(['parent', 'nested', '-v', 'test']);
+      const result = await parser.parse(["parent", "nested", "-v", "test"]);
       expect(result).toMatchObject({
         nested: true,
-        args: { value: 'test' },
+        args: { value: "test" },
       });
     });
   });
 
-  describe('Tool Execution', () => {
-    test('should execute tool handler with context', async () => {
+  describe("Tool Execution", () => {
+    test("should execute tool handler with context", async () => {
       let capturedContext: any;
 
       const toolParser = createTestParser({
-        appName: 'test-tool',
+        appName: "test-tool",
         handler: async (ctx) => {
           capturedContext = ctx;
           return { executed: true };
         },
       }).addFlag({
-        name: 'param',
-        options: ['-p'],
-        type: 'string',
+        name: "param",
+        options: ["-p"],
+        type: "string",
       });
 
       parser.addSubCommand({
-        name: 'tool',
+        name: "tool",
         parser: toolParser,
       });
 
-      await parser.parse(['tool', '-p', 'value']);
+      await parser.parse(["tool", "-p", "value"]);
 
       expect(capturedContext).toBeDefined();
-      expect(capturedContext.args.param).toBe('value');
-      expect(capturedContext.commandChain).toContain('tool');
+      expect(capturedContext.args.param).toBe("value");
+      expect(capturedContext.commandChain).toContain("tool");
     });
 
-    test('should handle async tool handlers', async () => {
+    test("should handle async tool handlers", async () => {
       const toolParser = createTestParser({
         handler: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -153,71 +151,69 @@ describe('Unified Tools', () => {
       });
 
       parser.addSubCommand({
-        name: 'async-tool',
+        name: "async-tool",
         parser: toolParser,
       });
 
-      const result = await parser.parse(['async-tool']);
+      const result = await parser.parse(["async-tool"]);
       expect(result.async).toBe(true);
     });
 
-    test('should handle tool errors gracefully', async () => {
+    test("should handle tool errors gracefully", async () => {
       const toolParser = createTestParser({
         handler: async () => {
-          throw new Error('Tool failed');
+          throw new Error("Tool failed");
         },
       });
 
       parser.addSubCommand({
-        name: 'failing-tool',
+        name: "failing-tool",
         parser: toolParser,
       });
 
-      await expect(parser.parse(['failing-tool'])).rejects.toThrow('Tool failed');
+      await expect(parser.parse(["failing-tool"])).rejects.toThrow("Tool failed");
     });
   });
 
-  describe('Tool Schema Generation', () => {
-    test('should generate JSON schema from tool flags', () => {
+  describe("Tool Schema Generation", () => {
+    test("should generate JSON schema from tool flags", () => {
       const flags = [
-        { name: 'name', options: ['-n'], type: 'string' },
-        { name: 'count', options: ['-c'], type: 'number' },
-        { name: 'enabled', options: ['-e'], type: 'boolean' },
+        { name: "name", options: ["-n"], type: "string" },
+        { name: "count", options: ["-c"], type: "number" },
+        { name: "enabled", options: ["-e"], type: "boolean" },
       ];
 
       // Schema would be generated for MCP
       const schema = {
-        type: 'object',
+        type: "object",
         properties: {
-          name: { type: 'string' },
-          count: { type: 'number' },
-          enabled: { type: 'boolean' },
+          name: { type: "string" },
+          count: { type: "number" },
+          enabled: { type: "boolean" },
         },
       };
 
-      expect(schema.properties.name.type).toBe('string');
-      expect(schema.properties.count.type).toBe('number');
-      expect(schema.properties.enabled.type).toBe('boolean');
+      expect(schema.properties.name.type).toBe("string");
+      expect(schema.properties.count.type).toBe("number");
+      expect(schema.properties.enabled.type).toBe("boolean");
     });
 
-    test('should handle array types in schema', () => {
-      const flags = [
-        { name: 'tags', options: ['-t'], type: 'string', allowMultiple: true },
-      ];
+    test("should handle array types in schema", () => {
+      const flags = [{ name: "tags", options: ["-t"], type: "string", allowMultiple: true }];
 
       const schema = {
-        type: 'object',
+        type: "object",
         properties: {
-          tags: { type: 'array', items: { type: 'string' } },
+          tags: { type: "array", items: { type: "string" } },
         },
       };
 
-      expect(schema.properties.tags.type).toBe('array');
+      expect(schema.properties.tags.type).toBe("array");
     });
   });
 
-  describe('Tool Context', () => {
-    test('should provide command chain in context', async () => {
+  describe("Tool Context", () => {
+    test("should provide command chain in context", async () => {
       let chain: string[] = [];
 
       const deepParser = createTestParser({
@@ -228,20 +224,20 @@ describe('Unified Tools', () => {
       });
 
       const midParser = createTestParser().addSubCommand({
-        name: 'deep',
+        name: "deep",
         parser: deepParser,
       });
 
       parser.addSubCommand({
-        name: 'mid',
+        name: "mid",
         parser: midParser,
       });
 
-      await parser.parse(['mid', 'deep']);
-      expect(chain).toEqual(['mid', 'deep']);
+      await parser.parse(["mid", "deep"]);
+      expect(chain).toEqual(["mid", "deep"]);
     });
 
-    test('should provide parent parser reference', async () => {
+    test("should provide parent parser reference", async () => {
       let parentRef: any;
 
       const childParser = createTestParser({
@@ -252,11 +248,11 @@ describe('Unified Tools', () => {
       });
 
       parser.addSubCommand({
-        name: 'child',
+        name: "child",
         parser: childParser,
       });
 
-      await parser.parse(['child']);
+      await parser.parse(["child"]);
       expect(parentRef).toBeDefined();
     });
   });

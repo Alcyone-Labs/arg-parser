@@ -1,6 +1,6 @@
 /**
  * MCP Lifecycle Manager
- * 
+ *
  * Handles MCP server lifecycle events.
  */
 
@@ -9,7 +9,11 @@
  */
 export interface McpLifecycleEvents {
   /** Called when server is initializing */
-  onInitialize?: (clientInfo: any, protocolVersion: string, capabilities: any) => Promise<void> | void;
+  onInitialize?: (
+    clientInfo: any,
+    protocolVersion: string,
+    capabilities: any,
+  ) => Promise<void> | void;
   /** Called when server is initialized */
   onInitialized?: () => Promise<void> | void;
   /** Called when server is shutting down */
@@ -29,12 +33,7 @@ export class McpLifecycleManager {
   private events: McpLifecycleEvents;
   private logger: any;
 
-  constructor(
-    events: McpLifecycleEvents,
-    logger: any,
-    _serverInfo: any,
-    _parser: any,
-  ) {
+  constructor(events: McpLifecycleEvents, logger: any, _serverInfo: any, _parser: any) {
     this.events = events;
     this.logger = logger;
   }
@@ -45,22 +44,26 @@ export class McpLifecycleManager {
   setParsedArgs(_args: any): void {
     // Reserved for future lifecycle context
   }
-  
+
   /**
    * Handle initialize event
    */
-  async handleInitialize(clientInfo: any, protocolVersion: string, capabilities: any): Promise<void> {
+  async handleInitialize(
+    clientInfo: any,
+    protocolVersion: string,
+    capabilities: any,
+  ): Promise<void> {
     if (this.events.onInitialize) {
       try {
         await this.events.onInitialize(clientInfo, protocolVersion, capabilities);
-        this.logger?.mcpError?.('Lifecycle: onInitialize completed');
+        this.logger?.mcpError?.("Lifecycle: onInitialize completed");
       } catch (error) {
         this.logger?.mcpError?.(`Lifecycle: onInitialize error: ${error}`);
         throw error;
       }
     }
   }
-  
+
   /**
    * Handle initialized event
    */
@@ -68,13 +71,13 @@ export class McpLifecycleManager {
     if (this.events.onInitialized) {
       try {
         await this.events.onInitialized();
-        this.logger?.mcpError?.('Lifecycle: onInitialized completed');
+        this.logger?.mcpError?.("Lifecycle: onInitialized completed");
       } catch (error) {
         this.logger?.mcpError?.(`Lifecycle: onInitialized error: ${error}`);
       }
     }
   }
-  
+
   /**
    * Handle shutdown event
    */
@@ -82,13 +85,13 @@ export class McpLifecycleManager {
     if (this.events.onShutdown) {
       try {
         await this.events.onShutdown();
-        this.logger?.mcpError?.('Lifecycle: onShutdown completed');
+        this.logger?.mcpError?.("Lifecycle: onShutdown completed");
       } catch (error) {
         this.logger?.mcpError?.(`Lifecycle: onShutdown error: ${error}`);
       }
     }
   }
-  
+
   /**
    * Handle tool invoke event
    */
@@ -101,7 +104,7 @@ export class McpLifecycleManager {
       }
     }
   }
-  
+
   /**
    * Handle tool complete event
    */
@@ -114,7 +117,7 @@ export class McpLifecycleManager {
       }
     }
   }
-  
+
   /**
    * Handle tool error event
    */

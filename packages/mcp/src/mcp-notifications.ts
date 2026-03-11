@@ -1,17 +1,17 @@
 /**
  * MCP Notifications Manager
- * 
+ *
  * Manages MCP notifications for resource and prompt changes.
  */
 
-export type McpChangeType = 'resource' | 'prompt' | 'tool';
+export type McpChangeType = "resource" | "prompt" | "tool";
 
 /**
  * Manages MCP notifications
  */
 export class McpNotificationsManager {
   private subscribers = new Map<McpChangeType, Set<(callback: any) => void>>();
-  
+
   /**
    * Subscribe to change notifications
    */
@@ -19,15 +19,15 @@ export class McpNotificationsManager {
     if (!this.subscribers.has(type)) {
       this.subscribers.set(type, new Set());
     }
-    
+
     this.subscribers.get(type)!.add(callback);
-    
+
     // Return unsubscribe function
     return () => {
       this.subscribers.get(type)?.delete(callback);
     };
   }
-  
+
   /**
    * Notify subscribers of a change
    */
@@ -43,7 +43,7 @@ export class McpNotificationsManager {
       }
     }
   }
-  
+
   /**
    * Clear all subscribers
    */

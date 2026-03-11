@@ -3,12 +3,7 @@
  * @module @alcyone-labs/arg-parser/tests/utils
  */
 
-export {
-  mockConsole,
-  mockProcessExit,
-  restoreMocks,
-  flexibleErrorRegex,
-} from '../setup.js';
+export { mockConsole, mockProcessExit, restoreMocks, flexibleErrorRegex } from "../setup.js";
 
 export {
   createTestParser,
@@ -16,7 +11,7 @@ export {
   parseArgs,
   standardTestFlags,
   complexTestFlags,
-} from './test-helpers.js';
+} from "./test-helpers.js";
 
 export {
   createStringFlag,
@@ -26,4 +21,4 @@ export {
   createEnumFlag,
   createMandatoryFlag,
   createFlagWithDefault,
-} from './flag-factories.js';
+} from "./flag-factories.js";

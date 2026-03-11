@@ -1,5 +1,17 @@
 ## Changelog
 
+### v3.0.0
+
+**Stable Release: Core + MCP + DXT + TUI ship together as v3.0.0**
+
+- The v3 plugin architecture is now the stable release line for all main packages:
+  - `@alcyone-labs/arg-parser` `3.0.0`
+  - `@alcyone-labs/arg-parser-mcp` `3.0.0`
+  - `@alcyone-labs/arg-parser-dxt` `3.0.0`
+  - `@alcyone-labs/arg-parser-tui` `3.0.0`
+- Plugin peer dependency ranges now target the stable `^3.0.0` core/plugin release line.
+- See [Migration Guide: v2.x to v3.0.0](./docs/MIGRATION_V3.md) for upgrade instructions and package split details.
+
 ### v2.14.2
 
 **Patch Release: Interactive Prompts Simplification & Context-Aware Pre-Configuration**

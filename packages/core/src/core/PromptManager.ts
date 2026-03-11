@@ -1,11 +1,11 @@
 /**
  * PromptManager - Manages interactive prompts with @clack/prompts
- * 
+ *
  * This class handles the collection and execution of interactive prompts
  * for CLI applications.
  */
 
-import type { IHandlerContext, IPromptableFlag } from './types';
+import type { IHandlerContext, IPromptableFlag } from "./types";
 
 export interface PromptManagerOptions {
   /** Default prompt sequence offset */
@@ -29,28 +29,28 @@ export class PromptManager {
   get sequenceOffset(): number {
     return this._options.sequenceOffset ?? 0;
   }
-  
+
   /**
    * Register a promptable flag
    */
   registerPromptableFlag(flag: IPromptableFlag): void {
     this.promptableFlags.set(flag.name, flag);
   }
-  
+
   /**
    * Unregister a promptable flag
    */
   unregisterPromptableFlag(name: string): boolean {
     return this.promptableFlags.delete(name);
   }
-  
+
   /**
    * Check if a flag has a prompt
    */
   hasPrompt(name: string): boolean {
     return this.promptableFlags.has(name);
   }
-  
+
   /**
    * Get all promptable flags sorted by sequence
    */
@@ -61,10 +61,10 @@ export class PromptManager {
       return seqA - seqB;
     });
   }
-  
+
   /**
    * Execute prompts for missing flags
-   * 
+   *
    * This is a placeholder implementation. The actual implementation
    * would integrate with @clack/prompts.
    */
@@ -73,19 +73,19 @@ export class PromptManager {
     missingFlagNames: string[],
   ): Promise<PromptResult> {
     const answers: Record<string, any> = {};
-    const results: PromptResult['results'] = [];
-    
+    const results: PromptResult["results"] = [];
+
     for (const flagName of missingFlagNames) {
       const flag = this.promptableFlags.get(flagName);
       if (!flag || !flag.prompt) continue;
-      
+
       try {
         const promptConfig = await flag.prompt(context);
-        
+
         // TODO: Integrate with @clack/prompts
         // For now, this is a placeholder
         console.log(`[PromptManager] Would prompt for '${flagName}': ${promptConfig.message}`);
-        
+
         results.push({
           flagName,
           success: true,
@@ -99,14 +99,14 @@ export class PromptManager {
         });
       }
     }
-    
+
     return {
       answers,
       results,
       cancelled: false,
     };
   }
-  
+
   /**
    * Clear all registered flags
    */

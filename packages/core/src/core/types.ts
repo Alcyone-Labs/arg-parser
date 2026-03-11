@@ -1,11 +1,11 @@
 /**
  * Core types for ArgParser
- * 
+ *
  * These types define the shape of flags, commands, and configuration
  * for the argument parser.
  */
 
-import { z, type ZodTypeAny } from 'zod';
+import { z, type ZodTypeAny } from "zod";
 
 // ============================================================================
 // Flag Types
@@ -15,9 +15,9 @@ import { z, type ZodTypeAny } from 'zod';
  * Defines the behavior for flag inheritance in sub-commands.
  */
 export const FlagInheritance = {
-  NONE: 'none',
-  DirectParentOnly: 'direct-parent-only',
-  AllParents: 'all-parents',
+  NONE: "none",
+  DirectParentOnly: "direct-parent-only",
+  AllParents: "all-parents",
 } as const;
 
 export type TFlagInheritance = (typeof FlagInheritance)[keyof typeof FlagInheritance] | boolean;
@@ -29,7 +29,7 @@ export const zodDxtOptionsSchema = z
   .object({
     sensitive: z.boolean().optional(),
     localDefault: z.string().optional(),
-    type: z.enum(['string', 'directory', 'file', 'boolean', 'number']).optional(),
+    type: z.enum(["string", "directory", "file", "boolean", "number"]).optional(),
     multiple: z.boolean().optional(),
     min: z.number().optional(),
     max: z.number().optional(),
@@ -45,8 +45,8 @@ export const zodDxtOptionsSchema = z
       return true;
     },
     {
-      message: 'min cannot be greater than max',
-      path: ['min'],
+      message: "min cannot be greater than max",
+      path: ["min"],
     },
   );
 
@@ -58,26 +58,28 @@ export const zodFlagSchema = z.object({
   valueHint: z.string().optional(),
   options: z.array(z.string().min(1)).min(1),
   defaultValue: z.any().optional(),
-  type: z.union([
-    z.custom((val) => val === String),
-    z.custom((val) => val === Number),
-    z.custom((val) => val === Boolean),
-    z.custom((val) => val === Array),
-    z.custom((val) => val === Object),
-    z.custom((val) => typeof val === 'function'),
-    z.custom((val) => val && typeof val === 'object' && (val as any)._def),
-    z.string(),
-  ]).default('string'),
-  mandatory: z.union([z.boolean(), z.custom((val) => typeof val === 'function')]).optional(),
+  type: z
+    .union([
+      z.custom((val) => val === String),
+      z.custom((val) => val === Number),
+      z.custom((val) => val === Boolean),
+      z.custom((val) => val === Array),
+      z.custom((val) => val === Object),
+      z.custom((val) => typeof val === "function"),
+      z.custom((val) => val && typeof val === "object" && (val as any)._def),
+      z.string(),
+    ])
+    .default("string"),
+  mandatory: z.union([z.boolean(), z.custom((val) => typeof val === "function")]).optional(),
   flagOnly: z.boolean().default(false),
-  validate: z.custom((val) => typeof val === 'function').optional(),
+  validate: z.custom((val) => typeof val === "function").optional(),
   enum: z.array(z.any()).optional(),
   env: z.union([z.string(), z.array(z.string())]).optional(),
   dxtOptions: zodDxtOptionsSchema.optional(),
-  dynamicRegister: z.custom((val) => typeof val === 'function').optional(),
+  dynamicRegister: z.custom((val) => typeof val === "function").optional(),
   setWorkingDirectory: z.boolean().optional(),
   positional: z.number().int().positive().optional(),
-  prompt: z.custom((val) => typeof val === 'function').optional(),
+  prompt: z.custom((val) => typeof val === "function").optional(),
   promptSequence: z.number().int().positive().optional(),
 });
 
@@ -87,7 +89,7 @@ export type ProcessedFlagCore = z.output<typeof zodFlagSchema>;
 export interface IDxtOptions {
   sensitive?: boolean;
   localDefault?: string;
-  type?: 'string' | 'directory' | 'file' | 'boolean' | 'number';
+  type?: "string" | "directory" | "file" | "boolean" | "number";
   multiple?: boolean;
   min?: number;
   max?: number;
@@ -133,11 +135,11 @@ export type TParsedArgsTypeFromFlagDef =
   | ((value: string) => any)
   | ((value: string) => Promise<any>)
   | ZodTypeAny
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'array'
-  | 'object';
+  | "string"
+  | "number"
+  | "boolean"
+  | "array"
+  | "object";
 
 export type ResolveType<T extends TParsedArgsTypeFromFlagDef> = T extends StringConstructor
   ? string
@@ -151,15 +153,15 @@ export type ResolveType<T extends TParsedArgsTypeFromFlagDef> = T extends String
           ? Record<string, any>
           : T extends ZodTypeAny
             ? z.infer<T>
-            : T extends 'string'
+            : T extends "string"
               ? string
-              : T extends 'number'
+              : T extends "number"
                 ? number
-                : T extends 'boolean'
+                : T extends "boolean"
                   ? boolean
-                  : T extends 'array'
+                  : T extends "array"
                     ? any[]
-                    : T extends 'object'
+                    : T extends "object"
                       ? Record<string, any>
                       : T extends (value: string) => infer R
                         ? R
@@ -170,7 +172,7 @@ export type ExtractFlagType<_TFlag extends ProcessedFlag> = any;
 export type FlagsArray = readonly ProcessedFlag[];
 
 export type TParsedArgs<TFlags extends readonly ProcessedFlag[]> = {
-  [K in TFlags[number]['name']]: ExtractFlagType<Extract<TFlags[number], { name: K }>>;
+  [K in TFlags[number]["name"]]: ExtractFlagType<Extract<TFlags[number], { name: K }>>;
 };
 
 // ============================================================================
@@ -240,7 +242,7 @@ export interface ISubCommand {
   onCancel?: (ctx: IHandlerContext) => void | Promise<void>;
 }
 
-export type PromptType = 'text' | 'password' | 'confirm' | 'select' | 'multiselect';
+export type PromptType = "text" | "password" | "confirm" | "select" | "multiselect";
 
 export interface PromptFieldConfig {
   type: PromptType;
@@ -253,7 +255,7 @@ export interface PromptFieldConfig {
   skip?: boolean;
 }
 
-export type PromptWhen = 'interactive-flag' | 'missing' | 'always';
+export type PromptWhen = "interactive-flag" | "missing" | "always";
 
 export interface IPromptableFlag extends IFlag {
   prompt?: (ctx: IHandlerContext) => PromptFieldConfig | Promise<PromptFieldConfig>;
@@ -277,7 +279,7 @@ export interface ParseResult<T = any> {
   data?: T;
   message?: string;
   shouldExit?: boolean;
-  type?: 'success' | 'error' | 'help' | 'version' | 'debug';
+  type?: "success" | "error" | "help" | "version" | "debug";
 }
 
 export interface ArgParserOptions {
@@ -296,39 +298,39 @@ export interface ArgParserBehaviorOptions {
 
 export function getJsonSchemaTypeFromFlag(
   flagType: TParsedArgsTypeFromFlagDef,
-): 'string' | 'number' | 'boolean' | 'array' | 'object' {
-  if (flagType && typeof flagType === 'object' && (flagType as ZodTypeAny)._def) {
-    return 'object';
+): "string" | "number" | "boolean" | "array" | "object" {
+  if (flagType && typeof flagType === "object" && (flagType as ZodTypeAny)._def) {
+    return "object";
   }
 
-  if (typeof flagType === 'function') {
-    if (flagType === String) return 'string';
-    if (flagType === Number) return 'number';
-    if (flagType === Boolean) return 'boolean';
-    if (flagType === Array) return 'array';
-    if (flagType === Object) return 'object';
-    return 'string';
+  if (typeof flagType === "function") {
+    if (flagType === String) return "string";
+    if (flagType === Number) return "number";
+    if (flagType === Boolean) return "boolean";
+    if (flagType === Array) return "array";
+    if (flagType === Object) return "object";
+    return "string";
   }
 
-  if (typeof flagType === 'string') {
+  if (typeof flagType === "string") {
     const normalizedType = flagType.toLowerCase();
     switch (normalizedType) {
-      case 'string':
-        return 'string';
-      case 'number':
-        return 'number';
-      case 'boolean':
-        return 'boolean';
-      case 'array':
-        return 'array';
-      case 'object':
-        return 'object';
+      case "string":
+        return "string";
+      case "number":
+        return "number";
+      case "boolean":
+        return "boolean";
+      case "array":
+        return "array";
+      case "object":
+        return "object";
       default:
-        return 'string';
+        return "string";
     }
   }
 
-  return 'string';
+  return "string";
 }
 
 // ============================================================================
@@ -379,18 +381,21 @@ export const OutputSchemaPatterns = {
 
 export type OutputSchemaPatternName = keyof typeof OutputSchemaPatterns;
 
-export type OutputSchemaConfig = OutputSchemaPatternName | z.ZodTypeAny | Record<string, z.ZodTypeAny>;
+export type OutputSchemaConfig =
+  | OutputSchemaPatternName
+  | z.ZodTypeAny
+  | Record<string, z.ZodTypeAny>;
 
 export function createOutputSchema(pattern: OutputSchemaConfig): z.ZodTypeAny {
-  if (typeof pattern === 'string' && pattern in OutputSchemaPatterns) {
+  if (typeof pattern === "string" && pattern in OutputSchemaPatterns) {
     return OutputSchemaPatterns[pattern as OutputSchemaPatternName]();
   }
 
-  if (pattern && typeof pattern === 'object' && '_def' in pattern) {
+  if (pattern && typeof pattern === "object" && "_def" in pattern) {
     return pattern as z.ZodTypeAny;
   }
 
-  if (pattern && typeof pattern === 'object') {
+  if (pattern && typeof pattern === "object") {
     return z.object(pattern as Record<string, z.ZodTypeAny>);
   }
 

@@ -56,7 +56,7 @@ export interface DxtToolInfo {
  */
 export interface DxtUserConfig {
   [key: string]: {
-    type: 'string' | 'directory' | 'file' | 'boolean' | 'number';
+    type: "string" | "directory" | "file" | "boolean" | "number";
     title: string;
     description: string;
     required: boolean;

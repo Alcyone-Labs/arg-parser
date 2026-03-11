@@ -1,11 +1,11 @@
 /**
  * DXT Plugin for ArgParser
- * 
+ *
  * This plugin adds DXT package generation capabilities to ArgParser.
  */
 
-import type { IArgParserPlugin } from '@alcyone-labs/arg-parser';
-import { DxtGenerator } from './DxtGenerator';
+import type { IArgParserPlugin } from "@alcyone-labs/arg-parser";
+import { DxtGenerator } from "./DxtGenerator";
 
 export interface IDxtPluginOptions {
   /** Output directory for DXT packages (default: './dxt') */
@@ -20,15 +20,15 @@ export interface IDxtPluginOptions {
  * DXT Plugin implementation
  */
 export class DxtPlugin implements IArgParserPlugin {
-  readonly name = 'com.alcyone-labs.dxt';
-  readonly version = '1.0.0';
+  readonly name = "com.alcyone-labs.dxt";
+  readonly version = "1.0.0";
 
   private options: IDxtPluginOptions;
   private generator: DxtGenerator | null = null;
 
   constructor(options: IDxtPluginOptions = {}) {
     this.options = {
-      outputDir: './dxt',
+      outputDir: "./dxt",
       withNodeModules: false,
       ...options,
     };
@@ -56,12 +56,12 @@ export class DxtPlugin implements IArgParserPlugin {
    */
   async buildDxt(entryPoint: string, outputDir?: string): Promise<any> {
     if (!this.generator) {
-      throw new Error('DxtPlugin has not been installed yet. Call install() first.');
+      throw new Error("DxtPlugin has not been installed yet. Call install() first.");
     }
-    const targetDir = outputDir || this.options.outputDir || './dxt';
-    const processArgs = ['--s-build-dxt', targetDir];
+    const targetDir = outputDir || this.options.outputDir || "./dxt";
+    const processArgs = ["--s-build-dxt", targetDir];
     if (this.options.withNodeModules) {
-      processArgs.push('--s-with-node-modules');
+      processArgs.push("--s-with-node-modules");
     }
     // Temporarily set process.argv[1] to the entry point for handleBuildDxtFlag
     const originalArgv1 = process.argv[1];
@@ -79,19 +79,19 @@ export class DxtPlugin implements IArgParserPlugin {
   private addDxtBuildFlag(_parser: any): void {
     // The DXT plugin works with the --s-build-dxt flag
     // This would be handled during parsing
-    console.log('[DXT Plugin] DXT build support enabled');
+    console.log("[DXT Plugin] DXT build support enabled");
   }
 }
 
 /**
  * Factory function for creating DXT plugin
- * 
+ *
  * @example
  * ```typescript
  * import { ArgParser } from '@alcyone-labs/arg-parser';
  * import { mcpPlugin } from '@alcyone-labs/arg-parser-mcp';
  * import { dxtPlugin } from '@alcyone-labs/arg-parser-dxt';
- * 
+ *
  * const parser = new ArgParser({...})
  *   .use(mcpPlugin({...}))
  *   .use(dxtPlugin({

@@ -38,12 +38,14 @@ describe("MCP Log Path Configuration", () => {
       const parser: any = new ArgParser({
         appName: "Test MCP Log Path",
         appCommandName: "test-mcp-log",
-      }).use(mcpPlugin({
-        serverInfo: {
-          name: "test-server",
-          version: "1.0.0",
-        },
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-server",
+            version: "1.0.0",
+          },
+        }),
+      );
 
       // Resolve the log path and ensure the directory exists
       const resolvedCustomLogPath = resolveLogPath(customLogPath);
@@ -69,12 +71,14 @@ describe("MCP Log Path Configuration", () => {
       const parser: any = new ArgParser({
         appName: "Test MCP Log Path",
         appCommandName: "test-mcp-log",
-      }).use(mcpPlugin({
-        serverInfo: {
-          name: "test-server",
-          version: "1.0.0",
-        },
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-server",
+            version: "1.0.0",
+          },
+        }),
+      );
 
       // Mock the transport method to verify it receives logPath parameter
       const originalStartMethod = parser.startMcpServerWithTransport;

@@ -11,13 +11,13 @@ npm install @alcyone-labs/arg-parser
 ## Quick Start
 
 ```typescript
-import { ArgParser } from '@alcyone-labs/arg-parser';
+import { ArgParser } from "@alcyone-labs/arg-parser";
 
 const parser = new ArgParser({
-  appName: 'my-cli',
+  appName: "my-cli",
   handler: async (ctx) => {
-    console.log('Hello', ctx.args.name);
-  }
+    console.log("Hello", ctx.args.name);
+  },
 });
 
 await parser.parse();

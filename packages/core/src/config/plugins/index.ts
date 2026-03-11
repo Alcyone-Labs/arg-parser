@@ -1,6 +1,6 @@
 /**
  * Configuration plugin system
- * 
+ *
  * Provides extensible configuration loading from various sources
  * like JSON files, environment variables, YAML, and TOML.
  */
@@ -21,27 +21,27 @@ export abstract class ConfigPlugin implements IConfigPlugin {
 
 // JSON plugin
 export class JsonConfigPlugin extends ConfigPlugin {
-  name = 'json';
-  
+  name = "json";
+
   canLoad(source: string): boolean {
-    return source.endsWith('.json');
+    return source.endsWith(".json");
   }
-  
+
   load(source: string): Record<string, any> {
-    const fs = require('node:fs');
-    const content = fs.readFileSync(source, 'utf-8');
+    const fs = require("node:fs");
+    const content = fs.readFileSync(source, "utf-8");
     return JSON.parse(content);
   }
 }
 
 // Environment variable plugin
 export class EnvConfigPlugin extends ConfigPlugin {
-  name = 'env';
-  
+  name = "env";
+
   canLoad(source: string): boolean {
-    return source === '.env' || source.endsWith('.env');
+    return source === ".env" || source.endsWith(".env");
   }
-  
+
   load(_source: string): Record<string, any> {
     // Placeholder - would use dotenv in actual implementation
     return {};
@@ -51,15 +51,15 @@ export class EnvConfigPlugin extends ConfigPlugin {
 // Plugin registry
 export class ConfigPluginRegistry {
   private plugins: Map<string, IConfigPlugin> = new Map();
-  
+
   register(plugin: IConfigPlugin): void {
     this.plugins.set(plugin.name, plugin);
   }
-  
+
   get(name: string): IConfigPlugin | undefined {
     return this.plugins.get(name);
   }
-  
+
   findForSource(source: string): IConfigPlugin | undefined {
     for (const plugin of this.plugins.values()) {
       if (plugin.canLoad(source)) {

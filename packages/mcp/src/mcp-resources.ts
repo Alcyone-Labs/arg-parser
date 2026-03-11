@@ -1,6 +1,6 @@
 /**
  * MCP Resources Manager
- * 
+ *
  * Manages MCP resources for the server.
  */
 
@@ -33,42 +33,42 @@ export interface McpResource {
  */
 export class McpResourcesManager {
   private resources = new Map<string, McpResourceConfig>();
-  
+
   /**
    * Register a resource
    */
   register(config: McpResourceConfig): void {
     this.resources.set(config.name, config);
   }
-  
+
   /**
    * Unregister a resource
    */
   unregister(name: string): boolean {
     return this.resources.delete(name);
   }
-  
+
   /**
    * Get a resource by name
    */
   get(name: string): McpResourceConfig | undefined {
     return this.resources.get(name);
   }
-  
+
   /**
    * Get all resources
    */
   getAll(): McpResourceConfig[] {
     return Array.from(this.resources.values());
   }
-  
+
   /**
    * Check if a resource exists
    */
   has(name: string): boolean {
     return this.resources.has(name);
   }
-  
+
   /**
    * Clear all resources
    */

@@ -5,9 +5,9 @@
 ArgParser v3.0.0 introduces a plugin-based architecture. The monolithic package has been split into separate packages:
 
 - `@alcyone-labs/arg-parser` - Core CLI parsing (v3.0.0)
-- `@alcyone-labs/arg-parser-mcp` - MCP server functionality (v1.0.0)
-- `@alcyone-labs/arg-parser-dxt` - DXT package generation (v1.0.0)
-- `@alcyone-labs/arg-parser-tui` - OpenTUI integration (v1.0.0)
+- `@alcyone-labs/arg-parser-mcp` - MCP server functionality (v3.0.0)
+- `@alcyone-labs/arg-parser-dxt` - DXT package generation (v3.0.0)
+- `@alcyone-labs/arg-parser-tui` - OpenTUI integration (v3.0.0)
 
 ## Breaking Changes
 

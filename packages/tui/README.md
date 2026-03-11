@@ -12,11 +12,11 @@ npm install @opentui/core @opentui/solid
 ## Quick Start
 
 ```tsx
-import { ArgParser } from '@alcyone-labs/arg-parser';
-import { tuiPlugin, createTuiApp, TuiProvider } from '@alcyone-labs/arg-parser-tui';
+import { ArgParser } from "@alcyone-labs/arg-parser";
+import { tuiPlugin, createTuiApp, TuiProvider } from "@alcyone-labs/arg-parser-tui";
 
 const parser = new ArgParser({
-  appName: 'my-tui-app',
+  appName: "my-tui-app",
   handler: async (ctx) => {
     const app = createTuiApp({
       component: () => (
@@ -24,13 +24,12 @@ const parser = new ArgParser({
           <text>Hello, TUI!</text>
         </TuiProvider>
       ),
-      title: 'My TUI App'
+      title: "My TUI App",
     });
-    
+
     await app.run();
-  }
-})
-  .use(tuiPlugin({ theme: 'dark' }));
+  },
+}).use(tuiPlugin({ theme: "dark" }));
 
 await parser.parse();
 ```

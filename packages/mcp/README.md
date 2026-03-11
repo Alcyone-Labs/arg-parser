@@ -11,20 +11,21 @@ npm install @alcyone-labs/arg-parser @alcyone-labs/arg-parser-mcp
 ## Quick Start
 
 ```typescript
-import { ArgParser } from '@alcyone-labs/arg-parser';
-import { mcpPlugin } from '@alcyone-labs/arg-parser-mcp';
+import { ArgParser } from "@alcyone-labs/arg-parser";
+import { mcpPlugin } from "@alcyone-labs/arg-parser-mcp";
 
 const parser = new ArgParser({
-  appName: 'my-cli',
-  handler: async (ctx) => ({ result: 'success' })
-})
-  .use(mcpPlugin({
+  appName: "my-cli",
+  handler: async (ctx) => ({ result: "success" }),
+}).use(
+  mcpPlugin({
     serverInfo: {
-      name: 'my-mcp-server',
-      version: '1.0.0',
-      description: 'My MCP server'
-    }
-  }));
+      name: "my-mcp-server",
+      version: "1.0.0",
+      description: "My MCP server",
+    },
+  }),
+);
 
 await parser.parse();
 ```

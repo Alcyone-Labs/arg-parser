@@ -7,9 +7,7 @@
  * MCP tool names must match ^[a-zA-Z0-9_-]{1,64}$
  */
 export function sanitizeMcpToolName(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .slice(0, 64);
+  return name.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
 }
 
 /**

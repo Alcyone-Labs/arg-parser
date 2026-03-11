@@ -8,13 +8,9 @@ const chalk = {
   red: (s: string) => s,
   gray: (s: string) => s,
 };
-import {
-  ArgParser,
-  type ParseResult,
-} from "@alcyone-labs/arg-parser";
+import { ArgParser, type ParseResult } from "@alcyone-labs/arg-parser";
 
 import { DxtGeneratorTestUtils } from "./DxtGenerator-testUtils.js";
-
 
 /**
  * DxtGenerator handles the generation of DXT (Desktop Extension) packages
@@ -146,7 +142,7 @@ export class DxtGenerator {
    */
   private extractMcpServerInfo(mcpSubCommand?: any): any {
     // First, try to get server info from withMcp() configuration via the plugin
-    const mcpPlugin = (this.argParserInstance as any).getPlugin?.('com.alcyone-labs.mcp');
+    const mcpPlugin = (this.argParserInstance as any).getPlugin?.("com.alcyone-labs.mcp");
     if (mcpPlugin && mcpPlugin.getMcpServerConfig) {
       const mcpConfig = mcpPlugin.getMcpServerConfig();
       if (mcpConfig?.serverInfo) {
@@ -162,7 +158,8 @@ export class DxtGenerator {
     // Final fallback: Generate default info from ArgParser instance
     const appName = this.argParserInstance.getAppName();
     const appCommandName = this.argParserInstance.getAppCommandName();
-    const description = this.argParserInstance.getDescription() || "MCP server generated from ArgParser";
+    const description =
+      this.argParserInstance.getDescription() || "MCP server generated from ArgParser";
 
     const defaultInfo = {
       name:
@@ -179,7 +176,7 @@ export class DxtGenerator {
   ): Array<{ name: string; description?: string }> {
     try {
       // Check if this is an ArgParser instance with MCP capabilities via the plugin
-      const mcpPlugin = (this.argParserInstance as any).getPlugin?.('com.alcyone-labs.mcp');
+      const mcpPlugin = (this.argParserInstance as any).getPlugin?.("com.alcyone-labs.mcp");
       if (mcpPlugin && typeof mcpPlugin.toMcpTools === "function") {
         let toolOptions = mcpSubCommand?.mcpToolOptions;
 
@@ -289,12 +286,12 @@ export class DxtGenerator {
 
     void this.findProjectRoot(entryPointFile);
     void this.extractMcpServerInfo();
-    
+
     const dxtDir = path.resolve(outputDir);
     if (!fs.existsSync(dxtDir)) {
       fs.mkdirSync(dxtDir, { recursive: true });
     }
-    
+
     await this.setupDxtPackageFiles(entryPointFile, outputDir, undefined, "logo.jpg");
   }
 
@@ -324,7 +321,8 @@ export class DxtGenerator {
     const { envVars, userConfig } = this.generateEnvAndUserConfig();
     const serverInfo = this.extractMcpServerInfo();
 
-    const entryFileName = actualOutputFilename || path.basename(entryPointFile).replace(/\.ts$/, ".js");
+    const entryFileName =
+      actualOutputFilename || path.basename(entryPointFile).replace(/\.ts$/, ".js");
 
     const manifest = {
       dxt_version: "0.1",
@@ -435,8 +433,15 @@ export class DxtGenerator {
         envVars[envVar] = `\${user_config.${envVar}}`;
 
         userConfig[envVar] = {
-          type: flag.dxtOptions?.type || (flag.type === Number ? "number" : flag.type === Boolean ? "boolean" : "string"),
-          title: flag.dxtOptions?.title || envVar.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (l: any) => l.toUpperCase()),
+          type:
+            flag.dxtOptions?.type ||
+            (flag.type === Number ? "number" : flag.type === Boolean ? "boolean" : "string"),
+          title:
+            flag.dxtOptions?.title ||
+            envVar
+              .replace(/_/g, " ")
+              .toLowerCase()
+              .replace(/\b\w/g, (l: any) => l.toUpperCase()),
           description: (flag.description as string) || `${envVar} environment variable`,
           required: !!flag.mandatory,
           sensitive: flag.dxtOptions?.sensitive !== undefined ? flag.dxtOptions.sensitive : true,

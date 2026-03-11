@@ -11,24 +11,28 @@ npm install @alcyone-labs/arg-parser @alcyone-labs/arg-parser-mcp @alcyone-labs/
 ## Quick Start
 
 ```typescript
-import { ArgParser } from '@alcyone-labs/arg-parser';
-import { mcpPlugin } from '@alcyone-labs/arg-parser-mcp';
-import { dxtPlugin } from '@alcyone-labs/arg-parser-dxt';
+import { ArgParser } from "@alcyone-labs/arg-parser";
+import { mcpPlugin } from "@alcyone-labs/arg-parser-mcp";
+import { dxtPlugin } from "@alcyone-labs/arg-parser-dxt";
 
 const parser = new ArgParser({
-  appName: 'my-cli',
-  handler: async (ctx) => ({ result: 'success' })
+  appName: "my-cli",
+  handler: async (ctx) => ({ result: "success" }),
 })
-  .use(mcpPlugin({
-    serverInfo: {
-      name: 'my-server',
-      version: '1.0.0'
-    }
-  }))
-  .use(dxtPlugin({
-    outputDir: './dist/dxt',
-    include: ['assets', 'config.json']
-  }));
+  .use(
+    mcpPlugin({
+      serverInfo: {
+        name: "my-server",
+        version: "1.0.0",
+      },
+    }),
+  )
+  .use(
+    dxtPlugin({
+      outputDir: "./dist/dxt",
+      include: ["assets", "config.json"],
+    }),
+  );
 
 await parser.parse();
 ```

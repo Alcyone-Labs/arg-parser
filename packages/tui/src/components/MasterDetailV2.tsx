@@ -82,7 +82,7 @@ export function MasterDetail(props: MasterDetailProps): JSX.Element {
         justifyContent="center"
         alignItems="center"
       >
-        <text {...{ bold: true, color: theme().colors.accent } as any}>
+        <text {...({ bold: true, color: theme().colors.accent } as any)}>
           {props.headerIcon ? ` ${props.headerIcon} ` : " "}
           {props.header}{" "}
         </text>
@@ -121,7 +121,7 @@ export function MasterDetail(props: MasterDetailProps): JSX.Element {
       {/* Footer */}
       <Show when={props.footer}>
         <box height={1} backgroundColor={theme().colors.background}>
-          <text {...{ color: theme().colors.muted } as any}> {props.footer}</text>
+          <text {...({ color: theme().colors.muted } as any)}> {props.footer}</text>
         </box>
       </Show>
     </box>

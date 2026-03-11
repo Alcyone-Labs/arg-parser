@@ -1,32 +1,32 @@
 /**
  * @alcyone-labs/arg-parser v3.0.0
- * 
+ *
  * A robust, type-safe CLI argument parser with plugin support.
- * 
+ *
  * @example
  * ```typescript
  * import { ArgParser } from '@alcyone-labs/arg-parser';
- * 
+ *
  * const parser = new ArgParser({
  *   appName: 'my-cli',
  *   handler: async (ctx) => {
  *     console.log('Args:', ctx.args);
  *   }
  * });
- * 
+ *
  * await parser.parse();
  * ```
  */
 
 // Core exports
-export { ArgParser, ArgParserError } from './core/ArgParser';
-export type { IArgParserParams, IParseOptions } from './core/ArgParser';
+export { ArgParser, ArgParserError } from "./core/ArgParser";
+export type { IArgParserParams, IParseOptions } from "./core/ArgParser";
 
 // Flag management
-export { FlagManager, type FlagManagerOptions, type FlagOptionCollision } from './core/FlagManager';
+export { FlagManager, type FlagManagerOptions, type FlagOptionCollision } from "./core/FlagManager";
 
 // Prompt management
-export { PromptManager, type PromptManagerOptions, type PromptResult } from './core/PromptManager';
+export { PromptManager, type PromptManagerOptions, type PromptResult } from "./core/PromptManager";
 
 // Plugin system
 export {
@@ -36,7 +36,7 @@ export {
   globalPluginRegistry,
   expose,
   type PluginMethods,
-} from './plugin/types';
+} from "./plugin/types";
 
 // Types
 export {
@@ -75,7 +75,7 @@ export {
   type IPromptableFlag,
   type IInteractiveSubCommand,
   type ParseResult,
-} from './core/types';
+} from "./core/types";
 
 // Config plugins
 export {
@@ -88,10 +88,10 @@ export {
   enableOptionalConfigPlugins,
   enableOptionalConfigPluginsAsync,
   enableConfigPlugins,
-} from './config/plugins';
+} from "./config/plugins";
 
 // Utilities
-export { debug } from './utils/debug-utils';
+export { debug } from "./utils/debug-utils";
 export {
   resolveLogPath,
   detectEntryPoint,
@@ -102,7 +102,7 @@ export {
   legacyCwdPath,
   type LogPath,
   type LogPathConfig,
-} from './core/log-path-utils';
+} from "./core/log-path-utils";
 
 // SimpleChalk export for chalk replacement
-export { default as SimpleChalk } from '@alcyone-labs/simple-chalk';
+export { default as SimpleChalk } from "@alcyone-labs/simple-chalk";

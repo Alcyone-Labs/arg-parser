@@ -138,7 +138,7 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
     const t = theme();
     return (
       <box height={1} backgroundColor={selected ? t.colors.selection : undefined}>
-        <text {...{ color: selected ? t.colors.background : t.colors.text } as any}>
+        <text {...({ color: selected ? t.colors.background : t.colors.text } as any)}>
           {showIndicator ? (selected ? "› " : "  ") : ""}
           {label}
         </text>
@@ -151,7 +151,7 @@ export function VirtualList<T>(props: VirtualListProps<T>): JSX.Element {
   return (
     <box flexDirection="column" flexGrow={1}>
       <Show when={props.title}>
-        <text {...{ bold: true, color: theme().colors.text, marginBottom: 1 } as any}>
+        <text {...({ bold: true, color: theme().colors.text, marginBottom: 1 } as any)}>
           {props.title} ({selectedIndex() + 1}/{items().length})
         </text>
       </Show>

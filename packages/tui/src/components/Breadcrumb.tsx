@@ -39,10 +39,8 @@ export function Breadcrumb(props: BreadcrumbProps): JSX.Element {
       <For each={props.segments}>
         {(segment, idx) => (
           <>
-            {idx() > 0 && <text {...{ color: mutedColor() } as any}> {separator} </text>}
-            <text {...{ color: accentColor(), bold: true } as any}>
-              {segment}
-            </text>
+            {idx() > 0 && <text {...({ color: mutedColor() } as any)}> {separator} </text>}
+            <text {...({ color: accentColor(), bold: true } as any)}>{segment}</text>
           </>
         )}
       </For>

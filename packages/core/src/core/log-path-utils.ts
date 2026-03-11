@@ -1,12 +1,12 @@
 /**
  * Log path utilities for ArgParser
- * 
+ *
  * Provides flexible path resolution for log files, supporting
  * relative paths (to entry point or cwd), absolute paths, and
  * configuration objects.
  */
 
-import * as path from 'node:path';
+import * as path from "node:path";
 
 /**
  * Log path can be a simple string or a configuration object
@@ -20,7 +20,7 @@ export interface LogPathConfig {
   /** The path string */
   path: string;
   /** How to resolve the path */
-  relativeTo?: 'entry' | 'cwd' | 'absolute';
+  relativeTo?: "entry" | "cwd" | "absolute";
   /** Optional base path for 'entry' resolution */
   basePath?: string;
 }
@@ -33,7 +33,7 @@ export function detectEntryPoint(): string {
   if (process.argv[1]) {
     return path.resolve(process.argv[1]);
   }
-  
+
   // Fallback to cwd
   return process.cwd();
 }
@@ -54,39 +54,39 @@ export function getEntryPointFromImportMeta(importMetaUrl: string): string {
  * Resolve a log path to an absolute path
  */
 export function resolveLogPath(logPath: LogPath): string {
-  if (typeof logPath === 'string') {
+  if (typeof logPath === "string") {
     // Handle explicit prefixes
-    if (logPath.startsWith('cwd:')) {
+    if (logPath.startsWith("cwd:")) {
       return path.resolve(process.cwd(), logPath.slice(4));
     }
-    
-    if (logPath.startsWith('entry:')) {
+
+    if (logPath.startsWith("entry:")) {
       const entryPoint = detectEntryPoint();
       const entryDir = path.dirname(entryPoint);
       return path.resolve(entryDir, logPath.slice(6));
     }
-    
+
     if (path.isAbsolute(logPath)) {
       return logPath;
     }
-    
+
     // Default: relative to entry point
     const entryPoint = detectEntryPoint();
     const entryDir = path.dirname(entryPoint);
     return path.resolve(entryDir, logPath);
   }
-  
+
   // Handle LogPathConfig
-  const { path: pathStr, relativeTo = 'entry', basePath } = logPath;
-  
-  if (relativeTo === 'absolute') {
+  const { path: pathStr, relativeTo = "entry", basePath } = logPath;
+
+  if (relativeTo === "absolute") {
     return pathStr;
   }
-  
-  if (relativeTo === 'cwd') {
+
+  if (relativeTo === "cwd") {
     return path.resolve(process.cwd(), pathStr);
   }
-  
+
   // relativeTo === 'entry'
   const entryPoint = basePath || detectEntryPoint();
   const entryDir = path.dirname(entryPoint);

@@ -2,13 +2,13 @@
  * MCP Plugin Types
  */
 
-import type { IFlag, IHandlerContext, OutputSchemaConfig } from '@alcyone-labs/arg-parser';
+import type { IFlag, IHandlerContext, OutputSchemaConfig } from "@alcyone-labs/arg-parser";
 
 /**
  * CORS configuration for streamable HTTP transport
  */
 export type CorsOptions = {
-  origins?: '*' | string | RegExp | Array<string | RegExp>;
+  origins?: "*" | string | RegExp | Array<string | RegExp>;
   methods?: string[];
   headers?: string[];
   exposedHeaders?: string[];
@@ -20,7 +20,7 @@ export type CorsOptions = {
  * JWT verification options
  */
 export type JwtVerifyOptions = {
-  algorithms?: ('HS256' | 'RS256')[];
+  algorithms?: ("HS256" | "RS256")[];
   secret?: string;
   publicKey?: string;
   getPublicKey?: (header: any, payload: any) => Promise<string> | string;
@@ -34,7 +34,7 @@ export type JwtVerifyOptions = {
  */
 export type AuthOptions = {
   required?: boolean;
-  scheme?: 'bearer' | 'jwt';
+  scheme?: "bearer" | "jwt";
   allowedTokens?: string[];
   validator?: (req: any, token: string | undefined) => boolean | Promise<boolean>;
   jwt?: JwtVerifyOptions;
@@ -47,7 +47,7 @@ export type AuthOptions = {
  * MCP transport configuration
  */
 export type McpTransportConfig = {
-  type: 'stdio' | 'sse' | 'streamable-http';
+  type: "stdio" | "sse" | "streamable-http";
   port?: number;
   host?: string;
   path?: string;

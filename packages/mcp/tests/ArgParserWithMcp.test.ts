@@ -44,28 +44,30 @@ describe("ArgParser with MCP Plugin", () => {
         handleErrors: false,
         autoExit: false,
       })
-      .use(mcpPlugin({
-        serverInfo: {
-          name: "test-mcp-server",
-          version: "1.0.0",
-        }
-      }))
-      .addFlags([
-        {
-          name: "name",
-          description: "Name parameter",
-          options: ["--name", "-n"],
-          type: "string",
-          mandatory: true,
-        },
-        {
-          name: "count",
-          description: "Count parameter",
-          options: ["--count", "-c"],
-          type: "number",
-          defaultValue: 1,
-        },
-      ]);
+        .use(
+          mcpPlugin({
+            serverInfo: {
+              name: "test-mcp-server",
+              version: "1.0.0",
+            },
+          }),
+        )
+        .addFlags([
+          {
+            name: "name",
+            description: "Name parameter",
+            options: ["--name", "-n"],
+            type: "string",
+            mandatory: true,
+          },
+          {
+            name: "count",
+            description: "Count parameter",
+            options: ["--count", "-c"],
+            type: "number",
+            defaultValue: 1,
+          },
+        ]);
     });
 
     test("should generate MCP tools", () => {
@@ -86,9 +88,10 @@ describe("ArgParser with MCP Plugin", () => {
 
       const tools = parser.toMcpTools({
         outputSchemaMap: {
-          "custom_mcp_test_tool": customOutputSchema,
+          custom_mcp_test_tool: customOutputSchema,
         },
-        generateToolName: (_commandPath: string[], appName: string) => `custom_${appName.toLowerCase().replace(/ /g, '_')}_tool`,
+        generateToolName: (_commandPath: string[], appName: string) =>
+          `custom_${appName.toLowerCase().replace(/ /g, "_")}_tool`,
       });
 
       expect(tools).toHaveLength(1);
@@ -121,9 +124,11 @@ describe("ArgParser with MCP Plugin", () => {
       const parser: any = new ArgParser({
         appName: "Tool CLI",
         appCommandName: "tool-cli",
-      }).use(mcpPlugin({
-        serverInfo: { name: "test", version: "1.0.0" }
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: { name: "test", version: "1.0.0" },
+        }),
+      );
 
       const toolConfig = {
         name: "test-tool",
@@ -146,9 +151,11 @@ describe("ArgParser with MCP Plugin", () => {
       const parser: any = new ArgParser({
         appName: "Tool CLI",
         appCommandName: "tool-cli",
-      }).use(mcpPlugin({
-        serverInfo: { name: "test", version: "1.0.0" }
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: { name: "test", version: "1.0.0" },
+        }),
+      );
 
       const toolConfig = {
         name: "duplicate-tool",

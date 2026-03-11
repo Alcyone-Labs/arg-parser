@@ -241,6 +241,12 @@ export interface IArgParserParams<THandlerReturn = any> {
    * @default false
    */
   throwForDuplicateFlags?: boolean;
+  /**
+   * Whether to silence all warnings (including duplicate flag and option collision warnings).
+   * When true, no warnings will be logged to the console.
+   * @default false
+   */
+  silenceWarnings?: boolean;
   description?: string; // New property for the description
   /**
    * Automatically handle ArgParserErrors by printing a formatted message
@@ -381,6 +387,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
   };
   #handler?: (ctx: IHandlerContext) => void;
   #throwForDuplicateFlags: boolean = false;
+  #silenceWarnings: boolean = false;
   #description?: string;
   #handleErrors: boolean = true;
   #autoExit: boolean = true;
@@ -442,9 +449,13 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
     if (typeof options.throwForDuplicateFlags === "boolean")
       this.#throwForDuplicateFlags = options.throwForDuplicateFlags;
 
+    if (typeof options.silenceWarnings === "boolean")
+      this.#silenceWarnings = options.silenceWarnings;
+
     this.#flagManager = new FlagManager(
       {
         throwForDuplicateFlags: this.#throwForDuplicateFlags,
+        silenceWarnings: this.#silenceWarnings,
       },
       initialFlags || [],
     );
@@ -468,7 +479,7 @@ export class ArgParserBase<THandlerReturn = any> implements IArgParser<THandlerR
       description: "Display this help message and exits",
       mandatory: false,
       type: Boolean,
-      options: ["-h", "--help"],
+      options: ["--help"],
       defaultValue: undefined,
       allowLigature: false,
       allowMultiple: false,

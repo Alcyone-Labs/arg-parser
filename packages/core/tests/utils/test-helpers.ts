@@ -3,14 +3,14 @@
  * @module @alcyone-labs/arg-parser/tests/utils/test-helpers
  */
 
-import { ArgParser } from '../../src/index.js';
-import type { IFlag, IArgParserParams } from '../../src/index.js';
+import { ArgParser } from "../../src/index.js";
+import type { IFlag, IArgParserParams } from "../../src/index.js";
 
 /**
  * Create a test parser with sensible defaults for testing
  * @param params - Optional parameters to override defaults
  * @returns Configured ArgParser instance
- * 
+ *
  * @example
  * ```typescript
  * const parser = createTestParser({ appName: 'my-test' });
@@ -18,8 +18,8 @@ import type { IFlag, IArgParserParams } from '../../src/index.js';
  */
 export function createTestParser(params: Partial<IArgParserParams> = {}) {
   return new ArgParser({
-    appName: 'test-cli',
-    appCommandName: 'test-cli',
+    appName: "test-cli",
+    appCommandName: "test-cli",
     autoExit: false,
     handleErrors: false,
     ...params,
@@ -31,7 +31,7 @@ export function createTestParser(params: Partial<IArgParserParams> = {}) {
  * @param flags - Array of flags to add
  * @param params - Optional parser parameters
  * @returns Configured ArgParser with flags
- * 
+ *
  * @example
  * ```typescript
  * const parser = createTestParserWithFlags([
@@ -39,10 +39,7 @@ export function createTestParser(params: Partial<IArgParserParams> = {}) {
  * ]);
  * ```
  */
-export function createTestParserWithFlags(
-  flags: IFlag[],
-  params: Partial<IArgParserParams> = {}
-) {
+export function createTestParserWithFlags(flags: IFlag[], params: Partial<IArgParserParams> = {}) {
   return createTestParser(params).addFlags(flags);
 }
 
@@ -53,11 +50,7 @@ export function createTestParserWithFlags(
  * @param options - Parse options
  * @returns Parse result
  */
-export async function parseArgs(
-  parser: ArgParser,
-  args: string[],
-  options = {}
-) {
+export async function parseArgs(parser: ArgParser, args: string[], options = {}) {
   return parser.parse(args, { autoExecute: false, ...options });
 }
 
@@ -66,33 +59,33 @@ export async function parseArgs(
  */
 export const standardTestFlags: IFlag[] = [
   {
-    name: 'name',
-    options: ['-n', '--name'],
-    type: 'string',
+    name: "name",
+    options: ["-n", "--name"],
+    type: "string",
     mandatory: true,
-    description: 'Name parameter',
+    description: "Name parameter",
   },
   {
-    name: 'verbose',
-    options: ['-v', '--verbose'],
-    type: 'boolean',
+    name: "verbose",
+    options: ["-v", "--verbose"],
+    type: "boolean",
     flagOnly: true,
     defaultValue: false,
-    description: 'Enable verbose mode',
+    description: "Enable verbose mode",
   },
   {
-    name: 'count',
-    options: ['-c', '--count'],
-    type: 'number',
+    name: "count",
+    options: ["-c", "--count"],
+    type: "number",
     defaultValue: 1,
-    description: 'Count parameter',
+    description: "Count parameter",
   },
   {
-    name: 'tags',
-    options: ['-t', '--tag'],
-    type: 'string',
+    name: "tags",
+    options: ["-t", "--tag"],
+    type: "string",
     allowMultiple: true,
-    description: 'Tags (can be specified multiple times)',
+    description: "Tags (can be specified multiple times)",
   },
 ];
 
@@ -101,41 +94,41 @@ export const standardTestFlags: IFlag[] = [
  */
 export const complexTestFlags: IFlag[] = [
   {
-    name: 'phase',
-    description: 'Phase of the process',
-    options: ['--phase'],
-    type: 'string',
+    name: "phase",
+    description: "Phase of the process",
+    options: ["--phase"],
+    type: "string",
     mandatory: true,
-    enum: ['chunking', 'pairing', 'analysis'],
+    enum: ["chunking", "pairing", "analysis"],
   },
   {
-    name: 'batch',
-    description: 'Batch number (required except for analysis phase)',
-    options: ['-b', '--batch-number'],
-    type: 'number',
-    mandatory: (args) => args.phase !== 'analysis',
+    name: "batch",
+    description: "Batch number (required except for analysis phase)",
+    options: ["-b", "--batch-number"],
+    type: "number",
+    mandatory: (args) => args.phase !== "analysis",
   },
   {
-    name: 'verbose',
-    description: 'Enable verbose mode',
-    options: ['-v'],
-    type: 'boolean',
+    name: "verbose",
+    description: "Enable verbose mode",
+    options: ["-v"],
+    type: "boolean",
     flagOnly: true,
     defaultValue: false,
   },
   {
-    name: 'files',
-    description: 'Files',
-    options: ['-f'],
+    name: "files",
+    description: "Files",
+    options: ["-f"],
     allowMultiple: true,
-    type: 'string',
+    type: "string",
   },
   {
-    name: 'table',
-    description: 'Table to query',
-    options: ['--table', '-t'],
-    type: 'string',
+    name: "table",
+    description: "Table to query",
+    options: ["--table", "-t"],
+    type: "string",
     mandatory: true,
-    enum: ['metadata', 'chunks', 'qaPairs', 'processingBatches', 'all'],
+    enum: ["metadata", "chunks", "qaPairs", "processingBatches", "all"],
   },
 ];

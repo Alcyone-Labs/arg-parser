@@ -60,13 +60,15 @@ describe("MCP Preset Transports Configuration", () => {
         new ArgParser({
           appName: "Preset Transport Test CLI",
           appCommandName: "preset-test",
-        }).use(mcpPlugin({
-          serverInfo: {
-            name: "test-mcp-server",
-            version: "1.0.0",
-          },
-          defaultTransport,
-        }));
+        }).use(
+          mcpPlugin({
+            serverInfo: {
+              name: "test-mcp-server",
+              version: "1.0.0",
+            },
+            defaultTransport,
+          }),
+        );
       }).not.toThrow();
     });
 
@@ -81,13 +83,15 @@ describe("MCP Preset Transports Configuration", () => {
         new ArgParser({
           appName: "Preset Transport Test CLI",
           appCommandName: "preset-test",
-        }).use(mcpPlugin({
-          serverInfo: {
-            name: "multi-transport-server",
-            version: "1.0.0",
-          },
-          defaultTransports,
-        }));
+        }).use(
+          mcpPlugin({
+            serverInfo: {
+              name: "multi-transport-server",
+              version: "1.0.0",
+            },
+            defaultTransports,
+          }),
+        );
       }).not.toThrow();
     });
 
@@ -101,17 +105,19 @@ describe("MCP Preset Transports Configuration", () => {
         new ArgParser({
           appName: "Preset Transport Test CLI",
           appCommandName: "preset-test",
-        }).use(mcpPlugin({
-          serverInfo: {
-            name: "configured-server",
-            version: "1.0.0",
-          },
-          defaultTransport,
-          toolOptions: {
-            includeSubCommands: true,
-            toolNamePrefix: "test-",
-          },
-        }));
+        }).use(
+          mcpPlugin({
+            serverInfo: {
+              name: "configured-server",
+              version: "1.0.0",
+            },
+            defaultTransport,
+            toolOptions: {
+              includeSubCommands: true,
+              toolNamePrefix: "test-",
+            },
+          }),
+        );
       }).not.toThrow();
     });
   });
@@ -123,16 +129,18 @@ describe("MCP Preset Transports Configuration", () => {
         appCommandName: "complex-preset",
         description: "A complex CLI with sub-commands and preset MCP transports",
       })
-        .use(mcpPlugin({
-          serverInfo: {
-            name: "complex-preset-server",
-            version: "1.0.0",
-          },
-          defaultTransports: [{ type: "stdio" }, { type: "sse", port: 3001, host: "0.0.0.0" }],
-          toolOptions: {
-            includeSubCommands: true,
-          },
-        }))
+        .use(
+          mcpPlugin({
+            serverInfo: {
+              name: "complex-preset-server",
+              version: "1.0.0",
+            },
+            defaultTransports: [{ type: "stdio" }, { type: "sse", port: 3001, host: "0.0.0.0" }],
+            toolOptions: {
+              includeSubCommands: true,
+            },
+          }),
+        )
         .addFlags([
           {
             name: "global",

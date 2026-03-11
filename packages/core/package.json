@@ -1,13 +1,13 @@
 {
   "name": "@alcyone-labs/arg-parser",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0",
   "description": "A robust, type-safe CLI argument parser with plugin support",
   "keywords": [
     "Arg Parser",
     "CLI",
     "CLI Commands",
-    "Sub-commands",
-    "Plugin System"
+    "Plugin System",
+    "Sub-commands"
   ],
   "license": "MIT",
   "author": "Nicolas Embleton <nicolas.embleton@gmail.com>",

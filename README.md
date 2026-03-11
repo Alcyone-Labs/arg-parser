@@ -2,6 +2,18 @@
 
 A robust, type-safe CLI argument parser with plugin support.
 
+> [!IMPORTANT]
+> ArgParser v3 is a **breaking release**. If you're upgrading from v2.x, start with the [v2 → v3 migration guide](./docs/MIGRATION_V3.md).
+
+## 🔄 Upgrading from v2.x
+
+If you're coming from v2, this is the fastest migration path:
+
+1. Keep `@alcyone-labs/arg-parser` for core parsing, then install the extra packages you actually use (`@alcyone-labs/arg-parser-mcp`, `@alcyone-labs/arg-parser-dxt`, `@alcyone-labs/arg-parser-tui`).
+2. Replace built-in v2 MCP/DXT/TUI usage with the v3 plugin pattern via `.use(...)`.
+3. Update `addMcpSubCommand()` calls to `mcpPlugin(...)` from `@alcyone-labs/arg-parser-mcp`.
+4. Move feature-specific imports to their new packages, such as `createTuiApp` from `@alcyone-labs/arg-parser-tui`.
+
 ## 🚀 What's New in v3.0.0
 
 ArgParser v3.0.0 introduces a **plugin-based architecture**! The monolithic package has been split into focused packages:

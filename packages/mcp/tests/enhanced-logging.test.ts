@@ -8,18 +8,20 @@ describe("Enhanced MCP Logging Configuration", () => {
       new ArgParser({
         appName: "Test Enhanced Logging",
         appCommandName: "test-enhanced-log",
-      }).use(mcpPlugin({
-        serverInfo: {
-          name: "test-server",
-          version: "1.0.0",
-        },
-        log: {
-          level: "debug",
-          logToFile: "./logs/test.log",
-          prefix: "TestServer",
-          mcpMode: true,
-        },
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-server",
+            version: "1.0.0",
+          },
+          log: {
+            level: "debug",
+            logToFile: "./logs/test.log",
+            prefix: "TestServer",
+            mcpMode: true,
+          },
+        }),
+      );
     }).not.toThrow();
   });
 
@@ -28,13 +30,15 @@ describe("Enhanced MCP Logging Configuration", () => {
       new ArgParser({
         appName: "Test Simple Logging",
         appCommandName: "test-simple-log",
-      }).use(mcpPlugin({
-        serverInfo: {
-          name: "test-server",
-          version: "1.0.0",
-        },
-        log: "./logs/simple.log",
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-server",
+            version: "1.0.0",
+          },
+          log: "./logs/simple.log",
+        }),
+      );
     }).not.toThrow();
   });
 
@@ -42,18 +46,20 @@ describe("Enhanced MCP Logging Configuration", () => {
     const parser: any = new ArgParser({
       appName: "Test Priority Logging",
       appCommandName: "test-priority-log",
-    }).use(mcpPlugin({
-      serverInfo: {
-        name: "test-server",
-        version: "1.0.0",
-      },
-      log: {
-        level: "info",
-        logToFile: "./logs/priority-log.log",
-        prefix: "PriorityServer",
-      },
-      logPath: "./logs/priority-logpath.log", // Should be ignored in favor of log
-    }));
+    }).use(
+      mcpPlugin({
+        serverInfo: {
+          name: "test-server",
+          version: "1.0.0",
+        },
+        log: {
+          level: "info",
+          logToFile: "./logs/priority-log.log",
+          prefix: "PriorityServer",
+        },
+        logPath: "./logs/priority-logpath.log", // Should be ignored in favor of log
+      }),
+    );
 
     const config = parser.getMcpServerConfig();
     expect(config?.log).toBeDefined();
@@ -74,17 +80,19 @@ describe("Enhanced MCP Logging Configuration", () => {
         new ArgParser({
           appName: `Test ${level} Logging`,
           appCommandName: `test-${level}-log`,
-        }).use(mcpPlugin({
-          serverInfo: {
-            name: "test-server",
-            version: "1.0.0",
-          },
-          log: {
-            level,
-            logToFile: `./logs/${level}.log`,
-            prefix: `${level}Server`,
-          },
-        }));
+        }).use(
+          mcpPlugin({
+            serverInfo: {
+              name: "test-server",
+              version: "1.0.0",
+            },
+            log: {
+              level,
+              logToFile: `./logs/${level}.log`,
+              prefix: `${level}Server`,
+            },
+          }),
+        );
       }).not.toThrow();
     });
   });
@@ -94,15 +102,17 @@ describe("Enhanced MCP Logging Configuration", () => {
       new ArgParser({
         appName: "Test Minimal Logging",
         appCommandName: "test-minimal-log",
-      }).use(mcpPlugin({
-        serverInfo: {
-          name: "test-server",
-          version: "1.0.0",
-        },
-        log: {
-          logToFile: "./logs/minimal.log",
-        },
-      }));
+      }).use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-server",
+            version: "1.0.0",
+          },
+          log: {
+            logToFile: "./logs/minimal.log",
+          },
+        }),
+      );
     }).not.toThrow();
   });
 
@@ -110,20 +120,22 @@ describe("Enhanced MCP Logging Configuration", () => {
     const parser: any = new ArgParser({
       appName: "Test Merged Logging",
       appCommandName: "test-merged-log",
-    }).use(mcpPlugin({
-      serverInfo: {
-        name: "test-server",
-        version: "1.0.0",
-      },
-      log: {
-        level: "debug",
-        prefix: "MergedServer",
-      },
-      logPath: {
-        path: "./logs/merged.log",
-        relativeTo: "entry",
-      },
-    }));
+    }).use(
+      mcpPlugin({
+        serverInfo: {
+          name: "test-server",
+          version: "1.0.0",
+        },
+        log: {
+          level: "debug",
+          prefix: "MergedServer",
+        },
+        logPath: {
+          path: "./logs/merged.log",
+          relativeTo: "entry",
+        },
+      }),
+    );
 
     const config = parser.getMcpServerConfig();
     expect(config?.log).toBeDefined();

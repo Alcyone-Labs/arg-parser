@@ -128,10 +128,7 @@ export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element 
         justifyContent="center"
         alignItems="center"
       >
-        <text {...{ bold: true, color: t.accent } as any}>
-          {" "}
-          {props.header}{" "}
-        </text>
+        <text {...({ bold: true, color: t.accent } as any)}> {props.header} </text>
       </box>
 
       {/* Breadcrumb */}
@@ -139,10 +136,8 @@ export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element 
         <box height={1} paddingLeft={2} backgroundColor={t.bg}>
           {props.breadcrumb.map((segment, idx) => (
             <>
-              {idx > 0 && <text {...{ color: t.muted } as any}> › </text>}
-              <text {...{ color: t.accent, bold: true } as any}>
-                {segment}
-              </text>
+              {idx > 0 && <text {...({ color: t.muted } as any)}> › </text>}
+              <text {...({ color: t.accent, bold: true } as any)}>{segment}</text>
             </>
           ))}
         </box>
@@ -156,7 +151,7 @@ export function MasterDetailLayout(props: MasterDetailLayoutProps): JSX.Element 
       {/* Footer */}
       {props.footer && (
         <box height={1} backgroundColor={t.bg}>
-          <text {...{ color: t.muted } as any}> {props.footer}</text>
+          <text {...({ color: t.muted } as any)}> {props.footer}</text>
         </box>
       )}
     </box>
@@ -219,7 +214,7 @@ export function ListItem(props: {
   const t = resolveTheme(props.theme);
   return (
     <box height={1} backgroundColor={props.selected ? t.selection : undefined}>
-      <text {...{ color: props.selected ? t.selectionFg : t.fg } as any}>
+      <text {...({ color: props.selected ? t.selectionFg : t.fg } as any)}>
         {props.selected ? "› " : "  "}
         {props.label}
       </text>

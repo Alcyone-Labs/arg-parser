@@ -1,6 +1,6 @@
 /**
  * Plugin system for ArgParser
- * 
+ *
  * This module provides the foundation for extending ArgParser functionality
  * through a plugin architecture. Plugins can add new methods, modify behavior,
  * or integrate with external systems like MCP, DXT, or TUI.
@@ -12,7 +12,7 @@ type ArgParserBase<_T = any> = any;
 
 /**
  * Plugin interface for extending ArgParser functionality
- * 
+ *
  * @example
  * ```typescript
  * const myPlugin = (options: MyOptions): IArgParserPlugin => ({
@@ -25,7 +25,7 @@ type ArgParserBase<_T = any> = any;
  *     };
  *   }
  * });
- * 
+ *
  * const parser = new ArgParser({...})
  *   .use(myPlugin({...}));
  * ```
@@ -33,17 +33,17 @@ type ArgParserBase<_T = any> = any;
 export interface IArgParserPlugin {
   /** Unique plugin identifier (should be reverse-DNS style, e.g., 'com.alcyone.mcp') */
   readonly name: string;
-  
+
   /** Plugin version (semver) */
   readonly version?: string;
-  
+
   /**
    * Install the plugin into an ArgParser instance
    * @param parser - The ArgParser instance to extend
    * @returns The modified parser or void
    */
   install<T>(parser: ArgParserBase<T>): ArgParserBase<T> | void;
-  
+
   /**
    * Optional cleanup when parser is destroyed
    */
@@ -64,14 +64,14 @@ export interface IPluginMetadata {
 
 /**
  * Plugin registry for managing installed plugins
- * 
+ *
  * This class tracks which plugins are installed on a parser instance
  * and provides methods for introspection.
  */
 export class PluginRegistry {
   private plugins = new Map<string, IArgParserPlugin>();
   private metadata = new Map<string, IPluginMetadata>();
-  
+
   /**
    * Register a plugin in the registry
    */
@@ -85,35 +85,35 @@ export class PluginRegistry {
       this.metadata.set(plugin.name, metadata);
     }
   }
-  
+
   /**
    * Get a registered plugin by name
    */
   get(name: string): IArgParserPlugin | undefined {
     return this.plugins.get(name);
   }
-  
+
   /**
    * Check if a plugin is registered
    */
   has(name: string): boolean {
     return this.plugins.has(name);
   }
-  
+
   /**
    * List all registered plugin names
    */
   list(): string[] {
     return Array.from(this.plugins.keys());
   }
-  
+
   /**
    * Get metadata for a plugin
    */
   getMetadata(name: string): IPluginMetadata | undefined {
     return this.metadata.get(name);
   }
-  
+
   /**
    * Unregister a plugin
    */
@@ -125,7 +125,7 @@ export class PluginRegistry {
     this.metadata.delete(name);
     return this.plugins.delete(name);
   }
-  
+
   /**
    * Clear all registered plugins
    */
@@ -170,6 +170,6 @@ export function expose(_target: any, propertyKey: string, descriptor: PropertyDe
 /**
  * Utility type for extracting plugin methods
  */
-export type PluginMethods<T> = T extends IArgParserPlugin 
+export type PluginMethods<T> = T extends IArgParserPlugin
   ? { [K in keyof T as T[K] extends Function ? K : never]: T[K] }
   : never;

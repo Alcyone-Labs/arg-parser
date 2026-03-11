@@ -1,6 +1,6 @@
 /**
  * MCP Prompts Manager
- * 
+ *
  * Manages MCP prompts for the server.
  */
 
@@ -24,9 +24,9 @@ export interface McpPromptConfig {
  */
 export interface McpPrompt {
   messages: Array<{
-    role: 'user' | 'assistant';
+    role: "user" | "assistant";
     content: {
-      type: 'text' | 'image' | 'resource';
+      type: "text" | "image" | "resource";
       text?: string;
       data?: string;
       mimeType?: string;
@@ -40,42 +40,42 @@ export interface McpPrompt {
  */
 export class McpPromptsManager {
   private prompts = new Map<string, McpPromptConfig>();
-  
+
   /**
    * Register a prompt
    */
   register(config: McpPromptConfig): void {
     this.prompts.set(config.name, config);
   }
-  
+
   /**
    * Unregister a prompt
    */
   unregister(name: string): boolean {
     return this.prompts.delete(name);
   }
-  
+
   /**
    * Get a prompt by name
    */
   get(name: string): McpPromptConfig | undefined {
     return this.prompts.get(name);
   }
-  
+
   /**
    * Get all prompts
    */
   getAll(): McpPromptConfig[] {
     return Array.from(this.prompts.values());
   }
-  
+
   /**
    * Check if a prompt exists
    */
   has(name: string): boolean {
     return this.prompts.has(name);
   }
-  
+
   /**
    * Clear all prompts
    */

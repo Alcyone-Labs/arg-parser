@@ -13,32 +13,34 @@ describe("DXT Environment Variable Generation", () => {
       description: "Test CLI for env var handling",
       handler: async (ctx) => ({ result: "success" }),
     })
-    .use(mcpPlugin({
-      serverInfo: {
-        name: "test-env-server",
-        version: "1.0.0",
-        description: "Test server for env vars",
-        author: { name: "Test Author" },
-      },
-    }))
-    .addFlags([
-      {
-        name: "apiKey",
-        description: "API key for service",
-        options: ["--api-key"],
-        type: "string",
-        mandatory: false,
-        env: "API_KEY",
-      },
-      {
-        name: "token",
-        description: "Authentication token",
-        options: ["--token"],
-        type: "string",
-        mandatory: true,
-        env: "AUTH_TOKEN",
-      },
-    ]);
+      .use(
+        mcpPlugin({
+          serverInfo: {
+            name: "test-env-server",
+            version: "1.0.0",
+            description: "Test server for env vars",
+            author: { name: "Test Author" },
+          },
+        }),
+      )
+      .addFlags([
+        {
+          name: "apiKey",
+          description: "API key for service",
+          options: ["--api-key"],
+          type: "string",
+          mandatory: false,
+          env: "API_KEY",
+        },
+        {
+          name: "token",
+          description: "Authentication token",
+          options: ["--token"],
+          type: "string",
+          mandatory: true,
+          env: "AUTH_TOKEN",
+        },
+      ]);
 
     dxtGenerator = new DxtGenerator(parser);
     const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
@@ -78,20 +80,22 @@ describe("DXT Environment Variable Generation", () => {
       appName: "No Env CLI",
       appCommandName: "no-env-cli",
     })
-    .use(mcpPlugin({
-      serverInfo: {
-        name: "no-env-server",
-        version: "1.0.0",
-      },
-    }))
-    .addFlags([
-      {
-        name: "regularFlag",
-        description: "Regular flag without env",
-        options: ["--regular"],
-        type: "string",
-      },
-    ]);
+      .use(
+        mcpPlugin({
+          serverInfo: {
+            name: "no-env-server",
+            version: "1.0.0",
+          },
+        }),
+      )
+      .addFlags([
+        {
+          name: "regularFlag",
+          description: "Regular flag without env",
+          options: ["--regular"],
+          type: "string",
+        },
+      ]);
 
     dxtGenerator = new DxtGenerator(parser);
     const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();
@@ -104,35 +108,37 @@ describe("DXT Environment Variable Generation", () => {
     const parser = new ArgParser({
       appName: "Different Types CLI",
     })
-    .use(mcpPlugin({
-      serverInfo: {
-        name: "different-types-server",
-        version: "1.0.0",
-      },
-    }))
-    .addFlags([
-      {
-        name: "stringFlag",
-        description: "String flag with env",
-        options: ["--string"],
-        type: "string",
-        env: "STRING_ENV",
-      },
-      {
-        name: "numberFlag",
-        description: "Number flag with env",
-        options: ["--number"],
-        type: Number,
-        env: "NUMBER_ENV",
-      },
-      {
-        name: "booleanFlag",
-        description: "Boolean flag with env",
-        options: ["--boolean"],
-        type: Boolean,
-        env: "BOOLEAN_ENV",
-      },
-    ]);
+      .use(
+        mcpPlugin({
+          serverInfo: {
+            name: "different-types-server",
+            version: "1.0.0",
+          },
+        }),
+      )
+      .addFlags([
+        {
+          name: "stringFlag",
+          description: "String flag with env",
+          options: ["--string"],
+          type: "string",
+          env: "STRING_ENV",
+        },
+        {
+          name: "numberFlag",
+          description: "Number flag with env",
+          options: ["--number"],
+          type: Number,
+          env: "NUMBER_ENV",
+        },
+        {
+          name: "booleanFlag",
+          description: "Boolean flag with env",
+          options: ["--boolean"],
+          type: Boolean,
+          env: "BOOLEAN_ENV",
+        },
+      ]);
 
     dxtGenerator = new DxtGenerator(parser);
     const { envVars, userConfig } = dxtGenerator.generateEnvAndUserConfig();

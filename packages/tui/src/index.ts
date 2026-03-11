@@ -28,8 +28,8 @@
  */
 
 // Plugin
-export { tuiPlugin, TuiPlugin } from './TuiPlugin';
-export type { ITuiPluginOptions } from './TuiPlugin';
+export { tuiPlugin, TuiPlugin } from "./TuiPlugin";
+export type { ITuiPluginOptions } from "./TuiPlugin";
 
 // Re-export core OpenTUI primitives from @opentui/solid
 export {

@@ -6,7 +6,7 @@ import {
   type IFlag,
   type ProcessedFlag,
   createOutputSchema,
-  getJsonSchemaTypeFromFlag
+  getJsonSchemaTypeFromFlag,
 } from "@alcyone-labs/arg-parser";
 import { sanitizeMcpToolName } from "./mcp-utils.js";
 
@@ -455,17 +455,17 @@ export function generateMcpToolsFromArgParser(
         async execute(mcpInputArgs: Record<string, any>) {
           // Execution logic
           const argv: string[] = [...commandPathParts];
-          
+
           for (const flagDef of currentParserFlags) {
             const flagName = flagDef.name;
             if (mcpInputArgs.hasOwnProperty(flagName)) {
               const value = mcpInputArgs[flagName];
               const flagOptions = flagDef.options;
-              
+
               argv.push(flagOptions[0]);
               if (value !== true || flagDef.flagOnly === false) {
                 if (Array.isArray(value)) {
-                  value.forEach(v => {
+                  value.forEach((v) => {
                     argv.push(flagOptions[0]);
                     argv.push(String(v));
                   });
@@ -479,7 +479,7 @@ export function generateMcpToolsFromArgParser(
 
           try {
             const parseResult = await rootParser.parse(argv, { isMcp: true });
-            
+
             // This is a simplified version of the execution logic
             // In a real implementation, we would handle handlers, etc.
             return createMcpSuccessResponse(parseResult);

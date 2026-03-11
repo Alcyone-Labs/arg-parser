@@ -1,15 +1,15 @@
 {
   "name": "@alcyone-labs/arg-parser-tui",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0",
   "description": "OpenTUI plugin for @alcyone-labs/arg-parser",
   "keywords": [
     "Arg Parser",
     "CLI",
-    "TUI",
-    "Terminal UI",
     "OpenTUI",
+    "Plugin",
     "SolidJS",
-    "Plugin"
+    "TUI",
+    "Terminal UI"
   ],
   "license": "MIT",
   "author": "Nicolas Embleton <nicolas.embleton@gmail.com>",
@@ -75,7 +75,7 @@
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
-    "@alcyone-labs/arg-parser": "^3.0.0-beta.1",
+    "@alcyone-labs/arg-parser": "^3.0.0",
     "@opentui/core": ">=0.1.67",
     "@opentui/solid": ">=0.1.67"
   }
